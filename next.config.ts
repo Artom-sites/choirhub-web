@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: 'export', // Static HTML export for GitHub Pages
-  basePath: '/choir-app-frontend', // Repository name for GitHub Pages
+  basePath: '/choirhub-web', // Repository name for GitHub Pages
   images: {
     unoptimized: true,
   },
