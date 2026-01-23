@@ -83,6 +83,35 @@ export async function deleteSong(choirId: string, songId: string): Promise<void>
     }
 }
 
+export async function getSong(choirId: string, songId: string): Promise<SimpleSong | null> {
+    try {
+        const docRef = doc(db, `choirs/${choirId}/songs`, songId);
+        const snapshot = await getDoc(docRef);
+        if (snapshot.exists()) {
+            const data = snapshot.data();
+            return {
+                id: snapshot.id,
+                ...data,
+                addedAt: data.addedAt?.toDate?.()?.toISOString() || data.addedAt,
+            } as SimpleSong;
+        }
+        return null;
+    } catch (error) {
+        console.error("Error fetching song:", error);
+        return null;
+    }
+}
+
+export async function updateSong(choirId: string, songId: string, updates: Partial<SimpleSong>): Promise<void> {
+    try {
+        const docRef = doc(db, `choirs/${choirId}/songs`, songId);
+        await updateDoc(docRef, updates);
+    } catch (error) {
+        console.error("Error updating song:", error);
+        throw error;
+    }
+}
+
 // ============ SERVICES ============
 
 export async function getServices(choirId: string): Promise<Service[]> {

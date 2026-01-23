@@ -88,7 +88,7 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
             conductor,
             hasPdf: !!pdfBase64,
             addedAt: new Date().toISOString(),
-            // pdfData: pdfBase64 
+            pdfData: pdfBase64
         });
 
         // Refresh list

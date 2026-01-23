@@ -57,7 +57,7 @@ export interface SimpleSong {
     hasPdf?: boolean;
     addedBy?: string;
     addedAt?: string;
-    // We can store PDF base64 separately or directly if small
+    pdfData?: string; // Base64 PDF content
 }
 
 export type Category =
