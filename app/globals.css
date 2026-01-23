@@ -58,10 +58,28 @@ body {
 /* Fix for native date picker icon visibility in dark mode */
 input[type="date"] {
   color-scheme: dark;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(1);
+  filter: invert(1) brightness(2);
   opacity: 1;
   cursor: pointer;
+  padding: 4px;
+}
+
+/* Firefox */
+input[type="date"]::-moz-calendar-picker-indicator {
+  filter: invert(1) brightness(2);
+}
+
+/* Additional dark mode form styling */
+input[type="date"]::-webkit-datetime-edit {
+  color: white;
+}
+
+input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  color: white;
 }
