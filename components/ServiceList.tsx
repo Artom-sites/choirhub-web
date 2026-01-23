@@ -18,7 +18,7 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
     const [showCreateModal, setShowCreateModal] = useState(false);
 
     // Create form
-    const [newTitle, setNewTitle] = useState("Служіння");
+    const [newTitle, setNewTitle] = useState("Співанка");
     const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
 
     useEffect(() => {
@@ -43,7 +43,7 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
         });
 
         setShowCreateModal(false);
-        setNewTitle("Служіння");
+        setNewTitle("Співанка");
         setNewDate(new Date().toISOString().split('T')[0]);
         refreshServices();
     };

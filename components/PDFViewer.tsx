@@ -39,9 +39,18 @@ export default function PDFViewer({ url, title, onClose }: PDFViewerProps) {
 
     useEffect(() => {
         const setupWorker = async () => {
-            const pdfjs = await import("react-pdf");
-            pdfjs.pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.pdfjs.version}/build/pdf.worker.min.mjs`;
-            setWorkerReady(true);
+            try {
+                const pdfjs = await import("react-pdf");
+                // Explicitly use the version from the imported library
+                const version = pdfjs.pdfjs.version;
+                if (!version) throw new Error("PDF.js version not found");
+
+                pdfjs.pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.mjs`;
+                setWorkerReady(true);
+            } catch (e) {
+                console.error("PDF Worker setup failed:", e);
+                setError("Помилка ініціалізації PDF переглядача");
+            }
         };
         setupWorker();
     }, []);
