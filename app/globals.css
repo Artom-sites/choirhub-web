@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+:root {
+  /* Soft Monochrome Palette */
+  --background: #09090b;
+  /* Deep matte black/gray */
+  --surface: #18181b;
+  /* Zinc-900 */
+  --surface-highlight: #27272a;
+  /* Zinc-800 */
+  --primary: #ffffff;
+  /* White as primary accent */
+  --text-primary: #ffffff;
+  --text-secondary: #a1a1aa;
+  /* Zinc-400 */
+  --danger: #ef4444;
+  --success: #22c55e;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-highlight: var(--surface-highlight);
+  --color-primary: var(--primary);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+}
+
+body {
+  background: var(--background);
+  color: var(--text-primary);
+  font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar for webkit - Dark & Soft */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface-highlight);
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* Fix for native date picker icon visibility in dark mode */
+input[type="date"] {
+  color-scheme: dark;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 1;
+  cursor: pointer;
+}
