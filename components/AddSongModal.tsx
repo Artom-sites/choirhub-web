@@ -11,8 +11,7 @@ interface AddSongModalProps {
 }
 
 const CATEGORIES = [
-    "Різдво", "Пасха", "В'їзд", "Вечеря", "Вознесіння", "Трійця", "Свято Жнив",
-    "Новий Рік", "Весілля", "Похорон", "Дитячі", "Молодіжні", "Інші"
+    "Новий рік", "Різдво", "В'їзд", "Вечеря", "Пасха", "Вознесіння", "Трійця", "Свято Жнив", "Інші"
 ];
 
 export default function AddSongModal({ isOpen, onClose, onAdd, regents }: AddSongModalProps) {
