@@ -207,8 +207,16 @@ export async function updateChoirMembers(choirId: string, members: any[]): Promi
 
 export async function createUser(userId: string, data: Partial<UserData>): Promise<void> {
     try {
+        // Filter out undefined values - Firestore doesn't accept them
+        const cleanData: Record<string, any> = {};
+        for (const [key, value] of Object.entries(data)) {
+            if (value !== undefined) {
+                cleanData[key] = value;
+            }
+        }
+
         await setDoc(doc(db, "users", userId), {
-            ...data,
+            ...cleanData,
             createdAt: serverTimestamp()
         }, { merge: true });
     } catch (error) {
