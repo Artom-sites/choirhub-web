@@ -28,6 +28,19 @@
   --color-success: var(--success);
 }
 
+/* Custom Utilities */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+.pb-safe-offset {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
+}
+
 body {
   background: var(--background);
   color: var(--text-primary);

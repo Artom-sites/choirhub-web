@@ -142,8 +142,18 @@ export async function getServices(choirId: string): Promise<Service[]> {
         );
         const snapshot = await getDocs(q);
         const services = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Service));
-        // Client-side sort to be safe with date strings/timestamps mix
-        return services.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        // Smart Sort: Upcoming (Ascending), then Past (Descending)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const upcoming = services.filter(s => new Date(s.date) >= today)
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        const past = services.filter(s => new Date(s.date) < today)
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        return [...upcoming, ...past];
     } catch (error) {
         console.error("Error fetching services:", error);
         return [];
