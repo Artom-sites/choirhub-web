@@ -572,7 +572,7 @@ function HomePageContent() {
               </button>
 
               {/* Codes for admin */}
-              {userData?.role === 'head' && choir && (
+              {(userData?.role === 'head' || userData?.role === 'regent') && choir && (
                 <div className="space-y-4 pt-4">
                   <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest pl-2">Коди доступу</h3>
 
