@@ -22,6 +22,7 @@ export interface ChoirMember {
     id: string; // userId or unique string
     name: string;
     role: UserRole;
+    voice?: 'Soprano' | 'Alto' | 'Tenor' | 'Bass';
 }
 
 export interface Choir {

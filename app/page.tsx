@@ -8,10 +8,12 @@ import { Service, Choir, UserMembership, ChoirMember } from "@/types";
 import SongList from "@/components/SongList";
 import ServiceList from "@/components/ServiceList";
 import ServiceView from "@/components/ServiceView";
+import StatisticsView from "@/components/StatisticsView"; // New
+import EditMemberModal from "@/components/EditMemberModal"; // New
 import {
   Music2, Loader2, Copy, Check,
   LogOut, ChevronLeft, Home, User, Users, Repeat,
-  PlusCircle, UserPlus, X, Trash2, Camera
+  PlusCircle, UserPlus, X, Trash2, Camera, BarChart2
 } from "lucide-react";
 import { collection as firestoreCollection, addDoc, getDocs, where, query, doc, updateDoc, arrayUnion } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -25,25 +27,30 @@ function HomePageContent() {
   const [services, setServices] = useState<Service[]>([]);
   const [pageLoading, setPageLoading] = useState(true);
 
-  // Navigation State - driven by URL params
+  // Navigation
   const activeTabRaw = searchParams.get('tab');
   const activeTab = (activeTabRaw === 'songs' || activeTabRaw === 'members') ? activeTabRaw : 'home';
 
   const setActiveTab = (tab: 'home' | 'songs' | 'members') => {
-    // Update URL without full reload
     const newParams = new URLSearchParams(searchParams.toString());
     if (tab === 'home') newParams.delete('tab');
     else newParams.set('tab', tab);
-
     router.replace(`/?${newParams.toString()}`, { scroll: false });
   };
+
   const [selectedService, setSelectedService] = useState<Service | null>(null);
+
+  // Stats
+  const [showStats, setShowStats] = useState(false);
 
   // Overlays
   const [showAccount, setShowAccount] = useState(false);
   const [showChoirManager, setShowChoirManager] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [showAddMember, setShowAddMember] = useState(false);
+
+  // Member Management
+  const [editingMember, setEditingMember] = useState<ChoirMember | null>(null);
+  const [showEditMemberModal, setShowEditMemberModal] = useState(false);
 
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
@@ -54,11 +61,6 @@ function HomePageContent() {
   const [managerLoading, setManagerLoading] = useState(false);
   const [managerError, setManagerError] = useState("");
 
-  // Add Member State
-  const [newMemberName, setNewMemberName] = useState("");
-  const [newMemberRole, setNewMemberRole] = useState<'member' | 'regent'>('member');
-
-  // Icon upload ref
   const iconInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -216,23 +218,22 @@ function HomePageContent() {
     }
   };
 
-  // Add manual member (not a real user, just a name for attendance tracking)
-  const handleAddMember = async () => {
-    if (!newMemberName.trim() || !choir || !userData?.choirId) return;
+  const handleSaveMember = async (member: ChoirMember) => {
+    if (!choir || !userData?.choirId) return;
 
-    const newMember: ChoirMember = {
-      id: `manual_${Date.now()}`, // Manual members get special IDs
-      name: newMemberName.trim(),
-      role: newMemberRole
-    };
+    const existingIndex = (choir.members || []).findIndex(m => m.id === member.id);
+    const updatedMembers = [...(choir.members || [])];
 
-    const updatedMembers = [...(choir.members || []), newMember];
+    if (existingIndex >= 0) {
+      updatedMembers[existingIndex] = member;
+    } else {
+      updatedMembers.push(member);
+    }
 
     try {
       await updateChoirMembers(userData.choirId, updatedMembers);
       setChoir({ ...choir, members: updatedMembers });
-      setNewMemberName("");
-      setShowAddMember(false);
+      setShowEditMemberModal(false);
     } catch (e) {
       console.error(e);
     }
@@ -248,6 +249,7 @@ function HomePageContent() {
     try {
       await updateChoirMembers(userData.choirId, updatedMembers);
       setChoir({ ...choir, members: updatedMembers });
+      setShowEditMemberModal(false);
     } catch (e) {
       console.error(e);
     }
@@ -265,7 +267,6 @@ function HomePageContent() {
     const file = e.target.files?.[0];
     if (!file || !userData?.choirId || !canEdit) return;
 
-    // Use strict Storage upload now
     try {
       const url = await uploadChoirIcon(userData.choirId, file);
       setChoir(prev => prev ? { ...prev, icon: url } : null);
@@ -279,6 +280,17 @@ function HomePageContent() {
       <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
         <Loader2 className="w-10 h-10 text-white animate-spin" />
       </div>
+    );
+  }
+
+  // Show Statistics
+  if (showStats && choir) {
+    return (
+      <StatisticsView
+        choir={choir}
+        services={services}
+        onBack={() => setShowStats(false)}
+      />
     );
   }
 
@@ -306,6 +318,25 @@ function HomePageContent() {
       <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${config.bg} ${config.text}`}>
         {config.label}
       </span>
+    );
+  };
+
+  const getVoiceBadge = (voice?: string) => {
+    if (!voice) return null;
+    const config: Record<string, string> = {
+      Soprano: "text-pink-400 border-pink-500/20",
+      Alto: "text-purple-400 border-purple-500/20",
+      Tenor: "text-blue-400 border-blue-500/20",
+      Bass: "text-green-400 border-green-500/20",
+    };
+
+    const style = config[voice] || "text-gray-400 border-white/10";
+    const label = voice === 'Soprano' ? 'S' : voice === 'Alto' ? 'A' : voice === 'Tenor' ? 'T' : 'B';
+
+    return (
+      <div className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold ${style}`}>
+        {label}
+      </div>
     );
   };
 
@@ -437,56 +468,14 @@ function HomePageContent() {
         </div>
       )}
 
-      {/* Add Member Modal */}
-      {showAddMember && (
-        <div className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-[#18181b] border border-white/10 w-full max-w-sm p-6 rounded-3xl shadow-2xl">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-white">Додати учасника</h3>
-              <button onClick={() => setShowAddMember(false)} className="p-2 text-text-secondary hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs text-text-secondary uppercase font-bold mb-2 block">Ім'я</label>
-                <input
-                  value={newMemberName}
-                  onChange={e => setNewMemberName(e.target.value)}
-                  placeholder="Ім'я учасника"
-                  className="w-full p-3 bg-black/20 text-white border border-white/10 rounded-xl"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs text-text-secondary uppercase font-bold mb-2 block">Роль</label>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setNewMemberRole('member')}
-                    className={`flex-1 p-3 rounded-xl text-sm font-bold transition-all ${newMemberRole === 'member' ? 'bg-white text-black' : 'bg-white/10 text-white'}`}
-                  >
-                    Хорист
-                  </button>
-                  <button
-                    onClick={() => setNewMemberRole('regent')}
-                    className={`flex-1 p-3 rounded-xl text-sm font-bold transition-all ${newMemberRole === 'regent' ? 'bg-white text-black' : 'bg-white/10 text-white'}`}
-                  >
-                    Регент
-                  </button>
-                </div>
-              </div>
-
-              <button
-                onClick={handleAddMember}
-                className="w-full p-3 bg-white text-black rounded-xl font-bold hover:bg-gray-200 mt-4"
-              >
-                Додати
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Edit/Add Member Modal */}
+      <EditMemberModal
+        isOpen={showEditMemberModal}
+        onClose={() => setShowEditMemberModal(false)}
+        member={editingMember}
+        onSave={handleSaveMember}
+        onDelete={handleRemoveMember}
+      />
 
       {/* Account Overlay */}
       {showAccount && (
@@ -647,10 +636,20 @@ function HomePageContent() {
         {activeTab === 'members' && (
           <div className="max-w-md mx-auto p-4">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-white">Учасники хору</h2>
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-bold text-white">Учасники</h2>
+                {/* Stats Button */}
+                <button
+                  onClick={() => setShowStats(true)}
+                  className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-text-secondary hover:text-white hover:bg-white/10 transition-colors"
+                >
+                  <BarChart2 className="w-5 h-5" />
+                </button>
+              </div>
+
               {canEdit && (
                 <button
-                  onClick={() => setShowAddMember(true)}
+                  onClick={() => { setEditingMember(null); setShowEditMemberModal(true); }}
                   className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors"
                 >
                   <UserPlus className="w-4 h-4" />
@@ -672,7 +671,13 @@ function HomePageContent() {
                   return (
                     <div
                       key={member.id}
-                      className="p-4 bg-white/5 border border-white/5 rounded-2xl flex items-center justify-between group hover:bg-white/10 transition-colors"
+                      onClick={() => {
+                        if (canEdit) {
+                          setEditingMember(member);
+                          setShowEditMemberModal(true);
+                        }
+                      }}
+                      className={`p-4 bg-white/5 border border-white/5 rounded-2xl flex items-center justify-between group hover:bg-white/10 transition-colors ${canEdit ? 'cursor-pointer active:scale-[0.99]' : ''}`}
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white font-bold text-sm relative">
@@ -684,7 +689,10 @@ function HomePageContent() {
                           )}
                         </div>
                         <div>
-                          <p className="text-white font-bold">{member.name}</p>
+                          <p className="text-white font-bold flex items-center gap-2">
+                            {member.name}
+                            {getVoiceBadge(member.voice)}
+                          </p>
                           <div className="flex items-center gap-2">
                             {getRoleBadge(member.role)}
                             {absences > 0 && (
@@ -696,13 +704,10 @@ function HomePageContent() {
                         </div>
                       </div>
 
-                      {canEdit && member.id !== user?.uid && member.role !== 'head' && (
-                        <button
-                          onClick={() => handleRemoveMember(member.id)}
-                          className="p-2 text-text-secondary hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                      {canEdit && (
+                        <div className="text-text-secondary/50 group-hover:text-white transition-colors">
+                          <User className="w-4 h-4" />
+                        </div>
                       )}
                     </div>
                   );

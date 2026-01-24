@@ -1,0 +1,151 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { ChoirMember, UserRole } from "@/types";
+import { X, Trash2, Save, User } from "lucide-react";
+
+interface EditMemberModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    member: ChoirMember | null; // null = adding new
+    onSave: (member: ChoirMember) => Promise<void>;
+    onDelete?: (memberId: string) => Promise<void>;
+}
+
+export default function EditMemberModal({ isOpen, onClose, member, onSave, onDelete }: EditMemberModalProps) {
+    const [name, setName] = useState("");
+    const [role, setRole] = useState<UserRole>('member');
+    const [voice, setVoice] = useState<string>("");
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (member) {
+            setName(member.name);
+            setRole(member.role);
+            setVoice(member.voice || "");
+        } else {
+            setName("");
+            setRole('member');
+            setVoice("");
+        }
+    }, [member, isOpen]);
+
+    if (!isOpen) return null;
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!name.trim()) return;
+        setLoading(true);
+        try {
+            await onSave({
+                id: member?.id || `manual_${Date.now()}`,
+                name: name.trim(),
+                role,
+                voice: voice as any || undefined
+            });
+            onClose();
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!member?.id || !onDelete) return;
+        if (confirm("Видалити цього учасника?")) {
+            setLoading(true);
+            await onDelete(member.id);
+            onClose();
+            setLoading(false);
+        }
+    };
+
+    const isEditing = !!member;
+
+    return (
+        <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+            <div className="bg-[#18181b] border border-white/10 w-full max-w-sm p-6 rounded-3xl shadow-2xl">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold text-white">
+                        {isEditing ? "Редагувати учасника" : "Новий учасник"}
+                    </h3>
+                    <button onClick={onClose} className="p-2 text-text-secondary hover:text-white">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-5">
+                    {/* Name */}
+                    <div>
+                        <label className="text-xs text-text-secondary uppercase font-bold mb-2 block">Ім'я</label>
+                        <input
+                            value={name}
+                            onChange={e => setName(e.target.value)}
+                            placeholder="Ім'я..."
+                            className="w-full p-3 bg-black/20 text-white border border-white/10 rounded-xl focus:border-white/30 outline-none transition-all"
+                            autoFocus
+                        />
+                    </div>
+
+                    {/* Role */}
+                    <div>
+                        <label className="text-xs text-text-secondary uppercase font-bold mb-2 block">Роль</label>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setRole('member')}
+                                className={`p-3 rounded-xl text-sm font-bold transition-all ${role === 'member' ? 'bg-white text-black' : 'bg-white/5 text-text-secondary hover:bg-white/10'}`}
+                            >
+                                Хорист
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setRole('regent')}
+                                className={`p-3 rounded-xl text-sm font-bold transition-all ${role === 'regent' ? 'bg-white text-black' : 'bg-white/5 text-text-secondary hover:bg-white/10'}`}
+                            >
+                                Регент
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Voice */}
+                    <div>
+                        <label className="text-xs text-text-secondary uppercase font-bold mb-2 block">Партія (Голос)</label>
+                        <div className="grid grid-cols-2 gap-2">
+                            {['Soprano', 'Alto', 'Tenor', 'Bass'].map((v) => (
+                                <button
+                                    key={v}
+                                    type="button"
+                                    onClick={() => setVoice(voice === v ? "" : v)}
+                                    className={`p-3 rounded-xl text-sm font-bold transition-all ${voice === v ? 'bg-blue-500 text-white' : 'bg-white/5 text-text-secondary hover:bg-white/10'}`}
+                                >
+                                    {v === 'Soprano' ? 'Сопрано' : v === 'Alto' ? 'Альт' : v === 'Tenor' ? 'Тенор' : 'Бас'}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="flex gap-3 mt-6">
+                        {isEditing && onDelete && (
+                            <button
+                                type="button"
+                                onClick={handleDelete}
+                                className="p-3 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 transition-colors"
+                            >
+                                <Trash2 className="w-5 h-5" />
+                            </button>
+                        )}
+                        <button
+                            type="submit"
+                            disabled={loading || !name.trim()}
+                            className="flex-1 p-3 bg-white text-black rounded-xl font-bold hover:bg-gray-200 disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                            {loading ? <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" /> : <><Save className="w-4 h-4" /> Зберегти</>}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
