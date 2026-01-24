@@ -17,13 +17,38 @@ export const metadata: Metadata = {
   title: "MyChoir — Хоровий репертуар",
   description: "PWA застосунок для управління хоровим репертуаром та нотами",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/favicon.png",
+    apple: "/apple-touch-icon.png",
+  },
+  openGraph: {
+    title: "MyChoir",
+    description: "Хоровий репертуар та ноти у вашій кишені",
+    siteName: "MyChoir",
+    images: [
+      {
+        url: "/apple-touch-icon.png",
+        width: 512,
+        height: 512,
+        alt: "MyChoir Icon",
+      },
+    ],
+    locale: "uk_UA",
+    type: "website",
+  },
+  appleWebApp: {
+    title: "MyChoir",
+    statusBarStyle: "black-translucent",
+    capable: true,
+  },
 };
 
 export const viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 5,
-  userScalable: true,
+  maximumScale: 1, // Fix input zoom on iOS
+  userScalable: false, // Prevent zooming for app-like feel
+  themeColor: "#000000",
 };
 
 export default function RootLayout({
@@ -34,12 +59,7 @@ export default function RootLayout({
   return (
     <html lang="uk">
       <head>
-        <meta name="theme-color" content="#000000" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="MyChoir" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <link rel="icon" href="/favicon.png" sizes="32x32" />
+        {/* Manual meta tags are replaced by metadata object */}
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-text-primary`}
