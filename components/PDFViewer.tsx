@@ -96,20 +96,9 @@ export default function PDFViewer({ url, title, onClose }: PDFViewerProps) {
                     <X className="w-6 h-6" />
                 </button>
 
-                {/* Zoom Controls */}
+                {/* Zoom Controls - Removed as per user request for native pinch zoom */}
                 <div className="flex items-center gap-2 pointer-events-auto">
-                    <button
-                        onClick={handleZoomOut}
-                        className="p-3 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/70 transition-colors border border-white/10"
-                    >
-                        <ZoomOut className="w-5 h-5" />
-                    </button>
-                    <button
-                        onClick={handleZoomIn}
-                        className="p-3 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/70 transition-colors border border-white/10"
-                    >
-                        <ZoomIn className="w-5 h-5" />
-                    </button>
+                    {/* Zoom buttons hidden to allow cleaner UI */}
                 </div>
             </header>
 
@@ -119,7 +108,7 @@ export default function PDFViewer({ url, title, onClose }: PDFViewerProps) {
                 className="flex-1 overflow-y-auto bg-[#09090b] custom-scrollbar"
                 style={{ WebkitOverflowScrolling: 'touch' }}
             >
-                <div className="min-h-full flex flex-col items-center py-20 px-4 gap-6">
+                <div className="min-h-full flex flex-col items-center pt-14 pb-20 px-0">
                     {isLoading && (
                         <div className="flex items-center justify-center py-20">
                             <Loader2 className="w-10 h-10 text-primary animate-spin" />
@@ -127,7 +116,7 @@ export default function PDFViewer({ url, title, onClose }: PDFViewerProps) {
                     )}
 
                     {error && (
-                        <div className="text-center py-20">
+                        <div className="text-center py-20 px-4">
                             <p className="text-red-400 mb-4">{error}</p>
                             <button onClick={() => window.location.reload()} className="px-6 py-2 bg-white text-black rounded-xl">
                                 Спробувати знову
@@ -140,23 +129,21 @@ export default function PDFViewer({ url, title, onClose }: PDFViewerProps) {
                         onLoadSuccess={onDocumentLoadSuccess}
                         onLoadError={onDocumentLoadError}
                         loading={null}
-                        className="flex flex-col gap-6"
+                        className="flex flex-col w-full"
                     >
                         {Array.from(new Array(numPages), (el, index) => (
-                            <div key={`page_${index + 1}`} className="shadow-2xl">
+                            <div key={`page_${index + 1}`} className="shadow-2xl w-full">
                                 <Page
                                     pageNumber={index + 1}
-                                    width={containerWidth ? (Math.min(containerWidth, 800) * scale) : undefined}
+                                    width={containerWidth ? containerWidth : undefined}
                                     renderTextLayer={false}
                                     renderAnnotationLayer={false}
-                                    className="bg-white overflow-hidden rounded-sm"
+                                    className="bg-white overflow-hidden w-full"
                                     loading={
-                                        <div className="w-full aspect-[1/1.4] bg-white/5 animate-pulse rounded-sm" />
+                                        <div className="w-full aspect-[1/1.4] bg-white/5 animate-pulse" />
                                     }
                                 />
-                                <div className="text-center mt-2 text-xs text-text-secondary/50">
-                                    {index + 1} / {numPages}
-                                </div>
+                                {/* Page separator/number overlay could be here if needed */}
                             </div>
                         ))}
                     </Document>
