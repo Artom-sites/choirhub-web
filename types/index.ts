@@ -57,7 +57,8 @@ export interface SimpleSong {
     hasPdf?: boolean;
     addedBy?: string;
     addedAt?: string;
-    pdfData?: string; // Base64 PDF content
+    pdfData?: string; // Base64 PDF content (Legacy)
+    pdfUrl?: string; // Firebase Storage URL
 }
 
 export type Category =

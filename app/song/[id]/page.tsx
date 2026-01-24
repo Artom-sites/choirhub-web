@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { getSong, updateSong } from "@/lib/db";
+import { getSong, updateSong, uploadSongPdf } from "@/lib/db";
 import { SimpleSong } from "@/types";
 import PDFViewer from "@/components/PDFViewer";
 import { ArrowLeft, FileText, Upload, Loader2, Check, AlertCircle } from "lucide-react";
@@ -30,7 +30,7 @@ export default function SongPage() {
             const fetched = await getSong(userData.choirId, songId);
             setSong(fetched);
             // Auto-open PDF if available
-            if (fetched?.hasPdf && fetched.pdfData) {
+            if (fetched?.hasPdf && (fetched.pdfUrl || fetched.pdfData)) {
                 setShowViewer(true);
             }
             setLoading(false);
@@ -114,11 +114,11 @@ export default function SongPage() {
     }
 
     // Show PDF Viewer
-    if (showViewer && song.pdfData) {
+    if (showViewer && (song.pdfUrl || song.pdfData)) {
         return (
             <div className="h-screen bg-[#09090b]">
                 <PDFViewer
-                    url={song.pdfData}
+                    url={song.pdfUrl || song.pdfData!}
                     title={song.title}
                     onClose={() => setShowViewer(false)}
                 />
@@ -145,7 +145,7 @@ export default function SongPage() {
             {/* Content */}
             <div className="p-4 flex flex-col items-center justify-center min-h-[calc(100vh-64px)]">
                 <div className="w-full max-w-md bg-surface/30 border border-white/5 rounded-3xl p-8 backdrop-blur-sm">
-                    {song.hasPdf && song.pdfData ? (
+                    {song.hasPdf && (song.pdfUrl || song.pdfData) ? (
                         // PDF exists
                         <div className="text-center">
                             <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6 border border-white/5">

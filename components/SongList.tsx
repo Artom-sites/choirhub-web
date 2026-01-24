@@ -71,25 +71,28 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
     const handleAddSong = async (title: string, category: string, conductor: string, pdfBase64?: string) => {
         if (!userData?.choirId) return;
 
-        // We'll upload PDF here or inside addSong if we change signature.
-        // For now, let's pass it. Since addSong takes Omit<SimpleSong, "id">, we can add extra fields if needed, 
-        // but SimpleSong interface has hasPdf (boolean).
-        // We should probably save the PDF content somewhere. 
-        // For this step, let's just create the song entry.
-        // Real implementation would upload to Storage.
-
-        // TEMPORARY: If we want to store PDF in Firestore document (careful with size limits):
-        // We can add a field 'pdfData' to the song object if we update the type.
-        // Or we handle it later.
-
-        await addSong(userData.choirId, {
+        // 1. Create song first
+        const newSongId = await addSong(userData.choirId, {
             title,
             category,
             conductor,
-            hasPdf: !!pdfBase64,
+            hasPdf: false, // Will verify after upload
             addedAt: new Date().toISOString(),
-            pdfData: pdfBase64
         });
+
+        // 2. Upload PDF if provided
+        if (pdfBase64) {
+            try {
+                // Import dynamically if needed or assume db.ts imports are fine
+                // But we need to use uploadSongPdf imported from db
+                // Note: we need to import uploadSongPdf in this file first!
+                await import("@/lib/db").then(mod => mod.uploadSongPdf(userData.choirId, newSongId, pdfBase64));
+            } catch (e) {
+                console.error("Failed to upload PDF for new song:", e);
+                // We created the song but failed PDF. 
+                // It will show up without PDF. User can retry in SongPage.
+            }
+        }
 
         // Refresh list
         const fetched = await getSongs(userData.choirId);
