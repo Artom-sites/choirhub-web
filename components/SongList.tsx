@@ -34,6 +34,7 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
     const [selectedCategory, setSelectedCategory] = useState<Category | "All">("All");
     const [showAddModal, setShowAddModal] = useState(false);
     const [songToDelete, setSongToDelete] = useState<string | null>(null);
+    const [isEditMode, setIsEditMode] = useState(false);
 
     // PDF Viewer state
     const [viewingSong, setViewingSong] = useState<SimpleSong | null>(null);
@@ -147,8 +148,8 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
                 </div>
             </div>
 
-            {/* Search & Filter */}
-            <div className="flex gap-3 sticky top-[72px] z-10 py-3 -mx-4 px-4 bg-[#09090b]/90 backdrop-blur-xl">
+            {/* Search & Filter - Fixed Top Offset */}
+            <div className="flex gap-3 sticky top-[88px] z-10 py-3 -mx-4 px-4 bg-[#09090b]/90 backdrop-blur-xl">
                 <div className="relative flex-1 group">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary group-focus-within:text-white transition-colors" />
                     <input
@@ -226,16 +227,18 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
 
 
                                     <div className="flex items-center gap-1 mt-3.5">
-                                        {effectiveCanAdd && (
+                                        {effectiveCanAdd && isEditMode && (
                                             <div
                                                 onClick={(e) => initiateDelete(e, song.id)}
-                                                className="p-1.5 text-text-secondary hover:text-red-500 hover:bg-white/10 rounded-lg transition-colors z-20"
+                                                className="p-2 -mr-2 text-red-400 bg-red-500/10 hover:bg-red-500/20 rounded-xl transition-colors z-20"
                                                 title="Видалити"
                                             >
-                                                <Trash2 className="w-4 h-4" />
+                                                <Trash2 className="w-5 h-5" />
                                             </div>
                                         )}
-                                        <ChevronRight className="w-5 h-5 text-text-secondary/30 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                                        {!isEditMode && (
+                                            <ChevronRight className="w-5 h-5 text-text-secondary/30 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                                        )}
                                     </div>
                                 </div>
                             </motion.button>
@@ -244,17 +247,28 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
                 )}
             </div>
 
-            {/* Floating Add Button - White Circle */}
-            {effectiveCanAdd && (
-                <div className="fixed bottom-24 right-5 z-20">
-                    <button
-                        onClick={() => setShowAddModal(true)}
-                        className="w-14 h-14 bg-white text-black rounded-full shadow-[0_4px_20px_rgba(255,255,255,0.2)] flex items-center justify-center hover:scale-105 active:scale-95 transition-all border border-white/50"
-                    >
-                        <Plus className="w-7 h-7" />
-                    </button>
-                </div>
-            )}
+            {/* Floating Action Buttons */}
+            <div className="fixed bottom-24 right-5 z-20 flex flex-col gap-3">
+                {effectiveCanAdd && (
+                    <>
+                        <button
+                            onClick={() => setIsEditMode(!isEditMode)}
+                            className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all border ${isEditMode
+                                ? 'bg-red-500 text-white border-red-400'
+                                : 'bg-[#18181b] text-text-secondary border-white/10'}`}
+                        >
+                            <Trash2 className="w-5 h-5" />
+                        </button>
+
+                        <button
+                            onClick={() => setShowAddModal(true)}
+                            className="w-14 h-14 bg-white text-black rounded-full shadow-[0_4px_20px_rgba(255,255,255,0.2)] flex items-center justify-center hover:scale-105 active:scale-95 transition-all border border-white/50"
+                        >
+                            <Plus className="w-7 h-7" />
+                        </button>
+                    </>
+                )}
+            </div>
 
             {/* Add Song Modal */}
             {showAddModal && (
