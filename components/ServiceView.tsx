@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Service, ServiceSong, SimpleSong, Choir, ChoirMember } from "@/types";
 import { getSongs, addSongToService, removeSongFromService, getChoir, updateService, setServiceAttendance } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
-import { ChevronLeft, Eye, X, Plus, Users, UserX, Check, Calendar, Music, UserCheck, AlertCircle, Trash2 } from "lucide-react";
+import { ChevronLeft, Eye, X, Plus, Users, UserX, Check, Calendar, Music, UserCheck, AlertCircle, Trash2, User as UserIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface ServiceViewProps {
@@ -454,8 +454,16 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                         : 'bg-surface border-white/5 hover:bg-white/10'
                                         }`}
                                 >
-                                    <span className={`font-medium text-lg ${isSelected ? 'text-blue-400' : 'text-white'}`}>{song.title}</span>
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isSelected
+                                    <div className="flex-1 min-w-0 pr-4">
+                                        <div className={`font-medium text-lg leading-tight ${isSelected ? 'text-blue-400' : 'text-white'}`}>{song.title}</div>
+                                        {song.conductor && (
+                                            <div className="flex items-center gap-1.5 mt-1">
+                                                <UserIcon className="w-3 h-3 text-text-secondary" />
+                                                <span className="text-xs text-text-secondary">{song.conductor}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${isSelected
                                         ? 'bg-blue-500 text-white'
                                         : 'bg-white/5 text-text-secondary group-hover:bg-white/20'
                                         }`}>
