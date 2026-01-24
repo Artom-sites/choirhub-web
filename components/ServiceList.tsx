@@ -22,6 +22,7 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [votingLoading, setVotingLoading] = useState<string | null>(null);
     const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
+    const [showArchive, setShowArchive] = useState(false);
 
     // Create form
     const [newTitle, setNewTitle] = useState("Співанка");
@@ -136,103 +137,134 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
     return (
         <div className="max-w-5xl mx-auto px-4 py-4 space-y-6 pb-24">
 
-            {/* Upcoming Header */}
+            {/* Header with Archive Toggle */}
             <div className="flex items-center justify-between">
-                <h2 className="text-sm font-bold text-text-secondary uppercase tracking-widest pl-2">Найближчі служіння</h2>
-                {effectiveCanEdit && (
+                <h2 className="text-sm font-bold text-text-secondary uppercase tracking-widest pl-2">
+                    {showArchive ? 'Архів служінь' : 'Найближчі служіння'}
+                </h2>
+                <div className="flex items-center gap-2">
                     <button
-                        onClick={() => setShowCreateModal(true)}
-                        className="text-black bg-white hover:bg-gray-200 p-2 rounded-xl transition-colors shadow-lg shadow-white/10"
-                        title="Додати служіння"
+                        onClick={() => setShowArchive(!showArchive)}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${showArchive ? 'bg-white text-black border-white' : 'bg-white/5 text-text-secondary border-white/5 hover:text-white'}`}
                     >
-                        <Plus className="w-5 h-5" />
+                        {showArchive ? 'Актуальні' : 'Архів'}
                     </button>
-                )}
-            </div>
-
-            {services.length === 0 ? (
-                <div className="text-center py-20 bg-surface/30 rounded-3xl border border-white/5 mx-2">
-                    <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white/50">
-                        <Calendar className="w-8 h-8" />
-                    </div>
-                    <p className="text-text-secondary font-medium">Немає запланованих служінь</p>
-                    {effectiveCanEdit && (
+                    {effectiveCanEdit && !showArchive && (
                         <button
                             onClick={() => setShowCreateModal(true)}
-                            className="mt-6 px-6 py-3 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-colors font-medium text-sm border border-white/5"
+                            className="bg-white text-black hover:bg-gray-200 p-2 rounded-xl transition-colors shadow-lg shadow-white/10"
+                            title="Додати служіння"
                         >
-                            Створити перше
+                            <Plus className="w-5 h-5" />
                         </button>
                     )}
                 </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {services.map(service => {
-                        const status = getMyStatus(service);
-                        const isFuture = isUpcoming(service.date);
+            </div>
 
-                        return (
-                            <div
-                                key={service.id}
-                                onClick={() => onSelectService(service)}
-                                className={`relative group p-5 rounded-2xl border transition-all cursor-pointer h-full flex flex-col justify-between ${isToday(service.date) ? 'bg-white/10 border-white/20' : 'bg-surface border-white/5 hover:border-white/10'}`}
-                            >
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${isToday(service.date) ? 'text-white' : 'text-text-secondary'}`}>
-                                            {isToday(service.date) ? 'Сьогодні' : formatDate(service.date)}
-                                        </p>
-                                        <h3 className="text-xl font-bold text-white mb-2">{service.title}</h3>
+            {/* Content Logic */}
+            {(() => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
 
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <div className={`px-2 py-0.5 rounded-lg text-xs font-medium border ${isToday(service.date) ? 'bg-white text-black border-white' : 'bg-white/5 text-text-secondary border-white/5'}`}>
-                                                {service.songs.length} пісень
+                // Smart Sort filters are done in DB, but let's strictly separate here for view
+                // Actually the `services` prop from getServices (Smart Sort) returns upcoming then past.
+                // We need to re-filter to separate them for the view toggle.
+
+                const upcomingServices = services.filter(s => new Date(s.date) >= today);
+                const pastServices = services.filter(s => new Date(s.date) < today);
+
+                const displayServices = showArchive ? pastServices : upcomingServices;
+
+                if (displayServices.length === 0) {
+                    return (
+                        <div className="text-center py-20 bg-surface/30 rounded-3xl border border-white/5 mx-2">
+                            <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white/50">
+                                <Calendar className="w-8 h-8" />
+                            </div>
+                            <p className="text-text-secondary font-medium">
+                                {showArchive ? 'Архіви порожні' : 'Немає запланованих служінь'}
+                            </p>
+                            {!showArchive && effectiveCanEdit && (
+                                <button
+                                    onClick={() => setShowCreateModal(true)}
+                                    className="mt-6 px-6 py-3 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-colors font-medium text-sm border border-white/5"
+                                >
+                                    Створити перше
+                                </button>
+                            )}
+                        </div>
+                    );
+                }
+
+                return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {displayServices.map(service => {
+                            const status = getMyStatus(service);
+                            const isFuture = isUpcoming(service.date);
+
+                            return (
+                                <div
+                                    key={service.id}
+                                    onClick={() => onSelectService(service)}
+                                    className={`relative group p-5 rounded-2xl border transition-all cursor-pointer h-full flex flex-col justify-between ${isToday(service.date) ? 'bg-white/10 border-white/20' : 'bg-surface border-white/5 hover:border-white/10'}`}
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${isToday(service.date) ? 'text-white' : 'text-text-secondary'}`}>
+                                                {isToday(service.date) ? 'Сьогодні' : formatDate(service.date)}
+                                            </p>
+                                            <h3 className="text-xl font-bold text-white mb-2">{service.title}</h3>
+
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <div className={`px-2 py-0.5 rounded-lg text-xs font-medium border ${isToday(service.date) ? 'bg-white text-black border-white' : 'bg-white/5 text-text-secondary border-white/5'}`}>
+                                                    {service.songs.length} пісень
+                                                </div>
                                             </div>
+
+                                            {/* Voting Area */}
+                                            {isFuture && (
+                                                <div className="flex gap-2 mt-3" onClick={e => e.stopPropagation()}>
+                                                    {(status === 'unknown' || status === 'present') && (
+                                                        <button
+                                                            onClick={(e) => handleVote(e, service.id, 'present')}
+                                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${status === 'present' ? 'bg-green-500 text-white ring-2 ring-green-500/50' : 'bg-white/5 text-text-secondary hover:bg-white/10 hover:text-white'}`}
+                                                        >
+                                                            <Check className="w-3.5 h-3.5" />
+                                                            {status === 'present' ? 'Я буду' : 'Буду'}
+                                                        </button>
+                                                    )}
+
+                                                    {(status === 'unknown' || status === 'absent') && (
+                                                        <button
+                                                            onClick={(e) => handleVote(e, service.id, 'absent')}
+                                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${status === 'absent' ? 'bg-red-500/20 text-red-400 ring-1 ring-red-500/50' : 'bg-white/5 text-text-secondary hover:bg-white/10 hover:text-white'}`}
+                                                        >
+                                                            <X className="w-3.5 h-3.5" />
+                                                            {status === 'absent' ? 'Не буду' : 'Не буду'}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
 
-                                        {/* Voting Area */}
-                                        {isFuture && (
-                                            <div className="flex gap-2 mt-3" onClick={e => e.stopPropagation()}>
-                                                {(status === 'unknown' || status === 'present') && (
-                                                    <button
-                                                        onClick={(e) => handleVote(e, service.id, 'present')}
-                                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${status === 'present' ? 'bg-green-500 text-white ring-2 ring-green-500/50' : 'bg-white/5 text-text-secondary hover:bg-white/10 hover:text-white'}`}
-                                                    >
-                                                        <Check className="w-3.5 h-3.5" />
-                                                        {status === 'present' ? 'Я буду' : 'Буду'}
-                                                    </button>
-                                                )}
-
-                                                {(status === 'unknown' || status === 'absent') && (
-                                                    <button
-                                                        onClick={(e) => handleVote(e, service.id, 'absent')}
-                                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${status === 'absent' ? 'bg-red-500/20 text-red-400 ring-1 ring-red-500/50' : 'bg-white/5 text-text-secondary hover:bg-white/10 hover:text-white'}`}
-                                                    >
-                                                        <X className="w-3.5 h-3.5" />
-                                                        {status === 'absent' ? 'Не буду' : 'Не буду'}
-                                                    </button>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="flex flex-col items-end gap-2">
-                                        {effectiveCanEdit && (
-                                            <button
-                                                onClick={(e) => initiateDelete(e, service.id)}
-                                                className="p-1.5 text-text-secondary hover:text-red-500 hover:bg-white/10 rounded-lg transition-colors z-20"
-                                            >
-                                                <Trash2 className="w-5 h-5" />
-                                            </button>
-                                        )}
-                                        <ChevronRight className="w-5 h-5 text-white/20 group-hover:text-white transition-colors" />
+                                        <div className="flex flex-col items-end gap-2">
+                                            {effectiveCanEdit && (
+                                                <button
+                                                    onClick={(e) => initiateDelete(e, service.id)}
+                                                    className="p-1.5 text-text-secondary hover:text-red-500 hover:bg-white/10 rounded-lg transition-colors z-20"
+                                                >
+                                                    <Trash2 className="w-5 h-5" />
+                                                </button>
+                                            )}
+                                            <ChevronRight className="w-5 h-5 text-white/20 group-hover:text-white transition-colors" />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        )
-                    })}
-                </div>
-            )}
+                            )
+                        })}
+                    </div>
+                );
+            })()}
 
             <ConfirmationModal
                 isOpen={!!serviceToDelete}

@@ -263,61 +263,63 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                             </div>
                         )}
 
-                        {/* Attendees Section */}
-                        <div onClick={() => canEdit && setShowAttendance(true)} className={`p-5 bg-surface border border-white/5 rounded-3xl space-y-4 ${canEdit ? 'cursor-pointer hover:border-white/20 transition-colors' : ''}`}>
-                            <div className="flex justify-between items-center">
-                                <div className="flex items-center gap-2 text-white font-bold">
-                                    <Users className="w-5 h-5 text-indigo-400" />
-                                    <span>Учасники</span>
+                        {/* Attendees Section - Only visible to Admins OR for Past services (Attendance history) */}
+                        {(canEdit || !isFuture) && (
+                            <div onClick={() => canEdit && setShowAttendance(true)} className={`p-5 bg-surface border border-white/5 rounded-3xl space-y-4 ${canEdit ? 'cursor-pointer hover:border-white/20 transition-colors' : ''}`}>
+                                <div className="flex justify-between items-center">
+                                    <div className="flex items-center gap-2 text-white font-bold">
+                                        <Users className="w-5 h-5 text-indigo-400" />
+                                        <span>Учасники</span>
+                                    </div>
+                                    {canEdit && <span className="text-xs text-text-secondary bg-white/5 px-2 py-1 rounded-full">Редагувати</span>}
                                 </div>
-                                {canEdit && <span className="text-xs text-text-secondary bg-white/5 px-2 py-1 rounded-full">Редагувати</span>}
-                            </div>
 
-                            {!membersLoading ? (
-                                <div className="flex items-center justify-between">
-                                    <div className="flex -space-x-3">
-                                        {/* Show Confirmed members primarily */}
-                                        {previewAttendees.map((member) => (
-                                            <div key={member.id} className="w-10 h-10 rounded-full border-2 border-[#18181b] bg-green-500 flex items-center justify-center text-xs font-bold text-black font-mono">
-                                                {member.name?.[0]?.toUpperCase()}
-                                            </div>
-                                        ))}
-                                        {extraAttendees > 0 && (
-                                            <div className="w-10 h-10 rounded-full border-2 border-[#18181b] bg-surface-highlight flex items-center justify-center text-xs font-bold text-white">
-                                                +{extraAttendees}
-                                            </div>
-                                        )}
-                                        {/* If no one confirmed, show placeholder in gray */}
-                                        {confirmedCount === 0 && (
-                                            <div className="w-10 h-10 rounded-full border-2 border-[#18181b] bg-white/5 flex items-center justify-center text-xs text-text-secondary">
-                                                ?
-                                            </div>
-                                        )}
+                                {!membersLoading ? (
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex -space-x-3">
+                                            {/* Show Confirmed members primarily */}
+                                            {previewAttendees.map((member) => (
+                                                <div key={member.id} className="w-10 h-10 rounded-full border-2 border-[#18181b] bg-green-500 flex items-center justify-center text-xs font-bold text-black font-mono">
+                                                    {member.name?.[0]?.toUpperCase()}
+                                                </div>
+                                            ))}
+                                            {extraAttendees > 0 && (
+                                                <div className="w-10 h-10 rounded-full border-2 border-[#18181b] bg-surface-highlight flex items-center justify-center text-xs font-bold text-white">
+                                                    +{extraAttendees}
+                                                </div>
+                                            )}
+                                            {/* If no one confirmed, show placeholder in gray */}
+                                            {confirmedCount === 0 && (
+                                                <div className="w-10 h-10 rounded-full border-2 border-[#18181b] bg-white/5 flex items-center justify-center text-xs text-text-secondary">
+                                                    ?
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-2xl font-bold text-white transition-all">{confirmedCount}</p>
+                                            <p className="text-xs text-text-secondary">підтвердили</p>
+                                        </div>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="text-2xl font-bold text-white transition-all">{confirmedCount}</p>
-                                        <p className="text-xs text-text-secondary">підтвердили</p>
-                                    </div>
+                                ) : (
+                                    <div className="h-10 w-full animate-pulse bg-white/5 rounded-xl" />
+                                )}
+
+                                {/* Show absence count separately OR expected count */}
+                                <div className="flex items-center gap-4 text-xs font-medium pt-1">
+                                    {(choirMembers.length - absentCount) > confirmedCount && (
+                                        <div className="text-text-secondary">
+                                            Очікується: <span className="text-white">{choirMembers.length - absentCount}</span>
+                                        </div>
+                                    )}
+                                    {absentCount > 0 && (
+                                        <div className="flex items-center gap-1 text-orange-400">
+                                            <AlertCircle className="w-3 h-3" />
+                                            <span>{absentCount} не буде</span>
+                                        </div>
+                                    )}
                                 </div>
-                            ) : (
-                                <div className="h-10 w-full animate-pulse bg-white/5 rounded-xl" />
-                            )}
-
-                            {/* Show absence count separately OR expected count */}
-                            <div className="flex items-center gap-4 text-xs font-medium pt-1">
-                                {(choirMembers.length - absentCount) > confirmedCount && (
-                                    <div className="text-text-secondary">
-                                        Очікується: <span className="text-white">{choirMembers.length - absentCount}</span>
-                                    </div>
-                                )}
-                                {absentCount > 0 && (
-                                    <div className="flex items-center gap-1 text-orange-400">
-                                        <AlertCircle className="w-3 h-3" />
-                                        <span>{absentCount} не буде</span>
-                                    </div>
-                                )}
                             </div>
-                        </div>
+                        )}
                     </div>
 
                     {/* Right Column (Songs) */}
