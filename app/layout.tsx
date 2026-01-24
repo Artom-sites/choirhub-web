@@ -27,6 +27,20 @@ export const metadata: Metadata = {
     siteName: "MyChoir",
     locale: "uk_UA",
     type: "website",
+    images: [
+      {
+        url: "/apple-touch-icon.png",
+        width: 512,
+        height: 512,
+        alt: "MyChoir Icon",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    title: "MyChoir",
+    description: "Застосунок для управління хоровим репертуаром та нотами",
+    images: ["/apple-touch-icon.png"],
   },
   appleWebApp: {
     title: "MyChoir",
