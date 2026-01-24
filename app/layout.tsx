@@ -25,14 +25,6 @@ export const metadata: Metadata = {
     title: "MyChoir",
     description: "Хоровий репертуар та ноти у вашій кишені",
     siteName: "MyChoir",
-    images: [
-      {
-        url: "/apple-touch-icon.png",
-        width: 512,
-        height: 512,
-        alt: "MyChoir Icon",
-      },
-    ],
     locale: "uk_UA",
     type: "website",
   },
