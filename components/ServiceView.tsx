@@ -136,14 +136,16 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
     );
 
     const absentCount = absentMembers.length;
-    const presentMembers = choirMembers.filter(m => !absentMembers.includes(m.id));
-    const presentCount = presentMembers.length;
+    // Explicitly confirmed members (Only those who voted "Present")
+    const confirmedMembersList = choirMembers.filter(m => currentService.confirmedMembers?.includes(m.id));
+    const confirmedCount = confirmedMembersList.length;
+
     const myStatus = getMyStatus();
     const isFuture = isUpcoming(currentService.date);
 
-    // Get avatars for preview
-    const previewAttendees = membersLoading ? [] : presentMembers.slice(0, 4);
-    const extraAttendees = presentCount > 4 ? presentCount - 4 : 0;
+    // Get avatars for preview (only explicitly confirmed)
+    const previewAttendees = membersLoading ? [] : confirmedMembersList.slice(0, 4);
+    const extraAttendees = confirmedCount > 4 ? confirmedCount - 4 : 0;
 
     return (
         <div className="pb-32 bg-background min-h-screen">
@@ -233,8 +235,9 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                             {!membersLoading ? (
                                 <div className="flex items-center justify-between">
                                     <div className="flex -space-x-3">
+                                        {/* Show Confirmed members primarily */}
                                         {previewAttendees.map((member) => (
-                                            <div key={member.id} className="w-10 h-10 rounded-full border-2 border-[#18181b] bg-indigo-500/90 flex items-center justify-center text-xs font-bold text-white">
+                                            <div key={member.id} className="w-10 h-10 rounded-full border-2 border-[#18181b] bg-green-500 flex items-center justify-center text-xs font-bold text-black font-mono">
                                                 {member.name?.[0]?.toUpperCase()}
                                             </div>
                                         ))}
@@ -243,9 +246,15 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                                 +{extraAttendees}
                                             </div>
                                         )}
+                                        {/* If no one confirmed, show placeholder in gray */}
+                                        {confirmedCount === 0 && (
+                                            <div className="w-10 h-10 rounded-full border-2 border-[#18181b] bg-white/5 flex items-center justify-center text-xs text-text-secondary">
+                                                ?
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-2xl font-bold text-white">{presentCount}</p>
+                                        <p className="text-2xl font-bold text-white transition-all">{confirmedCount}</p>
                                         <p className="text-xs text-text-secondary">підтвердили</p>
                                     </div>
                                 </div>
@@ -253,12 +262,18 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                 <div className="h-10 w-full animate-pulse bg-white/5 rounded-xl" />
                             )}
 
-                            {absentCount > 0 && (
-                                <div className="flex items-center gap-2 text-xs text-orange-400/80 bg-orange-500/10 p-2 rounded-lg">
-                                    <AlertCircle className="w-4 h-4" />
-                                    <span>{absentCount} не зможуть бути</span>
+                            {/* Show absence count separately OR expected count */}
+                            <div className="flex items-center gap-4 text-xs font-medium pt-1">
+                                <div className="text-text-secondary">
+                                    Очікується: <span className="text-white">{choirMembers.length - absentCount}</span>
                                 </div>
-                            )}
+                                {absentCount > 0 && (
+                                    <div className="flex items-center gap-1 text-orange-400">
+                                        <AlertCircle className="w-3 h-3" />
+                                        <span>{absentCount} не буде</span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 
