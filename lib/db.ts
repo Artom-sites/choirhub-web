@@ -122,10 +122,8 @@ export async function uploadSongPdf(choirId: string, songId: string, file: File 
         // Update the song document in Firestore with the URL
         await updateSong(choirId, songId, {
             hasPdf: true,
-            pdfUrl: downloadUrl,
-            // Clear legacy field
-            pdfData: undefined
-        } as any);
+            pdfUrl: downloadUrl
+        });
 
         return downloadUrl;
     } catch (error) {
