@@ -86,21 +86,53 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
         return 'unknown';
     };
 
-    const handleAddSong = async (song: SimpleSong) => {
-        if (!userData?.choirId) return;
 
-        const newServiceSong: ServiceSong = {
-            songId: song.id,
-            songTitle: song.title
-        };
 
-        const updatedSongs = [...currentService.songs, newServiceSong];
+    const [selectedSongsToService, setSelectedSongsToService] = useState<string[]>([]);
+    const [addingSongsLoading, setAddingSongsLoading] = useState(false);
+
+    const toggleSongSelection = (songId: string) => {
+        setSelectedSongsToService(prev =>
+            prev.includes(songId)
+                ? prev.filter(id => id !== songId)
+                : [...prev, songId]
+        );
+    };
+
+    const handleBatchAddSongs = async () => {
+        if (!userData?.choirId || selectedSongsToService.length === 0) return;
+        setAddingSongsLoading(true);
+
+        // Find full song objects
+        const songsToAdd = availableSongs.filter(s => selectedSongsToService.includes(s.id));
+        const newServiceSongs: ServiceSong[] = songsToAdd.map(s => ({
+            songId: s.id,
+            songTitle: s.title
+        }));
+
+        const updatedSongs = [...currentService.songs, ...newServiceSongs];
         setCurrentService({ ...currentService, songs: updatedSongs });
+
         setShowAddSong(false);
         setSearch("");
+        setSelectedSongsToService([]);
+        setAddingSongsLoading(false);
 
-        await addSongToService(userData.choirId, currentService.id, newServiceSong);
+        // Save to DB (One by one or strictly update array - current impl adds one by one, 
+        // but ideally we should update the whole array. existing removeSongFromService updates whole array.
+        // addSongToService appends to arrayUnion. We can call it in loop or update whole doc.
+        // Let's use updateService to overwrite the songs array for consistency and atomicity if possible, 
+        // but 'addSongToService' might be using arrayUnion.
+        // Check 'removeSongFromService': it does updateDoc({songs: newSongs}).
+        // So we can just use updateService to set the new list.
+        try {
+            await updateService(userData.choirId, currentService.id, { songs: updatedSongs });
+        } catch (e) {
+            console.error("Failed to batch add songs", e);
+        }
     };
+
+
 
     const handleRemoveSong = async (index: number) => {
         if (!userData?.choirId) return;
@@ -372,42 +404,74 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
             </div>
 
             {/* Modals remain mostly simple, just style updates */}
-            {/* Add Song Sheet */}
+            {/* Add Song Sheet - Full Screen Multiselect */}
             {showAddSong && (
-                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col pt-24 animate-in slide-in-from-bottom duration-300">
-                    <div className="bg-[#09090b] flex-1 rounded-t-[32px] overflow-hidden flex flex-col ring-1 ring-white/10">
-                        <div className="p-6 border-b border-white/5 flex justify-between items-center bg-surface">
-                            <h3 className="text-xl font-bold text-white">Додати пісню</h3>
-                            <button onClick={() => setShowAddSong(false)} className="p-2 bg-white/10 rounded-full hover:bg-white/20">
-                                <X className="w-6 h-6 text-white" />
+                <div className="fixed inset-0 z-[60] bg-[#09090b] flex flex-col animate-in slide-in-from-bottom duration-300">
+                    <div className="p-4 pt-safe border-b border-white/5 flex justify-between items-center bg-surface/50 backdrop-blur-xl sticky top-0 z-10">
+                        <div className="flex items-center gap-3">
+                            <button onClick={() => setShowAddSong(false)} className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors text-white">
+                                <ChevronLeft className="w-6 h-6" />
                             </button>
+                            <div>
+                                <h3 className="text-xl font-bold text-white">Додати пісні</h3>
+                                <p className="text-xs text-text-secondary">Оберіть пісні зі списку</p>
+                            </div>
                         </div>
+                        <div className="w-10" /> {/* Spacer for balance */}
+                    </div>
 
-                        <div className="p-4 bg-surface border-b border-white/5">
-                            <input
-                                type="text"
-                                placeholder="Пошук пісні..."
-                                className="w-full px-5 py-4 bg-black/40 rounded-2xl text-white border border-white/5 focus:outline-none focus:border-white/20 text-lg placeholder:text-white/20"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                autoFocus
-                            />
-                        </div>
+                    <div className="p-4 bg-background sticky top-[73px] z-10 border-b border-white/5">
+                        <input
+                            type="text"
+                            placeholder="Пошук пісні..."
+                            className="w-full px-5 py-4 bg-surface rounded-2xl text-white border border-white/5 focus:outline-none focus:border-white/20 text-lg placeholder:text-text-secondary/50"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </div>
 
-                        <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-black/20">
-                            {filteredSongs.map(song => (
+                    <div className="flex-1 overflow-y-auto p-4 space-y-2 pb-32">
+                        {filteredSongs.map(song => {
+                            const isSelected = selectedSongsToService.includes(song.id);
+                            const alreadyInService = currentService.songs.some(s => s.songId === song.id);
+
+                            if (alreadyInService) return null;
+
+                            return (
                                 <button
                                     key={song.id}
-                                    onClick={() => handleAddSong(song)}
-                                    className="w-full text-left p-4 bg-surface hover:bg-white/10 rounded-2xl border border-white/5 flex justify-between items-center group transition-all"
+                                    onClick={() => toggleSongSelection(song.id)}
+                                    className={`w-full text-left p-4 rounded-2xl border flex justify-between items-center group transition-all ${isSelected
+                                        ? 'bg-blue-500/10 border-blue-500/50'
+                                        : 'bg-surface border-white/5 hover:bg-white/10'
+                                        }`}
                                 >
-                                    <span className="text-white font-medium text-lg">{song.title}</span>
-                                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-green-500 group-hover:text-black transition-colors">
-                                        <Plus className="w-6 h-6" />
+                                    <span className={`font-medium text-lg ${isSelected ? 'text-blue-400' : 'text-white'}`}>{song.title}</span>
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isSelected
+                                        ? 'bg-blue-500 text-white'
+                                        : 'bg-white/5 text-text-secondary group-hover:bg-white/20'
+                                        }`}>
+                                        {isSelected ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
                                     </div>
                                 </button>
-                            ))}
-                        </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Bottom Action Bar */}
+                    <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#09090b]/90 backdrop-blur-xl border-t border-white/5 pb-safe">
+                        <button
+                            onClick={handleBatchAddSongs}
+                            disabled={selectedSongsToService.length === 0}
+                            className="w-full py-4 bg-white text-black rounded-2xl font-bold text-lg hover:bg-gray-200 transition-colors shadow-lg disabled:opacity-50 disabled:bg-gray-600 disabled:text-gray-400 flex items-center justify-center gap-2"
+                        >
+                            Додати
+                            {selectedSongsToService.length > 0 && (
+                                <span className="bg-black text-white text-xs px-2 py-0.5 rounded-full min-w-[20px]">
+                                    {selectedSongsToService.length}
+                                </span>
+                            )}
+                        </button>
                     </div>
                 </div>
             )}
