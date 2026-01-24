@@ -3,8 +3,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import {
-    ChevronLeft,
-    ChevronRight,
     X,
     Loader2,
     ZoomIn,
@@ -29,7 +27,6 @@ interface PDFViewerProps {
 
 export default function PDFViewer({ url, title, onClose }: PDFViewerProps) {
     const [numPages, setNumPages] = useState<number>(0);
-    const [pageNumber, setPageNumber] = useState<number>(1);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [workerReady, setWorkerReady] = useState(false);
@@ -41,7 +38,6 @@ export default function PDFViewer({ url, title, onClose }: PDFViewerProps) {
         const setupWorker = async () => {
             try {
                 const pdfjs = await import("react-pdf");
-                // Explicitly use the version from the imported library
                 const version = pdfjs.pdfjs.version;
                 if (!version) throw new Error("PDF.js version not found");
 
@@ -58,11 +54,10 @@ export default function PDFViewer({ url, title, onClose }: PDFViewerProps) {
     useEffect(() => {
         const updateWidth = () => {
             if (containerRef.current) {
-                // Subtle margin to prevent edge clipping (critical for mobile)
-                setContainerWidth(containerRef.current.offsetWidth - 20);
+                setContainerWidth(containerRef.current.offsetWidth - 20); // Margin
             }
         };
-        // Initial delay to let layout settle
+        // Initial delay
         setTimeout(updateWidth, 100);
         window.addEventListener("resize", updateWidth);
         return () => window.removeEventListener("resize", updateWidth);
@@ -79,9 +74,6 @@ export default function PDFViewer({ url, title, onClose }: PDFViewerProps) {
         setIsLoading(false);
     }, []);
 
-    const goToPrevPage = () => setPageNumber((p) => Math.max(1, p - 1));
-    const goToNextPage = () => setPageNumber((p) => Math.min(numPages, p + 1));
-
     const handleZoomIn = () => setScale(s => Math.min(s + 0.25, 3));
     const handleZoomOut = () => setScale(s => Math.max(s - 0.25, 0.5));
 
@@ -95,7 +87,7 @@ export default function PDFViewer({ url, title, onClose }: PDFViewerProps) {
 
     return (
         <div className="flex flex-col h-full bg-[#09090b] relative z-50">
-            {/* Header - Floating overlay style */}
+            {/* Header */}
             <header className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-10 bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
                 <button
                     onClick={onClose}
@@ -121,73 +113,55 @@ export default function PDFViewer({ url, title, onClose }: PDFViewerProps) {
                 </div>
             </header>
 
-            {/* PDF Content */}
+            {/* Content (Scrollable) */}
             <div
                 ref={containerRef}
-                className="flex-1 overflow-auto flex justify-center items-center bg-[#09090b]"
+                className="flex-1 overflow-y-auto bg-[#09090b] custom-scrollbar"
                 style={{ WebkitOverflowScrolling: 'touch' }}
             >
-                {isLoading && (
-                    <div className="flex flex-col items-center justify-center gap-4">
-                        <Loader2 className="w-10 h-10 text-primary animate-spin" />
-                    </div>
-                )}
+                <div className="min-h-full flex flex-col items-center py-20 px-4 gap-6">
+                    {isLoading && (
+                        <div className="flex items-center justify-center py-20">
+                            <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                        </div>
+                    )}
 
-                {error && (
-                    <div className="text-center p-4">
-                        <p className="text-red-400 mb-4">{error}</p>
-                        <button onClick={() => window.location.reload()} className="px-6 py-2 bg-white text-black rounded-xl">
-                            Спробувати знову
-                        </button>
-                    </div>
-                )}
+                    {error && (
+                        <div className="text-center py-20">
+                            <p className="text-red-400 mb-4">{error}</p>
+                            <button onClick={() => window.location.reload()} className="px-6 py-2 bg-white text-black rounded-xl">
+                                Спробувати знову
+                            </button>
+                        </div>
+                    )}
 
-                <div className={isLoading ? "hidden" : "p-4 min-h-full flex items-center"}>
                     <Document
                         file={url}
                         onLoadSuccess={onDocumentLoadSuccess}
                         onLoadError={onDocumentLoadError}
                         loading={null}
-                        className="shadow-2xl"
+                        className="flex flex-col gap-6"
                     >
-                        <Page
-                            pageNumber={pageNumber}
-                            width={containerWidth ? (Math.min(containerWidth, 800) * scale) : undefined}
-                            renderTextLayer={false}
-                            renderAnnotationLayer={false}
-                            className="bg-white shadow-lg overflow-hidden"
-                            loading={null}
-                        />
+                        {Array.from(new Array(numPages), (el, index) => (
+                            <div key={`page_${index + 1}`} className="shadow-2xl">
+                                <Page
+                                    pageNumber={index + 1}
+                                    width={containerWidth ? (Math.min(containerWidth, 800) * scale) : undefined}
+                                    renderTextLayer={false}
+                                    renderAnnotationLayer={false}
+                                    className="bg-white overflow-hidden rounded-sm"
+                                    loading={
+                                        <div className="w-full aspect-[1/1.4] bg-white/5 animate-pulse rounded-sm" />
+                                    }
+                                />
+                                <div className="text-center mt-2 text-xs text-text-secondary/50">
+                                    {index + 1} / {numPages}
+                                </div>
+                            </div>
+                        ))}
                     </Document>
                 </div>
             </div>
-
-            {/* Bottom Controls */}
-            <footer className="absolute bottom-6 left-0 right-0 flex justify-center pointer-events-none">
-                {numPages > 1 && (
-                    <div className="bg-black/60 backdrop-blur-lg border border-white/10 rounded-full px-6 py-3 flex items-center gap-6 shadow-2xl pointer-events-auto">
-                        <button
-                            onClick={goToPrevPage}
-                            disabled={pageNumber <= 1}
-                            className="p-1 rounded-full hover:bg-white/10 disabled:opacity-30 transition-colors text-white"
-                        >
-                            <ChevronLeft className="w-6 h-6" />
-                        </button>
-
-                        <span className="text-white font-bold font-mono">
-                            {pageNumber} / {numPages}
-                        </span>
-
-                        <button
-                            onClick={goToNextPage}
-                            disabled={pageNumber >= numPages}
-                            className="p-1 rounded-full hover:bg-white/10 disabled:opacity-30 transition-colors text-white"
-                        >
-                            <ChevronRight className="w-6 h-6" />
-                        </button>
-                    </div>
-                )}
-            </footer>
         </div>
     );
 }

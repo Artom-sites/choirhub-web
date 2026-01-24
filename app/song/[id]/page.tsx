@@ -29,6 +29,10 @@ export default function SongPage() {
             setLoading(true);
             const fetched = await getSong(userData.choirId, songId);
             setSong(fetched);
+            // Auto-open PDF if available
+            if (fetched?.hasPdf && fetched.pdfData) {
+                setShowViewer(true);
+            }
             setLoading(false);
         }
 
