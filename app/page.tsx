@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { getChoir, createUser, updateChoirMembers, getServices, updateChoirIcon } from "@/lib/db";
 import { Service, Choir, UserMembership, ChoirMember } from "@/types";
@@ -18,14 +18,25 @@ import { db } from "@/lib/firebase";
 
 export default function HomePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, userData, loading: authLoading, signOut, refreshProfile } = useAuth();
 
   const [choir, setChoir] = useState<Choir | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [pageLoading, setPageLoading] = useState(true);
 
-  // Navigation State - now with 3 tabs
-  const [activeTab, setActiveTab] = useState<'home' | 'songs' | 'members'>('home');
+  // Navigation State - driven by URL params
+  const activeTabRaw = searchParams.get('tab');
+  const activeTab = (activeTabRaw === 'songs' || activeTabRaw === 'members') ? activeTabRaw : 'home';
+
+  const setActiveTab = (tab: 'home' | 'songs' | 'members') => {
+    // Update URL without full reload
+    const newParams = new URLSearchParams(searchParams.toString());
+    if (tab === 'home') newParams.delete('tab');
+    else newParams.set('tab', tab);
+
+    router.replace(`/?${newParams.toString()}`, { scroll: false });
+  };
   const [selectedService, setSelectedService] = useState<Service | null>(null);
 
   // Overlays
