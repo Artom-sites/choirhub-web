@@ -72,30 +72,36 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
     const handleAddSong = async (title: string, category: string, conductor: string, pdfFile?: File) => {
         if (!userData?.choirId) return;
 
-        // 1. Create song first
+        // 1. Create song first (fast)
         const newSongId = await addSong(userData.choirId, {
             title,
             category,
             conductor,
-            hasPdf: false, // Will verify after upload
+            hasPdf: false,
             addedAt: new Date().toISOString(),
         });
 
-        // 2. Upload PDF if provided
-        if (pdfFile) {
-            try {
-                // Use File object directly now
-                await uploadSongPdf(userData.choirId, newSongId, pdfFile);
-            } catch (e) {
-                console.error("Failed to upload PDF for new song:", e);
-                // We created the song but failed PDF. 
-                // It will show up without PDF. User can retry in SongPage.
+        // 2. Background Upload logic
+        const uploadBackground = async () => {
+            if (pdfFile) {
+                try {
+                    await uploadSongPdf(userData.choirId, newSongId, pdfFile);
+                } catch (e) {
+                    console.error("Failed to upload PDF for new song:", e);
+                }
             }
-        }
+            // Refresh list after upload (or failure to show song)
+            const fetched = await getSongs(userData.choirId);
+            setSongsState(fetched);
+        };
 
-        // Refresh list
-        const fetched = await getSongs(userData.choirId);
-        setSongsState(fetched);
+        // Start background process
+        uploadBackground();
+
+        // 3. Immediately refresh list to show the new song (without PDF yet)
+        // and let the modal close
+        const currentSongs = await getSongs(userData.choirId);
+        setSongsState(currentSongs);
     };
 
     if (loading) {
