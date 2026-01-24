@@ -83,16 +83,23 @@ function HomePageContent() {
         // Check for joinCode param
         const joinCodeParam = searchParams.get('joinCode');
         if (joinCodeParam) {
-          // Remove param from URL without refresh
           const newParams = new URLSearchParams(searchParams.toString());
           newParams.delete('joinCode');
           router.replace(`/?${newParams.toString()}`, { scroll: false });
 
-          // Open join modal
-          setShowAccount(false); // Ensure other overlays are closed
+          setShowAccount(false);
           setShowChoirManager(true);
           setManagerMode('join');
           setJoinCode(joinCodeParam);
+        }
+
+        // Check for serviceId param (Android Back Support)
+        const serviceIdParam = searchParams.get('serviceId');
+        if (serviceIdParam) {
+          const foundService = fetchedServices.find(s => s.id === serviceIdParam);
+          if (foundService) setSelectedService(foundService);
+        } else {
+          setSelectedService(null);
         }
       }
       setPageLoading(false);
@@ -100,6 +107,24 @@ function HomePageContent() {
     init();
 
   }, [authLoading, user, userData, router, searchParams]);
+
+  // Handle Service Selection with URL sync
+  const handleSelectService = (service: Service | null) => {
+    const newParams = new URLSearchParams(searchParams.toString());
+    if (service) {
+      newParams.set('serviceId', service.id);
+      router.push(`/?${newParams.toString()}`, { scroll: false });
+      // State update will happen via useEffect or we can set it eagerly
+      setSelectedService(service);
+    } else {
+      newParams.delete('serviceId');
+      // If we are "going back", we might want router.back() if history length > 1, 
+      // but replacing is safer to just clear the param if clicked "Back" button in UI.
+      // However, if user clicks browser back, searchParams changes automatically.
+      // If user clicks UI back button, we should remove param.
+      router.back(); // This mimics browser back, which typically removes the last pushed state
+    }
+  };
 
   const copyCode = async (code: string) => {
     await navigator.clipboard.writeText(code);
@@ -315,7 +340,7 @@ function HomePageContent() {
       <main className="min-h-screen bg-[#09090b] selection:bg-white/30">
         <ServiceView
           service={selectedService}
-          onBack={() => setSelectedService(null)}
+          onBack={() => handleSelectService(null)}
           canEdit={canEdit}
         />
       </main>
@@ -662,7 +687,7 @@ function HomePageContent() {
       {/* Tab Content */}
       <div className="animate-in fade-in duration-300">
         {activeTab === 'home' && (
-          <ServiceList onSelectService={setSelectedService} canEdit={canEdit} />
+          <ServiceList onSelectService={handleSelectService} canEdit={canEdit} />
         )}
 
         {activeTab === 'songs' && (

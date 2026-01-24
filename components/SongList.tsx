@@ -148,7 +148,7 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
             </div>
 
             {/* Search & Filter - Fixed Top Offset */}
-            <div className="flex gap-3 sticky top-[88px] z-10 py-3 -mx-4 px-4 bg-[#09090b]/90 backdrop-blur-xl">
+            <div className="flex gap-3 sticky top-[72px] z-20 py-3 -mx-4 px-4 bg-[#09090b] border-b border-white/5 shadow-xl">
                 <div className="relative flex-1 group">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary group-focus-within:text-white transition-colors" />
                     <input
