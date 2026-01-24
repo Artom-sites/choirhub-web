@@ -112,21 +112,14 @@ export async function updateSong(choirId: string, songId: string, updates: Parti
     }
 }
 
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { storage } from "./firebase";
+import { uploadPdfToSupabase } from "./supabase";
 
 export async function uploadSongPdf(choirId: string, songId: string, file: File | Blob): Promise<string> {
     try {
-        // Create a reference to 'songs/<choirId>/<songId>.pdf'
-        const storageRef = ref(storage, `songs/${choirId}/${songId}.pdf`);
+        // Upload to Supabase Storage
+        const downloadUrl = await uploadPdfToSupabase(choirId, songId, file);
 
-        // Upload the File/Blob directly using resumable upload
-        await uploadBytesResumable(storageRef, file);
-
-        // Get the download URL
-        const downloadUrl = await getDownloadURL(storageRef);
-
-        // Update the song document with the URL
+        // Update the song document in Firestore with the URL
         await updateSong(choirId, songId, {
             hasPdf: true,
             pdfUrl: downloadUrl,
@@ -271,9 +264,25 @@ export async function getChoir(choirId: string): Promise<Choir | null> {
 
 export async function uploadChoirIcon(choirId: string, file: File | Blob): Promise<string> {
     try {
-        const storageRef = ref(storage, `choirs/${choirId}/icon.jpg`);
-        await uploadBytesResumable(storageRef, file);
-        const downloadUrl = await getDownloadURL(storageRef);
+        // Upload to Supabase Storage (using 'icons' bucket or folder)
+        const { supabase } = await import("./supabase");
+        const fileName = `choirs/${choirId}/icon.jpg`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('songs')
+            .upload(fileName, file, {
+                cacheControl: '3600',
+                upsert: true,
+                contentType: 'image/jpeg'
+            });
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage
+            .from('songs')
+            .getPublicUrl(fileName);
+
+        const downloadUrl = urlData.publicUrl;
 
         const docRef = doc(db, "choirs", choirId);
         await updateDoc(docRef, {
