@@ -126,6 +126,8 @@ export default function SongPage() {
         );
     }
 
+    const canEdit = userData?.role === 'head' || userData?.role === 'regent';
+
     return (
         <div className="min-h-screen bg-[#09090b] text-white">
             {/* Header */}
@@ -165,23 +167,25 @@ export default function SongPage() {
                                 Відкрити ноти
                             </button>
 
-                            <div className="mt-8 pt-6 border-t border-white/5">
-                                <p className="text-xs text-text-secondary mb-3 uppercase tracking-wider font-semibold">Оновити файл</p>
-                                <input
-                                    ref={fileInputRef}
-                                    type="file"
-                                    accept=".pdf,application/pdf"
-                                    onChange={handleFileSelect}
-                                    className="hidden"
-                                />
-                                <button
-                                    onClick={() => fileInputRef.current?.click()}
-                                    disabled={uploading}
-                                    className="w-full py-3 border border-white/10 rounded-xl text-text-secondary hover:text-white hover:bg-white/5 transition-colors text-sm font-medium"
-                                >
-                                    {uploading ? "Завантаження..." : "Завантажити інший PDF"}
-                                </button>
-                            </div>
+                            {canEdit && (
+                                <div className="mt-8 pt-6 border-t border-white/5">
+                                    <p className="text-xs text-text-secondary mb-3 uppercase tracking-wider font-semibold">Оновити файл</p>
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept=".pdf,application/pdf"
+                                        onChange={handleFileSelect}
+                                        className="hidden"
+                                    />
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={uploading}
+                                        className="w-full py-3 border border-white/10 rounded-xl text-text-secondary hover:text-white hover:bg-white/5 transition-colors text-sm font-medium"
+                                    >
+                                        {uploading ? "Завантаження..." : "Завантажити інший PDF"}
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         // No PDF
@@ -196,48 +200,54 @@ export default function SongPage() {
                                 Для цієї пісні ще не завантажено PDF файл
                             </p>
 
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept=".pdf,application/pdf"
-                                onChange={handleFileSelect}
-                                className="hidden"
-                            />
+                            {canEdit ? (
+                                <>
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept=".pdf,application/pdf"
+                                        onChange={handleFileSelect}
+                                        className="hidden"
+                                    />
 
-                            <button
-                                onClick={() => fileInputRef.current?.click()}
-                                disabled={uploading}
-                                className="w-full py-4 bg-white/10 border border-white/10 rounded-xl text-white font-bold hover:bg-white/20 transition-all flex items-center justify-center gap-3 group"
-                            >
-                                {uploading ? (
-                                    <>
-                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                        Завантаження...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Upload className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" />
-                                        Завантажити PDF
-                                    </>
-                                )}
-                            </button>
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={uploading}
+                                        className="w-full py-4 bg-white/10 border border-white/10 rounded-xl text-white font-bold hover:bg-white/20 transition-all flex items-center justify-center gap-3 group"
+                                    >
+                                        {uploading ? (
+                                            <>
+                                                <Loader2 className="w-5 h-5 animate-spin" />
+                                                Завантаження...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Upload className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" />
+                                                Завантажити PDF
+                                            </>
+                                        )}
+                                    </button>
 
-                            <p className="text-xs text-text-secondary/50 mt-4">
-                                Максимальний розмір: 10 MB
-                            </p>
+                                    <p className="text-xs text-text-secondary/50 mt-4">
+                                        Максимальний розмір: 10 MB
+                                    </p>
 
-                            {uploadStatus === 'success' && (
-                                <div className="mt-6 p-4 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center gap-3 text-green-400">
-                                    <Check className="w-5 h-5" />
-                                    <span className="font-medium text-sm">Файл успішно завантажено</span>
-                                </div>
-                            )}
+                                    {uploadStatus === 'success' && (
+                                        <div className="mt-6 p-4 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center gap-3 text-green-400">
+                                            <Check className="w-5 h-5" />
+                                            <span className="font-medium text-sm">Файл успішно завантажено</span>
+                                        </div>
+                                    )}
 
-                            {uploadStatus === 'error' && (
-                                <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3 text-red-400 text-left">
-                                    <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-                                    <span className="font-medium text-sm">{errorMessage}</span>
-                                </div>
+                                    {uploadStatus === 'error' && (
+                                        <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3 text-red-400 text-left">
+                                            <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                                            <span className="font-medium text-sm">{errorMessage}</span>
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <p className="text-sm text-text-secondary">Зверніться до регента, щоб додати ноти</p>
                             )}
                         </div>
                     )}

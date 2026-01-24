@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Search, FileText, Music2, ChevronRight, Filter, Plus, Eye, User, Loader2 } from "lucide-react";
 import { Category, SimpleSong } from "@/types";
+import { motion, AnimatePresence } from "framer-motion";
 import { getSongs, addSong } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
 import AddSongModal from "./AddSongModal";
@@ -161,44 +162,51 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
                         <p className="text-text-secondary">Пісень не знайдено</p>
                     </div>
                 ) : (
-                    filteredSongs.map(song => (
-                        <button
-                            key={song.id}
-                            onClick={() => handleSongClick(song)}
-                            className="w-full bg-surface hover:bg-surface-highlight border border-white/5 hover:border-white/10 rounded-2xl p-4 transition-all text-left group relative overflow-hidden active:scale-[0.99]"
-                        >
-                            <div className="flex items-start gap-4 relative z-10">
-                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${song.hasPdf ? 'bg-white text-black' : 'bg-white/5 text-text-secondary'}`}>
-                                    {song.hasPdf ? (
-                                        <Eye className="w-6 h-6" />
-                                    ) : (
-                                        <FileText className="w-6 h-6" />
-                                    )}
-                                </div>
-
-                                <div className="flex-1 min-w-0 py-0.5">
-                                    <h3 className="font-semibold text-lg text-white truncate mb-1.5 group-hover:text-white transition-colors">
-                                        {song.title}
-                                    </h3>
-
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        <span className="text-xs font-medium text-text-secondary bg-white/5 px-2 py-1 rounded-lg border border-white/5">
-                                            {song.category}
-                                        </span>
-
-                                        {song.conductor && (
-                                            <div className="flex items-center gap-1.5 text-xs text-text-secondary bg-white/5 px-2 py-1 rounded-lg border border-white/5">
-                                                <User className="w-3 h-3" />
-                                                <span>{song.conductor}</span>
-                                            </div>
+                    <AnimatePresence mode="popLayout">
+                        {filteredSongs.map((song, index) => (
+                            <motion.button
+                                layout
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                transition={{ delay: index * 0.05, duration: 0.3 }}
+                                key={song.id}
+                                onClick={() => handleSongClick(song)}
+                                className="w-full bg-surface hover:bg-surface-highlight border border-white/5 hover:border-white/10 rounded-2xl p-4 transition-all text-left group relative overflow-hidden active:scale-[0.99]"
+                            >
+                                <div className="flex items-start gap-4 relative z-10">
+                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${song.hasPdf ? 'bg-white text-black' : 'bg-white/5 text-text-secondary'}`}>
+                                        {song.hasPdf ? (
+                                            <Eye className="w-6 h-6" />
+                                        ) : (
+                                            <FileText className="w-6 h-6" />
                                         )}
                                     </div>
-                                </div>
 
-                                <ChevronRight className="w-5 h-5 text-text-secondary/30 mt-3.5 group-hover:text-white group-hover:translate-x-1 transition-all" />
-                            </div>
-                        </button>
-                    ))
+                                    <div className="flex-1 min-w-0 py-0.5">
+                                        <h3 className="font-semibold text-lg text-white truncate mb-1.5 group-hover:text-white transition-colors">
+                                            {song.title}
+                                        </h3>
+
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="text-xs font-medium text-text-secondary bg-white/5 px-2 py-1 rounded-lg border border-white/5">
+                                                {song.category}
+                                            </span>
+
+                                            {song.conductor && (
+                                                <div className="flex items-center gap-1.5 text-xs text-text-secondary bg-white/5 px-2 py-1 rounded-lg border border-white/5">
+                                                    <User className="w-3 h-3" />
+                                                    <span>{song.conductor}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <ChevronRight className="w-5 h-5 text-text-secondary/30 mt-3.5 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                                </div>
+                            </motion.button>
+                        ))}
+                    </AnimatePresence>
                 )}
             </div>
 
