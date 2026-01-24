@@ -164,10 +164,10 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
                         {filteredSongs.map((song, index) => (
                             <motion.button
                                 layout
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.95 }}
-                                transition={{ delay: index * 0.05, duration: 0.3 }}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.2 }}
                                 key={song.id}
                                 onClick={() => handleSongClick(song)}
                                 className="w-full bg-surface hover:bg-surface-highlight border border-white/5 hover:border-white/10 rounded-2xl p-4 transition-all text-left group relative overflow-hidden active:scale-[0.99]"
