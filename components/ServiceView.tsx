@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Service, ServiceSong, SimpleSong, Choir, ChoirMember } from "@/types";
 import { getSongs, addSongToService, removeSongFromService, getChoir, updateService, setServiceAttendance } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
-import { ChevronLeft, Eye, X, Plus, Users, UserX, Check, Calendar, Music, UserCheck, AlertCircle } from "lucide-react";
+import { ChevronLeft, Eye, X, Plus, Users, UserX, Check, Calendar, Music, UserCheck, AlertCircle, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface ServiceViewProps {
@@ -24,6 +24,7 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
     const [showAttendance, setShowAttendance] = useState(false);
     const [search, setSearch] = useState("");
     const [votingLoading, setVotingLoading] = useState(false);
+    const [isEditMode, setIsEditMode] = useState(false);
 
     // Choir members for attendance
     const [choirMembers, setChoirMembers] = useState<ChoirMember[]>([]);
@@ -284,13 +285,23 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                         <div className="flex items-center justify-between">
                             <h3 className="text-sm font-bold text-text-secondary uppercase tracking-wide px-1">Програма ({currentService.songs.length})</h3>
                             {canEdit && (
-                                <button
-                                    onClick={() => setShowAddSong(true)}
-                                    className="text-xs bg-white text-black font-bold px-3 py-1.5 rounded-full hover:bg-gray-200 transition-colors flex items-center gap-1"
-                                >
-                                    <Plus className="w-3 h-3" />
-                                    Додати
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setIsEditMode(!isEditMode)}
+                                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isEditMode
+                                            ? 'bg-red-500 text-white'
+                                            : 'bg-white/5 text-text-secondary hover:bg-white/10'}`}
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => setShowAddSong(true)}
+                                        className="text-xs bg-white text-black font-bold px-3 py-1.5 rounded-full hover:bg-gray-200 transition-colors flex items-center gap-1"
+                                    >
+                                        <Plus className="w-3 h-3" />
+                                        Додати
+                                    </button>
+                                </div>
                             )}
                         </div>
 
@@ -331,7 +342,7 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                                     </button>
                                                 )}
 
-                                                {canEdit && (
+                                                {canEdit && isEditMode && (
                                                     <button
                                                         onClick={() => handleRemoveSong(index)}
                                                         className="p-3 text-red-400 bg-red-500/5 hover:bg-red-500/10 rounded-xl transition-colors"
@@ -347,7 +358,7 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                         )}
 
                         {/* Add Song Button (Bottom) */}
-                        {canEdit && currentService.songs.length > 0 && (
+                        {canEdit && currentService.songs.length > 0 && !isEditMode && (
                             <button
                                 onClick={() => setShowAddSong(true)}
                                 className="w-full py-4 border border-dashed border-white/10 rounded-3xl text-text-secondary hover:text-white hover:bg-white/5 transition-all flex items-center justify-center gap-2"
