@@ -1,11 +1,11 @@
 {
-  "name": "ChoirHub",
-  "short_name": "ChoirHub",
+  "name": "MyChoir",
+  "short_name": "MyChoir",
   "description": "Хоровий репертуар та ноти",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1e3a8a",
-  "theme_color": "#1e3a8a",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "orientation": "portrait-primary",
   "icons": [
     {

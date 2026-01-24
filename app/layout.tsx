@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ChoirHub — Хоровий репертуар",
+  title: "MyChoir — Хоровий репертуар",
   description: "PWA застосунок для управління хоровим репертуаром та нотами",
   manifest: "/manifest.json",
 };
@@ -34,10 +34,10 @@ export default function RootLayout({
   return (
     <html lang="uk">
       <head>
-        <meta name="theme-color" content="#0F1115" />
+        <meta name="theme-color" content="#000000" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="ChoirHub" />
+        <meta name="apple-mobile-web-app-title" content="MyChoir" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="icon" href="/favicon.png" sizes="32x32" />
       </head>
