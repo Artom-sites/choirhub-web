@@ -217,13 +217,15 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
                 </div>
             )}
 
-            {/* Add Song Modal */}
-            <AddSongModal
-                isOpen={showAddModal}
-                onClose={() => setShowAddModal(false)}
-                onAdd={handleAddSong}
-                regents={regents}
-            />
+            {/* Add Song Modal - conditionally rendered to reset state */}
+            {showAddModal && (
+                <AddSongModal
+                    isOpen={showAddModal}
+                    onClose={() => setShowAddModal(false)}
+                    onAdd={handleAddSong}
+                    regents={regents}
+                />
+            )}
         </div>
     );
 }

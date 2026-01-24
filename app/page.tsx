@@ -469,13 +469,16 @@ function HomePageContent() {
       )}
 
       {/* Edit/Add Member Modal */}
-      <EditMemberModal
-        isOpen={showEditMemberModal}
-        onClose={() => setShowEditMemberModal(false)}
-        member={editingMember}
-        onSave={handleSaveMember}
-        onDelete={handleRemoveMember}
-      />
+      {/* Edit/Add Member Modal */}
+      {showEditMemberModal && (
+        <EditMemberModal
+          isOpen={showEditMemberModal}
+          onClose={() => setShowEditMemberModal(false)}
+          member={editingMember}
+          onSave={handleSaveMember}
+          onDelete={handleRemoveMember}
+        />
+      )}
 
       {/* Account Overlay */}
       {showAccount && (
