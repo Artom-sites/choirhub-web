@@ -127,7 +127,7 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
     }
 
     return (
-        <div className="max-w-md mx-auto px-4 py-4 space-y-4 pb-24">
+        <div className="max-w-5xl mx-auto px-4 py-4 space-y-4 pb-24">
             {/* Stats Card - Soft Dark Mono */}
             <div className="bg-surface/50 backdrop-blur-xl border border-white/5 rounded-3xl p-6 shadow-sm">
                 <div className="flex items-center gap-4 mb-3">
@@ -175,9 +175,9 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
             </div>
 
             {/* List */}
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {filteredSongs.length === 0 ? (
-                    <div className="text-center py-24 opacity-40">
+                    <div className="col-span-full text-center py-24 opacity-40">
                         <div className="w-16 h-16 bg-surface rounded-full flex items-center justify-center mx-auto mb-4 border border-white/5">
                             <Music2 className="w-8 h-8 text-text-secondary" />
                         </div>
@@ -194,9 +194,9 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
                                 transition={{ duration: 0.2 }}
                                 key={song.id}
                                 onClick={() => handleSongClick(song)}
-                                className="w-full bg-surface hover:bg-surface-highlight border border-white/5 hover:border-white/10 rounded-2xl p-4 transition-all text-left group relative overflow-hidden active:scale-[0.99]"
+                                className="w-full bg-surface hover:bg-surface-highlight border border-white/5 hover:border-white/10 rounded-2xl p-4 transition-all text-left group relative overflow-hidden active:scale-[0.99] h-full flex flex-col"
                             >
-                                <div className="flex items-start gap-4 relative z-10">
+                                <div className="flex items-start gap-4 relative z-10 h-full">
                                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${song.hasPdf ? 'bg-white text-black' : 'bg-white/5 text-text-secondary'}`}>
                                         {song.hasPdf ? (
                                             <Eye className="w-6 h-6" />
@@ -205,7 +205,7 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
                                         )}
                                     </div>
 
-                                    <div className="flex-1 min-w-0 py-0.5">
+                                    <div className="flex-1 min-w-0 py-0.5 flex flex-col h-full justify-between">
                                         <h3 className="font-semibold text-lg text-white truncate mb-1.5 group-hover:text-white transition-colors">
                                             {song.title}
                                         </h3>
@@ -223,6 +223,7 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
                                             )}
                                         </div>
                                     </div>
+
 
                                     <div className="flex items-center gap-1 mt-3.5">
                                         {effectiveCanAdd && (

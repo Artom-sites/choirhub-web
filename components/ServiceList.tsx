@@ -134,7 +134,7 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
     };
 
     return (
-        <div className="max-w-md mx-auto px-4 py-4 space-y-6 pb-24">
+        <div className="max-w-5xl mx-auto px-4 py-4 space-y-6 pb-24">
 
             {/* Upcoming Header */}
             <div className="flex items-center justify-between">
@@ -166,7 +166,7 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
                     )}
                 </div>
             ) : (
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {services.map(service => {
                         const status = getMyStatus(service);
                         const isFuture = isUpcoming(service.date);
@@ -175,7 +175,7 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
                             <div
                                 key={service.id}
                                 onClick={() => onSelectService(service)}
-                                className={`relative group p-5 rounded-2xl border transition-all cursor-pointer ${isToday(service.date) ? 'bg-white/10 border-white/20' : 'bg-surface border-white/5 hover:border-white/10'}`}
+                                className={`relative group p-5 rounded-2xl border transition-all cursor-pointer h-full flex flex-col justify-between ${isToday(service.date) ? 'bg-white/10 border-white/20' : 'bg-surface border-white/5 hover:border-white/10'}`}
                             >
                                 <div className="flex justify-between items-start">
                                     <div>
