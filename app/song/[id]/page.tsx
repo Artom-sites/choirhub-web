@@ -3,10 +3,10 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { getSong, updateSong, uploadSongPdf } from "@/lib/db";
+import { getSong, updateSong, uploadSongPdf, deleteSong } from "@/lib/db";
 import { SimpleSong } from "@/types";
 import PDFViewer from "@/components/PDFViewer";
-import { ArrowLeft, FileText, Upload, Loader2, Check, AlertCircle } from "lucide-react";
+import { ArrowLeft, FileText, Upload, Loader2, Check, AlertCircle, Trash2, ExternalLink } from "lucide-react";
 
 export default function SongPage() {
     const params = useParams();
@@ -29,15 +29,22 @@ export default function SongPage() {
             setLoading(true);
             const fetched = await getSong(userData.choirId, songId);
             setSong(fetched);
-            // Auto-open PDF if available
+            // Auto-open PDF if available AND valid PDF (not Telegram link)
             if (fetched?.hasPdf && (fetched.pdfUrl || fetched.pdfData)) {
-                setShowViewer(true);
+                if (!isTelegramLink(fetched.pdfUrl || "")) {
+                    setShowViewer(true);
+                }
             }
             setLoading(false);
         }
 
         loadSong();
     }, [userData?.choirId, songId]);
+
+    const isTelegramLink = (url?: string) => {
+        if (!url) return false;
+        return url.includes('t.me/') || url.includes('telegram.me/');
+    };
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -77,6 +84,18 @@ export default function SongPage() {
         }
     };
 
+    const handleDelete = async () => {
+        if (!userData?.choirId || !songId) return;
+        if (!confirm("Ви впевнені, що хочете видалити цю пісню?")) return;
+
+        try {
+            await deleteSong(userData.choirId, songId);
+            router.back();
+        } catch (error) {
+            alert("Помилка видалення");
+        }
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
@@ -99,8 +118,11 @@ export default function SongPage() {
         );
     }
 
-    // Show PDF Viewer
-    if (showViewer && (song.pdfUrl || song.pdfData)) {
+    // Check if link is Telegram
+    const isTg = isTelegramLink(song.pdfUrl);
+
+    // Show PDF Viewer (Only if NOT telegram link)
+    if (showViewer && (song.pdfUrl || song.pdfData) && !isTg) {
         return (
             <div className="h-screen bg-[#09090b]">
                 <PDFViewer
@@ -128,6 +150,14 @@ export default function SongPage() {
                     <h1 className="font-bold text-lg leading-tight truncate">{song.title}</h1>
                     <p className="text-xs text-text-secondary font-medium tracking-wide uppercase">{song.category}</p>
                 </div>
+                {canEdit && (
+                    <button
+                        onClick={handleDelete}
+                        className="p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition-colors"
+                    >
+                        <Trash2 className="w-5 h-5" />
+                    </button>
+                )}
             </header>
 
             {/* Content */}
@@ -139,19 +169,42 @@ export default function SongPage() {
                             <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6 border border-white/5">
                                 <FileText className="w-10 h-10 text-white" />
                             </div>
-                            <h2 className="text-xl font-bold text-white mb-2">
-                                PDF доступний
-                            </h2>
-                            <p className="text-text-secondary text-sm mb-8">
-                                Ноти завантажено та готово до перегляду
-                            </p>
 
-                            <button
-                                onClick={() => setShowViewer(true)}
-                                className="w-full py-4 bg-white text-black rounded-xl font-bold hover:bg-gray-200 transition-colors mb-4 shadow-lg shadow-white/5"
-                            >
-                                Відкрити ноти
-                            </button>
+                            {isTg ? (
+                                <>
+                                    <h2 className="text-xl font-bold text-white mb-2">
+                                        Файл у Telegram
+                                    </h2>
+                                    <p className="text-text-secondary text-sm mb-8">
+                                        Ця пісня була перенесена з Телеграму. Файл доступний за посиланням.
+                                    </p>
+                                    <a
+                                        href={song.pdfUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="w-full py-4 bg-[#2AABEE] text-white rounded-xl font-bold hover:bg-[#2AABEE]/90 transition-colors mb-4 shadow-lg shadow-[#2AABEE]/20 flex items-center justify-center gap-2"
+                                    >
+                                        <ExternalLink className="w-5 h-5" />
+                                        Відкрити в Telegram
+                                    </a>
+                                </>
+                            ) : (
+                                <>
+                                    <h2 className="text-xl font-bold text-white mb-2">
+                                        PDF доступний
+                                    </h2>
+                                    <p className="text-text-secondary text-sm mb-8">
+                                        Ноти завантажено та готово до перегляду
+                                    </p>
+
+                                    <button
+                                        onClick={() => setShowViewer(true)}
+                                        className="w-full py-4 bg-white text-black rounded-xl font-bold hover:bg-gray-200 transition-colors mb-4 shadow-lg shadow-white/5"
+                                    >
+                                        Відкрити ноти
+                                    </button>
+                                </>
+                            )}
 
                             {canEdit && (
                                 <div className="mt-8 pt-6 border-t border-white/5">

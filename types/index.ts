@@ -48,6 +48,7 @@ export interface Service {
     title: string;
     songs: ServiceSong[];
     absentMembers?: string[]; // Array of member IDs
+    confirmedMembers?: string[]; // Array of member IDs
 }
 
 export interface SimpleSong {

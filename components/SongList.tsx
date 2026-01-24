@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Search, FileText, Music2, ChevronRight, Filter, Plus, Eye, User, Loader2 } from "lucide-react";
+import { Search, FileText, Music2, ChevronRight, Filter, Plus, Eye, User, Loader2, Trash2 } from "lucide-react";
 import { Category, SimpleSong } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
-import { getSongs, addSong, uploadSongPdf } from "@/lib/db";
+import { getSongs, addSong, uploadSongPdf, deleteSong } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
 import AddSongModal from "./AddSongModal";
 import PDFViewer from "./PDFViewer";
@@ -22,6 +22,10 @@ const CATEGORIES: Category[] = [
 export default function SongList({ canAddSongs, regents }: SongListProps) {
     const router = useRouter();
     const { userData } = useAuth();
+
+    // DEBUG FORCE ENABLE
+    // const realCanAdd = canAddSongs; 
+    const isDebug = true;
 
     const [songs, setSongsState] = useState<SimpleSong[]>([]);
     const [loading, setLoading] = useState(true);
@@ -62,7 +66,7 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
             // We might need to fetch the full song details including PDF if it's large.
             // For this MVP, let's assume we simply open the song page for now.
             router.push(`/song/${song.id}`);
-        } else if (canAddSongs) {
+        } else if (effectiveCanAdd) {
             router.push(`/song/${song.id}`);
         } else {
             // Nothing for member to do if no PDF
@@ -94,6 +98,22 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
         const fetched = await getSongs(userData.choirId);
         setSongsState(fetched);
     };
+
+    const handleDelete = async (e: React.MouseEvent, id: string) => {
+        e.stopPropagation();
+        if (!userData?.choirId) return;
+
+        if (confirm("Видалити цю пісню?")) {
+            setSongsState(prev => prev.filter(s => s.id !== id));
+            try {
+                await deleteSong(userData.choirId, id);
+            } catch (e) {
+                console.error("Failed to delete song", e);
+            }
+        }
+    };
+
+    const effectiveCanAdd = canAddSongs;
 
     if (loading) {
         return <div className="flex justify-center py-20"><Loader2 className="animate-spin w-8 h-8 text-white/20" /></div>;
@@ -197,7 +217,18 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
                                         </div>
                                     </div>
 
-                                    <ChevronRight className="w-5 h-5 text-text-secondary/30 mt-3.5 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                                    <div className="flex items-center gap-1 mt-3.5">
+                                        {effectiveCanAdd && (
+                                            <div
+                                                onClick={(e) => handleDelete(e, song.id)}
+                                                className="p-1.5 text-text-secondary hover:text-red-500 hover:bg-white/10 rounded-lg transition-colors z-20"
+                                                title="Видалити"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </div>
+                                        )}
+                                        <ChevronRight className="w-5 h-5 text-text-secondary/30 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                                    </div>
                                 </div>
                             </motion.button>
                         ))}
@@ -206,7 +237,7 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
             </div>
 
             {/* Floating Add Button - White Circle */}
-            {canAddSongs && (
+            {effectiveCanAdd && (
                 <div className="fixed bottom-24 right-5 z-20">
                     <button
                         onClick={() => setShowAddModal(true)}

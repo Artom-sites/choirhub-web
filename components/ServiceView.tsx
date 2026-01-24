@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { Service, ServiceSong, SimpleSong, Choir, ChoirMember } from "@/types";
-import { getSongs, addSongToService, removeSongFromService, getChoir, updateService } from "@/lib/db";
+import { getSongs, addSongToService, removeSongFromService, getChoir, updateService, setServiceAttendance } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
-import { ChevronLeft, Eye, X, Plus, Users, UserX, Check } from "lucide-react";
+import { ChevronLeft, Eye, X, Plus, Users, UserX, Check, HelpCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface ServiceViewProps {
@@ -15,7 +15,7 @@ interface ServiceViewProps {
 
 export default function ServiceView({ service, onBack, canEdit }: ServiceViewProps) {
     const router = useRouter();
-    const { userData } = useAuth();
+    const { userData, user } = useAuth();
 
     // Local state for optimistic updates
     const [currentService, setCurrentService] = useState<Service>(service);
@@ -23,25 +23,71 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
     const [showAddSong, setShowAddSong] = useState(false);
     const [showAttendance, setShowAttendance] = useState(false);
     const [search, setSearch] = useState("");
+    const [votingLoading, setVotingLoading] = useState(false);
 
     // Choir members for attendance
     const [choirMembers, setChoirMembers] = useState<ChoirMember[]>([]);
     const [absentMembers, setAbsentMembers] = useState<string[]>(service.absentMembers || []);
+    const [membersLoading, setMembersLoading] = useState(true);
 
     useEffect(() => {
         async function fetchData() {
+            setMembersLoading(true);
             if (userData?.choirId) {
-                const songs = await getSongs(userData.choirId);
-                setAvailableSongs(songs);
+                // Fetch in parallel
+                const [songs, choir] = await Promise.all([
+                    getSongs(userData.choirId),
+                    getChoir(userData.choirId)
+                ]);
 
-                const choir = await getChoir(userData.choirId);
+                setAvailableSongs(songs);
                 if (choir?.members) {
                     setChoirMembers(choir.members);
                 }
             }
+            setMembersLoading(false);
         }
         fetchData();
     }, [userData?.choirId]);
+
+    const handleVote = async (status: 'present' | 'absent') => {
+        if (!userData?.choirId || !user?.uid) return;
+        setVotingLoading(true);
+        try {
+            await setServiceAttendance(userData.choirId, currentService.id, user.uid, status);
+
+            // Update local state
+            const uid = user.uid;
+            let newConfirmed = currentService.confirmedMembers || [];
+            let newAbsent = currentService.absentMembers || [];
+
+            if (status === 'present') {
+                newConfirmed = [...newConfirmed, uid].filter((v, i, a) => a.indexOf(v) === i);
+                newAbsent = newAbsent.filter(id => id !== uid);
+            } else {
+                newAbsent = [...newAbsent, uid].filter((v, i, a) => a.indexOf(v) === i);
+                newConfirmed = newConfirmed.filter(id => id !== uid);
+            }
+
+            setCurrentService({ ...currentService, confirmedMembers: newConfirmed, absentMembers: newAbsent });
+        } catch (e) { console.error(e); }
+        finally { setVotingLoading(false); }
+    };
+
+    const isUpcoming = (dateStr: string) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return new Date(dateStr) >= today;
+    };
+
+    const getMyStatus = () => {
+        if (!user?.uid) return 'unknown';
+        if (currentService.confirmedMembers?.includes(user?.uid)) return 'present';
+        if (currentService.absentMembers?.includes(user?.uid)) return 'absent';
+        return 'unknown';
+    };
+
+    // ... existing handlers ...
 
     const handleAddSong = async (song: SimpleSong) => {
         if (!userData?.choirId) return;
@@ -104,6 +150,8 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
 
     const absentCount = absentMembers.length;
     const presentCount = choirMembers.length - absentCount;
+    const myStatus = getMyStatus();
+    const isFuture = isUpcoming(currentService.date);
 
     return (
         <div className="pb-24">
@@ -126,13 +174,53 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
 
             <div className="max-w-md mx-auto px-4 py-6">
 
+                {/* Voting Section */}
+                {isFuture && (
+                    <div className="mb-6 p-4 rounded-2xl bg-white/5 border border-white/5 text-center">
+                        <p className="text-sm font-bold text-white mb-3">Ви будете на цьому служінні?</p>
+                        <div className="flex justify-center gap-3">
+                            <button
+                                onClick={() => handleVote('present')}
+                                disabled={votingLoading}
+                                className={`flex-1 py-3 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all ${myStatus === 'present'
+                                    ? 'bg-green-500 text-white border-green-500 shadow-lg shadow-green-500/20'
+                                    : 'bg-white/5 text-text-secondary border-white/5 hover:bg-white/10 hover:text-white'
+                                    }`}
+                            >
+                                <Check className="w-5 h-5" />
+                                {myStatus === 'present' ? 'Я буду' : 'Буду'}
+                            </button>
+
+                            <button
+                                onClick={() => handleVote('absent')}
+                                disabled={votingLoading}
+                                className={`flex-1 py-3 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all ${myStatus === 'absent'
+                                    ? 'bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/20'
+                                    : 'bg-white/5 text-text-secondary border-white/5 hover:bg-white/10 hover:text-white'
+                                    }`}
+                            >
+                                <X className="w-5 h-5" />
+                                {myStatus === 'absent' ? 'Не буду' : 'Не буду'}
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Attendance Summary Card */}
-                {choirMembers.length > 0 && (
+                {membersLoading ? (
+                    <div className="w-full mb-6 p-4 rounded-2xl border border-white/5 bg-white/5 h-[76px] animate-pulse flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-white/10" />
+                        <div className="space-y-2 flex-1">
+                            <div className="h-4 w-32 bg-white/10 rounded" />
+                            <div className="h-3 w-24 bg-white/10 rounded" />
+                        </div>
+                    </div>
+                ) : choirMembers.length > 0 && (
                     <button
                         onClick={() => canEdit && setShowAttendance(true)}
                         className={`w-full mb-6 p-4 rounded-2xl border flex items-center justify-between transition-all ${absentCount > 0
-                                ? 'bg-orange-500/10 border-orange-500/30'
-                                : 'bg-green-500/10 border-green-500/30'
+                            ? 'bg-orange-500/10 border-orange-500/30'
+                            : 'bg-green-500/10 border-green-500/30'
                             } ${canEdit ? 'hover:bg-white/5 cursor-pointer' : ''}`}
                     >
                         <div className="flex items-center gap-3">
@@ -284,8 +372,8 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                         key={member.id}
                                         onClick={() => toggleAbsent(member.id)}
                                         className={`w-full text-left p-4 rounded-xl border flex justify-between items-center transition-all ${isAbsent
-                                                ? 'bg-orange-500/10 border-orange-500/30'
-                                                : 'bg-surface border-white/5 hover:bg-white/5'
+                                            ? 'bg-orange-500/10 border-orange-500/30'
+                                            : 'bg-surface border-white/5 hover:bg-white/5'
                                             }`}
                                     >
                                         <div className="flex items-center gap-3">

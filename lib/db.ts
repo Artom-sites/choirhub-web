@@ -209,8 +209,6 @@ export async function removeSongFromService(
     serviceId: string,
     updatedSongs: ServiceSong[]
 ): Promise<void> {
-    // Firestore arrayRemove only works for exact primitive match or object match. 
-    // Since we modifying the list index or might have duplicates, usually typically easier to just replace the whole array.
     try {
         const docRef = doc(db, `choirs/${choirId}/services`, serviceId);
         await updateDoc(docRef, {
@@ -218,6 +216,40 @@ export async function removeSongFromService(
         });
     } catch (error) {
         console.error("Error updating service songs:", error);
+    }
+}
+
+export async function setServiceAttendance(
+    choirId: string,
+    serviceId: string,
+    userId: string,
+    status: 'present' | 'absent' | 'unknown'
+): Promise<void> {
+    try {
+        const docRef = doc(db, `choirs/${choirId}/services`, serviceId);
+
+        // We need to atomically update both arrays to avoid inconsistent state
+        // If present: add to confirmed, remove from absent
+        // If absent: add to absent, remove from confirmed
+        // If unknown: remove from both
+
+        const updates: any = {};
+
+        if (status === 'present') {
+            updates.confirmedMembers = arrayUnion(userId);
+            updates.absentMembers = arrayRemove(userId);
+        } else if (status === 'absent') {
+            updates.absentMembers = arrayUnion(userId);
+            updates.confirmedMembers = arrayRemove(userId);
+        } else {
+            updates.confirmedMembers = arrayRemove(userId);
+            updates.absentMembers = arrayRemove(userId);
+        }
+
+        await updateDoc(docRef, updates);
+    } catch (error) {
+        console.error("Error setting attendance:", error);
+        throw error;
     }
 }
 

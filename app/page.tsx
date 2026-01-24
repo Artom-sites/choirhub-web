@@ -508,7 +508,8 @@ function HomePageContent() {
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-white">{userData?.name}</h3>
-                  <p className="text-sm text-text-secondary">{userData?.choirName}</p>
+                  <p className="text-sm text-text-secondary">{user?.email}</p>
+                  <p className="text-xs text-text-secondary/50 mt-0.5">{userData?.choirName}</p>
                   <div className="mt-2">{getRoleBadge(userData?.role || 'member')}</div>
                 </div>
               </div>
