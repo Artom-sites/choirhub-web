@@ -72,46 +72,27 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
     const handleAddSong = async (title: string, category: string, conductor: string, pdfFile?: File) => {
         if (!userData?.choirId) return;
 
-        // 1. Create song first (fast)
-        const addedAt = new Date().toISOString();
+        // 1. Create song first
         const newSongId = await addSong(userData.choirId, {
             title,
             category,
             conductor,
             hasPdf: false,
-            addedAt, // Use local time for immediate display
+            addedAt: new Date().toISOString(),
         });
 
-        // Optimistic Update: Add to list immediately
-        const newSong: SimpleSong = {
-            id: newSongId,
-            title,
-            category: category as any,
-            conductor,
-            hasPdf: false,
-            addedAt,
-            addedBy: userData.id
-        };
-
-        setSongsState(prev => [newSong, ...prev]);
-
-        // 2. Background Upload logic
-        const uploadBackground = async () => {
-            if (pdfFile) {
-                try {
-                    await uploadSongPdf(userData.choirId, newSongId, pdfFile);
-                    // Update state to show PDF icon
-                    setSongsState(current =>
-                        current.map(s => s.id === newSongId ? { ...s, hasPdf: true } : s)
-                    );
-                } catch (e) {
-                    console.error("Failed to upload PDF for new song:", e);
-                }
+        // 2. Upload PDF (Blocking)
+        if (pdfFile) {
+            try {
+                await uploadSongPdf(userData.choirId, newSongId, pdfFile);
+            } catch (e) {
+                console.error("Failed to upload PDF for new song:", e);
             }
-        };
+        }
 
-        // Start background process
-        uploadBackground();
+        // 3. Refresh list (Server State)
+        const fetched = await getSongs(userData.choirId);
+        setSongsState(fetched);
     };
 
     if (loading) {
