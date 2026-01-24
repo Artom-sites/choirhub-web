@@ -50,9 +50,9 @@ export default function SongPage() {
             return;
         }
 
-        if (file.size > 10 * 1024 * 1024) {
+        if (file.size > 50 * 1024 * 1024) {
             setUploadStatus('error');
-            setErrorMessage("Файл занадто великий (макс. 10 MB)");
+            setErrorMessage("Файл занадто великий (макс. 50 MB)");
             return;
         }
 
@@ -60,33 +60,19 @@ export default function SongPage() {
         setUploadStatus('idle');
 
         try {
-            // Convert to base64
-            const reader = new FileReader();
-            reader.onloadend = async () => {
-                const base64 = reader.result as string;
+            // Upload directly to Storage (accepts File)
+            const url = await uploadSongPdf(userData.choirId, songId, file);
 
-                try {
-                    await updateSong(userData.choirId, songId, {
-                        ...song,
-                        hasPdf: true,
-                        pdfData: base64
-                    });
+            setSong(prev => prev ? { ...prev, hasPdf: true, pdfUrl: url, pdfData: undefined } : null);
+            setUploadStatus('success');
 
-                    setSong(prev => prev ? { ...prev, hasPdf: true, pdfData: base64 } : null);
-                    setUploadStatus('success');
-                } catch (err) {
-                    console.error("Failed to save PDF:", err);
-                    setUploadStatus('error');
-                    setErrorMessage("Помилка збереження в базу даних");
-                } finally {
-                    setUploading(false);
-                }
-            };
-            reader.readAsDataURL(file);
+            // Auto-show viewer on successful upload
+            setShowViewer(true);
         } catch (err) {
             console.error("Upload error:", err);
             setUploadStatus('error');
-            setErrorMessage("Помилка читання файлу");
+            setErrorMessage("Помилка завантаження файлу");
+        } finally {
             setUploading(false);
         }
     };
@@ -229,7 +215,7 @@ export default function SongPage() {
                                     </button>
 
                                     <p className="text-xs text-text-secondary/50 mt-4">
-                                        Максимальний розмір: 10 MB
+                                        Максимальний розмір: 50 MB
                                     </p>
 
                                     {uploadStatus === 'success' && (

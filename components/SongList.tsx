@@ -69,7 +69,7 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
         }
     };
 
-    const handleAddSong = async (title: string, category: string, conductor: string, pdfBase64?: string) => {
+    const handleAddSong = async (title: string, category: string, conductor: string, pdfFile?: File) => {
         if (!userData?.choirId) return;
 
         // 1. Create song first
@@ -82,12 +82,10 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
         });
 
         // 2. Upload PDF if provided
-        if (pdfBase64) {
+        if (pdfFile) {
             try {
-                // Import dynamically if needed or assume db.ts imports are fine
-                // But we need to use uploadSongPdf imported from db
-                // Note: we need to import uploadSongPdf in this file first!
-                await import("@/lib/db").then(mod => mod.uploadSongPdf(userData.choirId, newSongId, pdfBase64));
+                // Use File object directly now
+                await import("@/lib/db").then(mod => mod.uploadSongPdf(userData.choirId, newSongId, pdfFile));
             } catch (e) {
                 console.error("Failed to upload PDF for new song:", e);
                 // We created the song but failed PDF. 

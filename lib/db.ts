@@ -112,16 +112,16 @@ export async function updateSong(choirId: string, songId: string, updates: Parti
     }
 }
 
-import { ref, uploadString, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "./firebase";
 
-export async function uploadSongPdf(choirId: string, songId: string, base64Data: string): Promise<string> {
+export async function uploadSongPdf(choirId: string, songId: string, file: File | Blob): Promise<string> {
     try {
         // Create a reference to 'songs/<choirId>/<songId>.pdf'
         const storageRef = ref(storage, `songs/${choirId}/${songId}.pdf`);
 
-        // Upload the Base64 string
-        await uploadString(storageRef, base64Data, 'data_url');
+        // Upload the File/Blob directly
+        await uploadBytes(storageRef, file);
 
         // Get the download URL
         const downloadUrl = await getDownloadURL(storageRef);
@@ -130,11 +130,9 @@ export async function uploadSongPdf(choirId: string, songId: string, base64Data:
         await updateSong(choirId, songId, {
             hasPdf: true,
             pdfUrl: downloadUrl,
-            // We can clear pdfData if it existed to save space, 
-            // but let's just use pdfUrl moving forward.
-            // Actually, we should explicitely remove pdfData if migrating.
+            // Clear legacy field
             pdfData: undefined
-        } as any); // Cast to any to allow deleting field if needed or just ignore type check
+        } as any);
 
         return downloadUrl;
     } catch (error) {

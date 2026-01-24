@@ -6,7 +6,7 @@ import { X, Plus, Loader2, Upload, Check, UserPlus, ChevronDown } from "lucide-r
 interface AddSongModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onAdd: (title: string, category: string, conductor: string, pdfBase64?: string) => Promise<void>;
+    onAdd: (title: string, category: string, conductor: string, pdfFile?: File) => Promise<void>;
     regents: string[];
 }
 
@@ -21,7 +21,6 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents }: AddSon
     const [customConductor, setCustomConductor] = useState("");
     const [showCustomInput, setShowCustomInput] = useState(regents.length === 0);
     const [pdfFile, setPdfFile] = useState<File | null>(null);
-    const [pdfBase64, setPdfBase64] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -37,19 +36,14 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents }: AddSon
             return;
         }
 
-        if (file.size > 10 * 1024 * 1024) {
-            setError("Файл занадто великий (макс. 10 MB)");
+        if (file.size > 50 * 1024 * 1024) {
+            setError("Файл занадто великий (макс. 50 MB)");
             return;
         }
 
         setPdfFile(file);
         setError("");
-
-        const reader = new FileReader();
-        reader.onload = () => {
-            setPdfBase64(reader.result as string);
-        };
-        reader.readAsDataURL(file);
+        // No Base64 conversion needed for direct upload
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -65,7 +59,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents }: AddSon
         setError("");
 
         try {
-            await onAdd(title.trim(), category, finalConductor, pdfBase64 || undefined);
+            await onAdd(title.trim(), category, finalConductor, pdfFile || undefined);
             // Reset form
             setTitle("");
             setCategory("Інші");
@@ -73,7 +67,6 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents }: AddSon
             setCustomConductor("");
             setShowCustomInput(regents.length === 0);
             setPdfFile(null);
-            setPdfBase64(null);
             onClose();
         } catch (err) {
             setError("Помилка додавання. Спробуйте ще раз.");
@@ -90,7 +83,6 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents }: AddSon
         setCustomConductor("");
         setShowCustomInput(regents.length === 0);
         setPdfFile(null);
-        setPdfBase64(null);
         setError("");
         onClose();
     };
@@ -222,7 +214,6 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents }: AddSon
                                     type="button"
                                     onClick={() => {
                                         setPdfFile(null);
-                                        setPdfBase64(null);
                                         if (fileInputRef.current) fileInputRef.current.value = "";
                                     }}
                                     className="p-2 hover:bg-white/10 rounded-xl transition-colors text-text-secondary hover:text-white"
