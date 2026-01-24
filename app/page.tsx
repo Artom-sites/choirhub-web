@@ -324,7 +324,7 @@ function HomePageContent() {
 
   const getRoleBadge = (role: string) => {
     const roleConfig: Record<string, { label: string; bg: string; text: string }> = {
-      head: { label: "Голова", bg: "bg-amber-500/20", text: "text-amber-400" },
+      head: { label: "Регент", bg: "bg-amber-500/20", text: "text-amber-400" },
       regent: { label: "Регент", bg: "bg-blue-500/20", text: "text-blue-400" },
       member: { label: "Хорист", bg: "bg-white/10", text: "text-gray-400" },
     };
@@ -420,7 +420,7 @@ function HomePageContent() {
                     >
                       <div className="text-left">
                         <p className="text-white font-bold">{m.choirName}</p>
-                        <p className="text-xs text-text-secondary uppercase">{m.role === 'head' ? 'Головний' : m.role === 'regent' ? 'Регент' : 'Хорист'}</p>
+                        <p className="text-xs text-text-secondary uppercase">{m.role === 'head' ? 'Регент' : m.role === 'regent' ? 'Регент' : 'Хорист'}</p>
                       </div>
                       <Repeat className="w-4 h-4 text-text-secondary" />
                     </button>
