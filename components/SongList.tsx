@@ -9,6 +9,7 @@ import { getSongs, addSong, uploadSongPdf, deleteSong } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
 import AddSongModal from "./AddSongModal";
 import PDFViewer from "./PDFViewer";
+import ConfirmationModal from "./ConfirmationModal";
 
 interface SongListProps {
     canAddSongs: boolean;
@@ -32,6 +33,7 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
     const [search, setSearch] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<Category | "All">("All");
     const [showAddModal, setShowAddModal] = useState(false);
+    const [songToDelete, setSongToDelete] = useState<string | null>(null);
 
     // PDF Viewer state
     const [viewingSong, setViewingSong] = useState<SimpleSong | null>(null);
@@ -99,17 +101,22 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
         setSongsState(fetched);
     };
 
-    const handleDelete = async (e: React.MouseEvent, id: string) => {
+    const initiateDelete = (e: React.MouseEvent, id: string) => {
         e.stopPropagation();
-        if (!userData?.choirId) return;
+        setSongToDelete(id);
+    };
 
-        if (confirm("Видалити цю пісню?")) {
-            setSongsState(prev => prev.filter(s => s.id !== id));
-            try {
-                await deleteSong(userData.choirId, id);
-            } catch (e) {
-                console.error("Failed to delete song", e);
-            }
+    const confirmDelete = async () => {
+        if (!userData?.choirId || !songToDelete) return;
+
+        try {
+            // Optimistic
+            setSongsState(prev => prev.filter(s => s.id !== songToDelete));
+            await deleteSong(userData.choirId, songToDelete);
+        } catch (e) {
+            console.error("Failed to delete song", e);
+        } finally {
+            setSongToDelete(null);
         }
     };
 
@@ -220,7 +227,7 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
                                     <div className="flex items-center gap-1 mt-3.5">
                                         {effectiveCanAdd && (
                                             <div
-                                                onClick={(e) => handleDelete(e, song.id)}
+                                                onClick={(e) => initiateDelete(e, song.id)}
                                                 className="p-1.5 text-text-secondary hover:text-red-500 hover:bg-white/10 rounded-lg transition-colors z-20"
                                                 title="Видалити"
                                             >
@@ -248,7 +255,7 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
                 </div>
             )}
 
-            {/* Add Song Modal - conditionally rendered to reset state */}
+            {/* Add Song Modal */}
             {showAddModal && (
                 <AddSongModal
                     isOpen={showAddModal}
@@ -257,6 +264,17 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
                     regents={regents}
                 />
             )}
+
+            {/* Confirmation Modal */}
+            <ConfirmationModal
+                isOpen={!!songToDelete}
+                onClose={() => setSongToDelete(null)}
+                onConfirm={confirmDelete}
+                title="Видалити пісню?"
+                message="Цю пісню буде видалено з репертуару назавжди."
+                confirmLabel="Видалити"
+                isDestructive
+            />
         </div>
     );
 }

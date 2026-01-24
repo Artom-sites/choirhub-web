@@ -5,6 +5,7 @@ import { Service } from "@/types";
 import { getServices, addService, deleteService, setServiceAttendance } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
 import { Calendar, Plus, ChevronRight, X, Trash2, Loader2, Check } from "lucide-react";
+import ConfirmationModal from "./ConfirmationModal";
 
 interface ServiceListProps {
     onSelectService: (service: Service) => void;
@@ -20,6 +21,7 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
     const [loading, setLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [votingLoading, setVotingLoading] = useState<string | null>(null);
+    const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
 
     // Create form
     const [newTitle, setNewTitle] = useState("Співанка");
@@ -77,7 +79,6 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
         return serviceDate >= today;
     };
 
-    // ... create handlers same as before ... 
     const handleCreate = async () => {
         if (!userData?.choirId) return;
 
@@ -93,15 +94,18 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
         refreshServices();
     };
 
-    const handleDelete = async (e: React.MouseEvent, id: string) => {
+    const initiateDelete = (e: React.MouseEvent, id: string) => {
         e.stopPropagation();
-        if (!userData?.choirId) return;
-
-        if (confirm("Видалити це служіння?")) {
-            await deleteService(userData.choirId, id);
-            refreshServices();
-        }
+        setServiceToDelete(id);
     };
+
+    const confirmDelete = async () => {
+        if (!userData?.choirId || !serviceToDelete) return;
+        await deleteService(userData.choirId, serviceToDelete);
+        setServiceToDelete(null);
+        refreshServices();
+    };
+
 
     const formatDate = (dateStr: string) => {
         const date = new Date(dateStr);
@@ -212,22 +216,33 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
                                         )}
                                     </div>
 
-                                    <ChevronRight className="w-5 h-5 text-white/20 group-hover:text-white transition-colors" />
+                                    <div className="flex flex-col items-end gap-2">
+                                        {effectiveCanEdit && (
+                                            <button
+                                                onClick={(e) => initiateDelete(e, service.id)}
+                                                className="p-1.5 text-text-secondary hover:text-red-500 hover:bg-white/10 rounded-lg transition-colors z-20"
+                                            >
+                                                <Trash2 className="w-5 h-5" />
+                                            </button>
+                                        )}
+                                        <ChevronRight className="w-5 h-5 text-white/20 group-hover:text-white transition-colors" />
+                                    </div>
                                 </div>
-
-                                {effectiveCanEdit && (
-                                    <button
-                                        onClick={(e) => handleDelete(e, service.id)}
-                                        className="absolute top-4 right-4 p-2 text-text-secondary hover:text-red-500 hover:bg-white/5 rounded-lg transition-all"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                )}
                             </div>
                         )
                     })}
                 </div>
             )}
+
+            <ConfirmationModal
+                isOpen={!!serviceToDelete}
+                onClose={() => setServiceToDelete(null)}
+                onConfirm={confirmDelete}
+                title="Видалити служіння?"
+                message="Цю дію неможливо скасувати. Всі дані про відвідування цього служіння будуть втрачені."
+                confirmLabel="Видалити"
+                isDestructive
+            />
 
             {/* Create Modal */}
             {showCreateModal && (
