@@ -237,14 +237,19 @@ export async function getChoir(choirId: string): Promise<Choir | null> {
     }
 }
 
-export async function updateChoirIcon(choirId: string, iconBase64: string): Promise<void> {
+export async function uploadChoirIcon(choirId: string, file: File | Blob): Promise<string> {
     try {
+        const storageRef = ref(storage, `choirs/${choirId}/icon.jpg`);
+        await uploadBytes(storageRef, file);
+        const downloadUrl = await getDownloadURL(storageRef);
+
         const docRef = doc(db, "choirs", choirId);
         await updateDoc(docRef, {
-            icon: iconBase64
+            icon: downloadUrl
         });
+        return downloadUrl;
     } catch (error) {
-        console.error("Error updating choir icon:", error);
+        console.error("Error uploading choir icon:", error);
         throw error;
     }
 }

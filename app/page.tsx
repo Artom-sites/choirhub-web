@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { getChoir, createUser, updateChoirMembers, getServices, updateChoirIcon } from "@/lib/db";
+import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon } from "@/lib/db";
 import { Service, Choir, UserMembership, ChoirMember } from "@/types";
 import SongList from "@/components/SongList";
 import ServiceList from "@/components/ServiceList";
@@ -16,7 +16,7 @@ import {
 import { collection as firestoreCollection, addDoc, getDocs, where, query, doc, updateDoc, arrayUnion } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
-export default function HomePage() {
+function HomePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, userData, loading: authLoading, signOut, refreshProfile } = useAuth();
@@ -265,18 +265,13 @@ export default function HomePage() {
     const file = e.target.files?.[0];
     if (!file || !userData?.choirId || !canEdit) return;
 
-    // Convert to base64 (keeping it small for Firestore)
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64 = reader.result as string;
-      try {
-        await updateChoirIcon(userData.choirId, base64);
-        setChoir(prev => prev ? { ...prev, icon: base64 } : null);
-      } catch (err) {
-        console.error("Failed to update icon:", err);
-      }
-    };
-    reader.readAsDataURL(file);
+    // Use strict Storage upload now
+    try {
+      const url = await uploadChoirIcon(userData.choirId, file);
+      setChoir(prev => prev ? { ...prev, icon: url } : null);
+    } catch (err) {
+      console.error("Failed to update icon:", err);
+    }
   };
 
   if (authLoading || pageLoading) {
@@ -759,5 +754,17 @@ export default function HomePage() {
         </div>
       </nav>
     </main>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
+        <Loader2 className="w-10 h-10 text-white animate-spin" />
+      </div>
+    }>
+      <HomePageContent />
+    </Suspense>
   );
 }
