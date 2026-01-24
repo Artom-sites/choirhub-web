@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "MyChoir — Хоровий репертуар",
-  description: "PWA застосунок для управління хоровим репертуаром та нотами",
+  description: "Застосунок для управління хоровим репертуаром та нотами",
   manifest: "/manifest.json",
   icons: {
     icon: "/favicon.png",
