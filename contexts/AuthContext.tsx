@@ -6,6 +6,9 @@ import {
     onAuthStateChanged,
     signInWithPopup,
     GoogleAuthProvider,
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    updateProfile,
     signOut as firebaseSignOut,
     User as FirebaseUser
 } from "firebase/auth";
@@ -18,6 +21,8 @@ interface AuthContextType {
     userData: UserData | null;
     loading: boolean;
     signInWithGoogle: () => Promise<void>;
+    signInWithEmail: (email: string, password: string) => Promise<void>;
+    signUpWithEmail: (email: string, password: string, name: string) => Promise<void>;
     signOut: () => Promise<void>;
     refreshProfile: () => Promise<void>;
 }
@@ -57,9 +62,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const provider = new GoogleAuthProvider();
         try {
             await signInWithPopup(auth, provider);
-            // After sign in, we wait for onAuthStateChanged to trigger
         } catch (error) {
             console.error("Error signing in with Google:", error);
+            throw error;
+        }
+    };
+
+    const signInWithEmail = async (email: string, password: string) => {
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+        } catch (error) {
+            console.error("Error signing in with Email:", error);
+            throw error;
+        }
+    };
+
+    const signUpWithEmail = async (email: string, password: string, name: string) => {
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            await updateProfile(userCredential.user, {
+                displayName: name
+            });
+            // Profile entry creation happens optionally here or in the setup page, 
+            // but createUser trigger auth state change so we are good.
+        } catch (error) {
+            console.error("Error signing up with Email:", error);
+            throw error;
         }
     };
 
@@ -78,6 +106,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             userData,
             loading,
             signInWithGoogle,
+            signInWithEmail,
+            signUpWithEmail,
             signOut,
             refreshProfile: async () => {
                 if (user) await loadUserProfile(user.uid);
