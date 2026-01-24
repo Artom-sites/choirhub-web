@@ -13,7 +13,7 @@ import EditMemberModal from "@/components/EditMemberModal"; // New
 import {
   Music2, Loader2, Copy, Check,
   LogOut, ChevronLeft, Home, User, Users, Repeat,
-  PlusCircle, UserPlus, X, Trash2, Camera, BarChart2
+  PlusCircle, UserPlus, X, Trash2, Camera, BarChart2, Link2
 } from "lucide-react";
 import { collection as firestoreCollection, addDoc, getDocs, where, query, doc, updateDoc, arrayUnion } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -79,12 +79,27 @@ function HomePageContent() {
         ]);
         setChoir(fetchedChoir);
         setServices(fetchedServices);
+
+        // Check for joinCode param
+        const joinCodeParam = searchParams.get('joinCode');
+        if (joinCodeParam) {
+          // Remove param from URL without refresh
+          const newParams = new URLSearchParams(searchParams.toString());
+          newParams.delete('joinCode');
+          router.replace(`/?${newParams.toString()}`, { scroll: false });
+
+          // Open join modal
+          setShowAccount(false); // Ensure other overlays are closed
+          setShowChoirManager(true);
+          setManagerMode('join');
+          setJoinCode(joinCodeParam);
+        }
       }
       setPageLoading(false);
     }
     init();
 
-  }, [authLoading, user, userData, router]);
+  }, [authLoading, user, userData, router, searchParams]);
 
   const copyCode = async (code: string) => {
     await navigator.clipboard.writeText(code);
@@ -561,6 +576,23 @@ function HomePageContent() {
                       {copiedCode === choir.regentCode ? <Check className="w-5 h-5 text-green-500" /> : <Copy className="w-5 h-5 text-text-secondary group-hover:text-white" />}
                     </div>
                   </button>
+
+                  <div className="grid grid-cols-2 gap-3 mt-2">
+                    <button
+                      onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.memberCode}`)}
+                      className="p-3 bg-white/5 border border-white/5 rounded-xl flex items-center justify-center gap-2 hover:bg-white/10 transition-colors text-xs text-text-secondary hover:text-white"
+                    >
+                      <Link2 className="w-4 h-4" />
+                      Лінк для хористів
+                    </button>
+                    <button
+                      onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.regentCode}`)}
+                      className="p-3 bg-white/5 border border-white/5 rounded-xl flex items-center justify-center gap-2 hover:bg-white/10 transition-colors text-xs text-text-secondary hover:text-white"
+                    >
+                      <Link2 className="w-4 h-4" />
+                      Лінк для регентів
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

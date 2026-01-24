@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Music2, Check, ExternalLink, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { createUser, getChoir, updateChoirMembers } from "@/lib/db";
@@ -20,9 +20,12 @@ import {
 import { db } from "@/lib/firebase";
 import { getAuth, signInAnonymously, updateProfile } from "firebase/auth";
 
-export default function SetupPage() {
+function SetupPageContent() {
     const router = useRouter();
     const { user, userData, loading: authLoading, signInWithGoogle, refreshProfile } = useAuth();
+
+    const searchParams = useSearchParams();
+    const urlCode = searchParams.get('code');
 
     // UI State
     const [view, setView] = useState<'welcome' | 'join' | 'create' | 'guest_name'>('welcome');
@@ -36,9 +39,23 @@ export default function SetupPage() {
 
     useEffect(() => {
         if (!authLoading && userData?.choirId) {
-            router.push("/");
+            // If we have a code but are already in a choir (or setup is done), 
+            // redirect to home but PASS the code so Home can handle "Switch/Join" logic if needed.
+            // If no code, just go home.
+            if (urlCode) {
+                router.push(`/?joinCode=${urlCode}`);
+            } else {
+                router.push("/");
+            }
         }
-    }, [authLoading, userData, router]);
+    }, [authLoading, userData, router, urlCode]);
+
+    useEffect(() => {
+        if (urlCode && !userData?.choirId) {
+            setInviteCode(urlCode);
+            setView('join');
+        }
+    }, [urlCode, userData]);
 
     const handleGoogleLogin = async () => {
         try {
@@ -233,6 +250,11 @@ export default function SetupPage() {
                         <User className="w-5 h-5" />
                         Увійти як Гість
                     </button>
+                    {urlCode && (
+                        <p className="text-xs text-green-400 mt-2">
+                            Посилання на хор знайдено! Увійдіть, щоб продовжити.
+                        </p>
+                    )}
                 </div>
 
                 <p className="text-xs text-text-secondary mt-6 max-w-xs">
@@ -354,5 +376,17 @@ export default function SetupPage() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function SetupPage() {
+    return (
+        <Suspense fallback={
+            <div className="h-screen flex items-center justify-center bg-black text-white">
+                <Loader2 className="animate-spin" />
+            </div>
+        }>
+            <SetupPageContent />
+        </Suspense>
     );
 }

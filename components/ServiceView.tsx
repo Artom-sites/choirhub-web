@@ -134,13 +134,21 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
 
 
 
-    const handleRemoveSong = async (index: number) => {
-        if (!userData?.choirId) return;
+    const [songToDeleteIndex, setSongToDeleteIndex] = useState<number | null>(null);
+
+    const handleRemoveSong = (index: number) => {
+        setSongToDeleteIndex(index);
+    };
+
+    const confirmRemoveSong = async () => {
+        if (!userData?.choirId || songToDeleteIndex === null) return;
 
         const updatedSongs = [...currentService.songs];
-        updatedSongs.splice(index, 1);
+        updatedSongs.splice(songToDeleteIndex, 1);
 
         setCurrentService({ ...currentService, songs: updatedSongs });
+        setSongToDeleteIndex(null);
+
         await removeSongFromService(userData.choirId, currentService.id, updatedSongs);
     };
 
@@ -530,6 +538,38 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                             >
                                 Зберегти зміни
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Confirmation Modal for Song Deletion */}
+            {songToDeleteIndex !== null && (
+                <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-[#18181b] border border-white/10 w-full max-w-xs p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="flex flex-col items-center text-center gap-4">
+                            <div className="w-14 h-14 bg-red-500/10 rounded-full flex items-center justify-center">
+                                <Trash2 className="w-6 h-6 text-red-500" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-white">Видалити пісню?</h3>
+                                <p className="text-text-secondary text-sm mt-1">
+                                    "{currentService.songs[songToDeleteIndex]?.songTitle}" буде прибрано з цієї програми.
+                                </p>
+                            </div>
+                            <div className="flex gap-3 w-full mt-2">
+                                <button
+                                    onClick={() => setSongToDeleteIndex(null)}
+                                    className="flex-1 py-3 border border-white/10 rounded-xl text-white hover:bg-white/5 transition-colors font-medium text-sm"
+                                >
+                                    Скасувати
+                                </button>
+                                <button
+                                    onClick={confirmRemoveSong}
+                                    className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors text-sm"
+                                >
+                                    Видалити
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
