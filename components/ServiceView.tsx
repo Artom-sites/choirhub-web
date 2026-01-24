@@ -264,9 +264,11 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
 
                             {/* Show absence count separately OR expected count */}
                             <div className="flex items-center gap-4 text-xs font-medium pt-1">
-                                <div className="text-text-secondary">
-                                    Очікується: <span className="text-white">{choirMembers.length - absentCount}</span>
-                                </div>
+                                {(choirMembers.length - absentCount) > confirmedCount && (
+                                    <div className="text-text-secondary">
+                                        Очікується: <span className="text-white">{choirMembers.length - absentCount}</span>
+                                    </div>
+                                )}
                                 {absentCount > 0 && (
                                     <div className="flex items-center gap-1 text-orange-400">
                                         <AlertCircle className="w-3 h-3" />
