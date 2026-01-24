@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Search, FileText, Music2, ChevronRight, Filter, Plus, Eye, User, Loader2 } from "lucide-react";
 import { Category, SimpleSong } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
-import { getSongs, addSong } from "@/lib/db";
+import { getSongs, addSong, uploadSongPdf } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
 import AddSongModal from "./AddSongModal";
 import PDFViewer from "./PDFViewer";
@@ -85,7 +85,7 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
         if (pdfFile) {
             try {
                 // Use File object directly now
-                await import("@/lib/db").then(mod => mod.uploadSongPdf(userData.choirId, newSongId, pdfFile));
+                await uploadSongPdf(userData.choirId, newSongId, pdfFile);
             } catch (e) {
                 console.error("Failed to upload PDF for new song:", e);
                 // We created the song but failed PDF. 

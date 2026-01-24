@@ -112,7 +112,7 @@ export async function updateSong(choirId: string, songId: string, updates: Parti
     }
 }
 
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "./firebase";
 
 export async function uploadSongPdf(choirId: string, songId: string, file: File | Blob): Promise<string> {
@@ -120,8 +120,8 @@ export async function uploadSongPdf(choirId: string, songId: string, file: File 
         // Create a reference to 'songs/<choirId>/<songId>.pdf'
         const storageRef = ref(storage, `songs/${choirId}/${songId}.pdf`);
 
-        // Upload the File/Blob directly
-        await uploadBytes(storageRef, file);
+        // Upload the File/Blob directly using resumable upload
+        await uploadBytesResumable(storageRef, file);
 
         // Get the download URL
         const downloadUrl = await getDownloadURL(storageRef);
@@ -240,7 +240,7 @@ export async function getChoir(choirId: string): Promise<Choir | null> {
 export async function uploadChoirIcon(choirId: string, file: File | Blob): Promise<string> {
     try {
         const storageRef = ref(storage, `choirs/${choirId}/icon.jpg`);
-        await uploadBytes(storageRef, file);
+        await uploadBytesResumable(storageRef, file);
         const downloadUrl = await getDownloadURL(storageRef);
 
         const docRef = doc(db, "choirs", choirId);
