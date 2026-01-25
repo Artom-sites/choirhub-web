@@ -18,7 +18,7 @@ import {
     where
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { getAuth, signInAnonymously, updateProfile } from "firebase/auth";
+import { getAuth, signInAnonymously, updateProfile, RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
 
 function SetupPageContent() {
     const router = useRouter();
@@ -28,7 +28,7 @@ function SetupPageContent() {
     const urlCode = searchParams.get('code');
 
     // UI State
-    const [view, setView] = useState<'welcome' | 'join' | 'create' | 'guest_name' | 'email_auth'>('welcome');
+    const [view, setView] = useState<'welcome' | 'join' | 'create' | 'email_auth' | 'phone_auth'>('welcome');
 
     // Form State
     const [choirName, setChoirName] = useState("");
@@ -42,6 +42,12 @@ function SetupPageContent() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [authName, setAuthName] = useState("");
+
+    // Phone Auth State
+    const [phoneNumber, setPhoneNumber] = useState("");
+    const [verificationCode, setVerificationCode] = useState("");
+    const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+    const [phoneStep, setPhoneStep] = useState<'number' | 'code'>('number');
 
     useEffect(() => {
         if (!authLoading && userData?.choirId) {
@@ -125,6 +131,80 @@ function SetupPageContent() {
                 setError("Вхід гостя не увімкнено в Firebase Console. Увімкніть 'Anonymous' в Sign-in method.");
             } else {
                 setError("Помилка входу");
+            }
+        } finally {
+            setFormLoading(false);
+        }
+    };
+
+    const handleSendOTP = async () => {
+        if (!phoneNumber || phoneNumber.length < 10) {
+            setError("Введіть правильний номер телефону");
+            return;
+        }
+
+        setFormLoading(true);
+        setError("");
+
+        try {
+            const auth = getAuth();
+
+            // Format phone number (add +380 if not present)
+            let formattedPhone = phoneNumber.trim();
+            if (!formattedPhone.startsWith('+')) {
+                if (formattedPhone.startsWith('0')) {
+                    formattedPhone = '+38' + formattedPhone;
+                } else if (formattedPhone.startsWith('380')) {
+                    formattedPhone = '+' + formattedPhone;
+                } else {
+                    formattedPhone = '+380' + formattedPhone;
+                }
+            }
+
+            // Create invisible reCAPTCHA
+            const recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+                size: 'invisible',
+            });
+
+            const result = await signInWithPhoneNumber(auth, formattedPhone, recaptchaVerifier);
+            setConfirmationResult(result);
+            setPhoneStep('code');
+        } catch (err: any) {
+            console.error(err);
+            if (err.code === 'auth/invalid-phone-number') {
+                setError("Невірний формат номера");
+            } else if (err.code === 'auth/too-many-requests') {
+                setError("Забагато спроб. Спробуйте пізніше.");
+            } else {
+                setError("Помилка відправки SMS: " + err.message);
+            }
+        } finally {
+            setFormLoading(false);
+        }
+    };
+
+    const handleVerifyOTP = async () => {
+        if (!verificationCode || verificationCode.length !== 6) {
+            setError("Введіть 6-значний код");
+            return;
+        }
+        if (!confirmationResult) {
+            setError("Помилка верифікації. Спробуйте знову.");
+            return;
+        }
+
+        setFormLoading(true);
+        setError("");
+
+        try {
+            await confirmationResult.confirm(verificationCode);
+            // Auth state will change automatically
+        } catch (err: any) {
+            console.error(err);
+            if (err.code === 'auth/invalid-verification-code') {
+                setError("Невірний код підтвердження");
+            } else {
+                setError("Помилка підтвердження: " + err.message);
             }
         } finally {
             setFormLoading(false);
@@ -282,7 +362,7 @@ function SetupPageContent() {
 
     if (authLoading) return <div className="h-screen flex items-center justify-center bg-black text-white"><Loader2 className="animate-spin" /></div>;
 
-    if (!user && view !== 'guest_name' && view !== 'email_auth') {
+    if (!user && view !== 'email_auth' && view !== 'phone_auth') {
         return (
             <div className="min-h-screen bg-[#09090b] flex flex-col items-center justify-center p-6 text-center">
                 <div className="w-24 h-24 bg-surface rounded-3xl flex items-center justify-center mb-8 border border-white/10 shadow-2xl">
@@ -311,12 +391,15 @@ function SetupPageContent() {
                     </button>
 
                     <button
-                        onClick={() => setView('guest_name')}
-                        className="w-full py-4 bg-surface-highlight text-white font-medium rounded-xl flex items-center justify-center gap-3 hover:bg-white/10 transition-colors border border-white/5"
+                        onClick={() => { setView('phone_auth'); setPhoneNumber(""); setVerificationCode(""); setPhoneStep('number'); setError(""); }}
+                        className="w-full py-4 bg-surface text-white font-bold rounded-xl flex items-center justify-center gap-3 hover:bg-white/10 transition-colors border border-white/5"
                     >
-                        <User className="w-5 h-5" />
-                        Увійти як Гість
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                        </svg>
+                        Увійти за номером
                     </button>
+
                     {urlCode && (
                         <p className="text-xs text-green-400 mt-2">
                             Посилання на хор знайдено! Увійдіть, щоб продовжити.
@@ -386,29 +469,64 @@ function SetupPageContent() {
         );
     }
 
-    if (view === 'guest_name') {
+    if (view === 'phone_auth') {
         return (
             <div className="min-h-screen bg-[#09090b] flex items-center justify-center p-6">
+                <div id="recaptcha-container"></div>
                 <div className="w-full max-w-md bg-surface border border-white/5 rounded-3xl p-8">
-                    <button onClick={() => setView('welcome')} className="text-text-secondary text-sm mb-6">← Назад</button>
-                    <h2 className="text-2xl font-bold text-white mb-2">Як вас звати?</h2>
-                    <p className="text-text-secondary text-sm mb-6">Це ім'я будуть бачити інші учасники хору</p>
+                    <button onClick={() => { setView('welcome'); setPhoneStep('number'); }} className="text-text-secondary text-sm mb-6">← Назад</button>
+                    <h2 className="text-2xl font-bold text-white mb-2">
+                        {phoneStep === 'number' ? "Вхід за номером" : "Підтвердження"}
+                    </h2>
+                    <p className="text-text-secondary text-sm mb-6">
+                        {phoneStep === 'number'
+                            ? "Введіть ваш номер телефону"
+                            : "Введіть код з SMS"}
+                    </p>
 
                     <div className="space-y-4">
-                        <input
-                            value={guestName}
-                            onChange={(e) => setGuestName(e.target.value)}
-                            className="w-full px-4 py-3 bg-black/20 rounded-xl border border-white/10 text-white focus:outline-none focus:border-white/30"
-                            placeholder="Ваше ім'я"
-                            autoFocus
-                        />
+                        {phoneStep === 'number' ? (
+                            <>
+                                <input
+                                    type="tel"
+                                    value={phoneNumber}
+                                    onChange={(e) => setPhoneNumber(e.target.value)}
+                                    className="w-full px-4 py-3 bg-black/20 rounded-xl border border-white/10 text-white focus:outline-none focus:border-white/30 text-center text-lg font-mono"
+                                    placeholder="+380 XX XXX XX XX"
+                                    autoFocus
+                                />
+                                <p className="text-xs text-text-secondary text-center">
+                                    Можна вводити з 0 або без коду країни
+                                </p>
+                            </>
+                        ) : (
+                            <>
+                                <input
+                                    type="text"
+                                    value={verificationCode}
+                                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                    maxLength={6}
+                                    className="w-full px-4 py-4 bg-black/20 rounded-xl border border-white/10 text-white focus:outline-none focus:border-white/30 text-center text-2xl font-mono tracking-[0.5em]"
+                                    placeholder="000000"
+                                    autoFocus
+                                />
+                                <button
+                                    onClick={() => { setPhoneStep('number'); setVerificationCode(""); }}
+                                    className="text-text-secondary text-sm underline hover:text-white block mx-auto"
+                                >
+                                    Змінити номер
+                                </button>
+                            </>
+                        )}
+
                         {error && <p className="text-red-400 text-sm bg-red-400/10 p-3 rounded-lg">{error}</p>}
+
                         <button
-                            onClick={handleGuestLogin}
+                            onClick={phoneStep === 'number' ? handleSendOTP : handleVerifyOTP}
                             disabled={formLoading}
                             className="w-full py-4 bg-white text-black rounded-xl font-bold mt-4 hover:bg-gray-200 transition-colors flex justify-center"
                         >
-                            {formLoading ? <Loader2 className="animate-spin" /> : "Продовжити"}
+                            {formLoading ? <Loader2 className="animate-spin" /> : (phoneStep === 'number' ? "Надіслати SMS" : "Підтвердити")}
                         </button>
                     </div>
                 </div>
