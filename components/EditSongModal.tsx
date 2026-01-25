@@ -311,25 +311,6 @@ export default function EditSongModal({
 
                             {!showCustomInput && allConductors.length > 0 ? (
                                 <div className="space-y-4">
-                                    {/* Top Options (Most recent/Common) - Limit to 4 for cleaner look if needed, or show standard chips */}
-                                    {/* For Edit Mode: Ensure the currently selected conductor is visible or easily selectable */}
-                                    <div className="flex flex-wrap gap-2">
-                                        {allConductors.slice(0, 5).map(r => (
-                                            <div key={r} className={`group relative inline-flex items-center gap-1 pr-1 rounded-full border transition-all ${conductor === r
-                                                ? 'bg-white border-white text-black shadow-lg shadow-white/10'
-                                                : 'bg-white/5 border-white/5 text-text-secondary hover:bg-white/10'
-                                                }`}>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setConductor(r)}
-                                                    className="pl-3 pr-2 py-2 text-sm font-medium flex items-center gap-2"
-                                                >
-                                                    <span>{r}</span>
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-
                                     {/* Dropdown for All Conductors */}
                                     <div className="relative" ref={dropdownRef}>
                                         <button
@@ -338,8 +319,8 @@ export default function EditSongModal({
                                             className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl flex items-center justify-between hover:bg-white/5 transition-all group"
                                         >
                                             <div className="flex items-center gap-2">
-                                                <span className={`text-sm font-medium ${allConductors.slice(0, 5).includes(conductor) ? 'text-text-secondary' : 'text-white'}`}>
-                                                    {allConductors.slice(0, 5).includes(conductor) ? "Обрати зі списку..." : conductor || "Оберіть диригента"}
+                                                <span className={`text-sm font-medium ${conductor ? 'text-white' : 'text-text-secondary'}`}>
+                                                    {conductor || "Оберіть диригента..."}
                                                 </span>
                                             </div>
                                             <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${isConductorDropdownOpen ? 'rotate-180' : ''}`} />
