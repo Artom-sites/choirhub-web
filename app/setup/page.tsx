@@ -426,20 +426,27 @@ function SetupPageContent() {
                             {user?.displayName ? user.displayName[0] : <User />}
                         </div>
                         <h2 className="text-2xl font-bold text-white">Привіт, {user?.displayName || "Гість"}!</h2>
-                        <p className="text-text-secondary">У вас ще немає хору. Що зробимо?</p>
+                        <p className="text-text-secondary">
+                            {urlCode ? "Приєднайтеся до хору за запрошенням" : "У вас ще немає хору. Що зробимо?"}
+                        </p>
 
                         <div className="grid gap-3 pt-4">
-                            <button
-                                onClick={() => setView('create')}
-                                className="py-4 bg-white text-black rounded-xl font-bold hover:bg-gray-200 transition-colors"
-                            >
-                                Створити новий хор
-                            </button>
+                            {!urlCode && (
+                                <button
+                                    onClick={() => setView('create')}
+                                    className="py-4 bg-white text-black rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                                >
+                                    Створити новий хор
+                                </button>
+                            )}
                             <button
                                 onClick={() => setView('join')}
-                                className="py-4 bg-white/5 text-white rounded-xl font-medium hover:bg-white/10 transition-colors border border-white/5"
+                                className={`py-4 rounded-xl font-medium transition-colors ${urlCode
+                                    ? 'bg-white text-black font-bold hover:bg-gray-200'
+                                    : 'bg-white/5 text-white hover:bg-white/10 border border-white/5'
+                                    }`}
                             >
-                                Приєднатися за кодом
+                                Приєднатися {urlCode ? '' : 'за кодом'}
                             </button>
                         </div>
                     </div>
