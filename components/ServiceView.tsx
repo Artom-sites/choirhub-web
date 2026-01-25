@@ -484,32 +484,40 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                             const isSelected = selectedSongsToService.includes(song.id);
                             const alreadyInService = currentService.songs.some(s => s.songId === song.id);
 
-                            if (alreadyInService) return null;
-
                             return (
                                 <button
                                     key={song.id}
-                                    onClick={() => toggleSongSelection(song.id)}
-                                    className={`w-full text-left p-4 rounded-2xl border flex justify-between items-center group transition-all ${isSelected
-                                        ? 'bg-blue-500/10 border-blue-500/50'
-                                        : 'bg-surface border-white/5 hover:bg-white/10'
+                                    onClick={() => !alreadyInService && toggleSongSelection(song.id)}
+                                    disabled={alreadyInService}
+                                    className={`w-full text-left p-4 rounded-2xl border flex justify-between items-center group transition-all ${alreadyInService
+                                        ? 'bg-surface/50 border-white/5 opacity-50 cursor-not-allowed'
+                                        : isSelected
+                                            ? 'bg-blue-500/10 border-blue-500/50'
+                                            : 'bg-surface border-white/5 hover:bg-white/10'
                                         }`}
                                 >
                                     <div className="flex-1 min-w-0 pr-4">
-                                        <div className={`font-medium text-lg leading-tight ${isSelected ? 'text-blue-400' : 'text-white'}`}>{song.title}</div>
-                                        {song.conductor && (
+                                        <div className={`font-medium text-lg leading-tight ${alreadyInService ? 'text-text-secondary' : isSelected ? 'text-blue-400' : 'text-white'}`}>{song.title}</div>
+                                        {alreadyInService ? (
+                                            <div className="text-xs text-green-500 mt-1 flex items-center gap-1">
+                                                <Check className="w-3 h-3" />
+                                                Уже додано
+                                            </div>
+                                        ) : song.conductor && (
                                             <div className="flex items-center gap-1.5 mt-1">
                                                 <UserIcon className="w-3 h-3 text-text-secondary" />
                                                 <span className="text-xs text-text-secondary">{song.conductor}</span>
                                             </div>
                                         )}
                                     </div>
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${isSelected
-                                        ? 'bg-blue-500 text-white'
-                                        : 'bg-white/5 text-text-secondary group-hover:bg-white/20'
-                                        }`}>
-                                        {isSelected ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-                                    </div>
+                                    {!alreadyInService && (
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${isSelected
+                                            ? 'bg-blue-500 text-white'
+                                            : 'bg-white/5 text-text-secondary group-hover:bg-white/20'
+                                            }`}>
+                                            {isSelected ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                                        </div>
+                                    )}
                                 </button>
                             );
                         })}
