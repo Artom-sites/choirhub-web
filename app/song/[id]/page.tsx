@@ -7,7 +7,7 @@ import { getSong, updateSong, uploadSongPdf, deleteSong, getChoir } from "@/lib/
 import { SimpleSong } from "@/types";
 import PDFViewer from "@/components/PDFViewer";
 import EditSongModal from "@/components/EditSongModal";
-import { ArrowLeft, FileText, Upload, Loader2, Check, AlertCircle, Trash2, ExternalLink, Pencil } from "lucide-react";
+import { ArrowLeft, FileText, Upload, Loader2, Check, AlertCircle, Trash2, ExternalLink, Pencil, User } from "lucide-react";
 
 export default function SongPage() {
     const params = useParams();
@@ -182,7 +182,18 @@ export default function SongPage() {
                 </button>
                 <div className="flex-1 min-w-0">
                     <h1 className="font-bold text-lg leading-tight truncate">{song.title}</h1>
-                    <p className="text-xs text-text-secondary font-medium tracking-wide uppercase">{song.category}</p>
+                    <div className="flex items-center gap-2 overflow-hidden text-xs text-text-secondary font-medium tracking-wide">
+                        <span className="uppercase">{song.category}</span>
+                        {song.conductor && (
+                            <>
+                                <span className="w-1 h-1 rounded-full bg-white/20 shrink-0" />
+                                <span className="truncate flex items-center gap-1">
+                                    <User className="w-3 h-3" />
+                                    {song.conductor}
+                                </span>
+                            </>
+                        )}
+                    </div>
                 </div>
                 {canEdit && (
                     <div className="flex items-center gap-1">
@@ -203,8 +214,34 @@ export default function SongPage() {
             </header>
 
             {/* Content */}
-            <div className="p-4 flex flex-col items-center justify-center min-h-[calc(100vh-64px)]">
-                <div className="w-full max-w-md bg-surface/30 border border-white/5 rounded-3xl p-8 backdrop-blur-sm">
+            <div className="p-4 flex flex-col items-center justify-center min-h-[calc(100vh-64px)] pb-10">
+                <div className="w-full max-w-md bg-surface/30 border border-white/5 rounded-3xl p-6 sm:p-8 backdrop-blur-sm">
+                    {/* Song Metadata Card for Mobile clarity */}
+                    <div className="mb-8 text-center">
+                        <h2 className="text-2xl font-bold text-white mb-2 leading-tight">{song.title}</h2>
+                        <div className="flex flex-wrap items-center justify-center gap-2 text-sm text-text-secondary mb-4">
+                            <span className="px-3 py-1 rounded-full bg-white/5 border border-white/5">
+                                {song.category}
+                            </span>
+                            {song.conductor && (
+                                <span className="px-3 py-1 rounded-full bg-white/5 border border-white/5 flex items-center gap-1.5">
+                                    <User className="w-3.5 h-3.5" />
+                                    {song.conductor}
+                                </span>
+                            )}
+                        </div>
+
+                        {canEdit && (
+                            <button
+                                onClick={() => setShowEditModal(true)}
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-medium text-blue-400 transition-colors mb-2"
+                            >
+                                <Pencil className="w-3.5 h-3.5" />
+                                Редагувати дані
+                            </button>
+                        )}
+                    </div>
+
                     {song.hasPdf && (song.pdfUrl || song.pdfData) ? (
                         // PDF exists
                         <div className="text-center">
