@@ -154,8 +154,8 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
             }
 
             handleClose();
-        } catch (err) {
-            setError("Помилка додавання. Спробуйте ще раз.");
+        } catch (err: any) {
+            setError(err.message || "Помилка додавання. Спробуйте ще раз.");
             console.error(err);
         } finally {
             setLoading(false);

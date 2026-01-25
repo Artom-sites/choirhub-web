@@ -93,14 +93,11 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
         if (!userData?.choirId) return;
 
         // Check for duplicate title
+        // Check for duplicate title
         const normalizedTitle = song.title.trim().toLowerCase();
         const duplicate = songs.find((s: SimpleSong) => s.title.trim().toLowerCase() === normalizedTitle);
         if (duplicate) {
-            // Can't return string error easily with current signature returning void, but we can alert or change signature.
-            // AddSongModal expects Promise<string | null> ? No, we changed it to Promise<void>.
-            // We should handle error reporting better. For now alert.
-            alert(`Пісня "${duplicate.title}" вже існує в репертуарі`);
-            return;
+            throw new Error(`Пісня "${duplicate.title}" вже існує в репертуарі`);
         }
 
         // Save new conductor if not already known
