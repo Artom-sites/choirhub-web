@@ -65,6 +65,7 @@ export interface ServiceSong {
 export interface Service {
     id: string;
     date: string;
+    time?: string; // HH:MM format, e.g. "10:00"
     title: string;
     songs: ServiceSong[];
     absentMembers?: string[]; // Array of member IDs

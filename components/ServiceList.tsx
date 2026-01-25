@@ -27,6 +27,7 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
     // Create form
     const [newTitle, setNewTitle] = useState("Співанка");
     const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
+    const [newTime, setNewTime] = useState("10:00");
 
     useEffect(() => {
         refreshServices();
@@ -86,12 +87,14 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
         await addService(userData.choirId, {
             title: newTitle,
             date: newDate,
+            time: newTime || undefined,
             songs: []
         });
 
         setShowCreateModal(false);
         setNewTitle("Співанка");
         setNewDate(new Date().toISOString().split('T')[0]);
+        setNewTime("10:00");
         refreshServices();
     };
 
@@ -297,14 +300,25 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
                                     className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/30"
                                 />
                             </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Дата</label>
-                                <input
-                                    type="date"
-                                    value={newDate}
-                                    onChange={(e) => setNewDate(e.target.value)}
-                                    className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/30 [color-scheme:dark]"
-                                />
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Дата</label>
+                                    <input
+                                        type="date"
+                                        value={newDate}
+                                        onChange={(e) => setNewDate(e.target.value)}
+                                        className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/30 [color-scheme:dark]"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Час</label>
+                                    <input
+                                        type="time"
+                                        value={newTime}
+                                        onChange={(e) => setNewTime(e.target.value)}
+                                        className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/30 [color-scheme:dark]"
+                                    />
+                                </div>
                             </div>
 
                             <button

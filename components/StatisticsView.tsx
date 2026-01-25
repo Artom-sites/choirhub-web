@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Service, Choir, Category } from "@/types";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, Legend } from 'recharts';
-import { ArrowLeft, Users, Mic2, Calendar, TrendingUp, Music } from "lucide-react";
+import { ArrowLeft, Users, Mic2, Calendar, TrendingUp, Music, X, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface StatisticsViewProps {
@@ -59,7 +59,7 @@ export default function StatisticsView({ choir, services, onBack }: StatisticsVi
     }, [services, choir.members]);
 
     // 3. Most Performed Songs
-    const songFrequencyData = useMemo(() => {
+    const allSongFrequencyData = useMemo(() => {
         const songCounts: Record<string, { title: string; count: number }> = {};
         services.forEach(s => {
             s.songs.forEach(song => {
@@ -73,9 +73,12 @@ export default function StatisticsView({ choir, services, onBack }: StatisticsVi
 
         // Convert to array and sort by count descending
         return Object.values(songCounts)
-            .sort((a, b) => b.count - a.count)
-            .slice(0, 10); // Top 10
+            .sort((a, b) => b.count - a.count);
     }, [services]);
+
+    const songFrequencyData = allSongFrequencyData.slice(0, 10); // Top 10 for preview
+
+    const [showAllSongs, setShowAllSongs] = useState(false);
 
     const averageAttendance = useMemo(() => {
         if (!attendanceData.length) return 0;
@@ -227,9 +230,52 @@ export default function StatisticsView({ choir, services, onBack }: StatisticsVi
                                 </div>
                             ))}
                         </div>
+
+                        {allSongFrequencyData.length > 10 && (
+                            <button
+                                onClick={() => setShowAllSongs(true)}
+                                className="w-full mt-4 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-sm text-text-secondary hover:text-white transition-colors flex items-center justify-center gap-2"
+                            >
+                                Показати все ({allSongFrequencyData.length})
+                                <ChevronRight className="w-4 h-4" />
+                            </button>
+                        )}
                     </div>
                 )}
             </div>
+
+            {/* Show All Songs Modal */}
+            {showAllSongs && (
+                <div className="fixed inset-0 z-[70] bg-[#09090b] flex flex-col animate-in slide-in-from-bottom duration-300">
+                    <div className="sticky top-0 z-10 bg-[#09090b]/80 backdrop-blur-xl border-b border-white/5 px-4 py-3 flex items-center gap-3">
+                        <button onClick={() => setShowAllSongs(false)} className="p-2 hover:bg-white/10 rounded-xl">
+                            <X className="w-5 h-5" />
+                        </button>
+                        <h2 className="font-bold text-lg">Статистика по пісням ({allSongFrequencyData.length})</h2>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-4 pb-safe">
+                        <div className="space-y-2 max-w-lg mx-auto">
+                            {allSongFrequencyData.map((song, idx) => (
+                                <div key={idx} className="flex items-center gap-3 bg-surface border border-white/5 p-3 rounded-xl">
+                                    <span className="text-xs text-text-secondary w-6 text-center font-mono">{idx + 1}</span>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm font-medium text-white truncate">{song.title}</span>
+                                            <span className="text-sm text-pink-400 font-bold ml-2">{song.count}×</span>
+                                        </div>
+                                        <div className="h-1 bg-white/5 rounded-full overflow-hidden mt-1">
+                                            <div
+                                                className="h-full bg-gradient-to-r from-pink-500 to-purple-500 rounded-full"
+                                                style={{ width: `${(song.count / allSongFrequencyData[0].count) * 100}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

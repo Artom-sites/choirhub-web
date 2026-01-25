@@ -86,10 +86,20 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
         finally { setVotingLoading(false); }
     };
 
-    const isUpcoming = (dateStr: string) => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        return new Date(dateStr) >= today;
+    const isUpcoming = (dateStr: string, timeStr?: string) => {
+        const now = new Date();
+        const serviceDate = new Date(dateStr);
+
+        if (timeStr) {
+            // Parse time and set it on the service date
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            serviceDate.setHours(hours, minutes, 0, 0);
+            return serviceDate > now;
+        } else {
+            // If no time, check if date is today or future (using end of day)
+            serviceDate.setHours(23, 59, 59, 999);
+            return serviceDate >= now;
+        }
     };
 
     const getMyStatus = () => {
@@ -229,7 +239,7 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
     const confirmedCount = confirmedMembersList.length;
 
     const myStatus = getMyStatus();
-    const isFuture = isUpcoming(currentService.date);
+    const isFuture = isUpcoming(currentService.date, currentService.time);
 
     // Get avatars for preview (only explicitly confirmed)
     const previewAttendees = membersLoading ? [] : confirmedMembersList.slice(0, 4);
@@ -259,6 +269,7 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                     </div>
                     <p className="text-white font-medium text-sm">
                         {new Date(currentService.date).toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' })}
+                        {currentService.time && <span className="text-blue-400 ml-2">о {currentService.time}</span>}
                     </p>
                 </div>
 
