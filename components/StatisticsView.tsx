@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { Service, Choir, Category } from "@/types";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, Legend } from 'recharts';
-import { ArrowLeft, Users, Mic2, Calendar, TrendingUp } from "lucide-react";
+import { ArrowLeft, Users, Mic2, Calendar, TrendingUp, Music } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface StatisticsViewProps {
@@ -58,20 +58,23 @@ export default function StatisticsView({ choir, services, onBack }: StatisticsVi
         });
     }, [services, choir.members]);
 
-    // 3. Category Stats
-    const categoryData = useMemo(() => {
-        const catCounts: Record<string, number> = {};
+    // 3. Most Performed Songs
+    const songFrequencyData = useMemo(() => {
+        const songCounts: Record<string, { title: string; count: number }> = {};
         services.forEach(s => {
             s.songs.forEach(song => {
-                // We need song details, but here we only have ServiceSong which MIGHT have song data or we need to look it up.
-                // Actually Service object in types doesn't fully expand songs usually. 
-                // But let's assume 'category' might NOT be available in ServiceSong directly unless expanded.
-                // If distinct song data is missing, we might skip this chart or use what we have.
-                // Assuming we can't easily get category without song list context. 
-                // Skip for now to keep it simple and robust.
+                const title = song.songTitle || song.songId;
+                if (!songCounts[song.songId]) {
+                    songCounts[song.songId] = { title, count: 0 };
+                }
+                songCounts[song.songId].count++;
             });
         });
-        return [];
+
+        // Convert to array and sort by count descending
+        return Object.values(songCounts)
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 10); // Top 10
     }, [services]);
 
     const averageAttendance = useMemo(() => {
@@ -197,6 +200,35 @@ export default function StatisticsView({ choir, services, onBack }: StatisticsVi
                     </div>
                     <p className="text-xs text-text-secondary text-center mt-2">Останні 10 служінь</p>
                 </div>
+
+                {/* Most Performed Songs */}
+                {songFrequencyData.length > 0 && (
+                    <div className="bg-surface border border-white/5 rounded-3xl p-6">
+                        <h3 className="font-bold mb-4 flex items-center gap-2">
+                            <Music className="w-5 h-5 text-pink-400" />
+                            Найпопулярніші пісні
+                        </h3>
+                        <div className="space-y-3">
+                            {songFrequencyData.map((song, idx) => (
+                                <div key={idx} className="flex items-center gap-3">
+                                    <span className="text-xs text-text-secondary w-5 font-mono">{idx + 1}</span>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <span className="text-sm font-medium text-white truncate">{song.title}</span>
+                                            <span className="text-xs text-text-secondary ml-2">{song.count}×</span>
+                                        </div>
+                                        <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-gradient-to-r from-pink-500 to-purple-500 rounded-full"
+                                                style={{ width: `${(song.count / songFrequencyData[0].count) * 100}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
