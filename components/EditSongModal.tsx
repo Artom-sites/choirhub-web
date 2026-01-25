@@ -112,12 +112,6 @@ export default function EditSongModal({
         setError("");
 
         try {
-            await onSave({
-                title: title.trim(),
-                category: finalCategory,
-                conductor: finalConductor,
-            });
-
             // Save custom category if used
             if (showCustomCategory && customCategory.trim() && userData?.choirId) {
                 try {
@@ -136,6 +130,12 @@ export default function EditSongModal({
                     } catch (e) { console.error("Failed to add custom conductor:", e); }
                 }
             }
+
+            await onSave({
+                title: title.trim(),
+                category: finalCategory,
+                conductor: finalConductor,
+            });
 
             onClose();
         } catch (err) {

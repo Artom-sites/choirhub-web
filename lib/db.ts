@@ -400,3 +400,62 @@ export async function getUserProfile(userId: string): Promise<UserData | null> {
         return null;
     }
 }
+
+export async function mergeMembers(
+    choirId: string,
+    fromMemberId: string,
+    toMemberId: string
+): Promise<void> {
+    try {
+        // 1. Get all services
+        const services = await getServices(choirId);
+
+        // 2. Update each service that contains the old member
+        const updates = services.map(async (service) => {
+            let changed = false;
+            let newConfirmed = service.confirmedMembers || [];
+            let newAbsent = service.absentMembers || [];
+
+            // Helper to check and swap
+            if (newConfirmed.includes(fromMemberId)) {
+                newConfirmed = newConfirmed.filter(id => id !== fromMemberId);
+                if (!newConfirmed.includes(toMemberId)) {
+                    newConfirmed.push(toMemberId);
+                }
+                changed = true;
+            }
+
+            if (newAbsent.includes(fromMemberId)) {
+                newAbsent = newAbsent.filter(id => id !== fromMemberId);
+                if (!newAbsent.includes(toMemberId)) {
+                    newAbsent.push(toMemberId);
+                }
+                changed = true;
+            }
+
+            if (changed) {
+                const serviceRef = doc(db, `choirs/${choirId}/services`, service.id);
+                await updateDoc(serviceRef, {
+                    confirmedMembers: newConfirmed,
+                    absentMembers: newAbsent
+                });
+            }
+        });
+
+        await Promise.all(updates);
+
+        // 3. Remove the old member from the choir member list
+        const choirRef = doc(db, "choirs", choirId);
+        const choirSnap = await getDoc(choirRef);
+        if (choirSnap.exists()) {
+            const data = choirSnap.data();
+            const members = data.members || [];
+            const updatedMembers = members.filter((m: any) => m.id !== fromMemberId);
+            await updateDoc(choirRef, { members: updatedMembers });
+        }
+
+    } catch (error) {
+        console.error("Error merging members:", error);
+        throw error;
+    }
+}

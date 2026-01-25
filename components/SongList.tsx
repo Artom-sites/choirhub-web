@@ -17,13 +17,14 @@ interface SongListProps {
     regents: string[];
     knownConductors: string[];
     knownCategories: string[];
+    onRefresh?: () => void;
 }
 
 const CATEGORIES: Category[] = [
     "Різдво", "Пасха", "В'їзд", "Вечеря", "Вознесіння", "Трійця", "Свято Жнив", "Хрещення", "Інші"
 ];
 
-export default function SongList({ canAddSongs, regents, knownConductors, knownCategories }: SongListProps) {
+export default function SongList({ canAddSongs, regents, knownConductors, knownCategories, onRefresh }: SongListProps) {
     const router = useRouter();
     const { userData } = useAuth();
 
@@ -142,6 +143,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
         setSongsState(fetched);
         setLoading(false);
         setShowAddModal(false);
+        if (onRefresh) onRefresh();
     };
 
     const handleEditClick = (e: React.MouseEvent, song: SimpleSong) => {
@@ -156,6 +158,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
             // Optimistic update
             setSongsState(prev => prev.map(s => s.id === editingSong.id ? { ...s, ...updates } : s));
             setEditingSong(null);
+            if (onRefresh) onRefresh();
         } catch (e) {
             console.error("Failed to update song:", e);
             alert("Помилка оновлення");

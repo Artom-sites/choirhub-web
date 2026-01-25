@@ -139,19 +139,31 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
         setError("");
 
         try {
-            await onAdd({
-                title: title.trim(),
-                category: finalCategory,
-                conductor: finalConductor,
-                hasPdf: !!pdfFile,
-            }, pdfFile || undefined);
-
+            // Save custom category if used
             if (showCustomCategory && customCategory.trim() && userData?.choirId) {
                 try {
                     const { addKnownCategory } = await import("@/lib/db");
                     await addKnownCategory(userData.choirId, customCategory.trim());
                 } catch (e) { console.error("Failed to add custom category:", e); }
             }
+
+            // Save custom conductor if used
+            if (showCustomInput && customConductor.trim() && userData?.choirId) {
+                const isKnown = allConductors.includes(customConductor.trim());
+                if (!isKnown) {
+                    try {
+                        const { addKnownConductor } = await import("@/lib/db");
+                        await addKnownConductor(userData.choirId, customConductor.trim());
+                    } catch (e) { console.error("Failed to add custom conductor:", e); }
+                }
+            }
+
+            await onAdd({
+                title: title.trim(),
+                category: finalCategory,
+                conductor: finalConductor,
+                hasPdf: !!pdfFile,
+            }, pdfFile || undefined);
 
             handleClose();
         } catch (err: any) {

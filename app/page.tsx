@@ -3,13 +3,14 @@
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon } from "@/lib/db";
+import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon, mergeMembers } from "@/lib/db";
 import { Service, Choir, UserMembership, ChoirMember, Permission, AdminCode } from "@/types";
 import SongList from "@/components/SongList";
 import ServiceList from "@/components/ServiceList";
 import ServiceView from "@/components/ServiceView";
 import StatisticsView from "@/components/StatisticsView"; // New
 import EditMemberModal from "@/components/EditMemberModal"; // New
+import MergeMemberModal from "@/components/MergeMemberModal"; // New
 import {
   Music2, Loader2, Copy, Check,
   LogOut, ChevronLeft, Home, User, Users, Repeat,
@@ -51,6 +52,7 @@ function HomePageContent() {
   // Member Management
   const [editingMember, setEditingMember] = useState<ChoirMember | null>(null);
   const [showEditMemberModal, setShowEditMemberModal] = useState(false);
+  const [mergingMember, setMergingMember] = useState<ChoirMember | null>(null); // New merge state
 
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
@@ -405,6 +407,25 @@ function HomePageContent() {
     }
   };
 
+  const handleMerge = async (targetMemberId: string) => {
+    if (!choir || !userData?.choirId || !mergingMember) return;
+
+    try {
+      await mergeMembers(userData.choirId, mergingMember.id, targetMemberId);
+
+      // Update local state by removing the merged member
+      const updatedMembers = (choir.members || []).filter(m => m.id !== mergingMember.id);
+      setChoir({ ...choir, members: updatedMembers });
+
+      setMergingMember(null);
+      // Optionally reload services to refresh attendance counts, but not strictly necessary for UI list
+      // await fetchChoirData(); 
+    } catch (e) {
+      console.error(e);
+      alert("Не вдалося об'єднати учасників");
+    }
+  };
+
   const handleRemoveMember = async (memberId: string) => {
     if (!choir || !userData?.choirId) return;
     // Don't allow removing yourself or the head
@@ -653,6 +674,22 @@ function HomePageContent() {
           member={editingMember}
           onSave={handleSaveMember}
           onDelete={handleRemoveMember}
+          onMergeClick={(member) => {
+            setEditingMember(null);
+            setShowEditMemberModal(false);
+            setMergingMember(member);
+          }}
+        />
+      )}
+
+      {/* Merge Member Modal */}
+      {mergingMember && choir?.members && (
+        <MergeMemberModal
+          isOpen={!!mergingMember}
+          onClose={() => setMergingMember(null)}
+          sourceMember={mergingMember}
+          allMembers={choir.members}
+          onMerge={handleMerge}
         />
       )}
 
@@ -869,6 +906,7 @@ function HomePageContent() {
           regents={choir?.regents || []}
           knownConductors={choir?.knownConductors || []}
           knownCategories={choir?.knownCategories || []}
+          onRefresh={fetchChoirData}
         />}
 
         {activeTab === 'members' && (
@@ -904,7 +942,9 @@ function HomePageContent() {
                   {canEdit && <p className="text-sm mt-2">Додайте учасників, щоб відстежувати відвідуваність</p>}
                 </div>
               ) : (
-                choir?.members?.map((member) => {
+                [...(choir?.members || [])].sort((a, b) =>
+                  (a.name || '').localeCompare(b.name || '', 'uk')
+                ).map((member) => {
                   const absences = getAbsenceCount(member.id);
                   return (
                     <div

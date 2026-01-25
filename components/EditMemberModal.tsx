@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ChoirMember, UserRole } from "@/types";
-import { X, Trash2, Save, User } from "lucide-react";
+import { X, Trash2, Save, User, Merge } from "lucide-react";
 import ConfirmationModal from "./ConfirmationModal";
 
 interface EditMemberModalProps {
@@ -11,9 +11,10 @@ interface EditMemberModalProps {
     member: ChoirMember | null; // null = adding new
     onSave: (member: ChoirMember) => Promise<void>;
     onDelete?: (memberId: string) => Promise<void>;
+    onMergeClick?: (member: ChoirMember) => void;
 }
 
-export default function EditMemberModal({ isOpen, onClose, member, onSave, onDelete }: EditMemberModalProps) {
+export default function EditMemberModal({ isOpen, onClose, member, onSave, onDelete, onMergeClick }: EditMemberModalProps) {
     const [name, setName] = useState("");
     const [role, setRole] = useState<UserRole>('member');
     const [voice, setVoice] = useState<string>("");
@@ -133,9 +134,20 @@ export default function EditMemberModal({ isOpen, onClose, member, onSave, onDel
                                 <button
                                     type="button"
                                     onClick={() => setShowDeleteConfirm(true)}
-                                    className="p-3 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 transition-colors"
+                                    className="p-3 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500/20 transition-colors"
+                                    title="Видалити"
                                 >
                                     <Trash2 className="w-5 h-5" />
+                                </button>
+                            )}
+                            {isEditing && onMergeClick && (
+                                <button
+                                    type="button"
+                                    onClick={() => onMergeClick(member)}
+                                    className="p-3 bg-purple-500/10 text-purple-400 rounded-xl hover:bg-purple-500/20 transition-colors"
+                                    title="Об'єднати дублікат"
+                                >
+                                    <Merge className="w-5 h-5" />
                                 </button>
                             )}
                             <button
