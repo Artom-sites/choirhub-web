@@ -51,7 +51,7 @@ export async function getSongs(choirId: string): Promise<SimpleSong[]> {
     if (!choirId) return [];
     try {
         const q = query(
-            collection(db, `choirs / ${choirId}/songs`),
+            collection(db, `choirs/${choirId}/songs`),
             orderBy("title")
         );
         const snapshot = await getDocs(q);
