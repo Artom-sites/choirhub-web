@@ -381,6 +381,19 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                 />
             )}
 
+            {/* Edit Song Modal */}
+            {editingSong && (
+                <EditSongModal
+                    isOpen={!!editingSong}
+                    onClose={() => setEditingSong(null)}
+                    onSave={handleEditSave}
+                    initialData={editingSong}
+                    regents={regents}
+                    knownConductors={knownConductors}
+                    knownCategories={knownCategories}
+                />
+            )}
+
             {/* Confirmation Modal */}
             <ConfirmationModal
                 isOpen={!!songToDelete}
