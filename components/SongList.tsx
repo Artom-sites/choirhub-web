@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Search, FileText, Music2, ChevronRight, Filter, Plus, Eye, User, Loader2, Trash2 } from "lucide-react";
+import { Search, FileText, Music2, ChevronRight, Filter, Plus, Eye, User, Loader2, Trash2, Pencil } from "lucide-react";
 import { Category, SimpleSong } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
-import { getSongs, addSong, uploadSongPdf, deleteSong, addKnownConductor } from "@/lib/db";
+import { getSongs, addSong, uploadSongPdf, deleteSong, addKnownConductor, updateSong } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
 import AddSongModal from "./AddSongModal";
+import EditSongModal from "./EditSongModal";
 import PDFViewer from "./PDFViewer";
 import ConfirmationModal from "./ConfirmationModal";
 
@@ -36,6 +37,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
     const [selectedCategory, setSelectedCategory] = useState<Category | "All">("All");
     const [showAddModal, setShowAddModal] = useState(false);
     const [songToDelete, setSongToDelete] = useState<string | null>(null);
+    const [editingSong, setEditingSong] = useState<SimpleSong | null>(null);
 
     // PDF Viewer state
     const [viewingSong, setViewingSong] = useState<SimpleSong | null>(null);
@@ -135,6 +137,24 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
         setShowAddModal(false);
     };
 
+    const handleEditClick = (e: React.MouseEvent, song: SimpleSong) => {
+        e.stopPropagation();
+        setEditingSong(song);
+    };
+
+    const handleEditSave = async (updates: Partial<SimpleSong>) => {
+        if (!userData?.choirId || !editingSong) return;
+        try {
+            await updateSong(userData.choirId, editingSong.id, updates);
+            // Optimistic update
+            setSongsState(prev => prev.map(s => s.id === editingSong.id ? { ...s, ...updates } : s));
+            setEditingSong(null);
+        } catch (e) {
+            console.error("Failed to update song:", e);
+            alert("Помилка оновлення");
+        }
+    };
+
     const initiateDelete = (e: React.MouseEvent, id: string) => {
         e.stopPropagation();
         setSongToDelete(id);
@@ -201,8 +221,8 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                         <button
                             onClick={() => setSelectedCategory("All")}
                             className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all border ${selectedCategory === "All"
-                                    ? "bg-white text-black border-white shadow-lg shadow-white/10"
-                                    : "bg-surface border-white/5 text-text-secondary hover:bg-surface-highlight hover:text-white"
+                                ? "bg-white text-black border-white shadow-lg shadow-white/10"
+                                : "bg-surface border-white/5 text-text-secondary hover:bg-surface-highlight hover:text-white"
                                 }`}
                         >
                             Всі
@@ -212,8 +232,8 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                                 key={cat}
                                 onClick={() => setSelectedCategory(cat)}
                                 className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all border ${selectedCategory === cat
-                                        ? "bg-white text-black border-white shadow-lg shadow-white/10"
-                                        : "bg-surface border-white/5 text-text-secondary hover:bg-surface-highlight hover:text-white"
+                                    ? "bg-white text-black border-white shadow-lg shadow-white/10"
+                                    : "bg-surface border-white/5 text-text-secondary hover:bg-surface-highlight hover:text-white"
                                     }`}
                             >
                                 {cat}
@@ -276,12 +296,21 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
 
                                     <div className="flex items-center gap-1 mt-3.5">
                                         {effectiveCanAdd && (
-                                            <div
-                                                onClick={(e) => initiateDelete(e, song.id)}
-                                                className="p-1.5 text-text-secondary hover:text-red-500 hover:bg-white/10 rounded-lg transition-colors z-20"
-                                                title="Видалити"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    onClick={(e) => handleEditClick(e, song)}
+                                                    className="p-1.5 text-text-secondary hover:text-white hover:bg-white/10 rounded-lg transition-colors z-20"
+                                                    title="Редагувати"
+                                                >
+                                                    <Pencil className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => initiateDelete(e, song.id)}
+                                                    className="p-1.5 text-text-secondary hover:text-red-500 hover:bg-white/10 rounded-lg transition-colors z-20"
+                                                    title="Видалити"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
                                             </div>
                                         )}
                                         <ChevronRight className="w-5 h-5 text-text-secondary/30 group-hover:text-white group-hover:translate-x-1 transition-all" />
