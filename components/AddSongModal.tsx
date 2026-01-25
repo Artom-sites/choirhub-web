@@ -149,22 +149,37 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents }: AddSon
 
                         {!showCustomInput && regents.length > 0 ? (
                             <div className="space-y-3">
-                                <div className="relative">
-                                    <select
-                                        value={conductor}
-                                        onChange={(e) => setConductor(e.target.value)}
-                                        className="w-full px-4 py-3.5 bg-black/20 border border-white/10 rounded-xl focus:outline-none focus:border-white/20 focus:ring-1 focus:ring-white/20 text-white appearance-none font-medium cursor-pointer hover:bg-black/30 transition-colors"
-                                    >
-                                        {regents.map(r => (
-                                            <option key={r} value={r}>{r}</option>
-                                        ))}
-                                    </select>
-                                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary pointer-events-none" />
+                                {/* Custom Button List */}
+                                <div className="bg-black/20 border border-white/10 rounded-2xl p-1.5 space-y-1">
+                                    {regents.map(r => (
+                                        <button
+                                            key={r}
+                                            type="button"
+                                            onClick={() => setConductor(r)}
+                                            className={`w-full px-4 py-3 rounded-xl flex items-center gap-3 transition-all ${conductor === r
+                                                ? 'bg-white/10 border border-white/20'
+                                                : 'hover:bg-white/5 border border-transparent'
+                                                }`}
+                                        >
+                                            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold ${conductor === r
+                                                ? 'bg-blue-500 text-white'
+                                                : 'bg-white/10 text-text-secondary'
+                                                }`}>
+                                                {r.charAt(0).toUpperCase()}
+                                            </div>
+                                            <span className={`font-medium ${conductor === r ? 'text-white' : 'text-text-secondary'}`}>
+                                                {r}
+                                            </span>
+                                            {conductor === r && (
+                                                <Check className="w-4 h-4 text-blue-400 ml-auto" />
+                                            )}
+                                        </button>
+                                    ))}
                                 </div>
                                 <button
                                     type="button"
                                     onClick={() => setShowCustomInput(true)}
-                                    className="flex items-center gap-2 text-xs text-white hover:text-white/80 transition-all pl-1 font-medium"
+                                    className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 transition-all pl-2 font-medium"
                                 >
                                     <UserPlus className="w-3.5 h-3.5" />
                                     Вписати іншого
