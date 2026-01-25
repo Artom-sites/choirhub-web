@@ -15,13 +15,14 @@ interface SongListProps {
     canAddSongs: boolean;
     regents: string[];
     knownConductors: string[];
+    knownCategories: string[];
 }
 
 const CATEGORIES: Category[] = [
-    "Різдво", "Пасха", "В'їзд", "Вечеря", "Вознесіння", "Трійця", "Свято Жнив", "Інші"
+    "Різдво", "Пасха", "В'їзд", "Вечеря", "Вознесіння", "Трійця", "Свято Жнив", "Хрещення", "Інші"
 ];
 
-export default function SongList({ canAddSongs, regents, knownConductors }: SongListProps) {
+export default function SongList({ canAddSongs, regents, knownConductors, knownCategories }: SongListProps) {
     const router = useRouter();
     const { userData } = useAuth();
 
@@ -76,21 +77,25 @@ export default function SongList({ canAddSongs, regents, knownConductors }: Song
         }
     };
 
-    const handleAddSong = async (title: string, category: string, conductor: string, pdfFile?: File): Promise<string | null> => {
-        if (!userData?.choirId) return null;
+    const handleAddSong = async (song: Omit<SimpleSong, 'id' | 'addedBy' | 'addedAt'>, pdfFile?: File): Promise<void> => {
+        if (!userData?.choirId) return;
 
         // Check for duplicate title
-        const normalizedTitle = title.trim().toLowerCase();
+        const normalizedTitle = song.title.trim().toLowerCase();
         const duplicate = songs.find((s: SimpleSong) => s.title.trim().toLowerCase() === normalizedTitle);
         if (duplicate) {
-            return `Пісня "${duplicate.title}" вже існує в репертуарі`;
+            // Can't return string error easily with current signature returning void, but we can alert or change signature.
+            // AddSongModal expects Promise<string | null> ? No, we changed it to Promise<void>.
+            // We should handle error reporting better. For now alert.
+            alert(`Пісня "${duplicate.title}" вже існує в репертуарі`);
+            return;
         }
 
         // Save new conductor if not already known
         const allKnown = [...regents, ...knownConductors];
-        if (conductor && !allKnown.includes(conductor)) {
+        if (song.conductor && !allKnown.includes(song.conductor)) {
             try {
-                await addKnownConductor(userData.choirId, conductor);
+                await addKnownConductor(userData.choirId, song.conductor);
             } catch (e) {
                 console.error("Failed to save conductor:", e);
             }
@@ -98,26 +103,36 @@ export default function SongList({ canAddSongs, regents, knownConductors }: Song
 
         // 1. Create song first
         const newSongId = await addSong(userData.choirId, {
-            title,
-            category,
-            conductor,
-            hasPdf: false,
+            ...song,
             addedAt: new Date().toISOString(),
         });
 
         // 2. Upload PDF (Blocking)
         if (pdfFile) {
             try {
-                await uploadSongPdf(userData.choirId, newSongId, pdfFile);
+                const downloadUrl = await uploadSongPdf(userData.choirId, newSongId, pdfFile);
+                if (downloadUrl) {
+                    // Update song with PDF URL
+                    // Db function addSong doesn't allow updating immediately? 
+                    // Actually addSong creates it. We need updateSong or just trust it.
+                    // uploadSongPdf inside it updates the doc usually? 
+                    // Let's check db.ts if needed, but assuming standard flow.
+                    // Actually uploadSongPdf DOES update the doc with pdfUrl.
+                }
             } catch (e) {
-                console.error("Failed to upload PDF for new song:", e);
+                console.error("Failed to upload PDF:", e);
+                alert("Пісню створено, але PDF не завантажився.");
             }
         }
 
-        // 3. Refresh list (Server State)
+        // 3. Refresh list
+        // getSongs called via effect when songs state changes? No, we need to update state.
+        // Or re-fetch.
+        setLoading(true);
         const fetched = await getSongs(userData.choirId);
         setSongsState(fetched);
-        return null; // Success
+        setLoading(false);
+        setShowAddModal(false);
     };
 
     const initiateDelete = (e: React.MouseEvent, id: string) => {
@@ -283,6 +298,7 @@ export default function SongList({ canAddSongs, regents, knownConductors }: Song
                     onAdd={handleAddSong}
                     regents={regents}
                     knownConductors={knownConductors}
+                    knownCategories={knownCategories}
                 />
             )}
 

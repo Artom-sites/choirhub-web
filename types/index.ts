@@ -52,6 +52,7 @@ export interface Choir {
     knownConductors?: string[]; // Saved conductor names for autocomplete
     knownPianists?: string[];   // Saved pianist names for autocomplete
     adminCodes?: AdminCode[];   // Custom admin invite codes
+    knownCategories?: string[]; // Custom song categories
 }
 
 export interface ServiceSong {
@@ -84,13 +85,4 @@ export interface SimpleSong {
     pdfUrl?: string; // Firebase Storage URL
 }
 
-export type Category =
-    | "Новий рік"
-    | "Різдво"
-    | "В'їзд"
-    | "Вечеря"
-    | "Пасха"
-    | "Вознесіння"
-    | "Трійця"
-    | "Свято Жнив"
-    | "Інші";
+export type Category = string;

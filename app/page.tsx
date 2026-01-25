@@ -837,9 +837,12 @@ function HomePageContent() {
           <ServiceList onSelectService={handleSelectService} canEdit={canEdit} />
         )}
 
-        {activeTab === 'songs' && (
-          <SongList canAddSongs={canEdit} regents={choir?.regents || []} knownConductors={choir?.knownConductors || []} />
-        )}
+        {activeTab === 'songs' && <SongList
+          canAddSongs={canAddSongs}
+          regents={choir?.regents || []}
+          knownConductors={choir?.knownConductors || []}
+          knownCategories={choir?.knownCategories || []}
+        />}
 
         {activeTab === 'members' && (
           <div className="max-w-md mx-auto p-4">

@@ -327,6 +327,18 @@ export async function addKnownConductor(choirId: string, name: string): Promise<
     }
 }
 
+export async function addKnownCategory(choirId: string, category: string): Promise<void> {
+    try {
+        const docRef = doc(db, "choirs", choirId);
+        await updateDoc(docRef, {
+            knownCategories: arrayUnion(category)
+        });
+    } catch (error) {
+        console.error("Error adding known category:", error);
+        throw error;
+    }
+}
+
 export async function addKnownPianist(choirId: string, name: string): Promise<void> {
     try {
         const docRef = doc(db, "choirs", choirId);

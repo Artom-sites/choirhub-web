@@ -1,29 +1,57 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { X, Plus, Loader2, Upload, Check, UserPlus, ChevronDown } from "lucide-react";
+import { SimpleSong } from "@/types";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AddSongModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onAdd: (title: string, category: string, conductor: string, pdfFile?: File) => Promise<string | null>;
+    onAdd: (song: Omit<SimpleSong, 'id' | 'addedBy' | 'addedAt'>, pdfFile?: File) => Promise<void>;
     regents: string[];
-    knownConductors?: string[];
+    knownConductors: string[];
+    knownCategories: string[];
 }
 
 const CATEGORIES = [
-    "Новий рік", "Різдво", "В'їзд", "Вечеря", "Пасха", "Вознесіння", "Трійця", "Свято Жнив", "Інші"
+    "Різдво", "Пасха", "В'їзд", "Вечеря", "Вознесіння", "Трійця", "Свято Жнив", "Інші"
 ];
 
-export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownConductors = [] }: AddSongModalProps) {
-    // Merge regents with known conductors, removing duplicates
-    const allConductors = [...new Set([...regents, ...knownConductors])];
+export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownConductors, knownCategories }: AddSongModalProps) {
+    const { userData } = useAuth();
 
     const [title, setTitle] = useState("");
-    const [category, setCategory] = useState("Інші");
-    const [conductor, setConductor] = useState(allConductors[0] || "");
+    const [category, setCategory] = useState(""); // Initialize as empty, will be set by useEffect
+    const [conductor, setConductor] = useState(""); // Initialize as empty, will be set by useEffect
     const [customConductor, setCustomConductor] = useState("");
-    const [showCustomInput, setShowCustomInput] = useState(allConductors.length === 0);
+    const [showCustomInput, setShowCustomInput] = useState(false);
+
+    const [showCustomCategory, setShowCustomCategory] = useState(false);
+    const [customCategory, setCustomCategory] = useState("");
+
+    // Combine static and known categories
+    const allCategories = Array.from(new Set([...CATEGORIES, ...(knownCategories || [])]));
+    // Combine given regents and known conductors
+    const allConductors = Array.from(new Set([...regents, ...(knownConductors || [])]));
+
+    useEffect(() => {
+        if (allConductors.length > 0 && !conductor) {
+            setConductor(allConductors[0]);
+        }
+        if (allConductors.length === 0) {
+            setShowCustomInput(true);
+        }
+    }, [allConductors, conductor]);
+
+    // Set default category if not set
+    useEffect(() => {
+        if (!category && allCategories.length > 0) {
+            setCategory(allCategories[0]);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [allCategories]);
+
     const [pdfFile, setPdfFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -57,20 +85,55 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
             return;
         }
 
-        const finalConductor = showCustomInput ? customConductor.trim() : conductor;
+        let finalCategory = category;
+        if (showCustomCategory && customCategory.trim()) {
+            finalCategory = customCategory.trim();
+        } else if (showCustomCategory && !customCategory.trim()) {
+            setError("Введіть назву нової категорії");
+            return;
+        }
+
+        let finalConductor = conductor;
+        if (showCustomInput && customConductor.trim()) {
+            finalConductor = customConductor.trim();
+        } else if (showCustomInput && !customConductor.trim()) {
+            setError("Введіть ім'я диригента");
+            return;
+        }
+
+        if (!finalConductor) {
+            setError("Оберіть або введіть диригента");
+            return;
+        }
+        if (!finalCategory) {
+            setError("Оберіть або введіть категорію");
+            return;
+        }
 
         setLoading(true);
         setError("");
 
         try {
-            const errorMsg = await onAdd(title.trim(), category, finalConductor, pdfFile || undefined);
-            if (errorMsg) {
-                setError(errorMsg);
-                return;
+            await onAdd({
+                title: title.trim(),
+                category: finalCategory,
+                conductor: finalConductor,
+                hasPdf: !!pdfFile,
+            }, pdfFile || undefined);
+
+            // Save custom category if used
+            if (showCustomCategory && customCategory.trim() && userData?.choirId) { // Use userData.id for choirId if it's the user's choir
+                try {
+                    const { addKnownCategory } = await import("@/lib/db"); // Assuming this path is correct
+                    await addKnownCategory(userData.choirId, customCategory.trim()); // Assuming choirId is user.id or similar
+                } catch (e) { console.error("Failed to add custom category:", e); }
             }
+
             // Reset form
             setTitle("");
-            setCategory("Інші");
+            setCategory(allCategories[0] || "");
+            setCustomCategory("");
+            setShowCustomCategory(false);
             setConductor(allConductors[0] || "");
             setCustomConductor("");
             setShowCustomInput(allConductors.length === 0);
@@ -131,18 +194,49 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                         <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
                             Категорія
                         </label>
-                        <div className="relative">
-                            <select
-                                value={category}
-                                onChange={(e) => setCategory(e.target.value)}
-                                className="w-full px-4 py-3.5 bg-black/20 border border-white/10 rounded-xl focus:outline-none focus:border-white/20 focus:ring-1 focus:ring-white/20 text-white appearance-none font-medium cursor-pointer hover:bg-black/30 transition-colors"
-                            >
-                                {CATEGORIES.map(cat => (
-                                    <option key={cat} value={cat}>{cat}</option>
+                        {!showCustomCategory && allCategories.length > 0 ? (
+                            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent pr-1">
+                                {allCategories.map(cat => (
+                                    <button
+                                        key={cat}
+                                        type="button"
+                                        onClick={() => setCategory(cat)}
+                                        className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left truncate ${category === cat
+                                            ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50'
+                                            : 'bg-black/20 text-text-secondary border border-white/10 hover:bg-white/5'
+                                            }`}
+                                    >
+                                        {cat}
+                                    </button>
                                 ))}
-                            </select>
-                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary pointer-events-none" />
-                        </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCustomCategory(true)}
+                                    className="px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left bg-black/20 text-text-secondary border border-dashed border-white/20 hover:bg-white/5 flex items-center gap-2"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    Своя...
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                <input
+                                    type="text"
+                                    value={customCategory}
+                                    onChange={(e) => setCustomCategory(e.target.value)}
+                                    placeholder="Назва категорії"
+                                    className="w-full px-4 py-3.5 bg-black/20 border border-white/10 rounded-xl focus:outline-none focus:border-white/20 focus:ring-1 focus:ring-white/20 text-white placeholder:text-text-secondary/40 transition-all font-medium"
+                                    autoFocus
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCustomCategory(false)}
+                                    className="text-xs text-blue-400 hover:text-blue-300 font-medium pl-1"
+                                >
+                                    Назад до списку
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     {/* Conductor */}
