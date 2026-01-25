@@ -33,16 +33,27 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
     // Combine static and known categories
     const allCategories = Array.from(new Set([...CATEGORIES, ...(knownCategories || [])]));
     // Combine given regents and known conductors
-    const allConductors = Array.from(new Set([...regents, ...(knownConductors || [])]));
+    // Flatten and normalize regents
+    const normalizedRegents = Array.from(new Set(regents.map(r => r.trim())));
+
+    // Filter knownConductors to remove duplicates that are already in regents, case-insensitive
+    const uniqueKnownConductors = (knownConductors || [])
+        .map(c => c.trim())
+        .filter(c => !normalizedRegents.some(r => r.toLowerCase() === c.toLowerCase()))
+        .filter((c, index, self) => self.indexOf(c) === index); // Dedupe self
+
+    // Combined list for display
+    // const allConductors = [...normalizedRegents, ...uniqueKnownConductors]; // We'll keep them separate for UI distinction if needed, or merge. 
+    // User wants "clean selection", so merging is fine but we need to know which ones can be deleted (knownConductors).
+    const allConductors = [...normalizedRegents, ...uniqueKnownConductors];
 
     useEffect(() => {
         if (allConductors.length > 0 && !conductor) {
             setConductor(allConductors[0]);
-        }
-        if (allConductors.length === 0) {
+        } else if (allConductors.length === 0 && !showCustomInput) {
             setShowCustomInput(true);
         }
-    }, [allConductors, conductor]);
+    }, [allConductors, conductor, showCustomInput]);
 
     // Set default category if not set
     useEffect(() => {
@@ -246,61 +257,89 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                         </label>
 
                         {!showCustomInput && allConductors.length > 0 ? (
-                            <div className="space-y-3">
-                                {/* Custom Button List */}
-                                <div className="bg-black/20 border border-white/10 rounded-2xl p-1.5 space-y-1 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-                                    {allConductors.map(r => (
-                                        <button
-                                            key={r}
-                                            type="button"
-                                            onClick={() => setConductor(r)}
-                                            className={`w-full px-4 py-3 rounded-xl flex items-center gap-3 transition-all ${conductor === r
-                                                ? 'bg-white/10 border border-white/20'
-                                                : 'hover:bg-white/5 border border-transparent'
-                                                }`}
-                                        >
-                                            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold ${conductor === r
-                                                ? 'bg-blue-500 text-white'
-                                                : 'bg-white/10 text-text-secondary'
-                                                }`}>
-                                                {r.charAt(0).toUpperCase()}
-                                            </div>
-                                            <span className={`font-medium ${conductor === r ? 'text-white' : 'text-text-secondary'}`}>
-                                                {r}
-                                            </span>
-                                            {conductor === r && (
-                                                <Check className="w-4 h-4 text-blue-400 ml-auto" />
+                            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent pr-1">
+                                {allConductors.map(r => {
+                                    const isCustom = uniqueKnownConductors.includes(r);
+                                    return (
+                                        <div key={r} className={`group relative flex items-stretch rounded-xl transition-all border ${conductor === r
+                                            ? 'bg-blue-500/20 border-blue-500/50'
+                                            : 'bg-black/20 border-white/10 hover:bg-white/5'
+                                            }`}>
+                                            <button
+                                                type="button"
+                                                onClick={() => setConductor(r)}
+                                                className={`flex-1 px-3 py-2.5 text-sm font-medium text-left truncate flex items-center gap-2 ${conductor === r ? 'text-blue-400' : 'text-text-secondary'}`}
+                                            >
+                                                <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px] text-white/70 font-bold shrink-0">
+                                                    {r[0]?.toUpperCase()}
+                                                </div>
+                                                <span className="truncate">{r}</span>
+                                            </button>
+
+                                            {isCustom && userData?.choirId && (
+                                                <button
+                                                    type="button"
+                                                    onClick={async (e) => {
+                                                        e.stopPropagation();
+                                                        if (confirm(`Видалити "${r}" зі списку?`)) {
+                                                            const { removeKnownConductor } = await import("@/lib/db");
+                                                            try {
+                                                                await removeKnownConductor(userData.choirId, r);
+                                                                // Optimistic update handled by parent prop update via realtime listener or re-fetch?
+                                                                // We need to trigger a refresh in parent page logic essentially. 
+                                                                // But we are in a modal. 
+                                                                // For now, let's just do it and let page re-render if it listens.
+                                                                // Actually, parent handles data. We might need to ask parent to refresh?
+                                                                // Page wrapper has listener? No, it has manual fetch.
+                                                                // We should probably just do it and hope page refreshes soon or force it.
+                                                                // Wait, page component fetches data on mount or manual calls. 
+                                                                // We will need to trigger onAdd or separate refresh? 
+                                                                // Let's assume we want to just dispatch the delete.
+                                                                // We can use a callback prop or just reload page data if we had access.
+                                                                // Simplest: just confirm and delete. The list won't disappear instantly unless we filter local state.
+                                                                // But we receive props. 
+                                                                // Let's rely on page refresh for now or maybe we can't update props.
+                                                                // We can force reload. 
+                                                                window.location.reload();
+                                                            } catch (e) {
+                                                                console.error(e);
+                                                            }
+                                                        }
+                                                    }}
+                                                    className="px-2 flex items-center justify-center text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-r-xl transition-colors opacity-0 group-hover:opacity-100"
+                                                >
+                                                    <X className="w-3.5 h-3.5" />
+                                                </button>
                                             )}
-                                        </button>
-                                    ))}
-                                </div>
+                                        </div>
+                                    );
+                                })}
                                 <button
                                     type="button"
                                     onClick={() => setShowCustomInput(true)}
-                                    className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 transition-all pl-2 font-medium"
+                                    className="px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left bg-black/20 text-text-secondary border border-dashed border-white/20 hover:bg-white/5 flex items-center gap-2"
                                 >
-                                    <UserPlus className="w-3.5 h-3.5" />
-                                    Вписати іншого
+                                    <Plus className="w-4 h-4" />
+                                    Інший...
                                 </button>
                             </div>
                         ) : (
-                            <div className="space-y-3">
+                            <div className="space-y-2">
                                 <input
                                     type="text"
                                     value={customConductor}
                                     onChange={(e) => setCustomConductor(e.target.value)}
                                     placeholder="Ім'я диригента"
                                     className="w-full px-4 py-3.5 bg-black/20 border border-white/10 rounded-xl focus:outline-none focus:border-white/20 focus:ring-1 focus:ring-white/20 text-white placeholder:text-text-secondary/40 transition-all font-medium"
+                                    autoFocus
                                 />
-                                {allConductors.length > 0 && (
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowCustomInput(false)}
-                                        className="text-xs text-text-secondary hover:text-white transition-colors pl-1 font-medium"
-                                    >
-                                        ← Обрати зі списку
-                                    </button>
-                                )}
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCustomInput(false)}
+                                    className="text-xs text-blue-400 hover:text-blue-300 font-medium pl-1"
+                                >
+                                    Назад до списку
+                                </button>
                             </div>
                         )}
                     </div>

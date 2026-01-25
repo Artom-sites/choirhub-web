@@ -5,15 +5,16 @@ import {
     getDocs,
     setDoc,
     addDoc,
-    updateDoc,
     deleteDoc,
     query,
     where,
     orderBy,
     Timestamp,
     serverTimestamp,
+    updateDoc,
     arrayUnion,
-    arrayRemove
+    arrayRemove,
+    deleteField
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { Service, SimpleSong, Choir, UserData, ServiceSong } from "@/types";
@@ -50,7 +51,7 @@ export async function getSongs(choirId: string): Promise<SimpleSong[]> {
     if (!choirId) return [];
     try {
         const q = query(
-            collection(db, `choirs/${choirId}/songs`),
+            collection(db, `choirs / ${choirId}/songs`),
             orderBy("title")
         );
         const snapshot = await getDocs(q);
@@ -323,6 +324,18 @@ export async function addKnownConductor(choirId: string, name: string): Promise<
         });
     } catch (error) {
         console.error("Error adding known conductor:", error);
+        throw error;
+    }
+}
+
+export async function removeKnownConductor(choirId: string, name: string): Promise<void> {
+    try {
+        const docRef = doc(db, "choirs", choirId);
+        await updateDoc(docRef, {
+            knownConductors: arrayRemove(name)
+        });
+    } catch (error) {
+        console.error("Error removing known conductor:", error);
         throw error;
     }
 }
