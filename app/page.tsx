@@ -363,7 +363,17 @@ function HomePageContent() {
     return services.filter(s => s.absentMembers?.includes(memberId)).length;
   };
 
-  const canEdit = userData?.role === 'head' || userData?.role === 'regent';
+  // Check if user can edit - either by role OR specific permissions from admin codes
+  const hasManagePermission = userData?.permissions?.some(p =>
+    ['add_songs', 'edit_attendance', 'edit_credits', 'manage_services'].includes(p)
+  ) ?? false;
+  const canEdit = userData?.role === 'head' || userData?.role === 'regent' || hasManagePermission;
+
+  // More granular permissions
+  const canAddSongs = canEdit || (userData?.permissions?.includes('add_songs') ?? false);
+  const canEditAttendance = canEdit || (userData?.permissions?.includes('edit_attendance') ?? false);
+  const canEditCredits = canEdit || (userData?.permissions?.includes('edit_credits') ?? false);
+  const canManageServices = canEdit || (userData?.permissions?.includes('manage_services') ?? false);
 
   // Handle choir icon upload
   const handleIconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
