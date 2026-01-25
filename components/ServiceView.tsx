@@ -250,231 +250,195 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                 </div>
             </div>
 
-            <div className="max-w-5xl mx-auto px-4 py-6">
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-10">
+            <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
 
-                    {/* Left Column (Info & Voting) - Sticky on Desktop */}
-                    <div className="md:col-span-5 lg:col-span-4 space-y-6 md:sticky md:top-32 h-fit">
-                        {/* Date Badge */}
-                        <div className="flex items-center gap-3 text-text-secondary bg-surface/50 p-3 rounded-2xl border border-white/5">
-                            <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-                                <Calendar className="w-5 h-5 text-blue-400" />
+                {/* Date Badge - Compact */}
+                <div className="flex items-center gap-3 text-text-secondary bg-surface/50 p-3 rounded-2xl border border-white/5">
+                    <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+                        <Calendar className="w-4 h-4 text-blue-400" />
+                    </div>
+                    <p className="text-white font-medium text-sm">
+                        {new Date(currentService.date).toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    </p>
+                </div>
+
+                {/* Songs Program - FIRST */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-bold text-text-secondary uppercase tracking-wide px-1">Програма ({currentService.songs.length})</h3>
+                        {canEdit && (
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setIsEditMode(!isEditMode)}
+                                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isEditMode
+                                        ? 'bg-red-500 text-white'
+                                        : 'bg-white/5 text-text-secondary hover:bg-white/10'}`}
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                    onClick={() => setShowAddSong(true)}
+                                    className="text-xs bg-white text-black font-bold px-3 py-1.5 rounded-full hover:bg-gray-200 transition-colors flex items-center gap-1"
+                                >
+                                    <Plus className="w-3 h-3" />
+                                    Додати
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {currentService.songs.length === 0 ? (
+                        <div className="text-center py-10 bg-surface border border-white/5 rounded-3xl flex flex-col items-center justify-center gap-3">
+                            <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center text-text-secondary">
+                                <Music className="w-8 h-8" />
                             </div>
                             <div>
-                                <p className="text-xs font-medium uppercase tracking-wider text-text-secondary/70">Дата</p>
-                                <p className="text-white font-medium">
-                                    {new Date(currentService.date).toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' })}
-                                </p>
+                                <p className="text-white font-medium">Список порожній</p>
+                                <p className="text-sm text-text-secondary">Додайте пісні до цього служіння</p>
                             </div>
                         </div>
+                    ) : (
+                        <div className="space-y-2">
+                            {currentService.songs.map((song, index) => {
+                                const originalSong = availableSongs.find(s => s.id === song.songId);
+                                const hasPdf = originalSong?.hasPdf;
 
-                        {/* Voting Section */}
-                        {isFuture && (
-                            <div className="space-y-3">
-                                <h3 className="text-xs font-bold text-text-secondary px-1 uppercase tracking-wide">Ваша участь</h3>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <button
-                                        onClick={() => handleVote('present')}
-                                        disabled={votingLoading}
-                                        className={`relative overflow-hidden p-3 rounded-2xl border-2 transition-all duration-300 flex flex-col items-center gap-2 ${myStatus === 'present'
-                                            ? 'bg-green-500/20 border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.2)]'
-                                            : 'bg-surface border-white/5 hover:border-white/20'
-                                            }`}
-                                    >
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${myStatus === 'present' ? 'bg-green-500 text-black' : 'bg-white/5 text-text-secondary'
-                                            }`}>
-                                            <Check className="w-5 h-5" strokeWidth={3} />
+                                return (
+                                    <div key={`${song.songId}-${index}`} className="flex items-center gap-4 bg-surface hover:bg-surface-highlight border border-white/5 p-4 rounded-2xl group transition-colors">
+                                        <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-xs font-mono text-text-secondary">
+                                            {index + 1}
                                         </div>
-                                        <span className={`text-sm font-bold ${myStatus === 'present' ? 'text-green-400' : 'text-text-secondary'}`}>
-                                            Буду
-                                        </span>
-                                    </button>
 
-                                    <button
-                                        onClick={() => handleVote('absent')}
-                                        disabled={votingLoading}
-                                        className={`relative overflow-hidden p-3 rounded-2xl border-2 transition-all duration-300 flex flex-col items-center gap-2 ${myStatus === 'absent'
-                                            ? 'bg-red-500/20 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]'
-                                            : 'bg-surface border-white/5 hover:border-white/20'
-                                            }`}
-                                    >
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${myStatus === 'absent' ? 'bg-red-500 text-white' : 'bg-white/5 text-text-secondary'
-                                            }`}>
-                                            <X className="w-5 h-5" strokeWidth={3} />
-                                        </div>
-                                        <span className={`text-sm font-bold ${myStatus === 'absent' ? 'text-red-400' : 'text-text-secondary'}`}>
-                                            Не буду
-                                        </span>
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Attendees Section - Only visible to Admins OR for Past services (Attendance history) */}
-                        {(canEdit || !isFuture) && (
-                            <div onClick={() => canEdit && setShowAttendance(true)} className={`p-5 bg-surface border border-white/5 rounded-3xl space-y-4 ${canEdit ? 'cursor-pointer hover:border-white/20 transition-colors' : ''}`}>
-                                <div className="flex justify-between items-center">
-                                    <div className="flex items-center gap-2 text-white font-bold">
-                                        <Users className="w-5 h-5 text-indigo-400" />
-                                        <span>Учасники</span>
-                                    </div>
-                                    {canEdit && <span className="text-xs text-text-secondary bg-white/5 px-2 py-1 rounded-full">Редагувати</span>}
-                                </div>
-
-                                {!membersLoading ? (
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex -space-x-3">
-                                            {/* Show Confirmed members primarily */}
-                                            {previewAttendees.map((member) => (
-                                                <div key={member.id} className="w-10 h-10 rounded-full border-2 border-[#18181b] bg-green-500 flex items-center justify-center text-xs font-bold text-black font-mono">
-                                                    {member.name?.[0]?.toUpperCase()}
-                                                </div>
-                                            ))}
-                                            {extraAttendees > 0 && (
-                                                <div className="w-10 h-10 rounded-full border-2 border-[#18181b] bg-surface-highlight flex items-center justify-center text-xs font-bold text-white">
-                                                    +{extraAttendees}
-                                                </div>
-                                            )}
-                                            {/* If no one confirmed, show placeholder in gray */}
-                                            {confirmedCount === 0 && (
-                                                <div className="w-10 h-10 rounded-full border-2 border-[#18181b] bg-white/5 flex items-center justify-center text-xs text-text-secondary">
-                                                    ?
-                                                </div>
+                                        <div className="flex-1 min-w-0" onClick={() => canEdit && openEditCredits(index)}>
+                                            <h3 className="text-white font-medium truncate text-lg">{song.songTitle}</h3>
+                                            {/* Credits Display */}
+                                            <div className="flex flex-wrap gap-2 mt-1">
+                                                {song.performedBy && (
+                                                    <span className="text-xs text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                                        <UserIcon className="w-3 h-3" /> {song.performedBy}
+                                                    </span>
+                                                )}
+                                                {song.pianist && (
+                                                    <span className="text-xs text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                                        🎹 {song.pianist}
+                                                    </span>
+                                                )}
+                                                {hasPdf && <span className="text-xs text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md">PDF</span>}
+                                            </div>
+                                            {/* Hint to edit */}
+                                            {canEdit && !song.performedBy && !song.pianist && (
+                                                <p className="text-xs text-text-secondary/50 mt-1">Натисни, щоб вказати хто диригував</p>
                                             )}
                                         </div>
-                                        <div className="text-right">
-                                            <p className="text-2xl font-bold text-white transition-all">{confirmedCount}</p>
-                                            <p className="text-xs text-text-secondary">підтвердили</p>
+
+                                        <div className="flex items-center gap-1">
+                                            {hasPdf && (
+                                                <button
+                                                    onClick={() => handleViewPdf(song.songId)}
+                                                    className="p-3 text-white bg-white/5 hover:bg-white/10 rounded-xl transition-colors"
+                                                >
+                                                    <Eye className="w-5 h-5" />
+                                                </button>
+                                            )}
+
+                                            {canEdit && isEditMode && (
+                                                <button
+                                                    onClick={() => handleRemoveSong(index)}
+                                                    className="p-3 text-red-400 bg-red-500/5 hover:bg-red-500/10 rounded-xl transition-colors"
+                                                >
+                                                    <X className="w-5 h-5" />
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
-                                ) : (
-                                    <div className="h-10 w-full animate-pulse bg-white/5 rounded-xl" />
-                                )}
-
-                                {/* Show absence count separately OR expected count */}
-                                <div className="flex items-center gap-4 text-xs font-medium pt-1">
-                                    {(choirMembers.length - absentCount) > confirmedCount && (
-                                        <div className="text-text-secondary">
-                                            Очікується: <span className="text-white">{choirMembers.length - absentCount}</span>
-                                        </div>
-                                    )}
-                                    {absentCount > 0 && (
-                                        <div className="flex items-center gap-1 text-orange-400">
-                                            <AlertCircle className="w-3 h-3" />
-                                            <span>{absentCount} не буде</span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Right Column (Songs) */}
-                    <div className="md:col-span-7 lg:col-span-8 space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-sm font-bold text-text-secondary uppercase tracking-wide px-1">Програма ({currentService.songs.length})</h3>
-                            {canEdit && (
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => setIsEditMode(!isEditMode)}
-                                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isEditMode
-                                            ? 'bg-red-500 text-white'
-                                            : 'bg-white/5 text-text-secondary hover:bg-white/10'}`}
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                        onClick={() => setShowAddSong(true)}
-                                        className="text-xs bg-white text-black font-bold px-3 py-1.5 rounded-full hover:bg-gray-200 transition-colors flex items-center gap-1"
-                                    >
-                                        <Plus className="w-3 h-3" />
-                                        Додати
-                                    </button>
-                                </div>
-                            )}
+                                );
+                            })}
                         </div>
+                    )}
 
-                        {currentService.songs.length === 0 ? (
-                            <div className="text-center py-10 bg-surface border border-white/5 rounded-3xl flex flex-col items-center justify-center gap-3">
-                                <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center text-text-secondary">
-                                    <Music className="w-8 h-8" />
-                                </div>
-                                <div>
-                                    <p className="text-white font-medium">Список порожній</p>
-                                    <p className="text-sm text-text-secondary">Додайте пісні до цього служіння</p>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="space-y-2">
-                                {currentService.songs.map((song, index) => {
-                                    const originalSong = availableSongs.find(s => s.id === song.songId);
-                                    const hasPdf = originalSong?.hasPdf;
-
-                                    return (
-                                        <div key={`${song.songId}-${index}`} className="flex items-center gap-4 bg-surface hover:bg-surface-highlight border border-white/5 p-4 rounded-2xl group transition-colors">
-                                            <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-xs font-mono text-text-secondary">
-                                                {index + 1}
-                                            </div>
-
-                                            <div className="flex-1 min-w-0" onClick={() => canEdit && openEditCredits(index)}>
-                                                <h3 className="text-white font-medium truncate text-lg">{song.songTitle}</h3>
-                                                {/* Credits Display */}
-                                                <div className="flex flex-wrap gap-2 mt-1">
-                                                    {song.performedBy && (
-                                                        <span className="text-xs text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md flex items-center gap-1">
-                                                            <UserIcon className="w-3 h-3" /> {song.performedBy}
-                                                        </span>
-                                                    )}
-                                                    {song.pianist && (
-                                                        <span className="text-xs text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md flex items-center gap-1">
-                                                            🎹 {song.pianist}
-                                                        </span>
-                                                    )}
-                                                    {hasPdf && <span className="text-xs text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md">PDF</span>}
-                                                </div>
-                                                {/* Hint to edit */}
-                                                {canEdit && !song.performedBy && !song.pianist && (
-                                                    <p className="text-xs text-text-secondary/50 mt-1">Натисни, щоб вказати хто диригував</p>
-                                                )}
-                                            </div>
-
-                                            <div className="flex items-center gap-1">
-                                                {hasPdf && (
-                                                    <button
-                                                        onClick={() => handleViewPdf(song.songId)}
-                                                        className="p-3 text-white bg-white/5 hover:bg-white/10 rounded-xl transition-colors"
-                                                    >
-                                                        <Eye className="w-5 h-5" />
-                                                    </button>
-                                                )}
-
-                                                {canEdit && isEditMode && (
-                                                    <button
-                                                        onClick={() => handleRemoveSong(index)}
-                                                        className="p-3 text-red-400 bg-red-500/5 hover:bg-red-500/10 rounded-xl transition-colors"
-                                                    >
-                                                        <X className="w-5 h-5" />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-
-                        {/* Add Song Button (Bottom) */}
-                        {canEdit && currentService.songs.length > 0 && !isEditMode && (
-                            <button
-                                onClick={() => setShowAddSong(true)}
-                                className="w-full py-4 border border-dashed border-white/10 rounded-3xl text-text-secondary hover:text-white hover:bg-white/5 transition-all flex items-center justify-center gap-2"
-                            >
-                                <Plus className="w-5 h-5" />
-                                Додати ще пісню
-                            </button>
-                        )}
-                    </div>
+                    {/* Add Song Button (Bottom) */}
+                    {canEdit && currentService.songs.length > 0 && !isEditMode && (
+                        <button
+                            onClick={() => setShowAddSong(true)}
+                            className="w-full py-4 border border-dashed border-white/10 rounded-3xl text-text-secondary hover:text-white hover:bg-white/5 transition-all flex items-center justify-center gap-2"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Додати ще пісню
+                        </button>
+                    )}
                 </div>
+
+                {/* Voting Section - Compact */}
+                {isFuture && (
+                    <div className="bg-surface border border-white/5 rounded-2xl p-4">
+                        <h3 className="text-xs font-bold text-text-secondary uppercase tracking-wide mb-3">Ваша участь</h3>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button
+                                onClick={() => handleVote('present')}
+                                disabled={votingLoading}
+                                className={`p-3 rounded-xl border-2 transition-all flex items-center justify-center gap-2 ${myStatus === 'present'
+                                    ? 'bg-green-500/20 border-green-500'
+                                    : 'bg-black/20 border-white/5 hover:border-white/20'
+                                    }`}
+                            >
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${myStatus === 'present' ? 'bg-green-500 text-black' : 'bg-white/10 text-text-secondary'}`}>
+                                    <Check className="w-4 h-4" strokeWidth={3} />
+                                </div>
+                                <span className={`text-sm font-bold ${myStatus === 'present' ? 'text-green-400' : 'text-text-secondary'}`}>Буду</span>
+                            </button>
+
+                            <button
+                                onClick={() => handleVote('absent')}
+                                disabled={votingLoading}
+                                className={`p-3 rounded-xl border-2 transition-all flex items-center justify-center gap-2 ${myStatus === 'absent'
+                                    ? 'bg-red-500/20 border-red-500'
+                                    : 'bg-black/20 border-white/5 hover:border-white/20'
+                                    }`}
+                            >
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${myStatus === 'absent' ? 'bg-red-500 text-white' : 'bg-white/10 text-text-secondary'}`}>
+                                    <X className="w-4 h-4" strokeWidth={3} />
+                                </div>
+                                <span className={`text-sm font-bold ${myStatus === 'absent' ? 'text-red-400' : 'text-text-secondary'}`}>Не буду</span>
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Attendees Section - Simplified (no avatars, just counts) */}
+                {(canEdit || !isFuture) && (
+                    <div onClick={() => canEdit && setShowAttendance(true)} className={`p-4 bg-surface border border-white/5 rounded-2xl ${canEdit ? 'cursor-pointer hover:border-white/20 transition-colors' : ''}`}>
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2 text-white font-bold">
+                                <Users className="w-5 h-5 text-indigo-400" />
+                                <span>Учасники</span>
+                            </div>
+                            {canEdit && <span className="text-xs text-text-secondary bg-white/5 px-2 py-1 rounded-full">Переглянути</span>}
+                        </div>
+
+                        {!membersLoading && (
+                            <div className="flex items-center gap-4 mt-3 text-sm">
+                                <div className="flex items-center gap-1">
+                                    <UserCheck className="w-4 h-4 text-green-400" />
+                                    <span className="text-white font-bold">{confirmedCount}</span>
+                                    <span className="text-text-secondary">буде</span>
+                                </div>
+                                {absentCount > 0 && (
+                                    <div className="flex items-center gap-1">
+                                        <UserX className="w-4 h-4 text-red-400" />
+                                        <span className="text-white font-bold">{absentCount}</span>
+                                        <span className="text-text-secondary">не буде</span>
+                                    </div>
+                                )}
+                                {(choirMembers.length - confirmedCount - absentCount) > 0 && (
+                                    <div className="flex items-center gap-1 text-text-secondary">
+                                        <span className="font-bold">{choirMembers.length - confirmedCount - absentCount}</span>
+                                        <span>очікують</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Modals remain mostly simple, just style updates */}
