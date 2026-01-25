@@ -384,6 +384,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
             {/* Edit Song Modal */}
             {editingSong && (
                 <EditSongModal
+                    key={editingSong.id}
                     isOpen={!!editingSong}
                     onClose={() => setEditingSong(null)}
                     onSave={handleEditSave}
