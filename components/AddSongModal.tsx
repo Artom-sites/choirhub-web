@@ -30,6 +30,9 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
     const [showCustomCategory, setShowCustomCategory] = useState(false);
     const [customCategory, setCustomCategory] = useState("");
 
+    const [showAllCategories, setShowAllCategories] = useState(false);
+    const [showAllConductors, setShowAllConductors] = useState(false);
+
     // Combine static and known categories
     const allCategories = Array.from(new Set([...CATEGORIES, ...(knownCategories || [])]));
     // Combine given regents and known conductors
@@ -206,28 +209,51 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                             Категорія
                         </label>
                         {!showCustomCategory && allCategories.length > 0 ? (
-                            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent pr-1">
-                                {allCategories.map(cat => (
+                            <div className="space-y-2">
+                                <div className="grid grid-cols-2 gap-2">
+                                    {(showAllCategories ? allCategories : allCategories.slice(0, 6)).map(cat => (
+                                        <button
+                                            key={cat}
+                                            type="button"
+                                            onClick={() => setCategory(cat)}
+                                            className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left truncate ${category === cat
+                                                ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50'
+                                                : 'bg-black/20 text-text-secondary border border-white/10 hover:bg-white/5'
+                                                }`}
+                                        >
+                                            {cat}
+                                        </button>
+                                    ))}
+                                    {/* Additional Options Button */}
                                     <button
-                                        key={cat}
                                         type="button"
-                                        onClick={() => setCategory(cat)}
-                                        className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left truncate ${category === cat
-                                            ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50'
-                                            : 'bg-black/20 text-text-secondary border border-white/10 hover:bg-white/5'
-                                            }`}
+                                        onClick={() => setShowCustomCategory(true)}
+                                        className="px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left bg-black/20 text-text-secondary border border-dashed border-white/20 hover:bg-white/5 flex items-center gap-2"
                                     >
-                                        {cat}
+                                        <Plus className="w-4 h-4" />
+                                        Своя...
                                     </button>
-                                ))}
-                                <button
-                                    type="button"
-                                    onClick={() => setShowCustomCategory(true)}
-                                    className="px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left bg-black/20 text-text-secondary border border-dashed border-white/20 hover:bg-white/5 flex items-center gap-2"
-                                >
-                                    <Plus className="w-4 h-4" />
-                                    Своя...
-                                </button>
+                                </div>
+
+                                {allCategories.length > 6 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowAllCategories(!showAllCategories)}
+                                        className="w-full py-2 text-xs font-medium text-text-secondary hover:text-white flex items-center justify-center gap-1 transition-colors"
+                                    >
+                                        {showAllCategories ? (
+                                            <>
+                                                <ChevronDown className="w-3 h-3 rotate-180" />
+                                                Згорнути
+                                            </>
+                                        ) : (
+                                            <>
+                                                <ChevronDown className="w-3 h-3" />
+                                                Показати всі ({allCategories.length})
+                                            </>
+                                        )}
+                                    </button>
+                                )}
                             </div>
                         ) : (
                             <div className="space-y-2">
@@ -257,71 +283,78 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                         </label>
 
                         {!showCustomInput && allConductors.length > 0 ? (
-                            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent pr-1">
-                                {allConductors.map(r => {
-                                    const isCustom = uniqueKnownConductors.includes(r);
-                                    return (
-                                        <div key={r} className={`group relative flex items-stretch rounded-xl transition-all border ${conductor === r
-                                            ? 'bg-blue-500/20 border-blue-500/50'
-                                            : 'bg-black/20 border-white/10 hover:bg-white/5'
-                                            }`}>
-                                            <button
-                                                type="button"
-                                                onClick={() => setConductor(r)}
-                                                className={`flex-1 px-3 py-2.5 text-sm font-medium text-left truncate flex items-center gap-2 ${conductor === r ? 'text-blue-400' : 'text-text-secondary'}`}
-                                            >
-                                                <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px] text-white/70 font-bold shrink-0">
-                                                    {r[0]?.toUpperCase()}
-                                                </div>
-                                                <span className="truncate">{r}</span>
-                                            </button>
-
-                                            {isCustom && userData?.choirId && (
+                            <div className="space-y-2">
+                                <div className="grid grid-cols-2 gap-2">
+                                    {(showAllConductors ? allConductors : allConductors.slice(0, 6)).map(r => {
+                                        const isCustom = uniqueKnownConductors.includes(r);
+                                        return (
+                                            <div key={r} className={`group relative flex items-stretch rounded-xl transition-all border ${conductor === r
+                                                ? 'bg-blue-500/20 border-blue-500/50'
+                                                : 'bg-black/20 border-white/10 hover:bg-white/5'
+                                                }`}>
                                                 <button
                                                     type="button"
-                                                    onClick={async (e) => {
-                                                        e.stopPropagation();
-                                                        if (confirm(`Видалити "${r}" зі списку?`)) {
-                                                            const { removeKnownConductor } = await import("@/lib/db");
-                                                            try {
-                                                                await removeKnownConductor(userData.choirId, r);
-                                                                // Optimistic update handled by parent prop update via realtime listener or re-fetch?
-                                                                // We need to trigger a refresh in parent page logic essentially. 
-                                                                // But we are in a modal. 
-                                                                // For now, let's just do it and let page re-render if it listens.
-                                                                // Actually, parent handles data. We might need to ask parent to refresh?
-                                                                // Page wrapper has listener? No, it has manual fetch.
-                                                                // We should probably just do it and hope page refreshes soon or force it.
-                                                                // Wait, page component fetches data on mount or manual calls. 
-                                                                // We will need to trigger onAdd or separate refresh? 
-                                                                // Let's assume we want to just dispatch the delete.
-                                                                // We can use a callback prop or just reload page data if we had access.
-                                                                // Simplest: just confirm and delete. The list won't disappear instantly unless we filter local state.
-                                                                // But we receive props. 
-                                                                // Let's rely on page refresh for now or maybe we can't update props.
-                                                                // We can force reload. 
-                                                                window.location.reload();
-                                                            } catch (e) {
-                                                                console.error(e);
-                                                            }
-                                                        }
-                                                    }}
-                                                    className="px-2 flex items-center justify-center text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-r-xl transition-colors opacity-0 group-hover:opacity-100"
+                                                    onClick={() => setConductor(r)}
+                                                    className={`flex-1 px-3 py-2.5 text-sm font-medium text-left truncate flex items-center gap-2 ${conductor === r ? 'text-blue-400' : 'text-text-secondary'}`}
                                                 >
-                                                    <X className="w-3.5 h-3.5" />
+                                                    <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px] text-white/70 font-bold shrink-0">
+                                                        {r[0]?.toUpperCase()}
+                                                    </div>
+                                                    <span className="truncate">{r}</span>
                                                 </button>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                                <button
-                                    type="button"
-                                    onClick={() => setShowCustomInput(true)}
-                                    className="px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left bg-black/20 text-text-secondary border border-dashed border-white/20 hover:bg-white/5 flex items-center gap-2"
-                                >
-                                    <Plus className="w-4 h-4" />
-                                    Інший...
-                                </button>
+
+                                                {isCustom && userData?.choirId && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={async (e) => {
+                                                            e.stopPropagation();
+                                                            if (confirm(`Видалити "${r}" зі списку?`)) {
+                                                                const { removeKnownConductor } = await import("@/lib/db");
+                                                                try {
+                                                                    await removeKnownConductor(userData.choirId, r);
+                                                                    window.location.reload();
+                                                                } catch (e) {
+                                                                    console.error(e);
+                                                                }
+                                                            }
+                                                        }}
+                                                        className="px-2 flex items-center justify-center text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-r-xl transition-colors opacity-0 group-hover:opacity-100"
+                                                    >
+                                                        <X className="w-3.5 h-3.5" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowCustomInput(true)}
+                                        className="px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left bg-black/20 text-text-secondary border border-dashed border-white/20 hover:bg-white/5 flex items-center gap-2"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                        Інший...
+                                    </button>
+                                </div>
+
+                                {allConductors.length > 6 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowAllConductors(!showAllConductors)}
+                                        className="w-full py-2 text-xs font-medium text-text-secondary hover:text-white flex items-center justify-center gap-1 transition-colors"
+                                    >
+                                        {showAllConductors ? (
+                                            <>
+                                                <ChevronDown className="w-3 h-3 rotate-180" />
+                                                Згорнути
+                                            </>
+                                        ) : (
+                                            <>
+                                                <ChevronDown className="w-3 h-3" />
+                                                Показати всі ({allConductors.length})
+                                            </>
+                                        )}
+                                    </button>
+                                )}
                             </div>
                         ) : (
                             <div className="space-y-2">

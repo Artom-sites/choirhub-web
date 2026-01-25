@@ -343,10 +343,37 @@ function HomePageContent() {
 
   const handleSaveName = async () => {
     if (!newName.trim() || !user) return;
+    const finalName = newName.trim();
+    const oldName = userData?.name;
     setSavingName(true);
     try {
-      await createUser(user.uid, { name: newName.trim() });
+      // 1. Update User Profile
+      await createUser(user.uid, { name: finalName });
       await refreshProfile();
+
+      // 2. Update Choir Data if applicable
+      if (userData?.choirId && choir) {
+        const updatedMembers = (choir.members || []).map(m =>
+          m.id === user.uid ? { ...m, name: finalName } : m
+        );
+
+        let updatedRegents = [...(choir.regents || [])];
+        if (oldName && updatedRegents.includes(oldName)) {
+          updatedRegents = updatedRegents.map(r => r === oldName ? finalName : r);
+        }
+
+        // Also update knownConductors if present?
+        // Risky without IDs, but let's assume unique names or user intent.
+        // Actually, let's leave knownConductors alone to avoid side effects on other people with same name,
+        // unless we are sure. The user specifically mentioned "first regent" which is likely from `regents`.
+
+        const choirRef = doc(db, "choirs", userData.choirId);
+        await updateDoc(choirRef, {
+          members: updatedMembers,
+          regents: updatedRegents
+        });
+      }
+
       await fetchChoirData();
       setShowEditName(false);
       setNewName("");
