@@ -87,7 +87,6 @@ export default function EditMemberModal({ isOpen, onClose, member, onSave, onDel
                                 onChange={e => setName(e.target.value)}
                                 placeholder="Ім'я..."
                                 className="w-full p-3 bg-black/20 text-white border border-white/10 rounded-xl focus:border-white/30 outline-none transition-all"
-                                autoFocus
                             />
                         </div>
 
