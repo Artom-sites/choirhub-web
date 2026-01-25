@@ -303,44 +303,47 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
 
                                     <div className="flex items-center gap-1 mt-3.5 relative">
                                         {effectiveCanAdd && (
-                                            <div className="relative">
+                                            <div className="relative z-20">
                                                 <button
                                                     onClick={(e) => {
+                                                        e.preventDefault();
                                                         e.stopPropagation();
+                                                        e.nativeEvent.stopImmediatePropagation(); // Crucial for mixed listeners
                                                         setActionMenuOpen(actionMenuOpen === song.id ? null : song.id);
                                                     }}
-                                                    className="p-1.5 text-text-secondary hover:text-white hover:bg-white/10 rounded-lg transition-colors z-20"
+                                                    className={`p-1.5 rounded-lg transition-colors z-20 ${actionMenuOpen === song.id ? 'bg-white/10 text-white' : 'text-text-secondary hover:text-white hover:bg-white/10'}`}
                                                 >
                                                     <MoreVertical className="w-5 h-5" />
                                                 </button>
 
                                                 {actionMenuOpen === song.id && (
-                                                    <div className="absolute right-0 top-full mt-1 w-40 bg-[#1c1c20] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100 flex flex-col">
+                                                    <div className="absolute right-0 top-full mt-2 w-48 bg-[#1c1c20] border border-white/10 rounded-xl shadow-2xl shadow-black/50 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100 flex flex-col">
                                                         <button
                                                             onClick={(e) => {
+                                                                e.stopPropagation();
                                                                 handleEditClick(e, song);
                                                                 setActionMenuOpen(null);
                                                             }}
-                                                            className="px-4 py-3 text-left text-sm font-medium text-white hover:bg-white/5 flex items-center gap-3"
+                                                            className="w-full px-4 py-3 text-left text-sm font-medium text-white hover:bg-white/5 flex items-center gap-3 active:bg-white/10"
                                                         >
                                                             <Pencil className="w-4 h-4 text-text-secondary" />
-                                                            Редагувати
+                                                            <span>Редагувати</span>
                                                         </button>
                                                         <button
                                                             onClick={(e) => {
+                                                                e.stopPropagation();
                                                                 initiateDelete(e, song.id);
                                                                 setActionMenuOpen(null);
                                                             }}
-                                                            className="px-4 py-3 text-left text-sm font-medium text-red-400 hover:bg-red-500/10 flex items-center gap-3 border-t border-white/5"
+                                                            className="w-full px-4 py-3 text-left text-sm font-medium text-red-400 hover:bg-red-500/10 flex items-center gap-3 border-t border-white/5 active:bg-red-500/20"
                                                         >
                                                             <Trash2 className="w-4 h-4" />
-                                                            Видалити
+                                                            <span>Видалити</span>
                                                         </button>
                                                     </div>
                                                 )}
                                             </div>
                                         )}
-                                        <ChevronRight className="w-5 h-5 text-text-secondary/30 group-hover:text-white group-hover:translate-x-1 transition-all" />
                                     </div>
                                 </div>
                             </motion.button>
