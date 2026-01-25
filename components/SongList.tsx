@@ -182,29 +182,44 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
             </div>
 
             {/* Search & Filter - Fixed Top Offset */}
-            <div className="flex gap-3 sticky top-[72px] z-20 py-3 -mx-4 px-4 bg-[#09090b] border-b border-white/5 shadow-xl">
-                <div className="relative flex-1 group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary group-focus-within:text-white transition-colors" />
-                    <input
-                        type="text"
-                        placeholder="Пошук..."
-                        className="w-full pl-11 pr-4 py-3.5 bg-surface border border-white/5 rounded-2xl text-base focus:border-white/20 focus:outline-none text-white placeholder:text-text-secondary/50 transition-all shadow-sm"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
-                </div>
-                <div className="relative">
-                    <select
-                        className="appearance-none bg-surface pl-4 pr-10 py-3.5 rounded-2xl text-base border border-white/5 focus:border-white/20 focus:outline-none text-white h-full shadow-sm transition-all cursor-pointer hover:bg-surface-highlight"
-                        value={selectedCategory}
-                        onChange={(e) => setSelectedCategory(e.target.value as Category | "All")}
-                    >
-                        <option value="All">Всі</option>
-                        {CATEGORIES.map(cat => (
-                            <option key={cat} value={cat}>{cat}</option>
+            <div className="sticky top-[72px] z-20 -mx-4 bg-[#09090b]/95 backdrop-blur-xl border-b border-white/5 shadow-xl transition-all">
+                <div className="px-4 py-3 space-y-3">
+                    {/* Search Bar */}
+                    <div className="relative flex-1 group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary group-focus-within:text-white transition-colors" />
+                        <input
+                            type="text"
+                            placeholder="Пошук..."
+                            className="w-full pl-11 pr-4 py-3 bg-surface border border-white/5 rounded-2xl text-base focus:border-white/20 focus:outline-none text-white placeholder:text-text-secondary/50 transition-all shadow-sm"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </div>
+
+                    {/* Filter Chips */}
+                    <div className="flex overflow-x-auto pb-1 gap-2 scrollbar-none -mx-4 px-4 mask-linear-fade">
+                        <button
+                            onClick={() => setSelectedCategory("All")}
+                            className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all border ${selectedCategory === "All"
+                                    ? "bg-white text-black border-white shadow-lg shadow-white/10"
+                                    : "bg-surface border-white/5 text-text-secondary hover:bg-surface-highlight hover:text-white"
+                                }`}
+                        >
+                            Всі
+                        </button>
+                        {Array.from(new Set([...CATEGORIES, ...(knownCategories || [])])).map(cat => (
+                            <button
+                                key={cat}
+                                onClick={() => setSelectedCategory(cat)}
+                                className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all border ${selectedCategory === cat
+                                        ? "bg-white text-black border-white shadow-lg shadow-white/10"
+                                        : "bg-surface border-white/5 text-text-secondary hover:bg-surface-highlight hover:text-white"
+                                    }`}
+                            >
+                                {cat}
+                            </button>
                         ))}
-                    </select>
-                    <Filter className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary pointer-events-none" />
+                    </div>
                 </div>
             </div>
 
