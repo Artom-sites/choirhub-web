@@ -3,10 +3,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { getSong, updateSong, uploadSongPdf, deleteSong } from "@/lib/db";
+import { getSong, updateSong, uploadSongPdf, deleteSong, getChoir } from "@/lib/db";
 import { SimpleSong } from "@/types";
 import PDFViewer from "@/components/PDFViewer";
-import { ArrowLeft, FileText, Upload, Loader2, Check, AlertCircle, Trash2, ExternalLink } from "lucide-react";
+import EditSongModal from "@/components/EditSongModal";
+import { ArrowLeft, FileText, Upload, Loader2, Check, AlertCircle, Trash2, ExternalLink, Pencil } from "lucide-react";
 
 export default function SongPage() {
     const params = useParams();
@@ -22,6 +23,14 @@ export default function SongPage() {
     const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [errorMessage, setErrorMessage] = useState("");
 
+    // Edit Modal State
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [choirData, setChoirData] = useState<{
+        regents: string[];
+        knownConductors: string[];
+        knownCategories: string[];
+    }>({ regents: [], knownConductors: [], knownCategories: [] });
+
     useEffect(() => {
         async function loadSong() {
             if (!userData?.choirId || !songId) return;
@@ -36,10 +45,22 @@ export default function SongPage() {
                 }
             }
             setLoading(false);
+
+            // Load choir data for editing
+            if (userData.role === 'head' || userData.role === 'regent') {
+                const choir = await getChoir(userData.choirId);
+                if (choir) {
+                    setChoirData({
+                        regents: choir.regents || [],
+                        knownConductors: choir.knownConductors || [],
+                        knownCategories: choir.knownCategories || []
+                    });
+                }
+            }
         }
 
         loadSong();
-    }, [userData?.choirId, songId]);
+    }, [userData?.choirId, songId, userData?.role]);
 
     const isTelegramLink = (url?: string) => {
         if (!url) return false;
@@ -81,6 +102,19 @@ export default function SongPage() {
             setErrorMessage("Помилка завантаження файлу");
         } finally {
             setUploading(false);
+        }
+    };
+
+    const handleUpdateSong = async (updates: Partial<SimpleSong>) => {
+        if (!userData?.choirId || !songId) return;
+
+        try {
+            await updateSong(userData.choirId, songId, updates);
+            setSong(prev => prev ? { ...prev, ...updates } : null);
+            setShowEditModal(false);
+        } catch (error) {
+            console.error("Failed to update song:", error);
+            alert("Помилка оновлення пісні");
         }
     };
 
@@ -151,12 +185,20 @@ export default function SongPage() {
                     <p className="text-xs text-text-secondary font-medium tracking-wide uppercase">{song.category}</p>
                 </div>
                 {canEdit && (
-                    <button
-                        onClick={handleDelete}
-                        className="p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition-colors"
-                    >
-                        <Trash2 className="w-5 h-5" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={() => setShowEditModal(true)}
+                            className="p-2 text-blue-400 hover:bg-blue-500/10 rounded-xl transition-colors"
+                        >
+                            <Pencil className="w-5 h-5" />
+                        </button>
+                        <button
+                            onClick={handleDelete}
+                            className="p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition-colors"
+                        >
+                            <Trash2 className="w-5 h-5" />
+                        </button>
+                    </div>
                 )}
             </header>
 
@@ -292,6 +334,17 @@ export default function SongPage() {
                     )}
                 </div>
             </div>
+
+            {/* Edit Modal */}
+            <EditSongModal
+                isOpen={showEditModal}
+                onClose={() => setShowEditModal(false)}
+                onSave={handleUpdateSong}
+                initialData={song}
+                regents={choirData.regents}
+                knownConductors={choirData.knownConductors}
+                knownCategories={choirData.knownCategories}
+            />
         </div>
     );
 }
