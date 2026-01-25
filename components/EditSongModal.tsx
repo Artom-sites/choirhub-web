@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { X, Plus, Loader2, Save, Check, ChevronDown, Trash2 } from "lucide-react";
 import { SimpleSong } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,16 +33,31 @@ export default function EditSongModal({
 }: EditSongModalProps) {
     const { userData } = useAuth();
 
+    // Memoize derived lists to prevent unstable dependencies
+    const allCategories = useMemo(() => Array.from(new Set([...CATEGORIES, ...(knownCategories || [])])), [knownCategories]);
+
+    const normalizedRegents = useMemo(() => Array.from(new Set(regents.map(r => r.trim()))), [regents]);
+    const uniqueKnownConductors = useMemo(() => (knownConductors || [])
+        .map(c => c.trim())
+        .filter(c => !normalizedRegents.some(r => r.toLowerCase() === c.toLowerCase()))
+        .filter((c, index, self) => self.indexOf(c) === index), [knownConductors, normalizedRegents]);
+
+    const allConductors = useMemo(() => [...normalizedRegents, ...uniqueKnownConductors], [normalizedRegents, uniqueKnownConductors]);
+
+    // Determine initial state logic
+    const initialIsCustomCategory = initialData.category && !allCategories.includes(initialData.category);
+    const initialIsCustomConductor = initialData.conductor && !allConductors.includes(initialData.conductor);
+
     // Track initial values to detect changes
     const [title, setTitle] = useState(initialData.title);
-    const [category, setCategory] = useState(initialData.category);
-    const [conductor, setConductor] = useState(initialData.conductor || "");
 
-    const [customCategory, setCustomCategory] = useState("");
-    const [showCustomCategory, setShowCustomCategory] = useState(false);
+    const [category, setCategory] = useState(initialIsCustomCategory ? "" : initialData.category);
+    const [customCategory, setCustomCategory] = useState(initialIsCustomCategory ? initialData.category : "");
+    const [showCustomCategory, setShowCustomCategory] = useState(!!initialIsCustomCategory);
 
-    const [customConductor, setCustomConductor] = useState("");
-    const [showCustomInput, setShowCustomInput] = useState(false);
+    const [conductor, setConductor] = useState(initialIsCustomConductor ? "" : (initialData.conductor || ""));
+    const [customConductor, setCustomConductor] = useState(initialIsCustomConductor ? (initialData.conductor || "") : "");
+    const [showCustomInput, setShowCustomInput] = useState(!!initialIsCustomConductor);
 
     const [showAllCategories, setShowAllCategories] = useState(false);
 
@@ -57,48 +72,7 @@ export default function EditSongModal({
     const [error, setError] = useState("");
 
     // Combine static and known categories
-    const allCategories = Array.from(new Set([...CATEGORIES, ...(knownCategories || [])]));
 
-    // Sync state with initialData when it changes
-    // Removed useEffect to preventing input freezing due to parent re-renders.
-    // We will rely on key={id} in parent to force remount.
-    // Combine given regents and known conductors
-    const normalizedRegents = Array.from(new Set(regents.map(r => r.trim())));
-    const uniqueKnownConductors = (knownConductors || [])
-        .map(c => c.trim())
-        .filter(c => !normalizedRegents.some(r => r.toLowerCase() === c.toLowerCase()))
-        .filter((c, index, self) => self.indexOf(c) === index);
-
-    const allConductors = [...normalizedRegents, ...uniqueKnownConductors];
-
-    // Close dropdown on click outside
-    useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsConductorDropdownOpen(false);
-            }
-        }
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    // Initialize custom inputs if current value is not in lists
-    useEffect(() => {
-        if (!allCategories.includes(initialData.category) && initialData.category) {
-            setCustomCategory(initialData.category);
-            setShowCustomCategory(true);
-        } else {
-            setCategory(initialData.category);
-        }
-
-        if (initialData.conductor && !allConductors.includes(initialData.conductor)) {
-            setCustomConductor(initialData.conductor);
-            setShowCustomInput(true);
-        } else {
-            setConductor(initialData.conductor || "");
-        }
-        setTitle(initialData.title);
-    }, [initialData, allCategories, allConductors]);
 
     if (!isOpen) return null;
 
