@@ -58,6 +58,17 @@ export default function EditSongModal({
 
     // Combine static and known categories
     const allCategories = Array.from(new Set([...CATEGORIES, ...(knownCategories || [])]));
+
+    // Sync state with initialData when it changes
+    useEffect(() => {
+        setTitle(initialData.title);
+        setCategory(initialData.category);
+        setConductor(initialData.conductor || "");
+        setCustomCategory("");
+        setShowCustomCategory(false);
+        setCustomConductor("");
+        setShowCustomInput(false);
+    }, [initialData]);
     // Combine given regents and known conductors
     const normalizedRegents = Array.from(new Set(regents.map(r => r.trim())));
     const uniqueKnownConductors = (knownConductors || [])
