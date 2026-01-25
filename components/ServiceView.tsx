@@ -270,39 +270,39 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
 
                         {/* Voting Section */}
                         {isFuture && (
-                            <div className="space-y-4">
-                                <h3 className="text-sm font-bold text-text-secondary px-1 uppercase tracking-wide">Ваша участь</h3>
-                                <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-3">
+                                <h3 className="text-xs font-bold text-text-secondary px-1 uppercase tracking-wide">Ваша участь</h3>
+                                <div className="grid grid-cols-2 gap-2">
                                     <button
                                         onClick={() => handleVote('present')}
                                         disabled={votingLoading}
-                                        className={`relative overflow-hidden p-4 rounded-3xl border-2 transition-all duration-300 flex flex-col items-center gap-3 ${myStatus === 'present'
-                                            ? 'bg-green-500/20 border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.2)]'
+                                        className={`relative overflow-hidden p-3 rounded-2xl border-2 transition-all duration-300 flex flex-col items-center gap-2 ${myStatus === 'present'
+                                            ? 'bg-green-500/20 border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.2)]'
                                             : 'bg-surface border-white/5 hover:border-white/20'
                                             }`}
                                     >
-                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${myStatus === 'present' ? 'bg-green-500 text-black' : 'bg-white/5 text-text-secondary'
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${myStatus === 'present' ? 'bg-green-500 text-black' : 'bg-white/5 text-text-secondary'
                                             }`}>
-                                            <Check className="w-6 h-6" strokeWidth={3} />
+                                            <Check className="w-5 h-5" strokeWidth={3} />
                                         </div>
-                                        <span className={`font-bold ${myStatus === 'present' ? 'text-green-400' : 'text-text-secondary'}`}>
-                                            Я буду
+                                        <span className={`text-sm font-bold ${myStatus === 'present' ? 'text-green-400' : 'text-text-secondary'}`}>
+                                            Буду
                                         </span>
                                     </button>
 
                                     <button
                                         onClick={() => handleVote('absent')}
                                         disabled={votingLoading}
-                                        className={`relative overflow-hidden p-4 rounded-3xl border-2 transition-all duration-300 flex flex-col items-center gap-3 ${myStatus === 'absent'
-                                            ? 'bg-red-500/20 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.2)]'
+                                        className={`relative overflow-hidden p-3 rounded-2xl border-2 transition-all duration-300 flex flex-col items-center gap-2 ${myStatus === 'absent'
+                                            ? 'bg-red-500/20 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]'
                                             : 'bg-surface border-white/5 hover:border-white/20'
                                             }`}
                                     >
-                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${myStatus === 'absent' ? 'bg-red-500 text-white' : 'bg-white/5 text-text-secondary'
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${myStatus === 'absent' ? 'bg-red-500 text-white' : 'bg-white/5 text-text-secondary'
                                             }`}>
-                                            <X className="w-6 h-6" strokeWidth={3} />
+                                            <X className="w-5 h-5" strokeWidth={3} />
                                         </div>
-                                        <span className={`font-bold ${myStatus === 'absent' ? 'text-red-400' : 'text-text-secondary'}`}>
+                                        <span className={`text-sm font-bold ${myStatus === 'absent' ? 'text-red-400' : 'text-text-secondary'}`}>
                                             Не буду
                                         </span>
                                     </button>

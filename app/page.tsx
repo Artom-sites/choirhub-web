@@ -101,10 +101,22 @@ function HomePageContent() {
           newParams.delete('joinCode');
           router.replace(`/?${newParams.toString()}`, { scroll: false });
 
-          setShowAccount(false);
-          setShowChoirManager(true);
-          setManagerMode('join');
-          setJoinCode(joinCodeParam);
+          // Check if user is already in a choir that matches this code
+          const codeUpper = joinCodeParam.toUpperCase();
+          const alreadyInChoir = fetchedChoir && (
+            fetchedChoir.memberCode === codeUpper ||
+            fetchedChoir.regentCode === codeUpper ||
+            fetchedChoir.adminCodes?.some(ac => ac.code === codeUpper)
+          );
+
+          // Only show join modal if user is NOT already in the choir with this code
+          if (!alreadyInChoir) {
+            setShowAccount(false);
+            setShowChoirManager(true);
+            setManagerMode('join');
+            setJoinCode(joinCodeParam);
+          }
+          // If alreadyInChoir, just do nothing (they're already here)
         }
 
         // Check for serviceId param (Android Back Support)
@@ -952,8 +964,8 @@ function HomePageContent() {
                       key={perm.key}
                       onClick={() => togglePermission(perm.key)}
                       className={`w-full p-3 rounded-xl border text-left text-sm transition-all ${selectedPermissions.includes(perm.key)
-                          ? 'bg-indigo-500/20 border-indigo-500/50 text-white'
-                          : 'bg-black/20 border-white/5 text-text-secondary hover:border-white/20'
+                        ? 'bg-indigo-500/20 border-indigo-500/50 text-white'
+                        : 'bg-black/20 border-white/5 text-text-secondary hover:border-white/20'
                         }`}
                     >
                       <div className="flex items-center gap-3">
