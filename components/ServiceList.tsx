@@ -307,7 +307,7 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
                                         type="date"
                                         value={newDate}
                                         onChange={(e) => setNewDate(e.target.value)}
-                                        className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/30 [color-scheme:dark]"
+                                        className="w-full h-12 px-4 bg-black/20 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/30 [color-scheme:dark]"
                                     />
                                 </div>
                                 <div>
@@ -316,7 +316,7 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
                                         type="time"
                                         value={newTime}
                                         onChange={(e) => setNewTime(e.target.value)}
-                                        className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/30 [color-scheme:dark]"
+                                        className="w-full h-12 px-4 bg-black/20 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/30 [color-scheme:dark]"
                                     />
                                 </div>
                             </div>
