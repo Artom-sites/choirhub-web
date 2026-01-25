@@ -352,10 +352,11 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                                 </button>
                                             )}
 
-                                            {canEdit && isEditMode && (
+                                            {canEdit && (
                                                 <button
                                                     onClick={() => handleRemoveSong(index)}
-                                                    className="p-3 text-red-400 bg-red-500/5 hover:bg-red-500/10 rounded-xl transition-colors"
+                                                    className="p-3 text-red-400 bg-red-500/5 hover:bg-red-500/10 rounded-xl transition-colors opacity-50 hover:opacity-100"
+                                                    title="Видалити пісню"
                                                 >
                                                     <X className="w-5 h-5" />
                                                 </button>

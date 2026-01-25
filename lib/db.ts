@@ -142,7 +142,9 @@ export async function getServices(choirId: string): Promise<Service[]> {
             collection(db, `choirs/${choirId}/services`)
         );
         const snapshot = await getDocs(q);
-        const services = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Service));
+        const services = snapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() } as Service))
+            .filter(s => !s.deletedAt); // Exclude soft-deleted services
 
         // Smart Sort: Upcoming (Ascending), then Past (Descending)
         const today = new Date();
@@ -181,12 +183,54 @@ export async function updateService(choirId: string, serviceId: string, updates:
     }
 }
 
+// Soft-delete service (moves to trash)
 export async function deleteService(choirId: string, serviceId: string): Promise<void> {
+    try {
+        const docRef = doc(db, `choirs/${choirId}/services`, serviceId);
+        await updateDoc(docRef, {
+            deletedAt: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error("Error soft-deleting service:", error);
+        throw error;
+    }
+}
+
+// Permanently delete service (for cleanup)
+export async function permanentlyDeleteService(choirId: string, serviceId: string): Promise<void> {
     try {
         await deleteDoc(doc(db, `choirs/${choirId}/services`, serviceId));
     } catch (error) {
-        console.error("Error deleting service:", error);
+        console.error("Error permanently deleting service:", error);
         throw error;
+    }
+}
+
+// Restore service from trash
+export async function restoreService(choirId: string, serviceId: string): Promise<void> {
+    try {
+        const docRef = doc(db, `choirs/${choirId}/services`, serviceId);
+        await updateDoc(docRef, {
+            deletedAt: deleteField()
+        });
+    } catch (error) {
+        console.error("Error restoring service:", error);
+        throw error;
+    }
+}
+
+// Get deleted services (for trash bin)
+export async function getDeletedServices(choirId: string): Promise<Service[]> {
+    try {
+        const q = query(
+            collection(db, `choirs/${choirId}/services`),
+            where("deletedAt", "!=", null)
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Service[];
+    } catch (error) {
+        console.error("Error getting deleted services:", error);
+        return [];
     }
 }
 

@@ -6,6 +6,7 @@ import { getServices, addService, deleteService, setServiceAttendance } from "@/
 import { useAuth } from "@/contexts/AuthContext";
 import { Calendar, Plus, ChevronRight, X, Trash2, Loader2, Check } from "lucide-react";
 import ConfirmationModal from "./ConfirmationModal";
+import TrashBin from "./TrashBin";
 
 interface ServiceListProps {
     onSelectService: (service: Service) => void;
@@ -23,6 +24,7 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
     const [votingLoading, setVotingLoading] = useState<string | null>(null);
     const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
     const [showArchive, setShowArchive] = useState(false);
+    const [showTrashBin, setShowTrashBin] = useState(false);
 
     // Create form
     const [newTitle, setNewTitle] = useState("Співанка");
@@ -154,6 +156,15 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
                     </button>
                     {effectiveCanEdit && !showArchive && (
                         <button
+                            onClick={() => setShowTrashBin(true)}
+                            className="p-2 rounded-xl text-text-secondary hover:text-red-400 hover:bg-white/5 transition-colors"
+                            title="Корзина"
+                        >
+                            <Trash2 className="w-5 h-5" />
+                        </button>
+                    )}
+                    {effectiveCanEdit && !showArchive && (
+                        <button
                             onClick={() => setShowCreateModal(true)}
                             className="bg-white text-black hover:bg-gray-200 p-2 rounded-xl transition-colors shadow-lg shadow-white/10"
                             title="Додати служіння"
@@ -274,7 +285,7 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
                 onClose={() => setServiceToDelete(null)}
                 onConfirm={confirmDelete}
                 title="Видалити служіння?"
-                message="Цю дію неможливо скасувати. Всі дані про відвідування цього служіння будуть втрачені."
+                message="Служіння буде переміщено до корзини. Ви зможете відновити його протягом 7 днів."
                 confirmLabel="Видалити"
                 isDestructive
             />
@@ -330,6 +341,15 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Trash Bin */}
+            {showTrashBin && userData?.choirId && (
+                <TrashBin
+                    choirId={userData.choirId}
+                    onClose={() => setShowTrashBin(false)}
+                    onRestore={refreshServices}
+                />
             )}
         </div>
     );
