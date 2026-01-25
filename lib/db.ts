@@ -315,6 +315,30 @@ export async function updateChoirMembers(choirId: string, members: any[]): Promi
     }
 }
 
+export async function addKnownConductor(choirId: string, name: string): Promise<void> {
+    try {
+        const docRef = doc(db, "choirs", choirId);
+        await updateDoc(docRef, {
+            knownConductors: arrayUnion(name)
+        });
+    } catch (error) {
+        console.error("Error adding known conductor:", error);
+        throw error;
+    }
+}
+
+export async function addKnownPianist(choirId: string, name: string): Promise<void> {
+    try {
+        const docRef = doc(db, "choirs", choirId);
+        await updateDoc(docRef, {
+            knownPianists: arrayUnion(name)
+        });
+    } catch (error) {
+        console.error("Error adding known pianist:", error);
+        throw error;
+    }
+}
+
 // ============ USER ============
 
 export async function createUser(userId: string, data: Partial<UserData>): Promise<void> {

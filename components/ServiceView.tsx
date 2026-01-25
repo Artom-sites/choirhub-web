@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Service, ServiceSong, SimpleSong, Choir, ChoirMember } from "@/types";
-import { getSongs, addSongToService, removeSongFromService, getChoir, updateService, setServiceAttendance } from "@/lib/db";
+import { getSongs, addSongToService, removeSongFromService, getChoir, updateService, setServiceAttendance, addKnownConductor, addKnownPianist } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
 import { ChevronLeft, Eye, X, Plus, Users, UserX, Check, Calendar, Music, UserCheck, AlertCircle, Trash2, User as UserIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -44,11 +44,24 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                 if (choir?.members) {
                     setChoirMembers(choir.members);
                 }
+                if (choir?.knownConductors) {
+                    setKnownConductors(choir.knownConductors);
+                }
+                if (choir?.knownPianists) {
+                    setKnownPianists(choir.knownPianists);
+                }
             }
             setMembersLoading(false);
         }
         fetchData();
     }, [userData?.choirId]);
+
+    // Song credits state
+    const [knownConductors, setKnownConductors] = useState<string[]>([]);
+    const [knownPianists, setKnownPianists] = useState<string[]>([]);
+    const [editingSongIndex, setEditingSongIndex] = useState<number | null>(null);
+    const [tempConductor, setTempConductor] = useState("");
+    const [tempPianist, setTempPianist] = useState("");
 
     const handleVote = async (status: 'present' | 'absent') => {
         if (!userData?.choirId || !user?.uid) return;
@@ -154,6 +167,40 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
 
     const handleViewPdf = (songId: string) => {
         router.push(`/song/${songId}`);
+    };
+
+    const openEditCredits = (index: number) => {
+        const song = currentService.songs[index];
+        setTempConductor(song.performedBy || "");
+        setTempPianist(song.pianist || "");
+        setEditingSongIndex(index);
+    };
+
+    const handleSaveCredits = async () => {
+        if (editingSongIndex === null || !userData?.choirId) return;
+
+        const updatedSongs = [...currentService.songs];
+        updatedSongs[editingSongIndex] = {
+            ...updatedSongs[editingSongIndex],
+            performedBy: tempConductor || undefined,
+            pianist: tempPianist || undefined,
+        };
+
+        setCurrentService({ ...currentService, songs: updatedSongs });
+        setEditingSongIndex(null);
+
+        // Save to Firestore
+        await updateService(userData.choirId, currentService.id, { songs: updatedSongs });
+
+        // Add new names to known lists (if not empty and not already in list)
+        if (tempConductor && !knownConductors.includes(tempConductor)) {
+            await addKnownConductor(userData.choirId, tempConductor);
+            setKnownConductors(prev => [...prev, tempConductor]);
+        }
+        if (tempPianist && !knownPianists.includes(tempPianist)) {
+            await addKnownPianist(userData.choirId, tempPianist);
+            setKnownPianists(prev => [...prev, tempPianist]);
+        }
     };
 
     const toggleAbsent = (memberId: string) => {
@@ -369,9 +416,26 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                                 {index + 1}
                                             </div>
 
-                                            <div className="flex-1 min-w-0">
+                                            <div className="flex-1 min-w-0" onClick={() => canEdit && openEditCredits(index)}>
                                                 <h3 className="text-white font-medium truncate text-lg">{song.songTitle}</h3>
-                                                {hasPdf && <span className="text-xs text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md inline-block mt-1">PDF</span>}
+                                                {/* Credits Display */}
+                                                <div className="flex flex-wrap gap-2 mt-1">
+                                                    {song.performedBy && (
+                                                        <span className="text-xs text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                                            <UserIcon className="w-3 h-3" /> {song.performedBy}
+                                                        </span>
+                                                    )}
+                                                    {song.pianist && (
+                                                        <span className="text-xs text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                                            🎹 {song.pianist}
+                                                        </span>
+                                                    )}
+                                                    {hasPdf && <span className="text-xs text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md">PDF</span>}
+                                                </div>
+                                                {/* Hint to edit */}
+                                                {canEdit && !song.performedBy && !song.pianist && (
+                                                    <p className="text-xs text-text-secondary/50 mt-1">Натисни, щоб вказати хто диригував</p>
+                                                )}
                                             </div>
 
                                             <div className="flex items-center gap-1">
@@ -580,6 +644,59 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                     Видалити
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Credits Editing Modal */}
+            {editingSongIndex !== null && (
+                <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-[#18181b] border border-white/10 w-full max-w-sm p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="space-y-5">
+                            <div className="flex justify-between items-center">
+                                <h3 className="text-lg font-bold text-white">Хто виконував?</h3>
+                                <button onClick={() => setEditingSongIndex(null)} className="p-1 hover:bg-white/10 rounded-full">
+                                    <X className="w-5 h-5 text-text-secondary" />
+                                </button>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Диригент</label>
+                                <input
+                                    type="text"
+                                    list="conductor-list"
+                                    value={tempConductor}
+                                    onChange={(e) => setTempConductor(e.target.value)}
+                                    placeholder="Введіть або оберіть ім'я"
+                                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/30"
+                                />
+                                <datalist id="conductor-list">
+                                    {knownConductors.map(name => <option key={name} value={name} />)}
+                                </datalist>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Піаніст</label>
+                                <input
+                                    type="text"
+                                    list="pianist-list"
+                                    value={tempPianist}
+                                    onChange={(e) => setTempPianist(e.target.value)}
+                                    placeholder="Введіть або оберіть ім'я"
+                                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/30"
+                                />
+                                <datalist id="pianist-list">
+                                    {knownPianists.map(name => <option key={name} value={name} />)}
+                                </datalist>
+                            </div>
+
+                            <button
+                                onClick={handleSaveCredits}
+                                className="w-full py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors"
+                            >
+                                Зберегти
+                            </button>
                         </div>
                     </div>
                 </div>

@@ -34,12 +34,16 @@ export interface Choir {
     regents: string[]; // Legacy: just names
     members?: ChoirMember[]; // New: full member objects
     icon?: string; // Base64 or URL
+    knownConductors?: string[]; // Saved conductor names for autocomplete
+    knownPianists?: string[];   // Saved pianist names for autocomplete
 }
 
 export interface ServiceSong {
     songId: string;
     songTitle?: string;
     note?: string;
+    performedBy?: string;  // Conductor for THIS performance
+    pianist?: string;      // Pianist for THIS performance
 }
 
 export interface Service {
