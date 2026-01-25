@@ -195,14 +195,16 @@ function SetupPageContent() {
         setError("");
 
         try {
-            const qMember = query(firestoreCollection(db, "choirs"), where("memberCode", "==", inviteCode.toUpperCase()));
-            const qRegent = query(firestoreCollection(db, "choirs"), where("regentCode", "==", inviteCode.toUpperCase()));
+            const codeUpper = inviteCode.toUpperCase();
+            const qMember = query(firestoreCollection(db, "choirs"), where("memberCode", "==", codeUpper));
+            const qRegent = query(firestoreCollection(db, "choirs"), where("regentCode", "==", codeUpper));
 
             const [snapMember, snapRegent] = await Promise.all([getDocs(qMember), getDocs(qRegent)]);
 
             let foundChoirId = "";
             let role: 'member' | 'regent' = 'member';
             let foundChoirName = "";
+            let permissions: string[] | undefined = undefined;
 
             if (!snapRegent.empty) {
                 foundChoirId = snapRegent.docs[0].id;
@@ -213,21 +215,43 @@ function SetupPageContent() {
                 role = 'member';
                 foundChoirName = snapMember.docs[0].data().name;
             } else {
-                setError("Код не знайдено");
-                setFormLoading(false);
-                return;
+                // Check all choirs for adminCodes
+                const allChoirsSnap = await getDocs(firestoreCollection(db, "choirs"));
+                for (const choirDoc of allChoirsSnap.docs) {
+                    const choirData = choirDoc.data();
+                    const adminCodes = choirData.adminCodes || [];
+                    const matchingCode = adminCodes.find((ac: any) => ac.code === codeUpper);
+                    if (matchingCode) {
+                        foundChoirId = choirDoc.id;
+                        foundChoirName = choirData.name;
+                        role = 'member'; // Admins appear as members
+                        permissions = matchingCode.permissions;
+                        break;
+                    }
+                }
+
+                if (!foundChoirId) {
+                    setError("Код не знайдено");
+                    setFormLoading(false);
+                    return;
+                }
+            }
+
+            const memberData: any = {
+                id: user.uid,
+                name: user.displayName || guestName || "Користувач",
+                role: role
+            };
+            if (permissions && permissions.length > 0) {
+                memberData.permissions = permissions;
             }
 
             const choirRef = doc(db, "choirs", foundChoirId);
             await updateDoc(choirRef, {
-                members: arrayUnion({
-                    id: user.uid,
-                    name: user.displayName || guestName || "Користувач",
-                    role: role
-                })
+                members: arrayUnion(memberData)
             });
 
-            await createUser(user.uid, {
+            const userData: any = {
                 id: user.uid,
                 name: user.displayName || guestName || "Користувач",
                 email: user.email || undefined,
@@ -239,7 +263,12 @@ function SetupPageContent() {
                     choirName: foundChoirName,
                     role: role
                 }) as any
-            });
+            };
+            if (permissions && permissions.length > 0) {
+                userData.permissions = permissions;
+            }
+
+            await createUser(user.uid, userData);
 
             await refreshProfile();
             router.push("/");

@@ -1,5 +1,18 @@
 export type UserRole = 'head' | 'regent' | 'member';
 
+export type Permission =
+    | 'add_songs'
+    | 'edit_attendance'
+    | 'edit_credits'
+    | 'view_stats'
+    | 'manage_services';
+
+export interface AdminCode {
+    code: string;
+    permissions: Permission[];
+    label?: string; // e.g., "Секретар"
+}
+
 
 export interface UserMembership {
     choirId: string;
@@ -14,6 +27,7 @@ export interface UserData {
     choirId: string;
     choirName: string;
     role: UserRole;
+    permissions?: Permission[]; // Custom admin permissions
     memberships?: UserMembership[]; // New field
     createdAt?: any;
 }
@@ -23,6 +37,7 @@ export interface ChoirMember {
     name: string;
     role: UserRole;
     voice?: 'Soprano' | 'Alto' | 'Tenor' | 'Bass';
+    permissions?: Permission[]; // Custom admin permissions
 }
 
 export interface Choir {
@@ -36,6 +51,7 @@ export interface Choir {
     icon?: string; // Base64 or URL
     knownConductors?: string[]; // Saved conductor names for autocomplete
     knownPianists?: string[];   // Saved pianist names for autocomplete
+    adminCodes?: AdminCode[];   // Custom admin invite codes
 }
 
 export interface ServiceSong {

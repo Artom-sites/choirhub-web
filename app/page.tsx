@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon } from "@/lib/db";
-import { Service, Choir, UserMembership, ChoirMember } from "@/types";
+import { Service, Choir, UserMembership, ChoirMember, Permission, AdminCode } from "@/types";
 import SongList from "@/components/SongList";
 import ServiceList from "@/components/ServiceList";
 import ServiceView from "@/components/ServiceView";
@@ -62,6 +62,20 @@ function HomePageContent() {
   const [managerError, setManagerError] = useState("");
 
   const iconInputRef = useRef<HTMLInputElement>(null);
+
+  // Admin Code Creation
+  const [showAdminCodeModal, setShowAdminCodeModal] = useState(false);
+  const [newAdminLabel, setNewAdminLabel] = useState("");
+  const [selectedPermissions, setSelectedPermissions] = useState<Permission[]>([]);
+  const [creatingAdminCode, setCreatingAdminCode] = useState(false);
+
+  const AVAILABLE_PERMISSIONS: { key: Permission; label: string }[] = [
+    { key: 'add_songs', label: 'Додавати пісні' },
+    { key: 'edit_attendance', label: 'Відмічати відсутніх' },
+    { key: 'edit_credits', label: 'Записувати диригента/піаніста' },
+    { key: 'view_stats', label: 'Бачити статистику' },
+    { key: 'manage_services', label: 'Створювати/видаляти служіння' },
+  ];
 
   useEffect(() => {
     if (authLoading) return;
@@ -256,6 +270,43 @@ function HomePageContent() {
     } finally {
       setManagerLoading(false);
     }
+  };
+
+  const createAdminCode = async () => {
+    if (!choir || !userData?.choirId || selectedPermissions.length === 0) return;
+
+    setCreatingAdminCode(true);
+    try {
+      const newCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const newAdminCode: AdminCode = {
+        code: newCode,
+        permissions: selectedPermissions,
+        label: newAdminLabel.trim() || undefined,
+      };
+
+      const updatedAdminCodes = [...(choir.adminCodes || []), newAdminCode];
+
+      const choirRef = doc(db, "choirs", userData.choirId);
+      await updateDoc(choirRef, { adminCodes: updatedAdminCodes });
+
+      setChoir({ ...choir, adminCodes: updatedAdminCodes });
+      setShowAdminCodeModal(false);
+      setNewAdminLabel("");
+      setSelectedPermissions([]);
+
+      // Copy new code to clipboard
+      copyCode(newCode);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setCreatingAdminCode(false);
+    }
+  };
+
+  const togglePermission = (perm: Permission) => {
+    setSelectedPermissions(prev =>
+      prev.includes(perm) ? prev.filter(p => p !== perm) : [...prev, perm]
+    );
   };
 
   const handleSaveMember = async (member: ChoirMember) => {
@@ -618,6 +669,53 @@ function HomePageContent() {
                       Лінк для регентів
                     </button>
                   </div>
+
+                  {/* Admin Codes Section */}
+                  <div className="mt-6 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-text-secondary uppercase tracking-widest">Адмін-коди</h4>
+                      <button
+                        onClick={() => setShowAdminCodeModal(true)}
+                        className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-text-secondary hover:text-white transition-colors"
+                      >
+                        <PlusCircle className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {(choir.adminCodes?.length || 0) === 0 ? (
+                      <p className="text-xs text-text-secondary/50">Ще немає адмін-кодів</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {choir.adminCodes?.map((ac, idx) => (
+                          <div key={idx} className="bg-black/20 border border-white/5 p-3 rounded-xl">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-xs text-text-secondary">{ac.label || 'Адміністратор'}</p>
+                                <code className="text-white font-mono font-bold">{ac.code}</code>
+                              </div>
+                              <button
+                                onClick={() => copyCode(`https://${window.location.host}/setup?code=${ac.code}`)}
+                                className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
+                              >
+                                {copiedCode === `https://${window.location.host}/setup?code=${ac.code}` ? (
+                                  <Check className="w-4 h-4 text-green-500" />
+                                ) : (
+                                  <Link2 className="w-4 h-4 text-text-secondary" />
+                                )}
+                              </button>
+                            </div>
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {ac.permissions.map(p => (
+                                <span key={p} className="text-[10px] px-1.5 py-0.5 bg-indigo-500/10 text-indigo-400 rounded">
+                                  {AVAILABLE_PERMISSIONS.find(ap => ap.key === p)?.label?.split(' ')[0]}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -819,6 +917,68 @@ function HomePageContent() {
 
         </div>
       </nav>
+      {/* Admin Code Creation Modal */}
+      {showAdminCodeModal && (
+        <div className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[#18181b] border border-white/10 w-full max-w-sm p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="space-y-5">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-bold text-white">Створити адмін-код</h3>
+                <button onClick={() => setShowAdminCodeModal(false)} className="p-1 hover:bg-white/10 rounded-full">
+                  <X className="w-5 h-5 text-text-secondary" />
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                  Назва ролі (опціонально)
+                </label>
+                <input
+                  type="text"
+                  value={newAdminLabel}
+                  onChange={(e) => setNewAdminLabel(e.target.value)}
+                  placeholder="напр. Секретар"
+                  className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/30"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                  Дозволи
+                </label>
+                <div className="space-y-2">
+                  {AVAILABLE_PERMISSIONS.map(perm => (
+                    <button
+                      key={perm.key}
+                      onClick={() => togglePermission(perm.key)}
+                      className={`w-full p-3 rounded-xl border text-left text-sm transition-all ${selectedPermissions.includes(perm.key)
+                          ? 'bg-indigo-500/20 border-indigo-500/50 text-white'
+                          : 'bg-black/20 border-white/5 text-text-secondary hover:border-white/20'
+                        }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-5 h-5 rounded border flex items-center justify-center ${selectedPermissions.includes(perm.key) ? 'bg-indigo-500 border-indigo-500' : 'border-white/20'
+                          }`}>
+                          {selectedPermissions.includes(perm.key) && <Check className="w-3 h-3 text-white" />}
+                        </div>
+                        {perm.label}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                onClick={createAdminCode}
+                disabled={selectedPermissions.length === 0 || creatingAdminCode}
+                className="w-full py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {creatingAdminCode ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Створити код'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
