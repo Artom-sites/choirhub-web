@@ -6,7 +6,7 @@ import { X, Plus, Loader2, Upload, Check, UserPlus, ChevronDown } from "lucide-r
 interface AddSongModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onAdd: (title: string, category: string, conductor: string, pdfFile?: File) => Promise<void>;
+    onAdd: (title: string, category: string, conductor: string, pdfFile?: File) => Promise<string | null>;
     regents: string[];
 }
 
@@ -59,7 +59,11 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents }: AddSon
         setError("");
 
         try {
-            await onAdd(title.trim(), category, finalConductor, pdfFile || undefined);
+            const errorMsg = await onAdd(title.trim(), category, finalConductor, pdfFile || undefined);
+            if (errorMsg) {
+                setError(errorMsg);
+                return;
+            }
             // Reset form
             setTitle("");
             setCategory("Інші");

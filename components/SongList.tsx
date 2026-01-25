@@ -75,8 +75,15 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
         }
     };
 
-    const handleAddSong = async (title: string, category: string, conductor: string, pdfFile?: File) => {
-        if (!userData?.choirId) return;
+    const handleAddSong = async (title: string, category: string, conductor: string, pdfFile?: File): Promise<string | null> => {
+        if (!userData?.choirId) return null;
+
+        // Check for duplicate title
+        const normalizedTitle = title.trim().toLowerCase();
+        const duplicate = songs.find((s: SimpleSong) => s.title.trim().toLowerCase() === normalizedTitle);
+        if (duplicate) {
+            return `Пісня "${duplicate.title}" вже існує в репертуарі`;
+        }
 
         // 1. Create song first
         const newSongId = await addSong(userData.choirId, {
@@ -99,6 +106,7 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
         // 3. Refresh list (Server State)
         const fetched = await getSongs(userData.choirId);
         setSongsState(fetched);
+        return null; // Success
     };
 
     const initiateDelete = (e: React.MouseEvent, id: string) => {
