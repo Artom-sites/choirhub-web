@@ -640,7 +640,7 @@ function HomePageContent() {
                   <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest pl-2">Коди доступу</h3>
 
                   <button
-                    onClick={() => copyCode(choir.memberCode)}
+                    onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.memberCode}`)}
                     className="w-full bg-[#18181b] border border-white/5 hover:border-white/30 p-4 rounded-2xl flex items-center justify-between group transition-all"
                   >
                     <div className="text-left">
@@ -648,12 +648,12 @@ function HomePageContent() {
                       <code className="text-xl font-mono text-white font-bold tracking-wider">{choir.memberCode}</code>
                     </div>
                     <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-white/20 transition-colors">
-                      {copiedCode === choir.memberCode ? <Check className="w-5 h-5 text-green-500" /> : <Copy className="w-5 h-5 text-text-secondary group-hover:text-white" />}
+                      {copiedCode === `https://${window.location.host}/setup?code=${choir.memberCode}` ? <Check className="w-5 h-5 text-green-500" /> : <Link2 className="w-5 h-5 text-text-secondary group-hover:text-white" />}
                     </div>
                   </button>
 
                   <button
-                    onClick={() => copyCode(choir.regentCode)}
+                    onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.regentCode}`)}
                     className="w-full bg-[#18181b] border border-white/5 hover:border-white/30 p-4 rounded-2xl flex items-center justify-between group transition-all"
                   >
                     <div className="text-left">
@@ -661,26 +661,9 @@ function HomePageContent() {
                       <code className="text-xl font-mono text-white font-bold tracking-wider">{choir.regentCode}</code>
                     </div>
                     <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-white/20 transition-colors">
-                      {copiedCode === choir.regentCode ? <Check className="w-5 h-5 text-green-500" /> : <Copy className="w-5 h-5 text-text-secondary group-hover:text-white" />}
+                      {copiedCode === `https://${window.location.host}/setup?code=${choir.regentCode}` ? <Check className="w-5 h-5 text-green-500" /> : <Link2 className="w-5 h-5 text-text-secondary group-hover:text-white" />}
                     </div>
                   </button>
-
-                  <div className="grid grid-cols-2 gap-3 mt-2">
-                    <button
-                      onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.memberCode}`)}
-                      className="p-3 bg-white/5 border border-white/5 rounded-xl flex items-center justify-center gap-2 hover:bg-white/10 transition-colors text-xs text-text-secondary hover:text-white"
-                    >
-                      <Link2 className="w-4 h-4" />
-                      Лінк для хористів
-                    </button>
-                    <button
-                      onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.regentCode}`)}
-                      className="p-3 bg-white/5 border border-white/5 rounded-xl flex items-center justify-center gap-2 hover:bg-white/10 transition-colors text-xs text-text-secondary hover:text-white"
-                    >
-                      <Link2 className="w-4 h-4" />
-                      Лінк для регентів
-                    </button>
-                  </div>
 
                   {/* Admin Codes Section */}
                   <div className="mt-6 space-y-3">
