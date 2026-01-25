@@ -8,18 +8,22 @@ interface AddSongModalProps {
     onClose: () => void;
     onAdd: (title: string, category: string, conductor: string, pdfFile?: File) => Promise<string | null>;
     regents: string[];
+    knownConductors?: string[];
 }
 
 const CATEGORIES = [
     "Новий рік", "Різдво", "В'їзд", "Вечеря", "Пасха", "Вознесіння", "Трійця", "Свято Жнив", "Інші"
 ];
 
-export default function AddSongModal({ isOpen, onClose, onAdd, regents }: AddSongModalProps) {
+export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownConductors = [] }: AddSongModalProps) {
+    // Merge regents with known conductors, removing duplicates
+    const allConductors = [...new Set([...regents, ...knownConductors])];
+
     const [title, setTitle] = useState("");
     const [category, setCategory] = useState("Інші");
-    const [conductor, setConductor] = useState(regents[0] || "");
+    const [conductor, setConductor] = useState(allConductors[0] || "");
     const [customConductor, setCustomConductor] = useState("");
-    const [showCustomInput, setShowCustomInput] = useState(regents.length === 0);
+    const [showCustomInput, setShowCustomInput] = useState(allConductors.length === 0);
     const [pdfFile, setPdfFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -67,9 +71,9 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents }: AddSon
             // Reset form
             setTitle("");
             setCategory("Інші");
-            setConductor(regents[0] || "");
+            setConductor(allConductors[0] || "");
             setCustomConductor("");
-            setShowCustomInput(regents.length === 0);
+            setShowCustomInput(allConductors.length === 0);
             setPdfFile(null);
             onClose();
         } catch (err) {
@@ -83,9 +87,9 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents }: AddSon
     const handleClose = () => {
         setTitle("");
         setCategory("Інші");
-        setConductor(regents[0] || "");
+        setConductor(allConductors[0] || "");
         setCustomConductor("");
-        setShowCustomInput(regents.length === 0);
+        setShowCustomInput(allConductors.length === 0);
         setPdfFile(null);
         setError("");
         onClose();
@@ -147,11 +151,11 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents }: AddSon
                             Хто диригує
                         </label>
 
-                        {!showCustomInput && regents.length > 0 ? (
+                        {!showCustomInput && allConductors.length > 0 ? (
                             <div className="space-y-3">
                                 {/* Custom Button List */}
                                 <div className="bg-black/20 border border-white/10 rounded-2xl p-1.5 space-y-1">
-                                    {regents.map(r => (
+                                    {allConductors.map(r => (
                                         <button
                                             key={r}
                                             type="button"
@@ -194,7 +198,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents }: AddSon
                                     placeholder="Ім'я диригента"
                                     className="w-full px-4 py-3.5 bg-black/20 border border-white/10 rounded-xl focus:outline-none focus:border-white/20 focus:ring-1 focus:ring-white/20 text-white placeholder:text-text-secondary/40 transition-all font-medium"
                                 />
-                                {regents.length > 0 && (
+                                {allConductors.length > 0 && (
                                     <button
                                         type="button"
                                         onClick={() => setShowCustomInput(false)}

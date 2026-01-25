@@ -794,7 +794,7 @@ function HomePageContent() {
         )}
 
         {activeTab === 'songs' && (
-          <SongList canAddSongs={canEdit} regents={choir?.regents || []} />
+          <SongList canAddSongs={canEdit} regents={choir?.regents || []} knownConductors={choir?.knownConductors || []} />
         )}
 
         {activeTab === 'members' && (

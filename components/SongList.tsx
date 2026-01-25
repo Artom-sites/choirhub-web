@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Search, FileText, Music2, ChevronRight, Filter, Plus, Eye, User, Loader2, Trash2 } from "lucide-react";
 import { Category, SimpleSong } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
-import { getSongs, addSong, uploadSongPdf, deleteSong } from "@/lib/db";
+import { getSongs, addSong, uploadSongPdf, deleteSong, addKnownConductor } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
 import AddSongModal from "./AddSongModal";
 import PDFViewer from "./PDFViewer";
@@ -14,13 +14,14 @@ import ConfirmationModal from "./ConfirmationModal";
 interface SongListProps {
     canAddSongs: boolean;
     regents: string[];
+    knownConductors: string[];
 }
 
 const CATEGORIES: Category[] = [
     "Різдво", "Пасха", "В'їзд", "Вечеря", "Вознесіння", "Трійця", "Свято Жнив", "Інші"
 ];
 
-export default function SongList({ canAddSongs, regents }: SongListProps) {
+export default function SongList({ canAddSongs, regents, knownConductors }: SongListProps) {
     const router = useRouter();
     const { userData } = useAuth();
 
@@ -83,6 +84,16 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
         const duplicate = songs.find((s: SimpleSong) => s.title.trim().toLowerCase() === normalizedTitle);
         if (duplicate) {
             return `Пісня "${duplicate.title}" вже існує в репертуарі`;
+        }
+
+        // Save new conductor if not already known
+        const allKnown = [...regents, ...knownConductors];
+        if (conductor && !allKnown.includes(conductor)) {
+            try {
+                await addKnownConductor(userData.choirId, conductor);
+            } catch (e) {
+                console.error("Failed to save conductor:", e);
+            }
         }
 
         // 1. Create song first
@@ -271,6 +282,7 @@ export default function SongList({ canAddSongs, regents }: SongListProps) {
                     onClose={() => setShowAddModal(false)}
                     onAdd={handleAddSong}
                     regents={regents}
+                    knownConductors={knownConductors}
                 />
             )}
 
