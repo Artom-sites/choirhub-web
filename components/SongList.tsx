@@ -262,17 +262,12 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                 ) : (
                     <AnimatePresence mode="popLayout">
                         {filteredSongs.map((song, index) => (
-                            <motion.div
-                                layout
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: 0.2 }}
+                            <div
                                 key={song.id}
                                 onClick={() => handleSongClick(song)}
                                 role="button"
                                 tabIndex={0}
-                                className={`w-full bg-surface hover:bg-surface-highlight border border-white/5 hover:border-white/10 rounded-2xl p-4 transition-all text-left group relative active:scale-[0.99] h-full flex flex-col cursor-pointer ${actionMenuOpen === song.id ? 'z-50 ring-1 ring-white/20' : ''}`}
+                                className={`w-full bg-surface hover:bg-surface-highlight border border-white/5 hover:border-white/10 rounded-2xl p-4 transition-all text-left group relative active:scale-[0.99] h-full flex flex-col cursor-pointer ${actionMenuOpen === song.id ? 'z-[100] ring-1 ring-white/20' : ''}`}
                             >
                                 <div className="flex items-start gap-4 relative z-10 h-full">
                                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${song.hasPdf ? 'bg-white text-black' : 'bg-white/5 text-text-secondary'}`}>
@@ -305,7 +300,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
 
                                     <div className="flex items-center gap-1 mt-3.5 relative">
                                         {effectiveCanAdd && (
-                                            <div className="relative z-50">
+                                            <div className="relative z-50" onClick={(e) => e.stopPropagation()}>
                                                 <button
                                                     onClick={(e) => {
                                                         e.preventDefault();
@@ -319,11 +314,17 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                                                 </button>
 
                                                 {actionMenuOpen === song.id && (
-                                                    <div className="absolute right-0 top-full mt-2 w-48 bg-zinc-800 border border-white/10 rounded-xl shadow-xl shadow-black/80 ring-1 ring-white/10 z-[60] overflow-hidden animate-in fade-in zoom-in-95 duration-100 flex flex-col">
+                                                    <div
+                                                        className="absolute right-0 top-full mt-2 w-48 bg-zinc-800 border border-white/10 rounded-xl shadow-xl shadow-black/80 ring-1 ring-white/10 z-[100] overflow-hidden animate-in fade-in zoom-in-95 duration-100 flex flex-col"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
                                                         <button
                                                             onClick={(e) => {
+                                                                e.preventDefault();
                                                                 e.stopPropagation();
-                                                                handleEditClick(e, song);
+                                                                e.nativeEvent.stopImmediatePropagation();
+                                                                console.log("Edit clicked", song.id);
+                                                                setEditingSong(song);
                                                                 setActionMenuOpen(null);
                                                             }}
                                                             className="w-full px-4 py-3 text-left text-sm font-medium text-white hover:bg-white/10 flex items-center gap-3 active:bg-white/20"
@@ -333,7 +334,9 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                                                         </button>
                                                         <button
                                                             onClick={(e) => {
+                                                                e.preventDefault();
                                                                 e.stopPropagation();
+                                                                e.nativeEvent.stopImmediatePropagation();
                                                                 initiateDelete(e, song.id);
                                                                 setActionMenuOpen(null);
                                                             }}
@@ -348,7 +351,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                                         )}
                                     </div>
                                 </div>
-                            </motion.div>
+                            </div>
                         ))}
                     </AnimatePresence>
                 )}
