@@ -13,7 +13,7 @@ import EditMemberModal from "@/components/EditMemberModal"; // New
 import {
   Music2, Loader2, Copy, Check,
   LogOut, ChevronLeft, Home, User, Users, Repeat,
-  PlusCircle, UserPlus, X, Trash2, Camera, BarChart2, Link2
+  PlusCircle, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil
 } from "lucide-react";
 import { collection as firestoreCollection, addDoc, getDocs, where, query, doc, updateDoc, arrayUnion } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -68,6 +68,11 @@ function HomePageContent() {
   const [newAdminLabel, setNewAdminLabel] = useState("");
   const [selectedPermissions, setSelectedPermissions] = useState<Permission[]>([]);
   const [creatingAdminCode, setCreatingAdminCode] = useState(false);
+
+  // Edit Name Modal
+  const [showEditName, setShowEditName] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [savingName, setSavingName] = useState(false);
 
   const AVAILABLE_PERMISSIONS: { key: Permission; label: string }[] = [
     { key: 'add_songs', label: 'Додавати пісні' },
@@ -319,6 +324,21 @@ function HomePageContent() {
     setSelectedPermissions(prev =>
       prev.includes(perm) ? prev.filter(p => p !== perm) : [...prev, perm]
     );
+  };
+
+  const handleSaveName = async () => {
+    if (!newName.trim() || !user) return;
+    setSavingName(true);
+    try {
+      await createUser(user.uid, { name: newName.trim() });
+      await refreshProfile();
+      setShowEditName(false);
+      setNewName("");
+    } catch (err) {
+      console.error("Failed to update name:", err);
+    } finally {
+      setSavingName(false);
+    }
   };
 
   const handleSaveMember = async (member: ChoirMember) => {
@@ -619,8 +639,16 @@ function HomePageContent() {
                     <span>{userData?.name?.[0]?.toUpperCase() || "U"}</span>
                   )}
                 </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white">{userData?.name}</h3>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xl font-bold text-white">{userData?.name}</h3>
+                    <button
+                      onClick={() => { setNewName(userData?.name || ""); setShowEditName(true); }}
+                      className="p-1.5 rounded-full hover:bg-white/10 transition-colors text-text-secondary hover:text-white"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  </div>
                   <p className="text-sm text-text-secondary">{user?.email}</p>
                   <p className="text-xs text-text-secondary/50 mt-0.5">{userData?.choirName}</p>
                   <div className="mt-2">{getRoleBadge(userData?.role || 'member')}</div>
@@ -984,8 +1012,55 @@ function HomePageContent() {
           </div>
         </div>
       )}
+      {/* Edit Name Modal */}
+      {showEditName && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setShowEditName(false)}
+        >
+          <div
+            className="bg-[#18181b] w-full max-w-sm rounded-3xl border border-white/10 p-6 shadow-2xl animate-in zoom-in-95"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-start mb-6">
+              <h3 className="text-xl font-bold text-white">Змінити ім'я</h3>
+              <button
+                onClick={() => setShowEditName(false)}
+                className="p-1 text-text-secondary hover:text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                  Ваше ім'я
+                </label>
+                <input
+                  type="text"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Введіть нове ім'я"
+                  className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl focus:outline-none focus:border-white/20 text-white"
+                  autoFocus
+                />
+              </div>
+
+              <button
+                onClick={handleSaveName}
+                disabled={savingName || !newName.trim()}
+                className="w-full py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {savingName ? <Loader2 className="animate-spin" /> : "Зберегти"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
+
 }
 
 export default function HomePage() {

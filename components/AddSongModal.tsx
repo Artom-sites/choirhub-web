@@ -154,7 +154,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                         {!showCustomInput && allConductors.length > 0 ? (
                             <div className="space-y-3">
                                 {/* Custom Button List */}
-                                <div className="bg-black/20 border border-white/10 rounded-2xl p-1.5 space-y-1">
+                                <div className="bg-black/20 border border-white/10 rounded-2xl p-1.5 space-y-1 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
                                     {allConductors.map(r => (
                                         <button
                                             key={r}
