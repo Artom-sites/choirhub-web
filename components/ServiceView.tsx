@@ -535,8 +535,8 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
 
             {/* Attendance Sheet */}
             {showAttendance && (
-                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col pt-24 animate-in slide-in-from-bottom duration-300">
-                    <div className="bg-[#09090b] flex-1 rounded-t-[32px] overflow-hidden flex flex-col ring-1 ring-white/10">
+                <div className="fixed inset-0 z-50 bg-[#09090b] flex flex-col animate-in slide-in-from-bottom duration-300">
+                    <div className="flex-1 overflow-hidden flex flex-col">
                         <div className="p-6 border-b border-white/5 flex justify-between items-center bg-surface">
                             <div className="space-y-1">
                                 <h3 className="text-xl font-bold text-white">Учасники</h3>
