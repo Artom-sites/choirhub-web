@@ -82,6 +82,17 @@ function HomePageContent() {
     { key: 'manage_services', label: 'Створювати/видаляти служіння' },
   ];
 
+  const fetchChoirData = async () => {
+    if (!userData?.choirId) return;
+    const [fetchedChoir, fetchedServices] = await Promise.all([
+      getChoir(userData.choirId),
+      getServices(userData.choirId)
+    ]);
+    setChoir(fetchedChoir);
+    setServices(fetchedServices);
+    return fetchedChoir;
+  };
+
   useEffect(() => {
     if (authLoading) return;
 
@@ -90,14 +101,11 @@ function HomePageContent() {
       return;
     }
 
+
+
     async function init() {
       if (userData?.choirId) {
-        const [fetchedChoir, fetchedServices] = await Promise.all([
-          getChoir(userData.choirId),
-          getServices(userData.choirId)
-        ]);
-        setChoir(fetchedChoir);
-        setServices(fetchedServices);
+        const fetchedChoir = await fetchChoirData();
 
         // Check for joinCode param
         const joinCodeParam = searchParams.get('joinCode');
@@ -127,7 +135,14 @@ function HomePageContent() {
         // Check for serviceId param (Android Back Support)
         const serviceIdParam = searchParams.get('serviceId');
         if (serviceIdParam) {
-          const foundService = fetchedServices.find(s => s.id === serviceIdParam);
+          // We need services to be set, which fetchChoirData does
+          // But services state update might not be immediate here if we just called setServices
+          // So we rely on fetchedServices from Promise if we were returning it, but fetchChoirData returns void/choir
+          // Let's refactor slightly to access services
+          const services = await getServices(userData.choirId);
+          // actually better to just let fetchChoirData handle state and maybe we check services from state in a separate effect? 
+          // Or just re-get it here. 
+          const foundService = services.find(s => s.id === serviceIdParam);
           if (foundService) setSelectedService(foundService);
         } else {
           setSelectedService(null);
@@ -332,6 +347,7 @@ function HomePageContent() {
     try {
       await createUser(user.uid, { name: newName.trim() });
       await refreshProfile();
+      await fetchChoirData();
       setShowEditName(false);
       setNewName("");
     } catch (err) {
