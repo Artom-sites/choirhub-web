@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Search, FileText, Music2, ChevronRight, Filter, Plus, Eye, User, Loader2, Trash2, Pencil } from "lucide-react";
+import { Search, FileText, Music2, ChevronRight, Filter, Plus, Eye, User, Loader2, Trash2, Pencil, MoreVertical } from "lucide-react";
 import { Category, SimpleSong } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { getSongs, addSong, uploadSongPdf, deleteSong, addKnownConductor, updateSong } from "@/lib/db";
@@ -38,6 +38,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
     const [showAddModal, setShowAddModal] = useState(false);
     const [songToDelete, setSongToDelete] = useState<string | null>(null);
     const [editingSong, setEditingSong] = useState<SimpleSong | null>(null);
+    const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null);
 
     // PDF Viewer state
     const [viewingSong, setViewingSong] = useState<SimpleSong | null>(null);
@@ -53,6 +54,15 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
         }
         fetchSongs();
     }, [userData?.choirId]);
+
+    // Close menu on click outside
+    useEffect(() => {
+        function handleClickOutside() {
+            setActionMenuOpen(null);
+        }
+        document.addEventListener("click", handleClickOutside);
+        return () => document.removeEventListener("click", handleClickOutside);
+    }, []);
 
     const filteredSongs = songs.filter(song => {
         const matchesSearch = song.title.toLowerCase().includes(search.toLowerCase());
@@ -294,23 +304,43 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                                     </div>
 
 
-                                    <div className="flex items-center gap-1 mt-3.5">
+                                    <div className="flex items-center gap-1 mt-3.5 relative">
                                         {effectiveCanAdd && (
-                                            <div className="flex items-center gap-1">
+                                            <div className="relative">
                                                 <button
-                                                    onClick={(e) => handleEditClick(e, song)}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setActionMenuOpen(actionMenuOpen === song.id ? null : song.id);
+                                                    }}
                                                     className="p-1.5 text-text-secondary hover:text-white hover:bg-white/10 rounded-lg transition-colors z-20"
-                                                    title="Редагувати"
                                                 >
-                                                    <Pencil className="w-4 h-4" />
+                                                    <MoreVertical className="w-5 h-5" />
                                                 </button>
-                                                <button
-                                                    onClick={(e) => initiateDelete(e, song.id)}
-                                                    className="p-1.5 text-text-secondary hover:text-red-500 hover:bg-white/10 rounded-lg transition-colors z-20"
-                                                    title="Видалити"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
+
+                                                {actionMenuOpen === song.id && (
+                                                    <div className="absolute right-0 top-full mt-1 w-40 bg-[#1c1c20] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100 flex flex-col">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                handleEditClick(e, song);
+                                                                setActionMenuOpen(null);
+                                                            }}
+                                                            className="px-4 py-3 text-left text-sm font-medium text-white hover:bg-white/5 flex items-center gap-3"
+                                                        >
+                                                            <Pencil className="w-4 h-4 text-text-secondary" />
+                                                            Редагувати
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                initiateDelete(e, song.id);
+                                                                setActionMenuOpen(null);
+                                                            }}
+                                                            className="px-4 py-3 text-left text-sm font-medium text-red-400 hover:bg-red-500/10 flex items-center gap-3 border-t border-white/5"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                            Видалити
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                         <ChevronRight className="w-5 h-5 text-text-secondary/30 group-hover:text-white group-hover:translate-x-1 transition-all" />
