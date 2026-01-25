@@ -270,7 +270,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                                 transition={{ duration: 0.2 }}
                                 key={song.id}
                                 onClick={() => handleSongClick(song)}
-                                className="w-full bg-surface hover:bg-surface-highlight border border-white/5 hover:border-white/10 rounded-2xl p-4 transition-all text-left group relative overflow-hidden active:scale-[0.99] h-full flex flex-col"
+                                className="w-full bg-surface hover:bg-surface-highlight border border-white/5 hover:border-white/10 rounded-2xl p-4 transition-all text-left group relative active:scale-[0.99] h-full flex flex-col"
                             >
                                 <div className="flex items-start gap-4 relative z-10 h-full">
                                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${song.hasPdf ? 'bg-white text-black' : 'bg-white/5 text-text-secondary'}`}>
