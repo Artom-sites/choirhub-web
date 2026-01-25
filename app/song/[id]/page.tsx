@@ -162,7 +162,7 @@ export default function SongPage() {
                 <PDFViewer
                     url={song.pdfUrl || song.pdfData!}
                     title={song.title}
-                    onClose={() => router.back()}
+                    onClose={() => setShowViewer(false)}
                 />
             </div>
         );
