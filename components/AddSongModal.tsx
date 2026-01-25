@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, Plus, Loader2, Upload, Check, UserPlus, ChevronDown } from "lucide-react";
+import { X, Plus, Loader2, Upload, Check, ChevronDown, Trash2 } from "lucide-react";
 import { SimpleSong } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
+import { updateDoc, doc, arrayRemove } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+
 
 interface AddSongModalProps {
     isOpen: boolean;
@@ -143,16 +146,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                 } catch (e) { console.error("Failed to add custom category:", e); }
             }
 
-            // Reset form
-            setTitle("");
-            setCategory(allCategories[0] || "");
-            setCustomCategory("");
-            setShowCustomCategory(false);
-            setConductor(allConductors[0] || "");
-            setCustomConductor("");
-            setShowCustomInput(allConductors.length === 0);
-            setPdfFile(null);
-            onClose();
+            handleClose();
         } catch (err) {
             setError("Помилка додавання. Спробуйте ще раз.");
             console.error(err);
@@ -163,7 +157,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
 
     const handleClose = () => {
         setTitle("");
-        setCategory("Інші");
+        setCategory(allCategories[0] || "Інші");
         setConductor(allConductors[0] || "");
         setCustomConductor("");
         setShowCustomInput(allConductors.length === 0);
@@ -171,6 +165,37 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
         setError("");
         onClose();
     };
+
+    // Helper to delete conductor/regent from list
+    const handleDeleteConductor = async (name: string) => {
+        if (!userData?.choirId) return;
+        if (!confirm(`Видалити "${name}" зі списку диригентів?`)) return;
+
+        try {
+            const { removeKnownConductor } = await import("@/lib/db");
+
+            // Try removing from knownConductors first
+            if (uniqueKnownConductors.includes(name)) {
+                await removeKnownConductor(userData.choirId, name);
+            }
+            // If strictly in regents list (old legacy name)
+            else if (regents.includes(name)) {
+                // We need to manually remove from 'regents' array
+                const choirRef = doc(db, "choirs", userData.choirId);
+                await updateDoc(choirRef, {
+                    regents: arrayRemove(name)
+                });
+            }
+
+            // Force reload to refresh props
+            window.location.reload();
+        } catch (e) {
+            console.error("Failed to delete conductor:", e);
+            alert("Помилка видалення");
+        }
+    };
+
+    const canManageList = userData?.role === 'head' || userData?.role === 'regent';
 
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center z-50 animate-in fade-in duration-200">
@@ -204,42 +229,41 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                     </div>
 
                     {/* Category */}
-                    <div className="relative">
+                    <div>
                         <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
                             Категорія
                         </label>
                         {!showCustomCategory && allCategories.length > 0 ? (
-                            <div className="space-y-2">
-                                <div className="grid grid-cols-2 gap-2">
-                                    {(showAllCategories ? allCategories : allCategories.slice(0, 6)).map(cat => (
+                            <div className="space-y-3">
+                                <div className="flex flex-wrap gap-2">
+                                    {(showAllCategories ? allCategories : allCategories.slice(0, 8)).map(cat => (
                                         <button
                                             key={cat}
                                             type="button"
                                             onClick={() => setCategory(cat)}
-                                            className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left truncate ${category === cat
-                                                ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50'
-                                                : 'bg-black/20 text-text-secondary border border-white/10 hover:bg-white/5'
+                                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all border ${category === cat
+                                                ? 'bg-white text-black border-white shadow-lg shadow-white/10'
+                                                : 'bg-white/5 text-text-secondary border-white/5 hover:bg-white/10 hover:text-white'
                                                 }`}
                                         >
                                             {cat}
                                         </button>
                                     ))}
-                                    {/* Additional Options Button */}
                                     <button
                                         type="button"
                                         onClick={() => setShowCustomCategory(true)}
-                                        className="px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left bg-black/20 text-text-secondary border border-dashed border-white/20 hover:bg-white/5 flex items-center gap-2"
+                                        className="px-4 py-2 rounded-full text-sm font-medium transition-all bg-white/5 text-text-secondary border border-dashed border-white/20 hover:bg-white/10 hover:text-white flex items-center gap-1.5"
                                     >
                                         <Plus className="w-4 h-4" />
-                                        Своя...
+                                        Своя
                                     </button>
                                 </div>
 
-                                {allCategories.length > 6 && (
+                                {allCategories.length > 8 && (
                                     <button
                                         type="button"
                                         onClick={() => setShowAllCategories(!showAllCategories)}
-                                        className="w-full py-2 text-xs font-medium text-text-secondary hover:text-white flex items-center justify-center gap-1 transition-colors"
+                                        className="text-xs font-medium text-text-secondary hover:text-white flex items-center gap-1 transition-colors ml-1"
                                     >
                                         {showAllCategories ? (
                                             <>
@@ -283,42 +307,30 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                         </label>
 
                         {!showCustomInput && allConductors.length > 0 ? (
-                            <div className="space-y-2">
-                                <div className="grid grid-cols-2 gap-2">
-                                    {(showAllConductors ? allConductors : allConductors.slice(0, 6)).map(r => {
-                                        const isCustom = uniqueKnownConductors.includes(r);
+                            <div className="space-y-3">
+                                <div className="flex flex-wrap gap-2">
+                                    {(showAllConductors ? allConductors : allConductors.slice(0, 8)).map(r => {
                                         return (
-                                            <div key={r} className={`group relative flex items-stretch rounded-xl transition-all border ${conductor === r
-                                                ? 'bg-blue-500/20 border-blue-500/50'
-                                                : 'bg-black/20 border-white/10 hover:bg-white/5'
+                                            <div key={r} className={`group relative inline-flex items-center gap-1 pr-1 rounded-full border transition-all ${conductor === r
+                                                ? 'bg-white border-white text-black shadow-lg shadow-white/10'
+                                                : 'bg-white/5 border-white/5 text-text-secondary hover:bg-white/10'
                                                 }`}>
                                                 <button
                                                     type="button"
                                                     onClick={() => setConductor(r)}
-                                                    className={`flex-1 px-3 py-2.5 text-sm font-medium text-left truncate flex items-center gap-2 ${conductor === r ? 'text-blue-400' : 'text-text-secondary'}`}
+                                                    className="pl-3 pr-2 py-2 text-sm font-medium flex items-center gap-2"
                                                 >
-                                                    <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px] text-white/70 font-bold shrink-0">
-                                                        {r[0]?.toUpperCase()}
-                                                    </div>
-                                                    <span className="truncate">{r}</span>
+                                                    <span>{r}</span>
                                                 </button>
 
-                                                {isCustom && userData?.choirId && (
+                                                {canManageList && (
                                                     <button
                                                         type="button"
-                                                        onClick={async (e) => {
+                                                        onClick={(e) => {
                                                             e.stopPropagation();
-                                                            if (confirm(`Видалити "${r}" зі списку?`)) {
-                                                                const { removeKnownConductor } = await import("@/lib/db");
-                                                                try {
-                                                                    await removeKnownConductor(userData.choirId, r);
-                                                                    window.location.reload();
-                                                                } catch (e) {
-                                                                    console.error(e);
-                                                                }
-                                                            }
+                                                            handleDeleteConductor(r);
                                                         }}
-                                                        className="px-2 flex items-center justify-center text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-r-xl transition-colors opacity-0 group-hover:opacity-100"
+                                                        className={`w-6 h-6 flex items-center justify-center rounded-full hover:bg-black/10 transition-colors ${conductor === r ? 'text-black/50 hover:text-red-500' : 'text-white/30 hover:text-red-400'}`}
                                                     >
                                                         <X className="w-3.5 h-3.5" />
                                                     </button>
@@ -329,18 +341,18 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                                     <button
                                         type="button"
                                         onClick={() => setShowCustomInput(true)}
-                                        className="px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left bg-black/20 text-text-secondary border border-dashed border-white/20 hover:bg-white/5 flex items-center gap-2"
+                                        className="px-4 py-2 rounded-full text-sm font-medium transition-all bg-white/5 text-text-secondary border border-dashed border-white/20 hover:bg-white/10 hover:text-white flex items-center gap-1.5"
                                     >
                                         <Plus className="w-4 h-4" />
-                                        Інший...
+                                        Інший
                                     </button>
                                 </div>
 
-                                {allConductors.length > 6 && (
+                                {allConductors.length > 8 && (
                                     <button
                                         type="button"
                                         onClick={() => setShowAllConductors(!showAllConductors)}
-                                        className="w-full py-2 text-xs font-medium text-text-secondary hover:text-white flex items-center justify-center gap-1 transition-colors"
+                                        className="text-xs font-medium text-text-secondary hover:text-white flex items-center gap-1 transition-colors ml-1"
                                     >
                                         {showAllConductors ? (
                                             <>
