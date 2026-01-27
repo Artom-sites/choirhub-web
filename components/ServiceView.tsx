@@ -684,9 +684,9 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                     }}
                     title="Видалити пісню?"
                     message={`Видалити "${currentService.songs[pendingDeleteIndex]?.songTitle}" з програми?`}
-                    confirmText="Видалити"
-                    cancelText="Скасувати"
-                    variant="danger"
+                    confirmLabel="Видалити"
+                    cancelLabel="Скасувати"
+                    isDestructive={true}
                 />
             )}
         </div>
