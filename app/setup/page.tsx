@@ -21,19 +21,20 @@ import { db } from "@/lib/firebase";
 
 function SetupPageContent() {
     const router = useRouter();
-    const { user, userData, loading: authLoading, signInWithGoogle, signInWithEmail, signUpWithEmail, refreshProfile } = useAuth();
+    const { user, userData, loading: authLoading, signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, refreshProfile } = useAuth();
 
     const searchParams = useSearchParams();
     const urlCode = searchParams.get('code');
 
     // UI State
-    const [view, setView] = useState<'welcome' | 'join' | 'create' | 'email_auth'>('welcome');
+    const [view, setView] = useState<'welcome' | 'join' | 'create' | 'email_auth' | 'reset_password'>('welcome');
 
     // Form State
     const [choirName, setChoirName] = useState("");
     const [inviteCode, setInviteCode] = useState("");
     const [formLoading, setFormLoading] = useState(false);
     const [error, setError] = useState("");
+    const [resetSent, setResetSent] = useState(false);
 
     // Email Auth State
     const [isRegistering, setIsRegistering] = useState(false);
@@ -96,6 +97,31 @@ function SetupPageContent() {
                 setError("Пароль занадто простий (мінімум 6 символів)");
             } else {
                 setError("Помилка авторизації: " + err.message);
+            }
+        } finally {
+            setFormLoading(false);
+        }
+    };
+
+    const handlePasswordReset = async () => {
+        if (!email) {
+            setError("Введіть email");
+            return;
+        }
+
+        setFormLoading(true);
+        setError("");
+
+        try {
+            await resetPassword(email);
+            setResetSent(true);
+        } catch (err: any) {
+            if (err.code === 'auth/user-not-found') {
+                setError("Користувача з таким email не знайдено");
+            } else if (err.code === 'auth/invalid-email') {
+                setError("Невірний формат email");
+            } else {
+                setError("Помилка: " + err.message);
             }
         } finally {
             setFormLoading(false);
@@ -343,8 +369,63 @@ function SetupPageContent() {
                             >
                                 {isRegistering ? "Вже є акаунт? Увійти" : "Немає акаунту? Реєстрація"}
                             </button>
+                            {!isRegistering && (
+                                <button
+                                    onClick={() => { setView('reset_password'); setError(''); setResetSent(false); }}
+                                    className="text-text-secondary text-sm underline hover:text-white block mt-2"
+                                >
+                                    Забули пароль?
+                                </button>
+                            )}
                         </div>
                     </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (view === 'reset_password') {
+        return (
+            <div className="min-h-screen bg-[#09090b] flex items-center justify-center p-6">
+                <div className="w-full max-w-md bg-surface border border-white/5 rounded-3xl p-8">
+                    <button onClick={() => setView('email_auth')} className="text-text-secondary text-sm mb-6">← Назад</button>
+                    <h2 className="text-2xl font-bold text-white mb-2">Відновлення паролю</h2>
+                    <p className="text-text-secondary text-sm mb-6">Введіть email для отримання посилання</p>
+
+                    {resetSent ? (
+                        <div className="text-center space-y-4">
+                            <div className="w-16 h-16 bg-green-500/20 rounded-full mx-auto flex items-center justify-center">
+                                <Check className="w-8 h-8 text-green-400" />
+                            </div>
+                            <p className="text-white font-medium">Лист надіслано!</p>
+                            <p className="text-text-secondary text-sm">Перевірте вашу пошту {email} та перейдіть за посиланням для скидання паролю.</p>
+                            <button
+                                onClick={() => { setView('email_auth'); setResetSent(false); }}
+                                className="w-full py-4 bg-white text-black rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                            >
+                                Повернутися до входу
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full px-4 py-3 bg-black/20 rounded-xl border border-white/10 text-white focus:outline-none focus:border-white/30"
+                                placeholder="Email"
+                            />
+                            {error && <p className="text-red-400 text-sm bg-red-400/10 p-3 rounded-lg">{error}</p>}
+
+                            <button
+                                onClick={handlePasswordReset}
+                                disabled={formLoading}
+                                className="w-full py-4 bg-white text-black rounded-xl font-bold hover:bg-gray-200 transition-colors flex justify-center"
+                            >
+                                {formLoading ? <Loader2 className="animate-spin" /> : "Надіслати лист"}
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         );
