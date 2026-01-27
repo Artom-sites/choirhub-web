@@ -6,6 +6,8 @@ import { getSongs, addSongToService, removeSongFromService, getChoir, updateServ
 import { useAuth } from "@/contexts/AuthContext";
 import { ChevronLeft, Eye, X, Plus, Users, UserX, Check, Calendar, Music, UserCheck, AlertCircle, Trash2, User as UserIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
+import SwipeableCard from "./SwipeableCard";
+import ConfirmationModal from "./ConfirmationModal";
 
 interface ServiceViewProps {
     service: Service;
@@ -24,7 +26,7 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
     const [showAttendance, setShowAttendance] = useState(false);
     const [search, setSearch] = useState("");
     const [votingLoading, setVotingLoading] = useState(false);
-    const [isEditMode, setIsEditMode] = useState(false);
+    const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
 
     // Choir members for attendance
     const [choirMembers, setChoirMembers] = useState<ChoirMember[]>([]);
@@ -278,23 +280,13 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                     <div className="flex items-center justify-between">
                         <h3 className="text-sm font-bold text-text-secondary uppercase tracking-wide px-1">Програма ({currentService.songs.length})</h3>
                         {canEdit && (
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => setIsEditMode(!isEditMode)}
-                                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isEditMode
-                                        ? 'bg-red-500 text-white'
-                                        : 'bg-white/5 text-text-secondary hover:bg-white/10'}`}
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                                <button
-                                    onClick={() => setShowAddSong(true)}
-                                    className="text-xs bg-white text-black font-bold px-3 py-1.5 rounded-full hover:bg-gray-200 transition-colors flex items-center gap-1"
-                                >
-                                    <Plus className="w-3 h-3" />
-                                    Додати
-                                </button>
-                            </div>
+                            <button
+                                onClick={() => setShowAddSong(true)}
+                                className="text-xs bg-white text-black font-bold px-3 py-1.5 rounded-full hover:bg-gray-200 transition-colors flex items-center gap-1"
+                            >
+                                <Plus className="w-3 h-3" />
+                                Додати
+                            </button>
                         )}
                     </div>
 
@@ -315,34 +307,39 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                 const hasPdf = originalSong?.hasPdf;
 
                                 return (
-                                    <div key={`${song.songId}-${index}`} className="flex items-center gap-4 bg-surface hover:bg-surface-highlight border border-white/5 p-4 rounded-2xl group transition-colors">
-                                        <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-xs font-mono text-text-secondary">
-                                            {index + 1}
-                                        </div>
-
-                                        <div className="flex-1 min-w-0" onClick={() => canEdit && openEditCredits(index)}>
-                                            <h3 className="text-white font-medium truncate text-lg">{song.songTitle}</h3>
-                                            {/* Credits Display */}
-                                            <div className="flex flex-wrap gap-2 mt-1">
-                                                {song.performedBy && (
-                                                    <span className="text-xs text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md flex items-center gap-1">
-                                                        <UserIcon className="w-3 h-3" /> {song.performedBy}
-                                                    </span>
-                                                )}
-                                                {song.pianist && (
-                                                    <span className="text-xs text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md flex items-center gap-1">
-                                                        🎹 {song.pianist}
-                                                    </span>
-                                                )}
-                                                {hasPdf && <span className="text-xs text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md">PDF</span>}
+                                    <SwipeableCard
+                                        key={`${song.songId}-${index}`}
+                                        onDelete={() => setPendingDeleteIndex(index)}
+                                        disabled={!canEdit}
+                                        className="rounded-2xl"
+                                    >
+                                        <div className="flex items-center gap-4 bg-surface hover:bg-surface-highlight border border-white/5 p-4 rounded-2xl group transition-colors">
+                                            <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-xs font-mono text-text-secondary">
+                                                {index + 1}
                                             </div>
-                                            {/* Hint to edit */}
-                                            {canEdit && !song.performedBy && !song.pianist && (
-                                                <p className="text-xs text-text-secondary/50 mt-1">Натисни, щоб вказати хто диригував</p>
-                                            )}
-                                        </div>
 
-                                        <div className="flex items-center gap-1">
+                                            <div className="flex-1 min-w-0" onClick={() => canEdit && openEditCredits(index)}>
+                                                <h3 className="text-white font-medium truncate text-lg">{song.songTitle}</h3>
+                                                {/* Credits Display */}
+                                                <div className="flex flex-wrap gap-2 mt-1">
+                                                    {song.performedBy && (
+                                                        <span className="text-xs text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                                            <UserIcon className="w-3 h-3" /> {song.performedBy}
+                                                        </span>
+                                                    )}
+                                                    {song.pianist && (
+                                                        <span className="text-xs text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                                            🎹 {song.pianist}
+                                                        </span>
+                                                    )}
+                                                    {hasPdf && <span className="text-xs text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md">PDF</span>}
+                                                </div>
+                                                {/* Hint to edit */}
+                                                {canEdit && !song.performedBy && !song.pianist && (
+                                                    <p className="text-xs text-text-secondary/50 mt-1">Натисни, щоб вказати хто диригував</p>
+                                                )}
+                                            </div>
+
                                             {hasPdf && (
                                                 <button
                                                     onClick={() => handleViewPdf(song.songId)}
@@ -351,25 +348,15 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                                     <Eye className="w-5 h-5" />
                                                 </button>
                                             )}
-
-                                            {canEdit && (
-                                                <button
-                                                    onClick={() => handleRemoveSong(index)}
-                                                    className="p-3 text-red-400 bg-red-500/5 hover:bg-red-500/10 rounded-xl transition-colors opacity-50 hover:opacity-100"
-                                                    title="Видалити пісню"
-                                                >
-                                                    <X className="w-5 h-5" />
-                                                </button>
-                                            )}
                                         </div>
-                                    </div>
+                                    </SwipeableCard>
                                 );
                             })}
                         </div>
                     )}
 
                     {/* Add Song Button (Bottom) */}
-                    {canEdit && currentService.songs.length > 0 && !isEditMode && (
+                    {canEdit && currentService.songs.length > 0 && (
                         <button
                             onClick={() => setShowAddSong(true)}
                             className="w-full py-4 border border-dashed border-white/10 rounded-3xl text-text-secondary hover:text-white hover:bg-white/5 transition-all flex items-center justify-center gap-2"
@@ -684,6 +671,23 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Song Delete Confirmation Modal */}
+            {pendingDeleteIndex !== null && (
+                <ConfirmationModal
+                    isOpen={true}
+                    onClose={() => setPendingDeleteIndex(null)}
+                    onConfirm={() => {
+                        handleRemoveSong(pendingDeleteIndex);
+                        setPendingDeleteIndex(null);
+                    }}
+                    title="Видалити пісню?"
+                    message={`Видалити "${currentService.songs[pendingDeleteIndex]?.songTitle}" з програми?`}
+                    confirmText="Видалити"
+                    cancelText="Скасувати"
+                    variant="danger"
+                />
             )}
         </div>
     );

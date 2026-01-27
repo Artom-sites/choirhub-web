@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Calendar, Plus, ChevronRight, X, Trash2, Loader2, Check } from "lucide-react";
 import ConfirmationModal from "./ConfirmationModal";
 import TrashBin from "./TrashBin";
+import SwipeableCard from "./SwipeableCard";
 
 interface ServiceListProps {
     onSelectService: (service: Service) => void;
@@ -217,63 +218,59 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
                             const isFuture = isUpcoming(service.date);
 
                             return (
-                                <div
+                                <SwipeableCard
                                     key={service.id}
-                                    onClick={() => onSelectService(service)}
-                                    className={`relative group p-5 rounded-2xl border transition-all cursor-pointer h-full flex flex-col justify-between ${isToday(service.date) ? 'bg-white/10 border-white/20' : 'bg-surface border-white/5 hover:border-white/10'}`}
+                                    onDelete={() => setServiceToDelete(service.id)}
+                                    disabled={!effectiveCanEdit}
+                                    className="rounded-2xl h-full"
                                 >
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${isToday(service.date) ? 'text-white' : 'text-text-secondary'}`}>
-                                                {isToday(service.date) ? 'Сьогодні' : formatDate(service.date)}
-                                            </p>
-                                            <h3 className="text-xl font-bold text-white mb-2">{service.title}</h3>
+                                    <div
+                                        onClick={() => onSelectService(service)}
+                                        className={`relative group p-5 rounded-2xl border transition-all cursor-pointer h-full flex flex-col justify-between ${isToday(service.date) ? 'bg-white/10 border-white/20' : 'bg-surface border-white/5 hover:border-white/10'}`}
+                                    >
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${isToday(service.date) ? 'text-white' : 'text-text-secondary'}`}>
+                                                    {isToday(service.date) ? 'Сьогодні' : formatDate(service.date)}
+                                                </p>
+                                                <h3 className="text-xl font-bold text-white mb-2">{service.title}</h3>
 
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <div className={`px-2 py-0.5 rounded-lg text-xs font-medium border ${isToday(service.date) ? 'bg-white text-black border-white' : 'bg-white/5 text-text-secondary border-white/5'}`}>
-                                                    {service.songs.length} пісень
+                                                <div className="flex items-center gap-2 mb-3">
+                                                    <div className={`px-2 py-0.5 rounded-lg text-xs font-medium border ${isToday(service.date) ? 'bg-white text-black border-white' : 'bg-white/5 text-text-secondary border-white/5'}`}>
+                                                        {service.songs.length} пісень
+                                                    </div>
                                                 </div>
+
+                                                {/* Voting Area */}
+                                                {isFuture && (
+                                                    <div className="flex gap-2 mt-3" onClick={e => e.stopPropagation()}>
+                                                        {(status === 'unknown' || status === 'present') && (
+                                                            <button
+                                                                onClick={(e) => handleVote(e, service.id, 'present')}
+                                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${status === 'present' ? 'bg-green-500 text-white ring-2 ring-green-500/50' : 'bg-white/5 text-text-secondary hover:bg-white/10 hover:text-white'}`}
+                                                            >
+                                                                <Check className="w-3.5 h-3.5" />
+                                                                {status === 'present' ? 'Я буду' : 'Буду'}
+                                                            </button>
+                                                        )}
+
+                                                        {(status === 'unknown' || status === 'absent') && (
+                                                            <button
+                                                                onClick={(e) => handleVote(e, service.id, 'absent')}
+                                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${status === 'absent' ? 'bg-red-500/20 text-red-400 ring-1 ring-red-500/50' : 'bg-white/5 text-text-secondary hover:bg-white/10 hover:text-white'}`}
+                                                            >
+                                                                <X className="w-3.5 h-3.5" />
+                                                                {status === 'absent' ? 'Не буду' : 'Не буду'}
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
 
-                                            {/* Voting Area */}
-                                            {isFuture && (
-                                                <div className="flex gap-2 mt-3" onClick={e => e.stopPropagation()}>
-                                                    {(status === 'unknown' || status === 'present') && (
-                                                        <button
-                                                            onClick={(e) => handleVote(e, service.id, 'present')}
-                                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${status === 'present' ? 'bg-green-500 text-white ring-2 ring-green-500/50' : 'bg-white/5 text-text-secondary hover:bg-white/10 hover:text-white'}`}
-                                                        >
-                                                            <Check className="w-3.5 h-3.5" />
-                                                            {status === 'present' ? 'Я буду' : 'Буду'}
-                                                        </button>
-                                                    )}
-
-                                                    {(status === 'unknown' || status === 'absent') && (
-                                                        <button
-                                                            onClick={(e) => handleVote(e, service.id, 'absent')}
-                                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${status === 'absent' ? 'bg-red-500/20 text-red-400 ring-1 ring-red-500/50' : 'bg-white/5 text-text-secondary hover:bg-white/10 hover:text-white'}`}
-                                                        >
-                                                            <X className="w-3.5 h-3.5" />
-                                                            {status === 'absent' ? 'Не буду' : 'Не буду'}
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="flex flex-col items-end gap-2">
-                                            {effectiveCanEdit && (
-                                                <button
-                                                    onClick={(e) => initiateDelete(e, service.id)}
-                                                    className="p-1.5 text-text-secondary hover:text-red-500 hover:bg-white/10 rounded-lg transition-colors z-20"
-                                                >
-                                                    <Trash2 className="w-5 h-5" />
-                                                </button>
-                                            )}
                                             <ChevronRight className="w-5 h-5 text-white/20 group-hover:text-white transition-colors" />
                                         </div>
                                     </div>
-                                </div>
+                                </SwipeableCard>
                             )
                         })}
                     </div>
