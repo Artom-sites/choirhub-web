@@ -7,7 +7,7 @@ import { getSong, updateSong, uploadSongPdf, deleteSong, getChoir } from "@/lib/
 import { SimpleSong } from "@/types";
 import PDFViewer from "@/components/PDFViewer";
 import EditSongModal from "@/components/EditSongModal";
-import { ArrowLeft, FileText, Upload, Loader2, Check, AlertCircle, Trash2, ExternalLink, Pencil, User } from "lucide-react";
+import { ArrowLeft, FileText, Upload, Loader2, Check, AlertCircle, Trash2, ExternalLink, Pencil, User, Download } from "lucide-react";
 
 export default function SongPage() {
     const params = useParams();
@@ -127,6 +127,48 @@ export default function SongPage() {
             router.back();
         } catch (error) {
             alert("Помилка видалення");
+        }
+    };
+
+    const handleDownload = async () => {
+        if (!song) return;
+
+        try {
+            let blob: Blob;
+            const filename = `${song.title}.pdf`;
+
+            if (song.pdfData) {
+                // Base64 data - convert to blob
+                const byteCharacters = atob(song.pdfData);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                blob = new Blob([byteArray], { type: 'application/pdf' });
+            } else if (song.pdfUrl) {
+                // Fetch from URL
+                const response = await fetch(song.pdfUrl);
+                blob = await response.blob();
+            } else {
+                return;
+            }
+
+            // Create download link
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Download failed:', error);
+            // Fallback: open in new tab
+            if (song.pdfUrl) {
+                window.open(song.pdfUrl, '_blank');
+            }
         }
     };
 
@@ -276,12 +318,21 @@ export default function SongPage() {
                                         Ноти завантажено та готово до перегляду
                                     </p>
 
-                                    <button
-                                        onClick={() => setShowViewer(true)}
-                                        className="w-full py-4 bg-white text-black rounded-xl font-bold hover:bg-gray-200 transition-colors mb-4 shadow-lg shadow-white/5"
-                                    >
-                                        Відкрити ноти
-                                    </button>
+                                    <div className="flex gap-3 mb-4">
+                                        <button
+                                            onClick={() => setShowViewer(true)}
+                                            className="flex-1 py-4 bg-white text-black rounded-xl font-bold hover:bg-gray-200 transition-colors shadow-lg shadow-white/5"
+                                        >
+                                            Відкрити ноти
+                                        </button>
+                                        <button
+                                            onClick={handleDownload}
+                                            className="px-6 py-4 bg-white/10 border border-white/10 text-white rounded-xl font-bold hover:bg-white/20 transition-colors flex items-center justify-center"
+                                            title="Завантажити PDF"
+                                        >
+                                            <Download className="w-5 h-5" />
+                                        </button>
+                                    </div>
                                 </>
                             )}
 
