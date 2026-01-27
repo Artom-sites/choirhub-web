@@ -6,7 +6,8 @@ import {
     X,
     Loader2,
     ZoomIn,
-    ZoomOut
+    ZoomOut,
+    Download
 } from "lucide-react";
 
 // Dynamically import react-pdf to avoid SSR issues
@@ -77,6 +78,25 @@ export default function PDFViewer({ url, title, onClose }: PDFViewerProps) {
     const handleZoomIn = () => setScale(s => Math.min(s + 0.25, 3));
     const handleZoomOut = () => setScale(s => Math.max(s - 0.25, 0.5));
 
+    const handleDownload = async () => {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const downloadUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = title ? `${title}.pdf` : 'song.pdf';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(downloadUrl);
+        } catch (error) {
+            console.error('Download failed:', error);
+            // Fallback: open in new tab
+            window.open(url, '_blank');
+        }
+    };
+
     if (!workerReady) {
         return (
             <div className="flex flex-col h-full bg-background items-center justify-center">
@@ -96,10 +116,14 @@ export default function PDFViewer({ url, title, onClose }: PDFViewerProps) {
                     <X className="w-6 h-6" />
                 </button>
 
-                {/* Zoom Controls - Removed as per user request for native pinch zoom */}
-                <div className="flex items-center gap-2 pointer-events-auto">
-                    {/* Zoom buttons hidden to allow cleaner UI */}
-                </div>
+                {/* Download Button */}
+                <button
+                    onClick={handleDownload}
+                    className="p-3 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/70 transition-colors pointer-events-auto border border-white/10"
+                    title="Завантажити PDF"
+                >
+                    <Download className="w-6 h-6" />
+                </button>
             </header>
 
             {/* Content (Scrollable) */}
