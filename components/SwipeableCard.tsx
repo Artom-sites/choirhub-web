@@ -104,7 +104,7 @@ export default function SwipeableCard({ children, onDelete, disabled = false, cl
         <div className={`relative overflow-hidden ${className}`}>
             {/* Delete button behind */}
             <div
-                className="absolute inset-y-0 right-0 w-20 flex items-center justify-center bg-red-500 transition-opacity"
+                className="absolute inset-y-0 right-0 w-20 flex items-center justify-center bg-red-500 rounded-r-2xl transition-opacity"
                 style={{ opacity: Math.abs(translateX) / DELETE_AREA_WIDTH }}
             >
                 <button
@@ -117,7 +117,7 @@ export default function SwipeableCard({ children, onDelete, disabled = false, cl
 
             {/* Main content */}
             <div
-                className="relative bg-surface transition-transform"
+                className="relative transition-transform"
                 style={{
                     transform: `translateX(${translateX}px)`,
                     transition: isDragging.current ? 'none' : 'transform 0.2s ease-out'
