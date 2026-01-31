@@ -1,0 +1,28 @@
+🎵 MSC Music Import Script
+
+Options:
+  - Dry run: false
+  - Category filter: all
+  - Limit: no limit
+  - Verbose: false
+
+📥 Fetching works list from mscmusic.org...
+
+
+Fetched 3634 works from MSC API
+
+📄 Fetching detailed info for each work...
+
+
+Converted: 3379 songs
+Skipped: 255 (no matching category or no PDF)
+
+
+Importing 3379 songs to Firestore...
+
+
+✅ Successfully imported 3379 songs!
+
+📊 Summary by category:
+  choir/mixed: 2226
+  choir/youth: 1153

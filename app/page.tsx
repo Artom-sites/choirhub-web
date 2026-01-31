@@ -3,18 +3,24 @@
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon, mergeMembers } from "@/lib/db";
+import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon, mergeMembers, updateChoir, deleteUserAccount } from "@/lib/db";
 import { Service, Choir, UserMembership, ChoirMember, Permission, AdminCode } from "@/types";
 import SongList from "@/components/SongList";
 import ServiceList from "@/components/ServiceList";
+import Preloader from "@/components/Preloader";
 import ServiceView from "@/components/ServiceView";
 import StatisticsView from "@/components/StatisticsView"; // New
 import EditMemberModal from "@/components/EditMemberModal"; // New
 import MergeMemberModal from "@/components/MergeMemberModal"; // New
+import NotificationSettings from "@/components/NotificationSettings";
+import LegalModal from "@/components/LegalModal";
+import SupportModal from "@/components/SupportModal";
+import HelpModal from "@/components/HelpModal";
+import DeleteAccountModal from "@/components/DeleteAccountModal";
 import {
-  Music2, Loader2, Copy, Check,
+  Music2, Loader2, Copy, Check, HelpCircle,
   LogOut, ChevronLeft, Home, User, Users, Repeat,
-  PlusCircle, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil
+  PlusCircle, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart
 } from "lucide-react";
 import { collection as firestoreCollection, addDoc, getDocs, where, query, doc, updateDoc, arrayUnion } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -75,6 +81,19 @@ function HomePageContent() {
   const [showEditName, setShowEditName] = useState(false);
   const [newName, setNewName] = useState("");
   const [savingName, setSavingName] = useState(false);
+
+  // Choir Settings Modal
+  const [showChoirSettings, setShowChoirSettings] = useState(false);
+  const [editChoirName, setEditChoirName] = useState("");
+  const [savingChoirSettings, setSavingChoirSettings] = useState(false);
+
+  // Delete Account Modal
+  const [showLegalModal, setShowLegalModal] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // Help Modal
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
   const AVAILABLE_PERMISSIONS: { key: Permission; label: string }[] = [
     { key: 'add_songs', label: 'Додавати пісні' },
@@ -442,6 +461,21 @@ function HomePageContent() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    try {
+      // 1. Clean up Firestore
+      await deleteUserAccount(user.uid);
+      // 2. Delete Auth User
+      await user.delete();
+      // Navigation handles itself (auth state change)
+    } catch (error) {
+      console.error("Delete Account Error:", error);
+      // If requires re-login (common for sensitive actions)
+      setManagerError("Для видалення потрібно перезайти в акаунт");
+    }
+  };
+
   // Count absences for a member across all services
   const getAbsenceCount = (memberId: string): number => {
     return services.filter(s => s.absentMembers?.includes(memberId)).length;
@@ -451,7 +485,9 @@ function HomePageContent() {
   const hasManagePermission = userData?.permissions?.some(p =>
     ['add_songs', 'edit_attendance', 'edit_credits', 'manage_services'].includes(p)
   ) ?? false;
-  const canEdit = userData?.role === 'head' || userData?.role === 'regent' || hasManagePermission;
+  // Bug fix: canEdit should strictly mean full admin (Head/Regent). 
+  // Custom permissions are handled via canAddSongs, etc.
+  const canEdit = userData?.role === 'head' || userData?.role === 'regent';
 
   // More granular permissions
   const canAddSongs = canEdit || (userData?.permissions?.includes('add_songs') ?? false);
@@ -473,11 +509,7 @@ function HomePageContent() {
   };
 
   if (authLoading || pageLoading) {
-    return (
-      <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
-        <Loader2 className="w-10 h-10 text-white animate-spin" />
-      </div>
-    );
+    return <Preloader />;
   }
 
   // Show Statistics
@@ -569,6 +601,75 @@ function HomePageContent() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Choir Settings Modal */}
+      {showChoirSettings && (
+        <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[#18181b] border border-white/10 w-full max-w-sm p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-bold text-white">Налаштування хору</h3>
+              <button
+                onClick={() => setShowChoirSettings(false)}
+                className="p-2 text-text-secondary hover:text-white hover:bg-white/10 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Choir Icon */}
+            <div className="flex flex-col items-center mb-6">
+              <button
+                onClick={() => iconInputRef.current?.click()}
+                className="w-24 h-24 bg-white/10 rounded-2xl flex items-center justify-center border border-white/10 overflow-hidden relative group cursor-pointer hover:border-white/30 transition-colors"
+              >
+                {choir?.icon ? (
+                  <img src={choir.icon} alt="Choir" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-4xl text-white font-bold">{choir?.name?.[0]?.toUpperCase() || "C"}</span>
+                )}
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                  <Camera className="w-6 h-6 text-white" />
+                </div>
+              </button>
+              <p className="text-text-secondary text-xs mt-2">Натисніть, щоб змінити фото</p>
+            </div>
+
+            {/* Choir Name */}
+            <div className="mb-6">
+              <label className="text-text-secondary text-sm mb-2 block">Назва хору</label>
+              <input
+                type="text"
+                value={editChoirName}
+                onChange={(e) => setEditChoirName(e.target.value)}
+                placeholder="Назва хору"
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-text-secondary focus:outline-none focus:border-white/30"
+              />
+            </div>
+
+            {/* Save Button */}
+            <button
+              onClick={async () => {
+                if (!userData?.choirId || !editChoirName.trim()) return;
+                setSavingChoirSettings(true);
+                try {
+                  await updateChoir(userData.choirId, { name: editChoirName.trim() });
+                  setChoir(prev => prev ? { ...prev, name: editChoirName.trim() } : null);
+                  setShowChoirSettings(false);
+                } catch (err) {
+                  console.error("Failed to update choir:", err);
+                } finally {
+                  setSavingChoirSettings(false);
+                }
+              }}
+              disabled={savingChoirSettings || !editChoirName.trim()}
+              className="w-full py-3 bg-white text-black rounded-xl font-bold hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {savingChoirSettings && <Loader2 className="w-4 h-4 animate-spin" />}
+              Зберегти
+            </button>
           </div>
         </div>
       )}
@@ -833,6 +934,35 @@ function HomePageContent() {
               )}
             </div>
 
+            {/* Notification Settings */}
+            <div className="mt-6">
+              <NotificationSettings />
+            </div>
+
+            <button
+              onClick={() => setShowHelpModal(true)}
+              className="w-full py-4 bg-white/5 border border-white/5 text-white hover:bg-white/10 rounded-2xl font-bold transition-all mt-4 flex items-center justify-center gap-2"
+            >
+              <HelpCircle className="w-5 h-5 text-indigo-400" />
+              Довідка
+            </button>
+
+            <button
+              onClick={() => setShowLegalModal(true)}
+              className="w-full py-4 bg-white/5 border border-white/5 text-white hover:bg-white/10 rounded-2xl font-bold transition-all mt-3 flex items-center justify-center gap-2"
+            >
+              <FileText className="w-5 h-5 text-gray-400" />
+              Sources & Content (Legal)
+            </button>
+
+            <button
+              onClick={() => setShowSupportModal(true)}
+              className="w-full py-4 bg-gradient-to-r from-pink-500/10 to-rose-500/10 border border-pink-500/20 text-pink-200 hover:bg-pink-500/20 rounded-2xl font-bold transition-all mt-3 flex items-center justify-center gap-2 group"
+            >
+              <Heart className="w-5 h-5 text-pink-400 group-hover:scale-110 transition-transform" />
+              Підтримати проєкт
+            </button>
+
             <button
               onClick={() => setShowLogoutConfirm(true)}
               className="w-full py-4 border border-white/10 text-white hover:bg-white/10 rounded-2xl font-bold transition-all mt-6 flex items-center justify-center gap-2"
@@ -840,9 +970,37 @@ function HomePageContent() {
               <LogOut className="w-5 h-5" />
               Вийти з акаунту
             </button>
+
+            {/* Delete Account Button */}
+            <div className="mt-8 border-t border-white/5 pt-4">
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="w-full py-3 text-red-500 hover:bg-red-500/10 rounded-2xl text-sm font-bold transition-all"
+              >
+                Видалити акаунт
+              </button>
+            </div>
           </div>
         </div>
       )}
+
+      {/* Delete Account Modal */}
+      <DeleteAccountModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteAccount}
+      />
+
+      {/* Legal Modal */}
+      <LegalModal
+        isOpen={showLegalModal}
+        onClose={() => setShowLegalModal(false)}
+      />
+
+      <SupportModal
+        isOpen={showSupportModal}
+        onClose={() => setShowSupportModal(false)}
+      />
 
       {/* Header */}
       <header className="bg-[#09090b]/80 backdrop-blur-xl border-b border-white/5 sticky top-0 z-30">
@@ -857,7 +1015,12 @@ function HomePageContent() {
               onChange={handleIconUpload}
             />
             <button
-              onClick={() => canEdit && iconInputRef.current?.click()}
+              onClick={() => {
+                if (canEdit) {
+                  setEditChoirName(choir?.name || "");
+                  setShowChoirSettings(true);
+                }
+              }}
               className={`w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/5 overflow-hidden relative group ${canEdit ? 'cursor-pointer hover:border-white/30' : ''}`}
             >
               {choir?.icon ? (
@@ -1144,18 +1307,32 @@ function HomePageContent() {
           </div>
         </div>
       )}
+
+      {/* Help Modal */}
+      <HelpModal
+        isOpen={showHelpModal}
+        onClose={() => setShowHelpModal(false)}
+      />
+
+      {/* Merge Member Modal */}
+      {mergingMember && (
+        <MergeMemberModal
+          isOpen={!!mergingMember}
+          onClose={() => setMergingMember(null)}
+          onMerge={handleMerge}
+          sourceMember={mergingMember}
+          allMembers={choir?.members || []}
+        />
+      )}
     </main>
   );
-
 }
+
+
 
 export default function HomePage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
-        <Loader2 className="w-10 h-10 text-white animate-spin" />
-      </div>
-    }>
+    <Suspense fallback={<Preloader />}>
       <HomePageContent />
     </Suspense>
   );

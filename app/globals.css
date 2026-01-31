@@ -10,6 +10,8 @@
   /* Zinc-800 */
   --primary: #ffffff;
   /* White as primary accent */
+  --accent: #3b82f6;
+  /* Blue-500 - for interactive elements */
   --text-primary: #ffffff;
   --text-secondary: #a1a1aa;
   /* Zinc-400 */
@@ -22,6 +24,7 @@
   --color-surface: var(--surface);
   --color-surface-highlight: var(--surface-highlight);
   --color-primary: var(--primary);
+  --color-accent: var(--accent);
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
   --color-danger: var(--danger);
@@ -66,6 +69,19 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--primary);
+}
+
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+  /* Chrome, Safari, Opera */
 }
 
 /* Fix for native date picker icon visibility in dark mode */

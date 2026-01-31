@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2, Music2, Check, ExternalLink, User, Mail } from "lucide-react";
+import { Loader2, Music2, Check, ExternalLink, User, Mail, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { createUser, getChoir, updateChoirMembers } from "@/lib/db";
 import { Choir, UserData } from "@/types";
@@ -40,6 +40,7 @@ function SetupPageContent() {
     const [isRegistering, setIsRegistering] = useState(false);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [authName, setAuthName] = useState("");
 
     useEffect(() => {
@@ -345,13 +346,26 @@ function SetupPageContent() {
                             className="w-full px-4 py-3 bg-black/20 rounded-xl border border-white/10 text-white focus:outline-none focus:border-white/30"
                             placeholder="Email"
                         />
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full px-4 py-3 bg-black/20 rounded-xl border border-white/10 text-white focus:outline-none focus:border-white/30"
-                            placeholder="Пароль"
-                        />
+                        <div className="relative">
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full px-4 py-3 bg-black/20 rounded-xl border border-white/10 text-white focus:outline-none focus:border-white/30 pr-12"
+                                placeholder="Пароль"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-text-secondary hover:text-white transition-colors"
+                            >
+                                {showPassword ? (
+                                    <EyeOff className="w-5 h-5" />
+                                ) : (
+                                    <Eye className="w-5 h-5" />
+                                )}
+                            </button>
+                        </div>
                         {error && <p className="text-red-400 text-sm bg-red-400/10 p-3 rounded-lg">{error}</p>}
 
                         <button

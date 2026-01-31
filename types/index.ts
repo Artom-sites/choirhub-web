@@ -84,6 +84,92 @@ export interface SimpleSong {
     addedAt?: string;
     pdfData?: string; // Base64 PDF content (Legacy)
     pdfUrl?: string; // Firebase Storage URL
+    parts?: SongPart[]; // List of parts if available
+    composer?: string;
+    poet?: string;
+    theme?: string;
 }
 
 export type Category = string;
+
+// ============ GLOBAL ARCHIVE ============
+
+export type SongCategory = 'choir' | 'ensemble' | 'orchestra';
+
+export type ChoirSubcategory = 'mixed' | 'female' | 'male' | 'youth' | 'children';
+
+export type SyncPriority = 'critical' | 'high' | 'low';
+
+export type SongSource = 'global' | 'local';
+
+export interface SongPart {
+    name: string;           // "Партитура", "Скрипка", "Сопрано"
+    pdfUrl: string;         // Supabase Storage URL
+    fileSize?: number;      // Bytes, for cache management
+}
+
+export interface GlobalSong {
+    id?: string;
+    title: string;
+    composer?: string;
+    category: SongCategory | string;
+
+    subcategory?: ChoirSubcategory | string;  // For choir: mixed/female/etc, for orchestra: custom
+    theme?: string;         // E.g. "Різдво", "Пасха", "Весілля"
+    keywords: string[];     // Lowercase for search: ["отче", "наш", "кедров"]
+    parts: SongPart[];      // At least one part (main PDF)
+    sourceUrl?: string;     // Original URL from mscmusic.org
+    sourceId?: string;      // External ID (e.g., MSC idx)
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+// Local song in choir's private repertoire
+export interface LocalSong extends GlobalSong {
+    addedBy: string;        // User ID who added it
+    choirId: string;        // Which choir owns this
+    deletedAt?: string;     // Soft delete timestamp
+    deletedBy?: string;     // User who deleted it
+}
+
+// Song reference in a Service (program)
+export interface ServiceSongRef {
+    songId: string;
+    source: SongSource;     // 'global' or 'local'
+    partIndex: number;      // Which part is selected (0 = first/main)
+    songTitle?: string;     // Denormalized for display
+    note?: string;          // Performance notes
+    performedBy?: string;   // Conductor for THIS performance
+    pianist?: string;       // Pianist for THIS performance
+}
+
+// User's saved songs (personal folder)
+export interface UserSavedSong {
+    songId: string;
+    source: SongSource;
+    partIndex: number;
+    savedAt: string;
+}
+
+// Cache entry for offline storage
+export interface CachedPdf {
+    songId: string;
+    partIndex: number;
+    source: SongSource;
+    priority: SyncPriority;
+    pdfBlob?: Blob;         // Actual PDF data
+    cachedAt: string;
+    expiresAt?: string;     // For low-priority cache cleanup
+}
+
+// Metadata for search index (lightweight)
+export interface SongMeta {
+    id: string;
+    title: string;
+    composer?: string;
+    category: SongCategory;
+    subcategory?: string;
+    keywords: string[];
+    partCount: number;
+    source: SongSource;
+}

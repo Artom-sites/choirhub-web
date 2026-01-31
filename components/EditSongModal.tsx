@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { X, Plus, Loader2, Save, Check, ChevronDown, Trash2 } from "lucide-react";
 import { SimpleSong } from "@/types";
+import { CATEGORIES } from "@/lib/themes";
 import { useAuth } from "@/contexts/AuthContext";
 import { updateDoc, doc, arrayRemove } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -17,10 +18,6 @@ interface EditSongModalProps {
     knownConductors: string[];
     knownCategories: string[];
 }
-
-const CATEGORIES = [
-    "Різдво", "Пасха", "В'їзд", "Вечеря", "Вознесіння", "Трійця", "Свято Жнив", "Інші"
-];
 
 export default function EditSongModal({
     isOpen,
@@ -58,6 +55,11 @@ export default function EditSongModal({
     const [conductor, setConductor] = useState(initialIsCustomConductor ? "" : (initialData.conductor || ""));
     const [customConductor, setCustomConductor] = useState(initialIsCustomConductor ? (initialData.conductor || "") : "");
     const [showCustomInput, setShowCustomInput] = useState(!!initialIsCustomConductor);
+
+    // New Metadata Fields
+    const [composer, setComposer] = useState(initialData.composer || "");
+    const [poet, setPoet] = useState(initialData.poet || "");
+    const [theme, setTheme] = useState(initialData.theme || "");
 
     const [showAllCategories, setShowAllCategories] = useState(false);
 
@@ -135,6 +137,9 @@ export default function EditSongModal({
                 title: title.trim(),
                 category: finalCategory,
                 conductor: finalConductor,
+                composer: composer.trim() || undefined,
+                poet: poet.trim() || undefined,
+                theme: theme || undefined,
             });
 
             onClose();
@@ -361,6 +366,54 @@ export default function EditSongModal({
                                     </button>
                                 </div>
                             )}
+                        </div>
+
+                        {/* Metadata Section (Composer, Poet, Theme) */}
+                        <div className="space-y-4 pt-4 border-t border-white/5">
+                            <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                                Деталі
+                            </h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                                        Композитор
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={composer}
+                                        onChange={(e) => setComposer(e.target.value)}
+                                        placeholder="Ім'я композитора"
+                                        className="w-full px-3 py-2.5 bg-black/20 border border-white/10 rounded-lg focus:outline-none focus:border-white/20 text-white placeholder:text-text-secondary/40 text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                                        Автор слів (Поет)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={poet}
+                                        onChange={(e) => setPoet(e.target.value)}
+                                        placeholder="Ім'я поета"
+                                        className="w-full px-3 py-2.5 bg-black/20 border border-white/10 rounded-lg focus:outline-none focus:border-white/20 text-white placeholder:text-text-secondary/40 text-sm"
+                                    />
+                                </div>
+                                <div className="sm:col-span-2">
+                                    <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                                        Тематика
+                                    </label>
+                                    <select
+                                        value={theme}
+                                        onChange={(e) => setTheme(e.target.value)}
+                                        className="w-full px-3 py-2.5 bg-black/20 border border-white/10 rounded-lg focus:outline-none focus:border-white/20 text-white text-sm appearance-none cursor-pointer"
+                                    >
+                                        <option value="" className="bg-[#1c1c20] text-text-secondary">Не вказано</option>
+                                        {CATEGORIES.map(t => (
+                                            <option key={t} value={t} className="bg-[#1c1c20]">{t}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
                         </div>
 
                         {error && (

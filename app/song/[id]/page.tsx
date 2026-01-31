@@ -7,7 +7,14 @@ import { getSong, updateSong, uploadSongPdf, deleteSong, getChoir } from "@/lib/
 import { SimpleSong } from "@/types";
 import PDFViewer from "@/components/PDFViewer";
 import EditSongModal from "@/components/EditSongModal";
-import { ArrowLeft, FileText, Upload, Loader2, Check, AlertCircle, Trash2, ExternalLink, Pencil, User, Download } from "lucide-react";
+import { ArrowLeft, FileText, Upload, Loader2, Check, AlertCircle, Trash2, ExternalLink, Pencil, User, Download, X } from "lucide-react";
+import { extractInstrument } from "@/lib/utils";
+
+import ConfirmationModal from "@/components/ConfirmationModal";
+import Toast from "@/components/Toast";
+
+// Helper to extract instrument name for tabs
+// extractInstrument moved to @/lib/utils
 
 export default function SongPage() {
     const params = useParams();
@@ -22,6 +29,11 @@ export default function SongPage() {
     const [uploading, setUploading] = useState(false);
     const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [errorMessage, setErrorMessage] = useState("");
+    const [currentPartIndex, setCurrentPartIndex] = useState(0);
+
+    // Interaction State
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
     // Edit Modal State
     const [showEditModal, setShowEditModal] = useState(false);
@@ -112,23 +124,29 @@ export default function SongPage() {
             await updateSong(userData.choirId, songId, updates);
             setSong(prev => prev ? { ...prev, ...updates } : null);
             setShowEditModal(false);
+            setToast({ message: "Пісню оновлено", type: "success" });
         } catch (error) {
             console.error("Failed to update song:", error);
-            alert("Помилка оновлення пісні");
+            setToast({ message: "Помилка оновлення пісні", type: "error" });
         }
     };
 
-    const handleDelete = async () => {
-        if (!userData?.choirId || !songId) return;
-        if (!confirm("Ви впевнені, що хочете видалити цю пісню?")) return;
+    const handleDelete = () => {
+        // Just trigger the modal
+        setShowDeleteConfirm(true);
+    };
 
+    const confirmDelete = async () => {
+        if (!userData?.choirId || !songId) return;
         try {
             await deleteSong(userData.choirId, songId);
-            router.back();
+            router.push("/");
         } catch (error) {
-            alert("Помилка видалення");
+            console.error("Error deleting song:", error);
+            setToast({ message: "Помилка видалення", type: "error" });
         }
     };
+
 
     const handleDownload = async () => {
         if (!song) return;
@@ -198,14 +216,75 @@ export default function SongPage() {
     const isTg = isTelegramLink(song.pdfUrl);
 
     // Show PDF Viewer (Only if NOT telegram link)
-    if (showViewer && (song.pdfUrl || song.pdfData) && !isTg) {
+    if (showViewer && ((song.parts && song.parts.length > 0) || song.pdfUrl || song.pdfData) && !isTg) {
+        const hasParts = song.parts && song.parts.length > 1;
+        const currentPdfUrl = (song.parts && song.parts.length > 0)
+            ? song.parts[currentPartIndex].pdfUrl
+            : (song.pdfUrl || song.pdfData!);
+
         return (
-            <div className="h-screen bg-[#09090b]">
-                <PDFViewer
-                    url={song.pdfUrl || song.pdfData!}
-                    title={song.title}
-                    onClose={() => router.back()}
-                />
+            <div className="h-screen bg-white flex flex-col">
+                {/* PDF Header */}
+                <div className="bg-white border-b border-gray-200 shadow-sm z-10">
+                    <div className="px-4 py-3 flex items-center justify-between">
+                        <button
+                            onClick={() => router.back()}
+                            className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition-colors"
+                        >
+                            <ArrowLeft className="w-6 h-6 text-gray-700" />
+                        </button>
+
+                        <div className="flex-1 mx-4 min-w-0 flex flex-col items-center">
+                            <h1 className="font-bold text-gray-900 truncate w-full text-center">
+                                {song.title}
+                            </h1>
+                            {hasParts && song.parts && (
+                                <p className="text-xs text-gray-500 font-medium">
+                                    {song.parts[currentPartIndex].name}
+                                </p>
+                            )}
+                        </div>
+
+                        <button
+                            onClick={handleDownload}
+                            className="p-2 -mr-2 rounded-full hover:bg-gray-100 transition-colors"
+                            title="Завантажити PDF"
+                        >
+                            <Download className="w-6 h-6 text-gray-700" />
+                        </button>
+                    </div>
+
+                    {/* Parts Tabs (if multiple) */}
+                    {hasParts && song.parts && (
+                        <div className="px-4 pb-3 flex gap-2 overflow-x-auto scrollbar-hide">
+                            {song.parts.map((part, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => setCurrentPartIndex(index)}
+                                    className={`px-4 py-2 rounded-full whitespace-nowrap transition-all text-sm font-medium ${currentPartIndex === index
+                                        ? "bg-gray-900 text-white shadow-sm"
+                                        : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                                        }`}
+                                >
+                                    {extractInstrument(part.name || `Партія ${index + 1}`, song.title)}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* PDF Content */}
+                <div className="flex-1 overflow-hidden relative">
+                    <PDFViewer
+                        key={`${song.id}-${currentPartIndex}`} // Force re-render on part change
+                        url={currentPdfUrl && currentPdfUrl.includes('mscmusic.org')
+                            ? `/api/pdf-proxy?url=${encodeURIComponent(currentPdfUrl)}`
+                            : currentPdfUrl
+                        }
+                        title={song.title}
+                        onClose={() => router.back()}
+                    />
+                </div>
             </div>
         );
     }
@@ -423,16 +502,35 @@ export default function SongPage() {
                 </div>
             </div>
 
-            {/* Edit Modal */}
-            <EditSongModal
-                isOpen={showEditModal}
-                onClose={() => setShowEditModal(false)}
-                onSave={handleUpdateSong}
-                initialData={song}
-                regents={choirData.regents}
-                knownConductors={choirData.knownConductors}
-                knownCategories={choirData.knownCategories}
+            {showEditModal && song && (
+                <EditSongModal
+                    isOpen={showEditModal}
+                    onClose={() => setShowEditModal(false)}
+                    onSave={handleUpdateSong}
+                    initialData={song}
+                    regents={choirData.regents}
+                    knownConductors={choirData.knownConductors}
+                    knownCategories={choirData.knownCategories}
+                />
+            )}
+
+            <ConfirmationModal
+                isOpen={showDeleteConfirm}
+                onClose={() => setShowDeleteConfirm(false)}
+                onConfirm={confirmDelete}
+                title="Видалити пісню?"
+                message="Ви впевнені, що хочете видалити цю пісню? Цю дію неможливо скасувати."
+                confirmLabel="Видалити"
+                isDestructive={true}
             />
+
+            {toast && (
+                <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => setToast(null)}
+                />
+            )}
         </div>
     );
 }

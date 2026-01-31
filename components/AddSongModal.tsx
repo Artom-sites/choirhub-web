@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { X, Plus, Loader2, Upload, Check, ChevronDown, Trash2 } from "lucide-react";
 import { SimpleSong } from "@/types";
+import { CATEGORIES } from "@/lib/themes";
 import { useAuth } from "@/contexts/AuthContext";
 import { updateDoc, doc, arrayRemove } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -17,10 +18,6 @@ interface AddSongModalProps {
     knownConductors: string[];
     knownCategories: string[];
 }
-
-const CATEGORIES = [
-    "Різдво", "Пасха", "В'їзд", "Вечеря", "Вознесіння", "Трійця", "Свято Жнив", "Інші"
-];
 
 export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownConductors, knownCategories }: AddSongModalProps) {
     const { userData } = useAuth();

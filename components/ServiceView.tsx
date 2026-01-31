@@ -31,6 +31,7 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
     // Choir members for attendance
     const [choirMembers, setChoirMembers] = useState<ChoirMember[]>([]);
     const [absentMembers, setAbsentMembers] = useState<string[]>(service.absentMembers || []);
+    const [confirmedMembers, setConfirmedMembers] = useState<string[]>(service.confirmedMembers || []);
     const [membersLoading, setMembersLoading] = useState(true);
 
     useEffect(() => {
@@ -84,6 +85,8 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
             }
 
             setCurrentService({ ...currentService, confirmedMembers: newConfirmed, absentMembers: newAbsent });
+            setConfirmedMembers(newConfirmed);
+            setAbsentMembers(newAbsent);
         } catch (e) { console.error(e); }
         finally { setVotingLoading(false); }
     };
@@ -216,17 +219,33 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
     };
 
     const toggleAbsent = (memberId: string) => {
-        setAbsentMembers(prev =>
-            prev.includes(memberId)
-                ? prev.filter(id => id !== memberId)
-                : [...prev, memberId]
-        );
+        setAbsentMembers(prev => {
+            const isAbsent = prev.includes(memberId);
+            if (isAbsent) {
+                // Remove from absent (back to waiting)
+                return prev.filter(id => id !== memberId);
+            } else {
+                // Add to absent, remove from confirmed
+                setConfirmedMembers(curr => curr.filter(id => id !== memberId));
+                return [...prev, memberId];
+            }
+        });
+    };
+
+    const markRestAsPresent = () => {
+        const newConfirmed = choirMembers
+            .map(m => m.id)
+            .filter(id => !absentMembers.includes(id));
+        setConfirmedMembers(newConfirmed);
     };
 
     const handleSaveAttendance = async () => {
         if (!userData?.choirId) return;
-        await updateService(userData.choirId, currentService.id, { absentMembers });
-        setCurrentService({ ...currentService, absentMembers });
+        await updateService(userData.choirId, currentService.id, {
+            absentMembers,
+            confirmedMembers
+        });
+        setCurrentService({ ...currentService, absentMembers, confirmedMembers });
         setShowAttendance(false);
     };
 
@@ -236,16 +255,23 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
     );
 
     const absentCount = absentMembers.length;
-    // Explicitly confirmed members (Only those who voted "Present")
-    const confirmedMembersList = choirMembers.filter(m => currentService.confirmedMembers?.includes(m.id));
-    const confirmedCount = confirmedMembersList.length;
-
-    const myStatus = getMyStatus();
+    // Explicitly confirmed members (use local state)
+    // If service is in the past, everyone not absent is considered present
     const isFuture = isUpcoming(currentService.date, currentService.time);
 
-    // Get avatars for preview (only explicitly confirmed)
+    const displayConfirmedCount = !isFuture
+        ? choirMembers.length - absentCount
+        : choirMembers.filter(m => confirmedMembers.includes(m.id)).length;
+
+    const displayWaitingCount = !isFuture
+        ? 0
+        : choirMembers.length - displayConfirmedCount - absentCount;
+
+    // Get avatars for preview (use displayConfirmedCount)
+    const confirmedMembersList = choirMembers.filter(m => confirmedMembers.includes(m.id));
     const previewAttendees = membersLoading ? [] : confirmedMembersList.slice(0, 4);
-    const extraAttendees = confirmedCount > 4 ? confirmedCount - 4 : 0;
+    const extraAttendees = displayConfirmedCount > 4 ? displayConfirmedCount - 4 : 0;
+    const myStatus = getMyStatus();
 
     return (
         <div className="pb-32 bg-background min-h-screen">
@@ -318,7 +344,7 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                                 {index + 1}
                                             </div>
 
-                                            <div className="flex-1 min-w-0" onClick={() => canEdit && openEditCredits(index)}>
+                                            <div className="flex-1 min-w-0" onClick={() => handleViewPdf(song.songId)}>
                                                 <h3 className="text-white font-medium truncate text-lg">{song.songTitle}</h3>
                                                 {/* Credits Display */}
                                                 <div className="flex flex-wrap gap-2 mt-1">
@@ -332,7 +358,6 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                                             🎹 {song.pianist}
                                                         </span>
                                                     )}
-                                                    {hasPdf && <span className="text-xs text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md">PDF</span>}
                                                 </div>
                                                 {/* Hint to edit */}
                                                 {canEdit && !song.performedBy && !song.pianist && (
@@ -340,12 +365,15 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                                 )}
                                             </div>
 
-                                            {hasPdf && (
+                                            {canEdit && (
                                                 <button
-                                                    onClick={() => handleViewPdf(song.songId)}
-                                                    className="p-3 text-white bg-white/5 hover:bg-white/10 rounded-xl transition-colors"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        openEditCredits(index);
+                                                    }}
+                                                    className="p-3 text-text-secondary hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-colors"
                                                 >
-                                                    <Eye className="w-5 h-5" />
+                                                    <UserIcon className="w-5 h-5" />
                                                 </button>
                                             )}
                                         </div>
@@ -418,7 +446,7 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                             <div className="flex items-center gap-4 mt-3 text-sm">
                                 <div className="flex items-center gap-1">
                                     <UserCheck className="w-4 h-4 text-green-400" />
-                                    <span className="text-white font-bold">{confirmedCount}</span>
+                                    <span className="text-white font-bold">{displayConfirmedCount}</span>
                                     <span className="text-text-secondary">буде</span>
                                 </div>
                                 {absentCount > 0 && (
@@ -428,9 +456,9 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                         <span className="text-text-secondary">не буде</span>
                                     </div>
                                 )}
-                                {(choirMembers.length - confirmedCount - absentCount) > 0 && (
+                                {displayWaitingCount > 0 && (
                                     <div className="flex items-center gap-1 text-text-secondary">
-                                        <span className="font-bold">{choirMembers.length - confirmedCount - absentCount}</span>
+                                        <span className="font-bold">{displayWaitingCount}</span>
                                         <span>очікують</span>
                                     </div>
                                 )}
@@ -582,6 +610,13 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                 className="w-full py-4 bg-white text-black rounded-2xl font-bold text-lg hover:bg-gray-200 transition-colors shadow-lg"
                             >
                                 Зберегти зміни
+                            </button>
+
+                            <button
+                                onClick={markRestAsPresent}
+                                className="w-full mt-3 py-3 text-blue-400 font-medium text-sm hover:bg-blue-500/10 rounded-xl transition-colors"
+                            >
+                                Відмітити всіх інших як "Буде"
                             </button>
                         </div>
                     </div>
