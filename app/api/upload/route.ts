@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { r2Client, R2_BUCKET_NAME, R2_PUBLIC_URL } from "@/lib/r2";
+import { r2Client, R2_BUCKET_NAME, R2_PUBLIC_URL, isR2Configured } from "@/lib/r2";
 
 export async function POST(request: NextRequest) {
     try {
+        // Check if R2 is configured
+        if (!isR2Configured || !r2Client) {
+            return NextResponse.json(
+                { error: "R2 storage is not configured" },
+                { status: 503 }
+            );
+        }
+
         const { key, contentType } = await request.json();
 
         if (!key || !contentType) {
@@ -32,3 +40,4 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
