@@ -5,6 +5,7 @@ import { collection, getDocs, query, orderBy, onSnapshot } from "firebase/firest
 import { db } from "@/lib/firebase";
 import { GlobalSong, SongPart } from "@/types";
 import { extractInstrument } from "@/lib/utils";
+import { OFFICIAL_THEMES } from "@/lib/themes";
 import { Search, Music, Users, User, Loader2, FolderOpen, Plus, Eye, FileText, ChevronDown, Filter, X, LayoutGrid, Music2, Mic2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import PDFViewer from "./PDFViewer";
@@ -324,35 +325,33 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                     </div>
                                 )}
 
-                                {/* Row 3: Themes */}
-                                {availableThemes.length > 0 && (
-                                    <div className="space-y-2">
-                                        <p className="text-xs text-text-secondary uppercase font-bold tracking-wider">Тематика</p>
-                                        <div className="flex flex-wrap gap-2">
+                                {/* Row 3: Themes - horizontal scroll on mobile */}
+                                <div className="space-y-2">
+                                    <p className="text-xs text-text-secondary uppercase font-bold tracking-wider">Тематика</p>
+                                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+                                        <button
+                                            onClick={() => setSelectedTheme(null)}
+                                            className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs border transition-all ${!selectedTheme
+                                                ? "bg-white text-black border-white"
+                                                : "bg-transparent text-text-secondary border-white/10 hover:border-white/30"
+                                                }`}
+                                        >
+                                            Всі теми
+                                        </button>
+                                        {OFFICIAL_THEMES.map(theme => (
                                             <button
-                                                onClick={() => setSelectedTheme(null)}
-                                                className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${!selectedTheme
+                                                key={theme}
+                                                onClick={() => setSelectedTheme(selectedTheme === theme ? null : theme)}
+                                                className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs border transition-all ${selectedTheme === theme
                                                     ? "bg-white text-black border-white"
                                                     : "bg-transparent text-text-secondary border-white/10 hover:border-white/30"
                                                     }`}
                                             >
-                                                Всі теми
+                                                {theme}
                                             </button>
-                                            {availableThemes.map(theme => (
-                                                <button
-                                                    key={theme}
-                                                    onClick={() => setSelectedTheme(selectedTheme === theme ? null : theme)}
-                                                    className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${selectedTheme === theme
-                                                        ? "bg-white text-black border-white"
-                                                        : "bg-transparent text-text-secondary border-white/10 hover:border-white/30"
-                                                        }`}
-                                                >
-                                                    {theme}
-                                                </button>
-                                            ))}
-                                        </div>
+                                        ))}
                                     </div>
-                                )}
+                                </div>
                             </div>
                         </motion.div>
                     )}
