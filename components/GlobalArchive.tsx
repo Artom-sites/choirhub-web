@@ -479,31 +479,53 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                 >
                                     ←
                                 </button>
-                                {Array.from({ length: Math.min(totalPages, 10) }, (_, i) => {
-                                    // Show first 5, then ..., then last 2, or all if <= 10
-                                    let pageNum;
-                                    if (totalPages <= 10) {
-                                        pageNum = i + 1;
-                                    } else if (i < 5) {
-                                        pageNum = i + 1;
-                                    } else if (i === 5) {
-                                        return <span key="ellipsis" className="px-2 text-text-secondary">...</span>;
-                                    } else {
-                                        pageNum = totalPages - (9 - i);
+                                {(() => {
+                                    const pages = [];
+                                    const siblingCount = 2;
+
+                                    // Always show first
+                                    pages.push(1);
+
+                                    if (currentPage - siblingCount > 2) {
+                                        pages.push('...');
                                     }
-                                    return (
-                                        <button
-                                            key={pageNum}
-                                            onClick={() => setCurrentPage(pageNum)}
-                                            className={`w-9 h-9 rounded-lg transition-colors font-medium ${currentPage === pageNum
-                                                ? 'bg-white text-black'
-                                                : 'bg-surface text-text-secondary hover:bg-surface-highlight'
-                                                }`}
-                                        >
-                                            {pageNum}
-                                        </button>
-                                    );
-                                })}
+
+                                    // Siblings
+                                    const start = Math.max(2, currentPage - siblingCount);
+                                    const end = Math.min(totalPages - 1, currentPage + siblingCount);
+
+                                    for (let i = start; i <= end; i++) {
+                                        pages.push(i);
+                                    }
+
+                                    if (currentPage + siblingCount < totalPages - 1) {
+                                        pages.push('...');
+                                    }
+
+                                    // Always show last if > 1
+                                    if (totalPages > 1) {
+                                        pages.push(totalPages);
+                                    }
+
+                                    return pages.map((page, index) => {
+                                        if (page === '...') {
+                                            return <span key={`ellipsis-${index}`} className="px-2 text-text-secondary select-none">...</span>;
+                                        }
+                                        const pageNum = page as number;
+                                        return (
+                                            <button
+                                                key={pageNum}
+                                                onClick={() => setCurrentPage(pageNum)}
+                                                className={`w-9 h-9 rounded-lg transition-colors font-medium ${currentPage === pageNum
+                                                    ? 'bg-white text-black'
+                                                    : 'bg-surface text-text-secondary hover:bg-surface-highlight'
+                                                    }`}
+                                            >
+                                                {pageNum}
+                                            </button>
+                                        );
+                                    });
+                                })()}
                                 <button
                                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                     disabled={currentPage === totalPages}
