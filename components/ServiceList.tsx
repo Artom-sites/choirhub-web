@@ -5,6 +5,8 @@ import { Service } from "@/types";
 import { getServices, addService, deleteService, setServiceAttendance } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
 import { Calendar, Plus, ChevronRight, X, Trash2, Loader2, Check } from "lucide-react";
+import { collection, query, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import ConfirmationModal from "./ConfirmationModal";
 import TrashBin from "./TrashBin";
 import SwipeableCard from "./SwipeableCard";
@@ -33,16 +35,39 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
     const [newTime, setNewTime] = useState("10:00");
 
     useEffect(() => {
-        refreshServices();
-    }, [userData?.choirId]);
-
-    const refreshServices = async () => {
         if (!userData?.choirId) return;
+
         setLoading(true);
-        const fetched = await getServices(userData.choirId);
-        setServices(fetched);
-        setLoading(false);
-    };
+        const q = query(
+            collection(db, `choirs/${userData.choirId}/services`)
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            console.log(`Fetched ${snapshot.docs.length} services (Source: ${snapshot.metadata.fromCache ? 'Cache' : 'Server'})`);
+
+            const fetchedServices = snapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() } as Service))
+                .filter(s => !s.deletedAt);
+
+            // Smart Sort: Upcoming (Ascending), then Past (Descending)
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const upcoming = fetchedServices.filter(s => new Date(s.date) >= today)
+                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+            const past = fetchedServices.filter(s => new Date(s.date) < today)
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+            setServices([...upcoming, ...past]);
+            setLoading(false);
+        }, (error) => {
+            console.error("Error subscribing to services:", error);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [userData?.choirId]);
 
     const handleVote = async (e: React.MouseEvent, serviceId: string, status: 'present' | 'absent') => {
         e.stopPropagation();
@@ -69,7 +94,10 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
             await setServiceAttendance(userData.choirId, serviceId, user.uid, status);
         } catch (error) {
             console.error("Voting failed", error);
-            refreshServices(); // Revert on error
+            // Revert handled by listener or next update
+            // If we really want to revert, we might need a way to force refresh or just let next snapshot fix it.
+            // For now, listener will eventually correct it if write failed on backend but succeeded locally? 
+            // Actually if write fails, local cache might be reverted by SDK.
         } finally {
             setVotingLoading(null);
         }
@@ -98,7 +126,6 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
         setNewTitle("Співанка");
         setNewDate(new Date().toISOString().split('T')[0]);
         setNewTime("10:00");
-        refreshServices();
     };
 
     const initiateDelete = (e: React.MouseEvent, id: string) => {
@@ -110,7 +137,6 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
         if (!userData?.choirId || !serviceToDelete) return;
         await deleteService(userData.choirId, serviceToDelete);
         setServiceToDelete(null);
-        refreshServices();
     };
 
 
@@ -345,7 +371,7 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
                 <TrashBin
                     choirId={userData.choirId}
                     onClose={() => setShowTrashBin(false)}
-                    onRestore={refreshServices}
+                    onRestore={() => { }} // Listener handles restore updates
                 />
             )}
         </div>

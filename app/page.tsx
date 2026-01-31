@@ -22,7 +22,7 @@ import {
   LogOut, ChevronLeft, Home, User, Users, Repeat,
   PlusCircle, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart
 } from "lucide-react";
-import { collection as firestoreCollection, addDoc, getDocs, where, query, doc, updateDoc, arrayUnion } from "firebase/firestore";
+import { collection as firestoreCollection, addDoc, getDocs, where, query, doc, updateDoc, arrayUnion, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 function HomePageContent() {
@@ -103,16 +103,8 @@ function HomePageContent() {
     { key: 'manage_services', label: 'Створювати/видаляти служіння' },
   ];
 
-  const fetchChoirData = async () => {
-    if (!userData?.choirId) return;
-    const [fetchedChoir, fetchedServices] = await Promise.all([
-      getChoir(userData.choirId),
-      getServices(userData.choirId)
-    ]);
-    setChoir(fetchedChoir);
-    setServices(fetchedServices);
-    return fetchedChoir;
-  };
+  // Fetch Choir Data replaced by real-time listeners below
+  // const fetchChoirData = async () => { ... }
 
   useEffect(() => {
     if (authLoading) return;
@@ -126,54 +118,159 @@ function HomePageContent() {
 
     async function init() {
       if (userData?.choirId) {
-        const fetchedChoir = await fetchChoirData();
+        // Service Listener
+        const qServices = query(firestoreCollection(db, `choirs/${userData.choirId}/services`));
+        const unsubServices = onSnapshot(qServices, (snapshot) => {
+          const fetchedServices = snapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() } as Service))
+            .filter(s => !s.deletedAt);
 
-        // Check for joinCode param
-        const joinCodeParam = searchParams.get('joinCode');
-        if (joinCodeParam) {
-          const newParams = new URLSearchParams(searchParams.toString());
-          newParams.delete('joinCode');
-          router.replace(`/?${newParams.toString()}`, { scroll: false });
+          // Sort for finding next/prev or just consistency? 
+          // ServiceView might need sorted services? 
+          // Logic in db.ts services sort was: upcoming asc, past desc.
+          // We'll mimic or just store raw and let ServiceView sort?
+          // App usually passes `services` to ServiceView.
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const upcoming = fetchedServices.filter(s => new Date(s.date) >= today)
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+          const past = fetchedServices.filter(s => new Date(s.date) < today)
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-          // Check if user is already in a choir that matches this code
-          const codeUpper = joinCodeParam.toUpperCase();
-          const alreadyInChoir = fetchedChoir && (
-            fetchedChoir.memberCode === codeUpper ||
-            fetchedChoir.regentCode === codeUpper ||
-            fetchedChoir.adminCodes?.some(ac => ac.code === codeUpper)
-          );
+          const sortedServices = [...upcoming, ...past];
+          setServices(sortedServices);
 
-          // Only show join modal if user is NOT already in the choir with this code
-          if (!alreadyInChoir) {
-            setShowAccount(false);
-            setShowChoirManager(true);
-            setManagerMode('join');
-            setJoinCode(joinCodeParam);
+          // Check for serviceId param (Android Back Support)
+          const serviceIdParam = searchParams.get('serviceId');
+          if (serviceIdParam) {
+            const foundService = sortedServices.find(s => s.id === serviceIdParam);
+            if (foundService) setSelectedService(foundService);
+          } else {
+            // Only clear if we are not navigating (this might flicker if we navigate back?)
+            // Actually this logic runs on every snapshot.
+            // If URL has no param, selectedService should be null.
+            setSelectedService(null);
           }
-          // If alreadyInChoir, just do nothing (they're already here)
-        }
+        });
 
-        // Check for serviceId param (Android Back Support)
-        const serviceIdParam = searchParams.get('serviceId');
-        if (serviceIdParam) {
-          // We need services to be set, which fetchChoirData does
-          // But services state update might not be immediate here if we just called setServices
-          // So we rely on fetchedServices from Promise if we were returning it, but fetchChoirData returns void/choir
-          // Let's refactor slightly to access services
-          const services = await getServices(userData.choirId);
-          // actually better to just let fetchChoirData handle state and maybe we check services from state in a separate effect? 
-          // Or just re-get it here. 
-          const foundService = services.find(s => s.id === serviceIdParam);
-          if (foundService) setSelectedService(foundService);
-        } else {
-          setSelectedService(null);
-        }
+        // Choir Listener
+        const unsubChoir = onSnapshot(doc(db, "choirs", userData.choirId), (docSnap) => {
+          if (docSnap.exists()) {
+            const fetchedChoir = { id: docSnap.id, ...docSnap.data() } as Choir;
+            setChoir(fetchedChoir);
+
+            // Check for joinCode param (Redirect logic, run once ideally or checking every time is cheap)
+            // ... (Logic moved here or kept?)
+            // The join code logic is "one time" usually on load.
+            // We can leave the join code check separate or here.
+            const joinCodeParam = searchParams.get('joinCode');
+            if (joinCodeParam) {
+              const newParams = new URLSearchParams(searchParams.toString());
+              newParams.delete('joinCode');
+              router.replace(`/?${newParams.toString()}`, { scroll: false });
+
+              const codeUpper = joinCodeParam.toUpperCase();
+              const alreadyInChoir = fetchedChoir && (
+                fetchedChoir.memberCode === codeUpper ||
+                fetchedChoir.regentCode === codeUpper ||
+                fetchedChoir.adminCodes?.some(ac => ac.code === codeUpper)
+              );
+
+              if (!alreadyInChoir) {
+                setShowAccount(false);
+                setShowChoirManager(true);
+                setManagerMode('join');
+                setJoinCode(joinCodeParam);
+              }
+            }
+          }
+        });
+
+        return () => {
+          unsubServices();
+          unsubChoir();
+        };
       }
       setPageLoading(false);
     }
-    init();
 
-  }, [authLoading, user, userData, router, searchParams]);
+    // We can't return unsubscribe from async init easily inside useEffect without cleanup ref
+    // Better to inline the listeners into useEffect
+
+    let unsubServices: () => void;
+    let unsubChoir: () => void;
+
+    if (userData?.choirId) {
+      const qServices = query(firestoreCollection(db, `choirs/${userData.choirId}/services`));
+      unsubServices = onSnapshot(qServices, (snapshot) => {
+        const fetchedServices = snapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() } as Service))
+          .filter(s => !s.deletedAt);
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const upcoming = fetchedServices.filter(s => new Date(s.date) >= today)
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const past = fetchedServices.filter(s => new Date(s.date) < today)
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        const sortedServices = [...upcoming, ...past];
+        setServices(sortedServices);
+      });
+
+      unsubChoir = onSnapshot(doc(db, "choirs", userData.choirId), (docSnap) => {
+        if (docSnap.exists()) {
+          const fetchedChoir = { id: docSnap.id, ...docSnap.data() } as Choir;
+          setChoir(fetchedChoir);
+        }
+      });
+    }
+
+    setPageLoading(false);
+
+    // Initial URL check for Join Code (only need once, can rely on userData/params)
+    // We'll move join code logic to a separate effect or keep simple.
+    // The previous logic cleaned up params.
+
+    return () => {
+      if (unsubServices) unsubServices();
+      if (unsubChoir) unsubChoir();
+    };
+
+  }, [authLoading, user, userData?.choirId]); // Dep change to specific ID
+
+  // Separate Effect for URL synchronization with loaded Services
+  useEffect(() => {
+    const serviceIdParam = searchParams.get('serviceId');
+    if (serviceIdParam && services.length > 0) {
+      const foundService = services.find(s => s.id === serviceIdParam);
+      if (foundService) setSelectedService(foundService);
+    } else if (!serviceIdParam) {
+      setSelectedService(null);
+    }
+
+    const joinCodeParam = searchParams.get('joinCode');
+    if (joinCodeParam && choir) {
+      const newParams = new URLSearchParams(searchParams.toString());
+      newParams.delete('joinCode');
+      router.replace(`/?${newParams.toString()}`, { scroll: false });
+
+      const codeUpper = joinCodeParam.toUpperCase();
+      const alreadyInChoir = choir && (
+        choir.memberCode === codeUpper ||
+        choir.regentCode === codeUpper ||
+        choir.adminCodes?.some(ac => ac.code === codeUpper)
+      );
+
+      if (!alreadyInChoir) {
+        setShowAccount(false);
+        setShowChoirManager(true);
+        setManagerMode('join');
+        setJoinCode(joinCodeParam);
+      }
+    }
+
+  }, [searchParams, services, choir, router]);
 
   // Handle Service Selection with URL sync
   const handleSelectService = (service: Service | null) => {
@@ -395,7 +492,7 @@ function HomePageContent() {
         });
       }
 
-      await fetchChoirData();
+      // await fetchChoirData(); // Listener handles updates
       setShowEditName(false);
       setNewName("");
     } catch (err) {
@@ -438,7 +535,7 @@ function HomePageContent() {
 
       setMergingMember(null);
       // Optionally reload services to refresh attendance counts, but not strictly necessary for UI list
-      // await fetchChoirData(); 
+      // await fetchChoirData(); // Listener handles updates 
     } catch (e) {
       console.error(e);
       alert("Не вдалося об'єднати учасників");
@@ -1069,7 +1166,7 @@ function HomePageContent() {
           regents={choir?.regents || []}
           knownConductors={choir?.knownConductors || []}
           knownCategories={choir?.knownCategories || []}
-          onRefresh={fetchChoirData}
+
         />}
 
         {activeTab === 'members' && (
