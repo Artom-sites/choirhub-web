@@ -15,6 +15,7 @@ import ConfirmationModal from "./ConfirmationModal";
 import GlobalArchive from "./GlobalArchive";
 import TrashBin from "./TrashBin";
 import Toast from "./Toast";
+import SwipeableCard from "./SwipeableCard";
 
 interface SongListProps {
     canAddSongs: boolean;
@@ -163,8 +164,8 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
         }
     };
 
-    const initiateDelete = (e: React.MouseEvent, id: string) => {
-        e.stopPropagation();
+    const initiateDelete = (e: React.MouseEvent | null, id: string) => {
+        if (e) e.stopPropagation();
         setDeletingSongId(id);
     };
 
@@ -333,72 +334,68 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                         ) : (
                             <AnimatePresence mode="popLayout">
                                 {filteredSongs.map((song, index) => (
-                                    <div
+                                    <SwipeableCard
                                         key={song.id}
-                                        onClick={() => handleSongClick(song)}
-                                        role="button"
-                                        tabIndex={0}
-                                        className="w-full bg-surface hover:bg-surface-highlight border border-white/5 hover:border-white/10 rounded-2xl p-4 transition-all text-left group relative active:scale-[0.99] h-full flex flex-col cursor-pointer"
+                                        onDelete={() => initiateDelete(null, song.id)}
+                                        disabled={!effectiveCanAdd}
+                                        className="h-full rounded-2xl"
                                     >
-                                        <div className="flex items-start gap-4 relative z-10 h-full">
-                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${song.hasPdf ? 'bg-white text-black' : 'bg-white/5 text-text-secondary'}`}>
-                                                {song.hasPdf ? (
-                                                    <Eye className="w-6 h-6" />
-                                                ) : (
-                                                    <FileText className="w-6 h-6" />
-                                                )}
-                                            </div>
+                                        <div
+                                            onClick={() => handleSongClick(song)}
+                                            role="button"
+                                            tabIndex={0}
+                                            className="w-full bg-surface hover:bg-surface-highlight border border-white/5 hover:border-white/10 rounded-2xl p-4 transition-all text-left group relative active:scale-[0.99] h-full flex flex-col cursor-pointer"
+                                        >
+                                            <div className="flex items-start gap-4 relative z-10 h-full">
+                                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${song.hasPdf ? 'bg-white text-black' : 'bg-white/5 text-text-secondary'}`}>
+                                                    {song.hasPdf ? (
+                                                        <Eye className="w-6 h-6" />
+                                                    ) : (
+                                                        <FileText className="w-6 h-6" />
+                                                    )}
+                                                </div>
 
-                                            <div className="flex-1 min-w-0 py-0.5 flex flex-col h-full justify-between">
-                                                <h3 className="font-semibold text-lg text-white truncate mb-1.5 group-hover:text-white transition-colors">
-                                                    {song.title}
-                                                </h3>
+                                                <div className="flex-1 min-w-0 py-0.5 flex flex-col h-full justify-between">
+                                                    <h3 className="font-semibold text-lg text-white truncate mb-1.5 group-hover:text-white transition-colors">
+                                                        {song.title}
+                                                    </h3>
 
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className="text-xs font-medium text-text-secondary bg-white/5 px-2 py-1 rounded-lg border border-white/5">
-                                                        {song.category}
-                                                    </span>
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="text-xs font-medium text-text-secondary bg-white/5 px-2 py-1 rounded-lg border border-white/5">
+                                                            {song.category}
+                                                        </span>
 
-                                                    {song.conductor && (
-                                                        <div className="flex items-center gap-1.5 text-xs text-text-secondary bg-white/5 px-2 py-1 rounded-lg border border-white/5">
-                                                            <User className="w-3 h-3" />
-                                                            <span>{song.conductor}</span>
+                                                        {song.conductor && (
+                                                            <div className="flex items-center gap-1.5 text-xs text-text-secondary bg-white/5 px-2 py-1 rounded-lg border border-white/5">
+                                                                <User className="w-3 h-3" />
+                                                                <span>{song.conductor}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+
+                                                <div className="flex items-center gap-1 mt-3.5 relative">
+                                                    {effectiveCanAdd && (
+                                                        <div className="flex items-center gap-1 z-20" onClick={(e) => e.stopPropagation()}>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    e.stopPropagation();
+                                                                    handleEditClick(e, song);
+                                                                }}
+                                                                className="p-2 rounded-lg text-text-secondary hover:text-white hover:bg-white/10 transition-colors"
+                                                                title="Редагувати"
+                                                            >
+                                                                <Pencil className="w-5 h-5" />
+                                                            </button>
+                                                            {/* Delete is now via Swipe */}
                                                         </div>
                                                     )}
                                                 </div>
                                             </div>
-
-
-                                            <div className="flex items-center gap-1 mt-3.5 relative">
-                                                {effectiveCanAdd && (
-                                                    <div className="flex items-center gap-1 z-20" onClick={(e) => e.stopPropagation()}>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.preventDefault();
-                                                                e.stopPropagation();
-                                                                handleEditClick(e, song);
-                                                            }}
-                                                            className="p-2 rounded-lg text-text-secondary hover:text-white hover:bg-white/10 transition-colors"
-                                                            title="Редагувати"
-                                                        >
-                                                            <Pencil className="w-5 h-5" />
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.preventDefault();
-                                                                e.stopPropagation();
-                                                                initiateDelete(e, song.id);
-                                                            }}
-                                                            className="p-2 rounded-lg text-text-secondary hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                                                            title="Видалити"
-                                                        >
-                                                            <Trash2 className="w-5 h-5" />
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
                                         </div>
-                                    </div>
+                                    </SwipeableCard>
                                 ))}
                             </AnimatePresence>
                         )}
