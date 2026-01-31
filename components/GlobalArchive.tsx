@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { collection, getDocs, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { GlobalSong, SongPart } from "@/types";
@@ -173,9 +173,34 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
         setFilteredSongs(results);
     }, [searchQuery, songs, fuseInstance, selectedCategory, selectedSubCategory, selectedTheme, selectedLanguage]);
 
-    // Calculate pagination
-    const totalPages = Math.ceil(filteredSongs.length / PAGE_SIZE);
-    const paginatedSongs = filteredSongs.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+    // Infinite Scroll
+    const [displayedCount, setDisplayedCount] = useState(PAGE_SIZE);
+    const loaderRef = useRef<HTMLDivElement>(null);
+
+    // Reset displayed count when filters change
+    useEffect(() => {
+        setDisplayedCount(PAGE_SIZE);
+    }, [searchQuery, selectedCategory, selectedSubCategory, selectedTheme, selectedLanguage]);
+
+    // Intersection Observer for loading more
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    setDisplayedCount((prev) => prev + PAGE_SIZE);
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (loaderRef.current) {
+            observer.observe(loaderRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [filteredSongs]);
+
+    const visibleSongs = filteredSongs.slice(0, displayedCount);
 
     const handleAddSong = (song: GlobalSong) => {
         if (onAddSong) {
@@ -357,7 +382,7 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                     )}
                 </AnimatePresence>
 
-                {/* Song count */}
+                {/* Song count - ALWAYS SHOWS TRUE COUNT */}
                 <div className="flex items-center justify-between mb-2 px-2">
                     <span className="text-sm text-text-secondary">
                         {searchQuery || activeFiltersCount > 0 ? (
@@ -395,7 +420,7 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                 ) : (
                     <>
                         <AnimatePresence mode="popLayout">
-                            {paginatedSongs.map((song, index) => (
+                            {visibleSongs.map((song, index) => (
                                 <motion.div
                                     key={song.id || song.sourceId}
                                     initial={{ opacity: 0, y: 20 }}
@@ -417,14 +442,6 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                     <div className="flex-1 min-w-0">
                                         <h3 className="font-semibold text-white truncate">{song.title}</h3>
                                         <div className="flex flex-wrap gap-1.5 items-center mt-1">
-                                            {/* Hide composer for now as it causes confusion with Regent
-                                            {song.composer && (
-                                                <div className="flex items-center gap-1.5 text-xs text-text-secondary bg-white/5 px-2 py-1 rounded-lg border border-white/5 truncate max-w-[150px]">
-                                                    <User className="w-3 h-3 flex-shrink-0" />
-                                                    <span className="truncate">{song.composer}</span>
-                                                </div>
-                                            )} 
-                                            */}
                                             {song.subcategory && (
                                                 <span className="text-[10px] bg-white/5 text-gray-400 px-1.5 py-0.5 rounded">
                                                     {getSubcategoryLabel(song.category, song.subcategory)}
@@ -469,70 +486,10 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                             ))}
                         </AnimatePresence>
 
-                        {/* Pagination */}
-                        {totalPages > 1 && (
-                            <div className="flex items-center justify-center gap-2 py-4 flex-wrap">
-                                <button
-                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                    disabled={currentPage === 1}
-                                    className="px-3 py-1.5 rounded-lg bg-surface text-text-secondary hover:bg-surface-highlight disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                                >
-                                    ←
-                                </button>
-                                {(() => {
-                                    const pages = [];
-                                    const siblingCount = 2;
-
-                                    // Always show first
-                                    pages.push(1);
-
-                                    if (currentPage - siblingCount > 2) {
-                                        pages.push('...');
-                                    }
-
-                                    // Siblings
-                                    const start = Math.max(2, currentPage - siblingCount);
-                                    const end = Math.min(totalPages - 1, currentPage + siblingCount);
-
-                                    for (let i = start; i <= end; i++) {
-                                        pages.push(i);
-                                    }
-
-                                    if (currentPage + siblingCount < totalPages - 1) {
-                                        pages.push('...');
-                                    }
-
-                                    // Always show last if > 1
-                                    if (totalPages > 1) {
-                                        pages.push(totalPages);
-                                    }
-
-                                    return pages.map((page, index) => {
-                                        if (page === '...') {
-                                            return <span key={`ellipsis-${index}`} className="px-2 text-text-secondary select-none">...</span>;
-                                        }
-                                        const pageNum = page as number;
-                                        return (
-                                            <button
-                                                key={pageNum}
-                                                onClick={() => setCurrentPage(pageNum)}
-                                                className={`w-9 h-9 rounded-lg transition-colors font-medium ${currentPage === pageNum
-                                                    ? 'bg-white text-black'
-                                                    : 'bg-surface text-text-secondary hover:bg-surface-highlight'
-                                                    }`}
-                                            >
-                                                {pageNum}
-                                            </button>
-                                        );
-                                    });
-                                })()}
-                                <button
-                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                    disabled={currentPage === totalPages}
-                                    className="px-3 py-1.5 rounded-lg bg-surface text-text-secondary hover:bg-surface-highlight disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                                >
-                                    →
-                                </button>
+                        {/* Loader / Spacer for Infinite Scroll */}
+                        {visibleSongs.length < filteredSongs.length && (
+                            <div ref={loaderRef} className="py-8 flex justify-center">
+                                <Loader2 className="w-6 h-6 animate-spin text-white/20" />
                             </div>
                         )}
                     </>
