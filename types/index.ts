@@ -5,7 +5,8 @@ export type Permission =
     | 'edit_attendance'
     | 'edit_credits'
     | 'view_stats'
-    | 'manage_services';
+    | 'manage_services'
+    | 'notify_members';
 
 export interface AdminCode {
     code: string;

@@ -20,8 +20,9 @@ import DeleteAccountModal from "@/components/DeleteAccountModal";
 import {
   Music2, Loader2, Copy, Check, HelpCircle,
   LogOut, ChevronLeft, Home, User, Users, Repeat,
-  PlusCircle, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart
+  PlusCircle, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell
 } from "lucide-react";
+import SendNotificationModal from "@/components/SendNotificationModal";
 import { collection as firestoreCollection, addDoc, getDocs, where, query, doc, updateDoc, arrayUnion, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -92,6 +93,9 @@ function HomePageContent() {
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
+  // Send Notification Modal
+  const [showSendNotificationModal, setShowSendNotificationModal] = useState(false);
+
   // Help Modal
   const [showHelpModal, setShowHelpModal] = useState(false);
 
@@ -101,6 +105,7 @@ function HomePageContent() {
     { key: 'edit_credits', label: 'Записувати диригента/піаніста' },
     { key: 'view_stats', label: 'Бачити статистику' },
     { key: 'manage_services', label: 'Створювати/видаляти служіння' },
+    { key: 'notify_members', label: 'Надсилати сповіщення' },
   ];
 
   // Fetch Choir Data replaced by real-time listeners below
@@ -1183,15 +1188,30 @@ function HomePageContent() {
                 </button>
               </div>
 
-              {canEdit && (
-                <button
-                  onClick={() => { setEditingMember(null); setShowEditMemberModal(true); }}
-                  className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors"
-                >
-                  <UserPlus className="w-4 h-4" />
-                  Додати
-                </button>
-              )}
+
+
+              <div className="flex items-center gap-2">
+                {/* Send Notification Button */}
+                {(canEdit || userData?.permissions?.includes('notify_members')) && (
+                  <button
+                    onClick={() => setShowSendNotificationModal(true)}
+                    className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-text-secondary hover:text-white hover:bg-white/10 transition-colors"
+                    title="Надіслати сповіщення"
+                  >
+                    <Bell className="w-5 h-5" />
+                  </button>
+                )}
+
+                {canEdit && (
+                  <button
+                    onClick={() => { setEditingMember(null); setShowEditMemberModal(true); }}
+                    className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Додати
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -1263,11 +1283,12 @@ function HomePageContent() {
               </div>
             )}
           </div>
-        )}
-      </div>
+        )
+        }
+      </div >
 
       {/* Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-[#09090b]/90 backdrop-blur-xl border-t border-white/5 px-4 pb-safe pt-2 z-20">
+      < nav className="fixed bottom-0 left-0 right-0 bg-[#09090b]/90 backdrop-blur-xl border-t border-white/5 px-4 pb-safe pt-2 z-20" >
         <div className="max-w-md mx-auto flex justify-around items-center h-16">
 
           <button
@@ -1295,115 +1316,119 @@ function HomePageContent() {
           </button>
 
         </div>
-      </nav>
+      </nav >
       {/* Admin Code Creation Modal */}
-      {showAdminCodeModal && (
-        <div className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-[#18181b] border border-white/10 w-full max-w-sm p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="space-y-5">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-bold text-white">Створити адмін-код</h3>
-                <button onClick={() => setShowAdminCodeModal(false)} className="p-1 hover:bg-white/10 rounded-full">
-                  <X className="w-5 h-5 text-text-secondary" />
+      {
+        showAdminCodeModal && (
+          <div className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="bg-[#18181b] border border-white/10 w-full max-w-sm p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
+              <div className="space-y-5">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-bold text-white">Створити адмін-код</h3>
+                  <button onClick={() => setShowAdminCodeModal(false)} className="p-1 hover:bg-white/10 rounded-full">
+                    <X className="w-5 h-5 text-text-secondary" />
+                  </button>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                    Назва ролі (опціонально)
+                  </label>
+                  <input
+                    type="text"
+                    value={newAdminLabel}
+                    onChange={(e) => setNewAdminLabel(e.target.value)}
+                    placeholder="напр. Секретар"
+                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/30"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                    Дозволи
+                  </label>
+                  <div className="space-y-2">
+                    {AVAILABLE_PERMISSIONS.map(perm => (
+                      <button
+                        key={perm.key}
+                        onClick={() => togglePermission(perm.key)}
+                        className={`w-full p-3 rounded-xl border text-left text-sm transition-all ${selectedPermissions.includes(perm.key)
+                          ? 'bg-indigo-500/20 border-indigo-500/50 text-white'
+                          : 'bg-black/20 border-white/5 text-text-secondary hover:border-white/20'
+                          }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-5 h-5 rounded border flex items-center justify-center ${selectedPermissions.includes(perm.key) ? 'bg-indigo-500 border-indigo-500' : 'border-white/20'
+                            }`}>
+                            {selectedPermissions.includes(perm.key) && <Check className="w-3 h-3 text-white" />}
+                          </div>
+                          {perm.label}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  onClick={createAdminCode}
+                  disabled={selectedPermissions.length === 0 || creatingAdminCode}
+                  className="w-full py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {creatingAdminCode ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Створити код'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+      {/* Edit Name Modal */}
+      {
+        showEditName && (
+          <div
+            className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+            onClick={() => setShowEditName(false)}
+          >
+            <div
+              className="bg-[#18181b] w-full max-w-sm rounded-3xl border border-white/10 p-6 shadow-2xl animate-in zoom-in-95"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-start mb-6">
+                <h3 className="text-xl font-bold text-white">Змінити ім'я</h3>
+                <button
+                  onClick={() => setShowEditName(false)}
+                  className="p-1 text-text-secondary hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
                 </button>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                  Назва ролі (опціонально)
-                </label>
-                <input
-                  type="text"
-                  value={newAdminLabel}
-                  onChange={(e) => setNewAdminLabel(e.target.value)}
-                  placeholder="напр. Секретар"
-                  className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/30"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                  Дозволи
-                </label>
-                <div className="space-y-2">
-                  {AVAILABLE_PERMISSIONS.map(perm => (
-                    <button
-                      key={perm.key}
-                      onClick={() => togglePermission(perm.key)}
-                      className={`w-full p-3 rounded-xl border text-left text-sm transition-all ${selectedPermissions.includes(perm.key)
-                        ? 'bg-indigo-500/20 border-indigo-500/50 text-white'
-                        : 'bg-black/20 border-white/5 text-text-secondary hover:border-white/20'
-                        }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-5 h-5 rounded border flex items-center justify-center ${selectedPermissions.includes(perm.key) ? 'bg-indigo-500 border-indigo-500' : 'border-white/20'
-                          }`}>
-                          {selectedPermissions.includes(perm.key) && <Check className="w-3 h-3 text-white" />}
-                        </div>
-                        {perm.label}
-                      </div>
-                    </button>
-                  ))}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                    Ваше ім'я
+                  </label>
+                  <input
+                    type="text"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder="Введіть нове ім'я"
+                    className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl focus:outline-none focus:border-white/20 text-white"
+                    autoFocus
+                  />
                 </div>
-              </div>
 
-              <button
-                onClick={createAdminCode}
-                disabled={selectedPermissions.length === 0 || creatingAdminCode}
-                className="w-full py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {creatingAdminCode ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Створити код'}
-              </button>
+                <button
+                  onClick={handleSaveName}
+                  disabled={savingName || !newName.trim()}
+                  className="w-full py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {savingName ? <Loader2 className="animate-spin" /> : "Зберегти"}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-      {/* Edit Name Modal */}
-      {showEditName && (
-        <div
-          className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
-          onClick={() => setShowEditName(false)}
-        >
-          <div
-            className="bg-[#18181b] w-full max-w-sm rounded-3xl border border-white/10 p-6 shadow-2xl animate-in zoom-in-95"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-start mb-6">
-              <h3 className="text-xl font-bold text-white">Змінити ім'я</h3>
-              <button
-                onClick={() => setShowEditName(false)}
-                className="p-1 text-text-secondary hover:text-white transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                  Ваше ім'я
-                </label>
-                <input
-                  type="text"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="Введіть нове ім'я"
-                  className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl focus:outline-none focus:border-white/20 text-white"
-                  autoFocus
-                />
-              </div>
-
-              <button
-                onClick={handleSaveName}
-                disabled={savingName || !newName.trim()}
-                className="w-full py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {savingName ? <Loader2 className="animate-spin" /> : "Зберегти"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Help Modal */}
       <HelpModal
@@ -1411,17 +1436,24 @@ function HomePageContent() {
         onClose={() => setShowHelpModal(false)}
       />
 
+      <SendNotificationModal
+        isOpen={showSendNotificationModal}
+        onClose={() => setShowSendNotificationModal(false)}
+      />
+
       {/* Merge Member Modal */}
-      {mergingMember && (
-        <MergeMemberModal
-          isOpen={!!mergingMember}
-          onClose={() => setMergingMember(null)}
-          onMerge={handleMerge}
-          sourceMember={mergingMember}
-          allMembers={choir?.members || []}
-        />
-      )}
-    </main>
+      {
+        mergingMember && (
+          <MergeMemberModal
+            isOpen={!!mergingMember}
+            onClose={() => setMergingMember(null)}
+            onMerge={handleMerge}
+            sourceMember={mergingMember}
+            allMembers={choir?.members || []}
+          />
+        )
+      }
+    </main >
   );
 }
 
