@@ -796,7 +796,7 @@ export async function unsaveUserSong(
 
 export async function softDeleteLocalSong(choirId: string, songId: string, userId: string): Promise<void> {
     try {
-        const docRef = doc(db, `choirs/${choirId}/local_songs`, songId);
+        const docRef = doc(db, `choirs/${choirId}/songs`, songId); // Corrected collection
         await updateDoc(docRef, {
             deletedAt: new Date().toISOString(),
             deletedBy: userId
@@ -809,7 +809,7 @@ export async function softDeleteLocalSong(choirId: string, songId: string, userI
 
 export async function restoreLocalSong(choirId: string, songId: string): Promise<void> {
     try {
-        const docRef = doc(db, `choirs/${choirId}/local_songs`, songId);
+        const docRef = doc(db, `choirs/${choirId}/songs`, songId); // Corrected collection
         await updateDoc(docRef, {
             deletedAt: deleteField(),
             deletedBy: deleteField()
@@ -822,10 +822,25 @@ export async function restoreLocalSong(choirId: string, songId: string): Promise
 
 export async function permanentDeleteLocalSong(choirId: string, songId: string): Promise<void> {
     try {
-        await deleteDoc(doc(db, `choirs/${choirId}/local_songs`, songId));
+        const docRef = doc(db, `choirs/${choirId}/songs`, songId); // Corrected collection
+        await deleteDoc(docRef);
     } catch (error) {
         console.error("Error permanently deleting local song:", error);
         throw error;
+    }
+}
+
+export async function getDeletedSongs(choirId: string): Promise<SimpleSong[]> {
+    try {
+        const q = query(
+            collection(db, `choirs/${choirId}/songs`),
+            where("deletedAt", "!=", null)
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as SimpleSong[];
+    } catch (error) {
+        console.error("Error getting deleted songs:", error);
+        return [];
     }
 }
 

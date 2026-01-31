@@ -38,6 +38,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
     const [showAddModal, setShowAddModal] = useState(false);
     const [showTrashBin, setShowTrashBin] = useState(false);
     const [editingSong, setEditingSong] = useState<SimpleSong | null>(null);
+    const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null);
     const [deletingSongId, setDeletingSongId] = useState<string | null>(null);
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
@@ -344,7 +345,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                                         onClick={() => handleSongClick(song)}
                                         role="button"
                                         tabIndex={0}
-                                        className={`w-full bg-surface hover:bg-surface-highlight border border-white/5 hover:border-white/10 rounded-2xl p-4 transition-all text-left group relative active:scale-[0.99] h-full flex flex-col cursor-pointer ${actionMenuOpen === song.id ? 'z-[100] ring-1 ring-white/20' : ''}`}
+                                        className="w-full bg-surface hover:bg-surface-highlight border border-white/5 hover:border-white/10 rounded-2xl p-4 transition-all text-left group relative active:scale-[0.99] h-full flex flex-col cursor-pointer"
                                     >
                                         <div className="flex items-start gap-4 relative z-10 h-full">
                                             <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${song.hasPdf ? 'bg-white text-black' : 'bg-white/5 text-text-secondary'}`}>
@@ -486,8 +487,8 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
 
                     {/* Confirmation Modal */}
                     <ConfirmationModal
-                        isOpen={!!songToDelete}
-                        onClose={() => setSongToDelete(null)}
+                        isOpen={!!deletingSongId}
+                        onClose={() => setDeletingSongId(null)}
                         onConfirm={confirmDelete}
                         title="Видалити пісню?"
                         message="Цю пісню буде видалено з репертуару назавжди."

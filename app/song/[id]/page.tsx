@@ -7,7 +7,7 @@ import { getSong, updateSong, uploadSongPdf, deleteSong, getChoir } from "@/lib/
 import { SimpleSong } from "@/types";
 import PDFViewer from "@/components/PDFViewer";
 import EditSongModal from "@/components/EditSongModal";
-import { ArrowLeft, FileText, Upload, Loader2, Check, AlertCircle, Trash2, ExternalLink, Pencil, User, Download, X } from "lucide-react";
+import { ArrowLeft, FileText, Upload, Loader2, Check, AlertCircle, Trash2, ExternalLink, Pencil, User, Download, X, Search } from "lucide-react";
 import { extractInstrument } from "@/lib/utils";
 
 import ConfirmationModal from "@/components/ConfirmationModal";

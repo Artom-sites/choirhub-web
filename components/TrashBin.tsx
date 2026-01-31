@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Service } from "@/types";
-import { getDeletedServices, restoreService, permanentlyDeleteService } from "@/lib/db";
-import { Trash2, RotateCcw, X, Clock, AlertTriangle } from "lucide-react";
+import { Service, SimpleSong } from "@/types";
+import {
+    getDeletedServices, restoreService, permanentlyDeleteService,
+    getDeletedSongs, restoreLocalSong, permanentDeleteLocalSong
+} from "@/lib/db";
+import { Trash2, RotateCcw, X, Clock, AlertTriangle, Music, Calendar } from "lucide-react";
 import ConfirmationModal from "./ConfirmationModal";
 
 interface TrashBinProps {
@@ -12,45 +15,69 @@ interface TrashBinProps {
     onRestore: () => void; // Callback to refresh service list after restore
 }
 
+type TrashItem =
+    | { type: 'service'; data: Service }
+    | { type: 'song'; data: SimpleSong };
+
 export default function TrashBin({ choirId, onClose, onRestore }: TrashBinProps) {
-    const [deletedServices, setDeletedServices] = useState<Service[]>([]);
+    const [deletedItems, setDeletedItems] = useState<TrashItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
-    const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+    const [confirmDelete, setConfirmDelete] = useState<{ id: string; type: 'service' | 'song' } | null>(null);
 
     const DAYS_TO_KEEP = 7;
 
     useEffect(() => {
         async function loadDeleted() {
             setLoading(true);
-            const services = await getDeletedServices(choirId);
+            const [services, songs] = await Promise.all([
+                getDeletedServices(choirId),
+                getDeletedSongs(choirId)
+            ]);
 
-            // Filter out services older than DAYS_TO_KEEP and sort by deletedAt descending
             const now = new Date();
             const cutoffDate = new Date(now.getTime() - DAYS_TO_KEEP * 24 * 60 * 60 * 1000);
 
-            const recentlyDeleted = services
-                .filter(s => s.deletedAt && new Date(s.deletedAt) > cutoffDate)
-                .sort((a, b) => new Date(b.deletedAt!).getTime() - new Date(a.deletedAt!).getTime());
+            const validItems: TrashItem[] = [];
 
-            setDeletedServices(recentlyDeleted);
-
-            // Auto-purge old services
-            const oldServices = services.filter(s => s.deletedAt && new Date(s.deletedAt) <= cutoffDate);
-            for (const s of oldServices) {
-                await permanentlyDeleteService(choirId, s.id);
+            // Process Services
+            for (const s of services) {
+                if (s.deletedAt && new Date(s.deletedAt) > cutoffDate) {
+                    validItems.push({ type: 'service', data: s });
+                } else if (s.deletedAt) {
+                    await permanentlyDeleteService(choirId, s.id);
+                }
             }
 
+            // Process Songs
+            for (const s of songs) {
+                if (s.deletedAt && new Date(s.deletedAt) > cutoffDate) {
+                    validItems.push({ type: 'song', data: s });
+                } else if (s.deletedAt) {
+                    await permanentDeleteLocalSong(choirId, s.id);
+                }
+            }
+
+            // Sort by deletedAt desc
+            validItems.sort((a, b) =>
+                new Date(b.data.deletedAt!).getTime() - new Date(a.data.deletedAt!).getTime()
+            );
+
+            setDeletedItems(validItems);
             setLoading(false);
         }
         loadDeleted();
     }, [choirId]);
 
-    const handleRestore = async (serviceId: string) => {
-        setActionLoading(serviceId);
+    const handleRestore = async (id: string, type: 'service' | 'song') => {
+        setActionLoading(id);
         try {
-            await restoreService(choirId, serviceId);
-            setDeletedServices(prev => prev.filter(s => s.id !== serviceId));
+            if (type === 'service') {
+                await restoreService(choirId, id);
+            } else {
+                await restoreLocalSong(choirId, id);
+            }
+            setDeletedItems(prev => prev.filter(item => item.data.id !== id));
             onRestore();
         } catch (e) {
             console.error(e);
@@ -58,11 +85,15 @@ export default function TrashBin({ choirId, onClose, onRestore }: TrashBinProps)
         setActionLoading(null);
     };
 
-    const handlePermanentDelete = async (serviceId: string) => {
-        setActionLoading(serviceId);
+    const handlePermanentDelete = async (id: string, type: 'service' | 'song') => {
+        setActionLoading(id);
         try {
-            await permanentlyDeleteService(choirId, serviceId);
-            setDeletedServices(prev => prev.filter(s => s.id !== serviceId));
+            if (type === 'service') {
+                await permanentlyDeleteService(choirId, id);
+            } else {
+                await permanentDeleteLocalSong(choirId, id);
+            }
+            setDeletedItems(prev => prev.filter(item => item.data.id !== id));
         } catch (e) {
             console.error(e);
         }
@@ -96,41 +127,55 @@ export default function TrashBin({ choirId, onClose, onRestore }: TrashBinProps)
                         <div className="text-center py-12 text-text-secondary">
                             Завантаження...
                         </div>
-                    ) : deletedServices.length === 0 ? (
+                    ) : deletedItems.length === 0 ? (
                         <div className="text-center py-12">
                             <Trash2 className="w-12 h-12 mx-auto mb-4 text-text-secondary opacity-50" />
                             <p className="text-white font-medium">Корзина порожня</p>
                             <p className="text-sm text-text-secondary mt-1">
-                                Видалені служіння зберігаються тут {DAYS_TO_KEEP} днів
+                                Видалені елементи зберігаються тут {DAYS_TO_KEEP} днів
                             </p>
                         </div>
                     ) : (
                         <>
                             <p className="text-xs text-text-secondary text-center mb-4">
-                                Служіння автоматично видаляються через {DAYS_TO_KEEP} днів
+                                Елементи автоматично видаляються через {DAYS_TO_KEEP} днів
                             </p>
-                            {deletedServices.map(service => {
-                                const daysLeft = getDaysRemaining(service.deletedAt!);
+                            {deletedItems.map(item => {
+                                const daysLeft = getDaysRemaining(item.data.deletedAt!);
                                 const isExpiring = daysLeft <= 1;
-
+                                const isService = item.type === 'service';
+                                const data = item.data;
                                 return (
                                     <div
-                                        key={service.id}
+                                        key={data.id}
                                         className="bg-surface border border-white/5 rounded-2xl p-4"
                                     >
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    {isService ? (
+                                                        <span className="bg-blue-500/10 text-blue-400 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 w-fit">
+                                                            <Calendar className="w-3 h-3" /> Служіння
+                                                        </span>
+                                                    ) : (
+                                                        <span className="bg-emerald-500/10 text-emerald-400 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 w-fit">
+                                                            <Music className="w-3 h-3" /> Пісня
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <h3 className="text-white font-medium truncate">
-                                                    {service.title}
+                                                    {data.title}
                                                 </h3>
-                                                <p className="text-sm text-text-secondary">
-                                                    {new Date(service.date).toLocaleDateString('uk-UA', {
-                                                        day: 'numeric',
-                                                        month: 'long',
-                                                        year: 'numeric'
-                                                    })}
-                                                    {service.time && ` о ${service.time}`}
-                                                </p>
+                                                {isService && 'date' in data && (
+                                                    <p className="text-sm text-text-secondary">
+                                                        {new Date(data.date).toLocaleDateString('uk-UA', {
+                                                            day: 'numeric',
+                                                            month: 'long',
+                                                            year: 'numeric'
+                                                        })}
+                                                        {data.time && ` о ${data.time}`}
+                                                    </p>
+                                                )}
                                                 <div className={`flex items-center gap-1 mt-2 text-xs ${isExpiring ? 'text-orange-400' : 'text-text-secondary'}`}>
                                                     <Clock className="w-3 h-3" />
                                                     {daysLeft === 0
@@ -141,16 +186,16 @@ export default function TrashBin({ choirId, onClose, onRestore }: TrashBinProps)
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <button
-                                                    onClick={() => handleRestore(service.id)}
-                                                    disabled={actionLoading === service.id}
+                                                    onClick={() => handleRestore(data.id, item.type)}
+                                                    disabled={actionLoading === data.id}
                                                     className="p-3 bg-green-500/10 text-green-400 rounded-xl hover:bg-green-500/20 transition-colors disabled:opacity-50"
                                                     title="Відновити"
                                                 >
                                                     <RotateCcw className="w-5 h-5" />
                                                 </button>
                                                 <button
-                                                    onClick={() => setConfirmDelete(service.id)}
-                                                    disabled={actionLoading === service.id}
+                                                    onClick={() => setConfirmDelete({ id: data.id, type: item.type })}
+                                                    disabled={actionLoading === data.id}
                                                     className="p-3 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 transition-colors disabled:opacity-50"
                                                     title="Видалити назавжди"
                                                 >
@@ -158,13 +203,15 @@ export default function TrashBin({ choirId, onClose, onRestore }: TrashBinProps)
                                                 </button>
                                             </div>
                                         </div>
-                                        {service.songs.length > 0 && (
-                                            <div className="mt-3 pt-3 border-t border-white/5">
-                                                <p className="text-xs text-text-secondary">
-                                                    {service.songs.length} {service.songs.length === 1 ? 'пісня' : service.songs.length < 5 ? 'пісні' : 'пісень'}
-                                                </p>
-                                            </div>
-                                        )}
+                                        {
+                                            isService && 'songs' in data && data.songs.length > 0 && (
+                                                <div className="mt-3 pt-3 border-t border-white/5">
+                                                    <p className="text-xs text-text-secondary">
+                                                        {data.songs.length} {data.songs.length === 1 ? 'пісня' : data.songs.length < 5 ? 'пісні' : 'пісень'}
+                                                    </p>
+                                                </div>
+                                            )
+                                        }
                                     </div>
                                 );
                             })}
@@ -177,12 +224,12 @@ export default function TrashBin({ choirId, onClose, onRestore }: TrashBinProps)
             <ConfirmationModal
                 isOpen={!!confirmDelete}
                 title="Видалити назавжди?"
-                message="Це служіння буде видалено без можливості відновлення."
+                message="Цей елемент буде видалено без можливості відновлення."
                 confirmLabel="Видалити"
                 isDestructive
-                onConfirm={() => confirmDelete && handlePermanentDelete(confirmDelete)}
+                onConfirm={() => confirmDelete && handlePermanentDelete(confirmDelete.id, confirmDelete.type)}
                 onClose={() => setConfirmDelete(null)}
             />
-        </div>
+        </div >
     );
 }

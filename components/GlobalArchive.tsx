@@ -71,7 +71,7 @@ const isCyrillic = (text: string): boolean => {
 const fuseOptions = {
     keys: [
         { name: "title", weight: 0.5 },
-        { name: "composer", weight: 0.3 },
+        // { name: "composer", weight: 0.3 }, // Hidden from UI and search
         { name: "keywords", weight: 0.2 }
     ],
     threshold: 0.3,
