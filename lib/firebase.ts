@@ -49,17 +49,17 @@ if (typeof window !== "undefined") {
     });
 
     // Initialize App Check (DDoS Protection) - Only in production
-    if (process.env.NODE_ENV === 'production') {
-        try {
-            initializeAppCheck(app, {
-                provider: new ReCaptchaV3Provider("6LfBilssAAAAAHMCpCUhm3kI-FBLh4pdpCFGaCZ0"),
-                isTokenAutoRefreshEnabled: true
-            });
-            console.log("App Check initialized");
-        } catch (e) {
-            console.error("App Check init failed:", e);
-        }
-    }
+    // if (process.env.NODE_ENV === 'production') {
+    //     try {
+    //         initializeAppCheck(app, {
+    //             provider: new ReCaptchaV3Provider("6LfBilssAAAAAHMCpCUhm3kI-FBLh4pdpCFGaCZ0"),
+    //             isTokenAutoRefreshEnabled: true
+    //         });
+    //         console.log("App Check initialized");
+    //     } catch (e) {
+    //         console.error("App Check init failed:", e);
+    //     }
+    // }
 }
 
 // Helper function to get messaging instance (for use in hooks)
