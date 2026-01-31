@@ -3,7 +3,15 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { X, Plus, Loader2, Save, Check, ChevronDown, Trash2 } from "lucide-react";
 import { SimpleSong } from "@/types";
-import { CATEGORIES } from "@/lib/themes";
+import { CATEGORIES as OFFICIAL_THEMES_IMPORTED } from "@/lib/themes";
+
+const OFFICIAL_THEMES = OFFICIAL_THEMES_IMPORTED;
+
+const SECTIONS = [
+    { id: "choir", label: "Хор" },
+    { id: "orchestra", label: "Оркестр" },
+    { id: "ensemble", label: "Ансамбль" },
+];
 import { useAuth } from "@/contexts/AuthContext";
 import { updateDoc, doc, arrayRemove } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -30,8 +38,7 @@ export default function EditSongModal({
 }: EditSongModalProps) {
     const { userData } = useAuth();
 
-    // Memoize derived lists to prevent unstable dependencies
-    const allCategories = useMemo(() => Array.from(new Set([...CATEGORIES, ...(knownCategories || [])])), [knownCategories]);
+
 
     const normalizedRegents = useMemo(() => Array.from(new Set(regents.map(r => r.trim()))), [regents]);
     const uniqueKnownConductors = useMemo(() => (knownConductors || [])
@@ -41,16 +48,27 @@ export default function EditSongModal({
 
     const allConductors = useMemo(() => [...normalizedRegents, ...uniqueKnownConductors], [normalizedRegents, uniqueKnownConductors]);
 
+    // Use OFFICIAL_THEMES + knownCategories (filtering out sections) for the "Category" (Theme) list
+    const allThemes = useMemo(() => {
+        const sectionsIds = SECTIONS.map(s => s.id);
+        const merged = [...OFFICIAL_THEMES, ...(knownCategories || [])];
+        return Array.from(new Set(merged)).filter(t => !sectionsIds.includes(t));
+    }, [knownCategories]);
+
     // Determine initial state logic
-    const initialIsCustomCategory = initialData.category && !allCategories.includes(initialData.category);
+    const initialIsCustomTheme = initialData.theme && !allThemes.includes(initialData.theme);
     const initialIsCustomConductor = initialData.conductor && !allConductors.includes(initialData.conductor);
 
     // Track initial values to detect changes
     const [title, setTitle] = useState(initialData.title);
 
-    const [category, setCategory] = useState(initialIsCustomCategory ? "" : initialData.category);
-    const [customCategory, setCustomCategory] = useState(initialIsCustomCategory ? initialData.category : "");
-    const [showCustomCategory, setShowCustomCategory] = useState(!!initialIsCustomCategory);
+    // Section (Choir/Orchestra) - formerly Category
+    const [section, setSection] = useState(initialData.category || "choir");
+
+    // Theme (Christmas, etc.) - formerly handled variously
+    const [theme, setTheme] = useState(initialIsCustomTheme ? "" : (initialData.theme || ""));
+    const [customTheme, setCustomTheme] = useState(initialIsCustomTheme ? initialData.theme : "");
+    const [showCustomTheme, setShowCustomTheme] = useState(!!initialIsCustomTheme);
 
     const [conductor, setConductor] = useState(initialIsCustomConductor ? "" : (initialData.conductor || ""));
     const [customConductor, setCustomConductor] = useState(initialIsCustomConductor ? (initialData.conductor || "") : "");
@@ -59,9 +77,8 @@ export default function EditSongModal({
     // New Metadata Fields
     const [composer, setComposer] = useState(initialData.composer || "");
     const [poet, setPoet] = useState(initialData.poet || "");
-    const [theme, setTheme] = useState(initialData.theme || "");
 
-    const [showAllCategories, setShowAllCategories] = useState(false);
+    const [showAllThemes, setShowAllThemes] = useState(false);
 
     // Conductor Dropdown State
     const [isConductorDropdownOpen, setIsConductorDropdownOpen] = useState(false);
@@ -85,11 +102,11 @@ export default function EditSongModal({
             return;
         }
 
-        let finalCategory = category;
-        if (showCustomCategory && customCategory.trim()) {
-            finalCategory = customCategory.trim();
-        } else if (showCustomCategory && !customCategory.trim()) {
-            setError("Введіть назву нової категорії");
+        let finalTheme = theme;
+        if (showCustomTheme && customTheme?.trim()) {
+            finalTheme = customTheme.trim();
+        } else if (showCustomTheme && !customTheme?.trim()) {
+            setError("Введіть назву нової тематики");
             return;
         }
 
@@ -105,21 +122,17 @@ export default function EditSongModal({
             setError("Оберіть або введіть диригента");
             return;
         }
-        if (!finalCategory) {
-            setError("Оберіть або введіть категорію");
-            return;
-        }
 
         setLoading(true);
         setError("");
 
         try {
-            // Save custom category if used
-            if (showCustomCategory && customCategory.trim() && userData?.choirId) {
+            // Save custom theme if used (persisted as "knownCategory" for backward compatibility)
+            if (showCustomTheme && customTheme?.trim() && userData?.choirId) {
                 try {
                     const { addKnownCategory } = await import("@/lib/db");
-                    await addKnownCategory(userData.choirId, customCategory.trim());
-                } catch (e) { console.error("Failed to add custom category:", e); }
+                    await addKnownCategory(userData.choirId, customTheme.trim());
+                } catch (e) { console.error("Failed to add custom theme:", e); }
             }
 
             // Save custom conductor if used
@@ -135,11 +148,11 @@ export default function EditSongModal({
 
             await onSave({
                 title: title.trim(),
-                category: finalCategory,
+                category: section, // Choir/Orchestra
                 conductor: finalConductor,
                 composer: composer.trim() || undefined,
                 poet: poet.trim() || undefined,
-                theme: theme || undefined,
+                theme: finalTheme || undefined,
             });
 
             onClose();
@@ -214,30 +227,52 @@ export default function EditSongModal({
                             />
                         </div>
 
-                        {/* Category */}
+                        {/* Section (Type) */}
                         <div>
                             <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                                Категорія
+                                Розділ (Тип)
                             </label>
-                            {!showCustomCategory && allCategories.length > 0 ? (
+                            <div className="flex bg-black/20 rounded-xl p-1 w-full gap-1">
+                                {SECTIONS.map(sec => (
+                                    <button
+                                        key={sec.id}
+                                        type="button"
+                                        onClick={() => setSection(sec.id)}
+                                        className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${section === sec.id
+                                            ? 'bg-white/20 text-white shadow-sm'
+                                            : 'text-text-secondary hover:text-white hover:bg-white/5'
+                                            }`}
+                                    >
+                                        {sec.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Category (Theme) */}
+                        <div>
+                            <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                                Категорія (Тематика)
+                            </label>
+                            {!showCustomTheme ? (
                                 <div className="space-y-3">
                                     <div className="flex flex-wrap gap-2">
-                                        {(showAllCategories ? allCategories : allCategories.slice(0, 8)).map(cat => (
+                                        {(showAllThemes ? allThemes : allThemes.slice(0, 8)).map(t => (
                                             <button
-                                                key={cat}
+                                                key={t}
                                                 type="button"
-                                                onClick={() => setCategory(cat)}
-                                                className={`px-4 py-2 rounded-full text-sm font-medium transition-all border ${category === cat
+                                                onClick={() => setTheme(t === theme ? "" : t)}
+                                                className={`px-4 py-2 rounded-full text-sm font-medium transition-all border ${theme === t
                                                     ? 'bg-white text-black border-white shadow-lg shadow-white/10'
                                                     : 'bg-white/5 text-text-secondary border-white/5 hover:bg-white/10 hover:text-white'
                                                     }`}
                                             >
-                                                {cat}
+                                                {t}
                                             </button>
                                         ))}
                                         <button
                                             type="button"
-                                            onClick={() => setShowCustomCategory(true)}
+                                            onClick={() => setShowCustomTheme(true)}
                                             className="px-4 py-2 rounded-full text-sm font-medium transition-all bg-white/5 text-text-secondary border border-dashed border-white/20 hover:bg-white/10 hover:text-white flex items-center gap-1.5"
                                         >
                                             <Plus className="w-4 h-4" />
@@ -245,13 +280,13 @@ export default function EditSongModal({
                                         </button>
                                     </div>
 
-                                    {allCategories.length > 8 && (
+                                    {allThemes.length > 8 && (
                                         <button
                                             type="button"
-                                            onClick={() => setShowAllCategories(!showAllCategories)}
+                                            onClick={() => setShowAllThemes(!showAllThemes)}
                                             className="text-xs font-medium text-text-secondary hover:text-white flex items-center gap-1 transition-colors ml-1"
                                         >
-                                            {showAllCategories ? (
+                                            {showAllThemes ? (
                                                 <>
                                                     <ChevronDown className="w-3 h-3 rotate-180" />
                                                     Згорнути
@@ -259,7 +294,7 @@ export default function EditSongModal({
                                             ) : (
                                                 <>
                                                     <ChevronDown className="w-3 h-3" />
-                                                    Показати всі ({allCategories.length})
+                                                    Показати всі ({allThemes.length})
                                                 </>
                                             )}
                                         </button>
@@ -269,15 +304,15 @@ export default function EditSongModal({
                                 <div className="space-y-2">
                                     <input
                                         type="text"
-                                        value={customCategory}
-                                        onChange={(e) => setCustomCategory(e.target.value)}
-                                        placeholder="Назва категорії"
+                                        value={customTheme || ""}
+                                        onChange={(e) => setCustomTheme(e.target.value)}
+                                        placeholder="Назва тематики"
                                         className="w-full px-4 py-3.5 bg-black/20 border border-white/10 rounded-xl focus:outline-none focus:border-white/20 focus:ring-1 focus:ring-white/20 text-white placeholder:text-text-secondary/40 transition-all font-medium"
                                         autoFocus
                                     />
                                     <button
                                         type="button"
-                                        onClick={() => setShowCustomCategory(false)}
+                                        onClick={() => setShowCustomTheme(false)}
                                         className="text-xs text-blue-400 hover:text-blue-300 font-medium pl-1"
                                     >
                                         Назад до списку
@@ -398,30 +433,18 @@ export default function EditSongModal({
                                         className="w-full px-3 py-2.5 bg-black/20 border border-white/10 rounded-lg focus:outline-none focus:border-white/20 text-white placeholder:text-text-secondary/40 text-sm"
                                     />
                                 </div>
-                                <div className="sm:col-span-2">
-                                    <label className="block text-xs font-medium text-text-secondary mb-1.5">
-                                        Тематика
-                                    </label>
-                                    <select
-                                        value={theme}
-                                        onChange={(e) => setTheme(e.target.value)}
-                                        className="w-full px-3 py-2.5 bg-black/20 border border-white/10 rounded-lg focus:outline-none focus:border-white/20 text-white text-sm appearance-none cursor-pointer"
-                                    >
-                                        <option value="" className="bg-[#1c1c20] text-text-secondary">Не вказано</option>
-                                        {CATEGORIES.map(t => (
-                                            <option key={t} value={t} className="bg-[#1c1c20]">{t}</option>
-                                        ))}
-                                    </select>
-                                </div>
+
                             </div>
                         </div>
+
 
                         {error && (
                             <div className="bg-red-500/10 text-red-400 p-4 rounded-xl text-sm border border-red-500/20 flex items-center gap-2">
                                 <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
                                 {error}
                             </div>
-                        )}
+                        )
+                        }
 
                         <button
                             type="submit"
@@ -440,9 +463,9 @@ export default function EditSongModal({
                                 </>
                             )}
                         </button>
-                    </form>
-                </div>
-            </div>
+                    </form >
+                </div >
+            </div >
 
             <ConfirmationModal
                 isOpen={!!conductorToDelete}
