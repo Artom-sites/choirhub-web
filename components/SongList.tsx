@@ -6,6 +6,8 @@ import { Search, FileText, Music2, ChevronRight, Filter, Plus, Eye, User, Loader
 import { SimpleSong } from "@/types";
 import { CATEGORIES, Category } from "@/lib/themes";
 import { motion, AnimatePresence } from "framer-motion";
+import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { getSongs, addSong, uploadSongPdf, deleteSong, addKnownConductor, updateSong, softDeleteLocalSong } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
 import AddSongModal from "./AddSongModal";
@@ -50,15 +52,29 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
 
 
     useEffect(() => {
-        async function fetchSongs() {
-            if (userData?.choirId) {
-                setLoading(true);
-                const fetched = await getSongs(userData.choirId);
-                setSongsState(fetched);
-                setLoading(false);
-            }
-        }
-        fetchSongs();
+        if (!userData?.choirId) return;
+
+        setLoading(true);
+        const q = query(
+            collection(db, `choirs/${userData.choirId}/songs`),
+            orderBy("title")
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            console.log(`Fetched ${snapshot.docs.length} songs (Source: ${snapshot.metadata.fromCache ? 'Cache' : 'Server'})`);
+
+            const fetchedSongs: SimpleSong[] = snapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() } as SimpleSong))
+                .filter(song => !song.deletedAt); // Filter out soft-deleted songs
+
+            setSongsState(fetchedSongs);
+            setLoading(false);
+        }, (error) => {
+            console.error("Error subscribing to songs:", error);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
     }, [userData?.choirId]);
 
     // Close menu on click outside
@@ -134,15 +150,12 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
             }
         }
 
-        // 3. Refresh list
-        // getSongs called via effect when songs state changes? No, we need to update state.
-        // Or re-fetch.
-        setLoading(true);
-        const fetched = await getSongs(userData.choirId);
-        setSongsState(fetched);
-        setLoading(false);
-        setShowAddModal(false);
+        // 3. Refresh list - No manual refresh needed with onSnapshot
+        // But we wait briefly to let onSnapshot catch the new addition (local write is instant usually)
         if (onRefresh) onRefresh();
+
+        // Just close modal, the listener handles the UI
+        setShowAddModal(false);
     };
 
     const handleEditClick = (e: React.MouseEvent, song: SimpleSong) => {
@@ -154,8 +167,8 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
         if (!userData?.choirId || !editingSong) return;
         try {
             await updateSong(userData.choirId, editingSong.id, updates);
-            // Optimistic update
-            setSongsState(prev => prev.map(s => s.id === editingSong.id ? { ...s, ...updates } : s));
+            // Optimistic update - Not strictly needed as listener will update, but good for immediate feedback
+            // setSongsState(prev => prev.map(s => s.id === editingSong.id ? { ...s, ...updates } : s));
             setEditingSong(null);
             if (onRefresh) onRefresh();
         } catch (e) {
@@ -173,8 +186,8 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
         if (!userData?.choirId || !deletingSongId) return;
 
         try {
-            // Optimistic
-            setSongsState(prev => prev.filter(s => s.id !== deletingSongId));
+            // Optimistic - listener will handle it technically, but local optimistic update is fine too
+            // setSongsState(prev => prev.filter(s => s.id !== deletingSongId));
             await softDeleteLocalSong(userData.choirId, deletingSongId, userData.id || "unknown");
             setToast({ message: "Пісню видалено", type: "success" });
             if (onRefresh) onRefresh();
@@ -250,9 +263,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                                 hasPdf: !!pdfUrl,
                                 parts: globalSong.parts, // Save all parts
                             });
-                            // Refresh songs list
-                            const fetched = await getSongs(userData.choirId);
-                            setSongsState(fetched);
+                            // Refresh songs list - listener handles
                             if (onRefresh) onRefresh();
                         } catch (e) {
                             console.error(e);
@@ -447,9 +458,10 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                                 onClose={() => setShowTrashBin(false)}
                                 initialFilter="song"
                                 onRestore={() => {
-                                    if (userData?.choirId) {
-                                        getSongs(userData.choirId).then(setSongsState);
-                                    }
+                                    // No manual fetch logic needed with onSnapshot
+                                    // if (userData?.choirId) {
+                                    //     getSongs(userData.choirId).then(setSongsState);
+                                    // }
                                 }}
                             />
                         </>
