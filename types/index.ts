@@ -88,6 +88,7 @@ export interface SimpleSong {
     composer?: string;
     poet?: string;
     theme?: string;
+    deletedAt?: string; // For soft delete
 }
 
 export type Category = string;

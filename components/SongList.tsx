@@ -14,6 +14,7 @@ import PDFViewer from "./PDFViewer";
 import ConfirmationModal from "./ConfirmationModal";
 import GlobalArchive from "./GlobalArchive";
 import TrashBinModal from "./TrashBinModal";
+import Toast from "./Toast";
 
 interface SongListProps {
     canAddSongs: boolean;
@@ -33,10 +34,12 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<Category | "All">("All");
+    // Modals
     const [showAddModal, setShowAddModal] = useState(false);
-    const [songToDelete, setSongToDelete] = useState<string | null>(null);
+    const [showTrashBin, setShowTrashBin] = useState(false);
     const [editingSong, setEditingSong] = useState<SimpleSong | null>(null);
-    const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null);
+    const [deletingSongId, setDeletingSongId] = useState<string | null>(null);
+    const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
     // Sub-tab state: 'repertoire' or 'catalog'
     const [subTab, setSubTab] = useState<'repertoire' | 'catalog'>('repertoire');
@@ -168,21 +171,23 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
 
     const initiateDelete = (e: React.MouseEvent, id: string) => {
         e.stopPropagation();
-        setSongToDelete(id);
+        setDeletingSongId(id);
     };
 
     const confirmDelete = async () => {
-        if (!userData?.choirId || !songToDelete) return;
+        if (!userData?.choirId || !deletingSongId) return;
 
         try {
             // Optimistic
-            setSongsState(prev => prev.filter(s => s.id !== songToDelete));
-            // await deleteSong(userData.choirId, songToDelete);
-            await softDeleteLocalSong(userData.choirId, songToDelete, userData.id || "unknown");
+            setSongsState(prev => prev.filter(s => s.id !== deletingSongId));
+            await softDeleteLocalSong(userData.choirId, deletingSongId, userData.id || "unknown");
+            setToast({ message: "Пісню видалено", type: "success" });
+            if (onRefresh) onRefresh();
         } catch (e) {
             console.error("Failed to delete song", e);
+            setToast({ message: "Помилка при видаленні", type: "error" });
         } finally {
-            setSongToDelete(null);
+            setDeletingSongId(null);
         }
     };
 
@@ -244,7 +249,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                             await addSong(userData.choirId, {
                                 title: globalSong.title,
                                 category: 'Інші' as Category,
-                                conductor: globalSong.composer || '',
+                                conductor: '', // Don't use composer as conductor
                                 addedAt: new Date().toISOString(),
                                 pdfUrl: pdfUrl,
                                 hasPdf: !!pdfUrl,
@@ -490,6 +495,15 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                         isDestructive
                     />
                 </>
+            )}
+
+
+            {toast && (
+                <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => setToast(null)}
+                />
             )}
         </div>
     );

@@ -12,6 +12,9 @@ import { extractInstrument } from "@/lib/utils";
 
 import ConfirmationModal from "@/components/ConfirmationModal";
 import Toast from "@/components/Toast";
+import ArchiveLoader from "@/components/ArchiveLoader";
+import GlobalArchive from "@/components/GlobalArchive";
+import { GlobalSong } from "@/types";
 
 // Helper to extract instrument name for tabs
 // extractInstrument moved to @/lib/utils
@@ -42,6 +45,43 @@ export default function SongPage() {
         knownConductors: string[];
         knownCategories: string[];
     }>({ regents: [], knownConductors: [], knownCategories: [] });
+
+    // Archive Modal State
+    const [showArchiveModal, setShowArchiveModal] = useState(false);
+
+    const handleLinkArchive = async (globalSong: GlobalSong) => {
+        if (!song || !userData?.choirId) return;
+
+        // Get PDF URL from first part (usually main part)
+        const pdfUrl = globalSong.parts?.[0]?.pdfUrl;
+
+        if (!pdfUrl) {
+            setToast({ message: "У цій пісні з архіву немає PDF", type: "error" });
+            return;
+        }
+
+        try {
+            setUploading(true);
+            await updateSong(userData.choirId, song.id, {
+                hasPdf: true,
+                pdfUrl: pdfUrl,
+                // Also update metadata if missing in current song
+                composer: song.composer || globalSong.composer,
+                poet: song.poet,
+            });
+
+            setToast({ message: "PDF успішно прикріплено", type: "success" });
+            setShowArchiveModal(false);
+
+            // Reload page to refresh data
+            window.location.reload();
+        } catch (error) {
+            console.error(error);
+            setToast({ message: "Помилка при оновленні", type: "error" });
+        } finally {
+            setUploading(false);
+        }
+    };
 
     useEffect(() => {
         async function loadSong() {
@@ -191,11 +231,7 @@ export default function SongPage() {
     };
 
     if (loading) {
-        return (
-            <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
-                <Loader2 className="w-10 h-10 text-white animate-spin" />
-            </div>
-        );
+        return <ArchiveLoader />;
     }
 
     if (!song) {
@@ -476,9 +512,27 @@ export default function SongPage() {
                                         )}
                                     </button>
 
-                                    <p className="text-xs text-text-secondary/50 mt-4">
+                                    <p className="text-xs text-text-secondary/50 mt-4 mb-4">
                                         Максимальний розмір: 50 MB
                                     </p>
+
+                                    <div className="relative my-6">
+                                        <div className="absolute inset-0 flex items-center">
+                                            <div className="w-full border-t border-white/10"></div>
+                                        </div>
+                                        <div className="relative flex justify-center text-xs uppercase">
+                                            <span className="bg-background px-2 text-text-secondary">Або</span>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        onClick={() => setShowArchiveModal(true)}
+                                        disabled={uploading}
+                                        className="w-full py-4 bg-white/5 border border-white/10 rounded-xl text-white font-bold hover:bg-white/10 transition-all flex items-center justify-center gap-3"
+                                    >
+                                        <Search className="w-5 h-5 text-accent" />
+                                        Знайти в архіві
+                                    </button>
 
                                     {uploadStatus === 'success' && (
                                         <div className="mt-6 p-4 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center gap-3 text-green-400">
@@ -530,6 +584,23 @@ export default function SongPage() {
                     type={toast.type}
                     onClose={() => setToast(null)}
                 />
+            )}
+            {/* Archive Search Modal */}
+            {showArchiveModal && (
+                <div className="fixed inset-0 z-50 bg-background flex flex-col">
+                    <div className="flex items-center justify-between p-4 border-b border-white/10 bg-background/80 backdrop-blur-md sticky top-0 z-10">
+                        <h2 className="text-lg font-bold">Знайти в архіві</h2>
+                        <button
+                            onClick={() => setShowArchiveModal(false)}
+                            className="p-2 hover:bg-white/10 rounded-full"
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
+                    </div>
+                    <div className="flex-1 overflow-hidden">
+                        <GlobalArchive onAddSong={handleLinkArchive} />
+                    </div>
+                </div>
             )}
         </div>
     );

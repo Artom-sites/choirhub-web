@@ -58,7 +58,9 @@ export async function getSongs(choirId: string): Promise<SimpleSong[]> {
             orderBy("title")
         );
         const snapshot = await getDocs(q);
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SimpleSong));
+        return snapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() } as SimpleSong))
+            .filter(song => !song.deletedAt);
     } catch (error) {
         console.error("Error fetching songs:", error);
         return [];

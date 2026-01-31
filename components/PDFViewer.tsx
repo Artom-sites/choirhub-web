@@ -172,7 +172,7 @@ export default function PDFViewer({ url, title, onClose, onAddAction }: PDFViewe
     return (
         <div className="flex flex-col h-full bg-white relative">
             {/* Offline Indicator */}
-            <div className={`absolute top-20 left-1/2 -translate-x-1/2 z-50 transition-all duration-500 pointer-events-none ${showIndicator ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
+            <div className={`absolute top-4 left-1/2 -translate-x-1/2 z-50 transition-all duration-500 pointer-events-none ${showIndicator ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
                 <div className="bg-green-500/90 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1.5 backdrop-blur-md">
                     <Check className="w-3 h-3" />
                     Збережено офлайн

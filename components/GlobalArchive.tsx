@@ -10,7 +10,7 @@ import { Search, Music, Users, User, Loader2, FolderOpen, Plus, Eye, FileText, C
 import { motion, AnimatePresence } from "framer-motion";
 import PDFViewer from "./PDFViewer";
 import ConfirmationModal from "./ConfirmationModal";
-import Preloader from "./Preloader";  // Import Custom Preloader
+import ArchiveLoader from "./ArchiveLoader";  // Musical note + waves loader for archive
 import Fuse from "fuse.js";
 
 interface GlobalArchiveProps {
@@ -386,7 +386,7 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
             <div className="flex-1 overflow-y-auto space-y-2">
                 {/* ... (Existing List Logic) ... */}
                 {loading ? (
-                    <Preloader />
+                    <ArchiveLoader />
                 ) : filteredSongs.length === 0 ? (
                     <div className="text-center py-12 text-text-secondary">
                         <FolderOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
@@ -417,12 +417,14 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                     <div className="flex-1 min-w-0">
                                         <h3 className="font-semibold text-white truncate">{song.title}</h3>
                                         <div className="flex flex-wrap gap-1.5 items-center mt-1">
+                                            {/* Hide composer for now as it causes confusion with Regent
                                             {song.composer && (
                                                 <div className="flex items-center gap-1.5 text-xs text-text-secondary bg-white/5 px-2 py-1 rounded-lg border border-white/5 truncate max-w-[150px]">
                                                     <User className="w-3 h-3 flex-shrink-0" />
                                                     <span className="truncate">{song.composer}</span>
                                                 </div>
-                                            )}
+                                            )} 
+                                            */}
                                             {song.subcategory && (
                                                 <span className="text-[10px] bg-white/5 text-gray-400 px-1.5 py-0.5 rounded">
                                                     {getSubcategoryLabel(song.category, song.subcategory)}
