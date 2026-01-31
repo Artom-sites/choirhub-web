@@ -38,7 +38,6 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
     const [showAddModal, setShowAddModal] = useState(false);
     const [showTrashBin, setShowTrashBin] = useState(false);
     const [editingSong, setEditingSong] = useState<SimpleSong | null>(null);
-    const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null);
     const [deletingSongId, setDeletingSongId] = useState<string | null>(null);
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
@@ -47,7 +46,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
 
     // PDF Viewer state
     const [viewingSong, setViewingSong] = useState<SimpleSong | null>(null);
-    const [showTrash, setShowTrash] = useState(false);
+
 
     useEffect(() => {
         async function fetchSongs() {
@@ -62,13 +61,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
     }, [userData?.choirId]);
 
     // Close menu on click outside
-    useEffect(() => {
-        function handleClickOutside() {
-            setActionMenuOpen(null);
-        }
-        document.addEventListener("click", handleClickOutside);
-        return () => document.removeEventListener("click", handleClickOutside);
-    }, []);
+
 
     const filteredSongs = songs.filter(song => {
         const matchesSearch = song.title.toLowerCase().includes(search.toLowerCase());
@@ -228,7 +221,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
             {canAddSongs && subTab === 'repertoire' && (
                 <div className="flex justify-end">
                     <button
-                        onClick={() => setShowTrash(true)}
+                        onClick={() => setShowTrashBin(true)}
                         className="text-xs text-text-secondary hover:text-red-400 flex items-center gap-1 transition-colors mt-2"
                     >
                         <Trash2 className="w-3 h-3" />
@@ -378,53 +371,29 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
 
                                             <div className="flex items-center gap-1 mt-3.5 relative">
                                                 {effectiveCanAdd && (
-                                                    <div className="relative z-50" onClick={(e) => e.stopPropagation()}>
+                                                    <div className="flex items-center gap-1 z-20" onClick={(e) => e.stopPropagation()}>
                                                         <button
                                                             onClick={(e) => {
                                                                 e.preventDefault();
                                                                 e.stopPropagation();
-                                                                e.nativeEvent.stopImmediatePropagation();
-                                                                setActionMenuOpen(actionMenuOpen === song.id ? null : song.id);
+                                                                handleEditClick(e, song);
                                                             }}
-                                                            className={`p-1.5 rounded-lg transition-colors z-20 ${actionMenuOpen === song.id ? 'bg-white/20 text-white' : 'text-text-secondary hover:text-white hover:bg-white/10'}`}
+                                                            className="p-2 rounded-lg text-text-secondary hover:text-white hover:bg-white/10 transition-colors"
+                                                            title="Редагувати"
                                                         >
-                                                            <MoreVertical className="w-5 h-5" />
+                                                            <Pencil className="w-5 h-5" />
                                                         </button>
-
-                                                        {actionMenuOpen === song.id && (
-                                                            <div
-                                                                className="absolute right-0 top-full mt-2 w-48 bg-zinc-800 border border-white/10 rounded-xl shadow-xl shadow-black/80 ring-1 ring-white/10 z-[100] overflow-hidden animate-in fade-in zoom-in-95 duration-100 flex flex-col"
-                                                                onClick={(e) => e.stopPropagation()}
-                                                            >
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.preventDefault();
-                                                                        e.stopPropagation();
-                                                                        e.nativeEvent.stopImmediatePropagation();
-                                                                        console.log("Edit clicked", song.id);
-                                                                        setEditingSong(song);
-                                                                        setActionMenuOpen(null);
-                                                                    }}
-                                                                    className="w-full px-4 py-3 text-left text-sm font-medium text-white hover:bg-white/10 flex items-center gap-3 active:bg-white/20"
-                                                                >
-                                                                    <Pencil className="w-4 h-4 text-text-secondary" />
-                                                                    <span>Редагувати</span>
-                                                                </button>
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.preventDefault();
-                                                                        e.stopPropagation();
-                                                                        e.nativeEvent.stopImmediatePropagation();
-                                                                        initiateDelete(e, song.id);
-                                                                        setActionMenuOpen(null);
-                                                                    }}
-                                                                    className="w-full px-4 py-3 text-left text-sm font-medium text-red-300 hover:bg-red-500/10 flex items-center gap-3 border-t border-white/10 active:bg-red-500/20"
-                                                                >
-                                                                    <Trash2 className="w-4 h-4 text-red-300" />
-                                                                    <span>Видалити</span>
-                                                                </button>
-                                                            </div>
-                                                        )}
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                initiateDelete(e, song.id);
+                                                            }}
+                                                            className="p-2 rounded-lg text-text-secondary hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                                                            title="Видалити"
+                                                        >
+                                                            <Trash2 className="w-5 h-5" />
+                                                        </button>
                                                     </div>
                                                 )}
                                             </div>
