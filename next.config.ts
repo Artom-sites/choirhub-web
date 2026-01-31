@@ -20,6 +20,14 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   turbopack: {},
+  async rewrites() {
+    return [
+      {
+        source: '/__/auth/:path*',
+        destination: 'https://choirhub-8bfa2.firebaseapp.com/__/auth/:path*',
+      },
+    ];
+  },
 };
 
 export default withPWA(nextConfig);

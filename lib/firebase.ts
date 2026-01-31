@@ -10,7 +10,7 @@ import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check"; //
 // Your web app's Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyCPBASol-Zd6dLF3XsRNTUFTMyJMptFJRA",
-    authDomain: "choirhub-8bfa2.firebaseapp.com",
+    authDomain: typeof window !== "undefined" ? window.location.hostname : "choirhub-8bfa2.firebaseapp.com",
     projectId: "choirhub-8bfa2",
     storageBucket: "choirhub-8bfa2.firebasestorage.app",
     messagingSenderId: "536668000416",
