@@ -13,14 +13,16 @@ interface TrashBinProps {
     choirId: string;
     onClose: () => void;
     onRestore: () => void; // Callback to refresh service list after restore
+    initialFilter?: 'all' | 'service' | 'song';
 }
 
 type TrashItem =
     | { type: 'service'; data: Service }
     | { type: 'song'; data: SimpleSong };
 
-export default function TrashBin({ choirId, onClose, onRestore }: TrashBinProps) {
+export default function TrashBin({ choirId, onClose, onRestore, initialFilter = 'all' }: TrashBinProps) {
     const [deletedItems, setDeletedItems] = useState<TrashItem[]>([]);
+    const [activeFilter, setActiveFilter] = useState<'all' | 'service' | 'song'>(initialFilter);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [confirmDelete, setConfirmDelete] = useState<{ id: string; type: 'service' | 'song' } | null>(null);
@@ -109,6 +111,11 @@ export default function TrashBin({ choirId, onClose, onRestore }: TrashBinProps)
         return Math.max(0, daysRemaining);
     };
 
+    const filteredItems = deletedItems.filter(item => {
+        if (activeFilter === 'all') return true;
+        return item.type === activeFilter;
+    });
+
     return (
         <div className="fixed inset-0 z-[70] bg-[#09090b] flex flex-col animate-in slide-in-from-bottom duration-300">
             {/* Header */}
@@ -120,14 +127,41 @@ export default function TrashBin({ choirId, onClose, onRestore }: TrashBinProps)
                 <h2 className="font-bold text-lg">Корзина</h2>
             </div>
 
+            {/* Filter Tabs */}
+            <div className="px-4 pt-4 pb-2 flex gap-2 overflow-x-auto scrollbar-hide">
+                <button
+                    onClick={() => setActiveFilter('all')}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${activeFilter === 'all' ? 'bg-white text-black' : 'bg-white/5 text-text-secondary hover:bg-white/10'
+                        }`}
+                >
+                    Всі
+                </button>
+                <button
+                    onClick={() => setActiveFilter('service')}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap ${activeFilter === 'service' ? 'bg-blue-500 text-white' : 'bg-white/5 text-text-secondary hover:bg-white/10'
+                        }`}
+                >
+                    <Calendar className="w-3.5 h-3.5" />
+                    Служіння
+                </button>
+                <button
+                    onClick={() => setActiveFilter('song')}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap ${activeFilter === 'song' ? 'bg-emerald-500 text-white' : 'bg-white/5 text-text-secondary hover:bg-white/10'
+                        }`}
+                >
+                    <Music className="w-3.5 h-3.5" />
+                    Пісні
+                </button>
+            </div>
+
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-4 pb-safe">
+            <div className="flex-1 overflow-y-auto p-4 pb-safe pt-2">
                 <div className="max-w-lg mx-auto space-y-3">
                     {loading ? (
                         <div className="text-center py-12 text-text-secondary">
                             Завантаження...
                         </div>
-                    ) : deletedItems.length === 0 ? (
+                    ) : filteredItems.length === 0 ? (
                         <div className="text-center py-12">
                             <Trash2 className="w-12 h-12 mx-auto mb-4 text-text-secondary opacity-50" />
                             <p className="text-white font-medium">Корзина порожня</p>
@@ -140,7 +174,7 @@ export default function TrashBin({ choirId, onClose, onRestore }: TrashBinProps)
                             <p className="text-xs text-text-secondary text-center mb-4">
                                 Елементи автоматично видаляються через {DAYS_TO_KEEP} днів
                             </p>
-                            {deletedItems.map(item => {
+                            {filteredItems.map(item => {
                                 const daysLeft = getDaysRemaining(item.data.deletedAt!);
                                 const isExpiring = daysLeft <= 1;
                                 const isService = item.type === 'service';

@@ -13,7 +13,7 @@ import EditSongModal from "./EditSongModal";
 import PDFViewer from "./PDFViewer";
 import ConfirmationModal from "./ConfirmationModal";
 import GlobalArchive from "./GlobalArchive";
-import TrashBinModal from "./TrashBinModal";
+import TrashBin from "./TrashBin";
 import Toast from "./Toast";
 
 interface SongListProps {
@@ -474,16 +474,20 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                     )}
 
                     {/* Trash Bin Modal */}
-                    <TrashBinModal
-                        choirId={userData?.choirId || ""}
-                        isOpen={showTrash}
-                        onClose={() => setShowTrash(false)}
-                        onRestore={() => {
-                            if (userData?.choirId) {
-                                getSongs(userData.choirId).then(setSongsState);
-                            }
-                        }}
-                    />
+                    {showTrashBin && (
+                        <>
+                            <TrashBin
+                                choirId={userData?.choirId || ""}
+                                onClose={() => setShowTrashBin(false)}
+                                initialFilter="song"
+                                onRestore={() => {
+                                    if (userData?.choirId) {
+                                        getSongs(userData.choirId).then(setSongsState);
+                                    }
+                                }}
+                            />
+                        </>
+                    )}
 
                     {/* Confirmation Modal */}
                     <ConfirmationModal
