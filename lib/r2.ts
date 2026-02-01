@@ -6,6 +6,7 @@ const hasR2Credentials = !!(
     process.env.R2_SECRET_ACCESS_KEY
 );
 
+// Helper to avoid build-time errors if crendentials are missing
 export const r2Client = hasR2Credentials
     ? new S3Client({
         region: "auto",

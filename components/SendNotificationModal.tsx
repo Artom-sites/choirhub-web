@@ -42,7 +42,7 @@ export default function SendNotificationModal({ isOpen, onClose }: SendNotificat
                 throw new Error(data.error || "Failed to send");
             }
 
-            setToast({ message: `Надіслано успішно: ${data.count}, помилок: ${data.failed}`, type: "success" });
+            setToast({ message: "Сповіщення надіслано", type: "success" });
 
             setTimeout(() => {
                 onClose();

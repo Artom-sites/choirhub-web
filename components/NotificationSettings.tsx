@@ -32,12 +32,12 @@ export default function NotificationSettings() {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     {isGranted ? (
-                        <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                            <Bell className="w-5 h-5 text-green-400" />
+                        <div className="w-12 h-12 rounded-2xl bg-green-500/20 flex items-center justify-center">
+                            <Bell className="w-6 h-6 text-green-400" />
                         </div>
                     ) : (
-                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
-                            <BellOff className="w-5 h-5 text-text-secondary" />
+                        <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center">
+                            <BellOff className="w-6 h-6 text-text-secondary" />
                         </div>
                     )}
                     <div>
