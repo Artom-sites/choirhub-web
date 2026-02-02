@@ -250,8 +250,17 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
 
     return (
         <div className="flex flex-col h-full">
-            <div className="sticky top-[64px] z-10 bg-background/95 backdrop-blur-lg pb-4 border-b border-border -mx-4 px-4">
-                <h2 className="text-xl font-bold mb-4 pt-4 text-text-primary">Архів МХО</h2>
+            <div className="sticky top-[64px] z-10 bg-background/95 backdrop-blur-lg pb-2 border-b border-border -mx-4 px-4">
+                <div className="flex items-center justify-between pt-4 mb-4">
+                    <h2 className="text-xl font-bold text-text-primary">Архів МХО</h2>
+                    <span className="text-sm text-text-secondary">
+                        {searchQuery || activeFiltersCount > 0 ? (
+                            <>Знайдено: <strong className="text-text-primary">{filteredSongs.length}</strong> з {songs.length}</>
+                        ) : (
+                            <><strong className="text-text-primary">{songs.length}</strong> пісень</>
+                        )}
+                    </span>
+                </div>
 
                 {/* Search Bar with Filter Toggle */}
                 <div className="flex gap-2 mb-4">
@@ -390,16 +399,8 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                     )}
                 </AnimatePresence>
 
-                {/* Song count - ALWAYS SHOWS TRUE COUNT */}
-                <div className="flex items-center justify-between mb-2 px-2">
-                    <span className="text-sm text-text-secondary">
-                        {searchQuery || activeFiltersCount > 0 ? (
-                            <>Знайдено: <strong className="text-text-primary">{filteredSongs.length}</strong> з {songs.length}</>
-                        ) : (
-                            <>Всього: <strong className="text-text-primary">{songs.length}</strong> пісень</>
-                        )}
-                    </span>
-                    {activeFiltersCount > 0 && (
+                {activeFiltersCount > 0 && (
+                    <div className="flex justify-end mb-2 px-2">
                         <button
                             onClick={() => {
                                 setSelectedLanguage('all');
@@ -411,12 +412,12 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                         >
                             <X className="w-3 h-3" /> Скинути фільтри
                         </button>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
 
             {/* Song List */}
-            <div className="flex-1 overflow-y-auto space-y-2">
+            <div className="flex-1 overflow-y-auto space-y-2 pt-4">
                 {/* ... (Existing List Logic) ... */}
                 {loading ? (
                     <ArchiveLoader />

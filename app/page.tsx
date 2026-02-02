@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon, mergeMembers, updateChoir, deleteUserAccount, deleteAdminCode, getChoirNotifications } from "@/lib/db";
 import { Service, Choir, UserMembership, ChoirMember, Permission, AdminCode } from "@/types";
 import SongList from "@/components/SongList";
@@ -24,9 +25,9 @@ import NotificationsModal from "@/components/NotificationsModal";
 import DeleteAccountModal from "@/components/DeleteAccountModal";
 import ConfirmationModal from "@/components/ConfirmationModal";
 import {
-  Music2, Loader2, Copy, Check, HelpCircle,
-  LogOut, ChevronLeft, Home, User, Users, Repeat,
-  PlusCircle, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon
+  Music2, Loader2, Copy, Check, HelpCircle, Mail, Shield,
+  LogOut, ChevronLeft, ChevronRight, Home, User, Users, Repeat,
+  PlusCircle, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor
 } from "lucide-react";
 import SendNotificationModal from "@/components/SendNotificationModal";
 import { collection as firestoreCollection, addDoc, getDocs, where, query, doc, updateDoc, arrayUnion, onSnapshot } from "firebase/firestore";
@@ -37,6 +38,7 @@ function HomePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, userData, loading: authLoading, signOut, refreshProfile } = useAuth();
+  const { theme, setTheme } = useTheme();
 
 
 
@@ -937,20 +939,44 @@ function HomePageContent() {
           <div className="max-w-md mx-auto w-full h-full flex flex-col p-6 overflow-y-auto">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-3xl font-bold text-text-primary tracking-tight">Акаунт</h2>
-              <button
-                onClick={() => setShowNotificationModal(true)}
-                className="p-2 rounded-full hover:bg-surface-highlight transition-colors relative"
-                title="Сповіщення"
-              >
-                {unreadNotifications > 0 ? (
-                  <>
+              <div className="flex items-center gap-3">
+                {/* Theme Toggle in Header */}
+                <div className="flex items-center gap-1 bg-surface-highlight/50 rounded-full p-1 mr-2">
+                  <button
+                    onClick={() => setTheme('light')}
+                    className={`p-1.5 rounded-full transition-all ${theme === 'light' ? 'bg-surface text-primary shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
+                  >
+                    <Sun className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setTheme('dark')}
+                    className={`p-1.5 rounded-full transition-all ${theme === 'dark' ? 'bg-surface text-primary shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
+                  >
+                    <Moon className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setTheme('system')}
+                    className={`p-1.5 rounded-full transition-all ${theme === 'system' ? 'bg-surface text-primary shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
+                  >
+                    <Monitor className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => setShowNotificationModal(true)}
+                  className="p-2 rounded-full hover:bg-surface-highlight transition-colors relative"
+                  title="Сповіщення"
+                >
+                  {unreadNotifications > 0 ? (
+                    <>
+                      <Bell className="w-5 h-5 text-text-secondary" />
+                      <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-green-500 border-2 border-background rounded-full" />
+                    </>
+                  ) : (
                     <Bell className="w-5 h-5 text-text-secondary" />
-                    <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-green-500 border-2 border-background rounded-full" />
-                  </>
-                ) : (
-                  <Bell className="w-5 h-5 text-text-secondary" />
-                )}
-              </button>
+                  )}
+                </button>
+              </div>
             </div>
 
             <div className="space-y-6 flex-1">
@@ -998,122 +1024,130 @@ function HomePageContent() {
 
               {/* Codes for admin */}
               {(userData?.role === 'head' || userData?.role === 'regent') && choir && (
-                <div className="space-y-3 pt-4">
-                  <div className="flex items-center justify-between pl-2">
-                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest">Коди доступу</h3>
+                <div className="pt-6 border-t border-border mt-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm text-text-secondary">Коди доступу</h3>
                     <button
                       onClick={() => setShowAdminCodeModal(true)}
-                      className="p-1.5 hover:bg-surface-highlight rounded-lg text-text-secondary hover:text-text-primary transition-colors flex items-center gap-1"
-                      title="Створити адмін-код"
+                      className="text-xs text-accent hover:underline flex items-center gap-1"
                     >
-                      <PlusCircle className="w-4 h-4" />
+                      <PlusCircle className="w-3 h-3" />
+                      Додати
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-3">
                     <button
                       onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.memberCode}`)}
-                      className="flex flex-col items-start gap-1 p-4 bg-surface hover:bg-surface-highlight rounded-2xl transition-all card-shadow group"
+                      className="w-full flex items-center justify-between py-2 group"
                     >
-                      <div className="flex items-center justify-between w-full">
-                        <span className="text-xs text-text-secondary">Хористи</span>
-                        {copiedCode === `https://${window.location.host}/setup?code=${choir.memberCode}` ? <Check className="w-4 h-4 text-success" /> : <Link2 className="w-4 h-4 text-text-secondary group-hover:text-accent" />}
+                      <div className="flex items-center gap-3">
+                        <span className="text-text-secondary text-sm">Хористи</span>
+                        <code className="text-lg font-mono font-bold text-text-primary">{choir.memberCode}</code>
                       </div>
-                      <code className="text-lg font-mono font-bold text-text-primary">{choir.memberCode}</code>
+                      {copiedCode === `https://${window.location.host}/setup?code=${choir.memberCode}`
+                        ? <Check className="w-4 h-4 text-success" />
+                        : <Link2 className="w-4 h-4 text-text-secondary group-hover:text-accent transition-colors" />}
                     </button>
 
                     <button
                       onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.regentCode}`)}
-                      className="flex flex-col items-start gap-1 p-4 bg-surface hover:bg-surface-highlight rounded-2xl transition-all card-shadow group"
+                      className="w-full flex items-center justify-between py-2 group"
                     >
-                      <div className="flex items-center justify-between w-full">
-                        <span className="text-xs text-text-secondary">Регенти</span>
-                        {copiedCode === `https://${window.location.host}/setup?code=${choir.regentCode}` ? <Check className="w-4 h-4 text-success" /> : <Link2 className="w-4 h-4 text-text-secondary group-hover:text-accent" />}
+                      <div className="flex items-center gap-3">
+                        <span className="text-text-secondary text-sm">Регенти</span>
+                        <code className="text-lg font-mono font-bold text-text-primary">{choir.regentCode}</code>
                       </div>
-                      <code className="text-lg font-mono font-bold text-text-primary">{choir.regentCode}</code>
+                      {copiedCode === `https://${window.location.host}/setup?code=${choir.regentCode}`
+                        ? <Check className="w-4 h-4 text-success" />
+                        : <Link2 className="w-4 h-4 text-text-secondary group-hover:text-accent transition-colors" />}
                     </button>
-                  </div>
 
-                  {/* Admin Codes List (Compact) */}
-                  {choir.adminCodes && choir.adminCodes.length > 0 && (
-                    <div className="grid grid-cols-2 gap-2 mt-2">
-                      {choir.adminCodes.map((ac, idx) => (
-                        <SwipeableCard
-                          key={idx}
-                          onDelete={() => setDeletingAdminCode(ac.code)}
-                          disabled={false}
-                          className="rounded-xl"
+                    {/* Admin Codes - inline */}
+                    {choir.adminCodes && choir.adminCodes.length > 0 && choir.adminCodes.map((ac, idx) => (
+                      <SwipeableCard
+                        key={idx}
+                        onDelete={() => setDeletingAdminCode(ac.code)}
+                        disabled={false}
+                      >
+                        <button
+                          onClick={() => copyCode(`https://${window.location.host}/setup?code=${ac.code}`)}
+                          className="w-full flex items-center justify-between py-2 group"
                         >
-                          <div className="bg-surface/50 border border-border/50 p-2 rounded-xl flex flex-col group hover:bg-surface transition-colors h-full">
-                            <div className="flex items-start justify-between">
-                              <div className="flex flex-col min-w-0">
-                                <span className="text-[9px] text-text-secondary uppercase tracking-wider truncate">{ac.label || 'Адмін'}</span>
-                                <code className="text-xs font-mono font-bold text-text-primary">{ac.code}</code>
-                              </div>
-                              <button
-                                onClick={() => copyCode(`https://${window.location.host}/setup?code=${ac.code}`)}
-                                className="p-1 text-text-secondary hover:text-text-primary transition-colors flex-shrink-0"
-                              >
-                                {copiedCode === `https://${window.location.host}/setup?code=${ac.code}` ? <Check className="w-3 h-3 text-success" /> : <Link2 className="w-3 h-3" />}
-                              </button>
-                            </div>
-                            <div className="flex gap-1 mt-1">
-                              {ac.permissions.map(p => (
-                                <div key={p} className="w-1 h-1 rounded-full bg-accent/40" title={p} />
-                              ))}
-                            </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-text-secondary text-sm">{ac.label || 'Адмін'}</span>
+                            <code className="text-sm font-mono font-bold text-text-primary">{ac.code}</code>
                           </div>
-                        </SwipeableCard>
-                      ))}
-                    </div>
-                  )}
+                          {copiedCode === `https://${window.location.host}/setup?code=${ac.code}`
+                            ? <Check className="w-4 h-4 text-success" />
+                            : <Link2 className="w-4 h-4 text-text-secondary group-hover:text-accent transition-colors" />}
+                        </button>
+                      </SwipeableCard>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
 
-            {/* Theme Settings */}
-            <div className="mt-6">
-              <ThemeSettings />
+
+
+
+            {/* Про застосунок Section */}
+            <div className="mt-8">
+              <p className="text-sm text-text-secondary mb-4">Про застосунок</p>
+
+              <a
+                href="mailto:artom.devv@gmail.com?subject=ChoirHub%20Підтримка"
+                className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
+              >
+                <Mail className="w-5 h-5 text-text-secondary" />
+                <span>Служба підтримки</span>
+              </a>
+
+              <button
+                onClick={() => setShowLegalModal(true)}
+                className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
+              >
+                <Shield className="w-5 h-5 text-text-secondary" />
+                <span>Політика конфіденційності</span>
+              </button>
+
+              <button
+                onClick={() => setShowHelpModal(true)}
+                className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
+              >
+                <FileText className="w-5 h-5 text-text-secondary" />
+                <span>Умови використання</span>
+              </button>
+
+              <button
+                onClick={() => setShowLogoutConfirm(true)}
+                className="w-full py-4 text-left text-lg font-medium text-text-secondary hover:text-text-primary border-t border-border transition-all flex items-center gap-4 group"
+              >
+                <LogOut className="w-5 h-5" />
+                <span>Вийти з акаунту</span>
+              </button>
             </div>
 
-
-            <button
-              onClick={() => setShowHelpModal(true)}
-              className="w-full py-4 bg-surface text-text-primary hover:bg-surface rounded-xl font-bold transition-all mt-4 flex items-center justify-center gap-2 card-shadow"
-            >
-              <HelpCircle className="w-5 h-5 text-accent" />
-              Довідка
-            </button>
-
-            <button
-              onClick={() => setShowLegalModal(true)}
-              className="w-full py-4 bg-surface text-text-primary hover:bg-surface rounded-xl font-bold transition-all mt-3 flex items-center justify-center gap-2 card-shadow"
-            >
-              <FileText className="w-5 h-5 text-text-secondary" />
-              Sources & Content (Legal)
-            </button>
-
+            {/* Підтримати - окремий виділений блок */}
             <button
               onClick={() => setShowSupportModal(true)}
-              className="w-full py-4 bg-pink-500/10 text-pink-500 hover:bg-pink-500/15 rounded-xl font-bold transition-all mt-3 flex items-center justify-center gap-2 group"
+              className="w-full mt-8 py-4 px-5 bg-gradient-to-r from-pink-500/10 to-purple-500/10 border border-pink-400/30 rounded-2xl text-left transition-all hover:from-pink-500/20 hover:to-purple-500/20 flex items-center gap-4 group"
             >
-              <Heart className="w-5 h-5 text-pink-500 group-hover:scale-110 transition-transform" />
-              Підтримати проєкт
-            </button>
-
-            <button
-              onClick={() => setShowLogoutConfirm(true)}
-              className="w-full py-4 bg-surface text-text-primary hover:bg-surface rounded-xl font-bold transition-all mt-6 flex items-center justify-center gap-2 card-shadow"
-            >
-              <LogOut className="w-5 h-5" />
-              Вийти з акаунту
+              <div className="w-10 h-10 rounded-full bg-pink-500/20 flex items-center justify-center">
+                <Heart className="w-5 h-5 text-pink-400" />
+              </div>
+              <div>
+                <span className="text-lg font-medium text-pink-400">Підтримати проєкт</span>
+                <p className="text-xs text-text-secondary mt-0.5">Допоможіть розвивати застосунок</p>
+              </div>
             </button>
 
             {/* Delete Account Button */}
-            <div className="mt-8 pt-4">
+            <div className="mt-8 pt-4 border-t border-border">
               <button
                 onClick={() => setShowDeleteModal(true)}
-                className="w-full py-3 text-danger hover:bg-danger/10 rounded-xl text-sm font-bold transition-all"
+                className="w-full py-3 text-danger hover:bg-danger/10 rounded-xl text-sm transition-all"
               >
                 Видалити акаунт
               </button>
