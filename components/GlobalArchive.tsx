@@ -250,8 +250,8 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
 
     return (
         <div className="flex flex-col h-full">
-            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-lg pb-4">
-                <h2 className="text-xl font-bold mb-4">Архів МХО</h2>
+            <div className="sticky top-[64px] z-10 bg-background/95 backdrop-blur-lg pb-4 border-b border-border -mx-4 px-4">
+                <h2 className="text-xl font-bold mb-4 pt-4 text-text-primary">Архів МХО</h2>
 
                 {/* Search Bar with Filter Toggle */}
                 <div className="flex gap-2 mb-4">

@@ -170,33 +170,33 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
         <div className="max-w-5xl mx-auto px-4 py-4 space-y-6 pb-32">
 
             {/* Header with Archive Toggle */}
-            <div className="flex items-center justify-between">
-                <h2 className="text-sm font-bold text-text-secondary uppercase tracking-widest pl-2">
+            <div className="flex items-center justify-between bg-surface rounded-2xl p-4 card-shadow">
+                <h2 className="text-sm font-bold text-text-primary uppercase tracking-widest">
                     {showArchive ? 'Архів служінь' : 'Найближчі служіння'}
                 </h2>
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setShowArchive(!showArchive)}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${showArchive ? 'bg-primary text-background' : 'bg-surface text-text-secondary card-shadow'}`}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${showArchive ? 'bg-primary text-background' : 'bg-surface-highlight text-text-secondary border border-border'}`}
                     >
                         {showArchive ? 'Актуальні' : 'Архів'}
                     </button>
                     {effectiveCanEdit && !showArchive && (
                         <button
                             onClick={() => setShowTrashBin(true)}
-                            className="p-2 rounded-xl text-text-secondary hover:text-red-400 hover:bg-surface-highlight transition-colors"
+                            className="p-2.5 rounded-xl text-text-secondary hover:text-red-400 bg-surface-highlight border border-border hover:border-red-400/30 transition-colors"
                             title="Корзина"
                         >
-                            <Trash2 className="w-5 h-5" />
+                            <Trash2 className="w-4 h-4" />
                         </button>
                     )}
                     {effectiveCanEdit && !showArchive && (
                         <button
                             onClick={() => setShowCreateModal(true)}
-                            className="bg-zinc-900 text-white hover:bg-zinc-800 p-2 rounded-xl transition-colors shadow-md"
+                            className="bg-primary text-background p-2.5 rounded-xl transition-colors shadow-md hover:opacity-90"
                             title="Додати служіння"
                         >
-                            <Plus className="w-5 h-5" />
+                            <Plus className="w-4 h-4" />
                         </button>
                     )}
                 </div>

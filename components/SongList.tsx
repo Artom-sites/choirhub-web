@@ -286,8 +286,8 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
 
                     </div>
                     {/* Search & Filter - iOS Style */}
-                    <div className="sticky top-[72px] z-20 -mx-4 bg-background/95 backdrop-blur-xl border-none transition-all">
-                        <div className="px-4 space-y-4">
+                    <div className="sticky top-[64px] z-20 -mx-4 px-4 py-4 bg-background/95 backdrop-blur-xl border-b border-border">
+                        <div className="space-y-4">
                             {/* Search Bar */}
                             <div className="relative flex-1 group">
                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
@@ -309,7 +309,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                             </div>
 
                             {/* Filter Chips */}
-                            <div className="flex overflow-x-auto gap-2 scrollbar-hide -mx-4 px-4">
+                            <div className="flex overflow-x-auto gap-2 scrollbar-hide -mx-4 px-4 pb-1">
                                 <button
                                     onClick={() => setSelectedCategory("All")}
                                     className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedCategory === "All"
