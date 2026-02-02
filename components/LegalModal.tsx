@@ -1,6 +1,6 @@
 "use client";
 
-import { X, ExternalLink, ShieldAlert, FileText, Music2 } from "lucide-react";
+import { X, ExternalLink, ShieldAlert, FileText, Music2, Scale, Lock, Copyright } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface LegalModalProps {
@@ -30,7 +30,7 @@ export default function LegalModal({ isOpen, onClose }: LegalModalProps) {
                 >
                     {/* Header */}
                     <div className="p-6 border-b border-white/5 flex items-center justify-between bg-[#18181b] sticky top-0 z-10">
-                        <h2 className="text-xl font-bold text-white tracking-tight">Sources & Content</h2>
+                        <h2 className="text-xl font-bold text-white tracking-tight">Джерела та контент</h2>
                         <button
                             onClick={onClose}
                             className="p-2 bg-white/5 hover:bg-white/10 rounded-full transition-colors text-text-secondary hover:text-white"
@@ -39,22 +39,22 @@ export default function LegalModal({ isOpen, onClose }: LegalModalProps) {
                         </button>
                     </div>
 
-                    <div className="p-6 overflow-y-auto space-y-8">
+                    <div className="p-6 overflow-y-auto space-y-6">
                         {/* Section 1: Song Catalog */}
-                        <section className="space-y-4">
-                            <div className="flex items-center gap-2 text-white font-bold text-lg">
+                        <section className="space-y-3">
+                            <div className="flex items-center gap-2 text-white font-bold text-base">
                                 <Music2 className="w-5 h-5 text-indigo-400" />
-                                <h3>Song catalog</h3>
+                                <h3>Каталог пісень</h3>
                             </div>
                             <div className="p-4 bg-white/5 rounded-2xl border border-white/5 space-y-3">
                                 <p className="text-sm text-text-secondary leading-relaxed">
                                     Каталог пісень у застосунку сформовано на основі відкритих матеріалів,
-                                    опублікованих Музично-хоровим відділом МСЦ ЄХБ,
-                                    та призначених для вільного використання в церковному служінні.
+                                    опублікованих Музично-хоровим відділом МСЦ ЄХБ (Міжнародний союз церков
+                                    євангельських християн-баптистів).
                                 </p>
                                 <p className="text-sm text-text-secondary leading-relaxed">
-                                    Застосунок не є власником музичних творів
-                                    і не обмежує доступ до першоджерел.
+                                    Ці матеріали призначені для вільного використання в церковному служінні
+                                    та доступні на офіційному сайті організації.
                                 </p>
                                 <a
                                     href="https://mscmusic.org"
@@ -68,34 +68,98 @@ export default function LegalModal({ isOpen, onClose }: LegalModalProps) {
                             </div>
                         </section>
 
-                        {/* Section 2: User Content */}
-                        <section className="space-y-4">
-                            <div className="flex items-center gap-2 text-white font-bold text-lg">
-                                <FileText className="w-5 h-5 text-amber-400" />
-                                <h3>User content</h3>
+                        {/* Section 2: Copyright */}
+                        <section className="space-y-3">
+                            <div className="flex items-center gap-2 text-white font-bold text-base">
+                                <Copyright className="w-5 h-5 text-purple-400" />
+                                <h3>Авторські права</h3>
                             </div>
-                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5 space-y-3">
                                 <p className="text-sm text-text-secondary leading-relaxed">
-                                    Користувачі можуть додавати власні матеріали
-                                    (ноти, тексти, PDF-файли) для приватного використання
-                                    в межах свого хору або церковної спільноти.
+                                    Застосунок не є власником музичних творів і не претендує на авторські права.
+                                    Всі права на оригінальні твори належать їх авторам та правовласникам.
+                                </p>
+                                <p className="text-sm text-text-secondary leading-relaxed">
+                                    Ми лише надаємо зручний інтерфейс для доступу до матеріалів,
+                                    які вже є у відкритому доступі.
                                 </p>
                             </div>
                         </section>
 
-                        {/* Section 3: Responsibility */}
-                        <section className="space-y-4">
-                            <div className="flex items-center gap-2 text-white font-bold text-lg">
-                                <ShieldAlert className="w-5 h-5 text-emerald-400" />
-                                <h3>Responsibility</h3>
+                        {/* Section 3: User Content */}
+                        <section className="space-y-3">
+                            <div className="flex items-center gap-2 text-white font-bold text-base">
+                                <FileText className="w-5 h-5 text-amber-400" />
+                                <h3>Користувацький контент</h3>
                             </div>
-                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5 space-y-3">
                                 <p className="text-sm text-text-secondary leading-relaxed">
-                                    Користувачі несуть відповідальність за контент,
-                                    який вони додають або використовують у застосунку,
-                                    та підтверджують, що мають право на його використання
-                                    в межах церковного служіння.
+                                    Користувачі можуть додавати власні матеріали (ноти, тексти, PDF-файли, аудіо)
+                                    для використання в межах свого хору або церковної спільноти.
                                 </p>
+                                <p className="text-sm text-text-secondary leading-relaxed">
+                                    Завантажений контент зберігається на захищених серверах і доступний
+                                    лише учасникам відповідного хору.
+                                </p>
+                            </div>
+                        </section>
+
+                        {/* Section 4: Data Protection */}
+                        <section className="space-y-3">
+                            <div className="flex items-center gap-2 text-white font-bold text-base">
+                                <Lock className="w-5 h-5 text-cyan-400" />
+                                <h3>Захист даних</h3>
+                            </div>
+                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5 space-y-3">
+                                <p className="text-sm text-text-secondary leading-relaxed">
+                                    Ваші дані зашифровані та зберігаються на серверах Google Firebase
+                                    та Cloudflare з дотриманням стандартів GDPR.
+                                </p>
+                                <p className="text-sm text-text-secondary leading-relaxed">
+                                    Ми не передаємо ваші персональні дані третім сторонам
+                                    для маркетингових або комерційних цілей.
+                                </p>
+                            </div>
+                        </section>
+
+                        {/* Section 5: Responsibility */}
+                        <section className="space-y-3">
+                            <div className="flex items-center gap-2 text-white font-bold text-base">
+                                <ShieldAlert className="w-5 h-5 text-emerald-400" />
+                                <h3>Відповідальність</h3>
+                            </div>
+                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5 space-y-3">
+                                <p className="text-sm text-text-secondary leading-relaxed">
+                                    Користувачі несуть відповідальність за контент, який вони додають
+                                    або використовують у застосунку.
+                                </p>
+                                <p className="text-sm text-text-secondary leading-relaxed">
+                                    Завантажуючи матеріали, ви підтверджуєте, що маєте право
+                                    на їх використання в межах церковного служіння та некомерційних цілей.
+                                </p>
+                            </div>
+                        </section>
+
+                        {/* Section 6: Legal */}
+                        <section className="space-y-3">
+                            <div className="flex items-center gap-2 text-white font-bold text-base">
+                                <Scale className="w-5 h-5 text-rose-400" />
+                                <h3>Правова інформація</h3>
+                            </div>
+                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5 space-y-3">
+                                <p className="text-sm text-text-secondary leading-relaxed">
+                                    Детальну інформацію про обробку персональних даних
+                                    можна знайти в нашій Політиці конфіденційності.
+                                </p>
+                                <a
+                                    href="/privacy"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-2 text-xs font-bold text-rose-400 hover:text-rose-300 transition-colors uppercase tracking-wider"
+                                >
+                                    Політика конфіденційності
+                                    <ExternalLink className="w-3 h-3" />
+                                </a>
                             </div>
                         </section>
                     </div>

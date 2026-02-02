@@ -156,6 +156,7 @@ export default function PrivacyPage() {
                     </p>
                     <ul className="list-none space-y-1 mt-2">
                         <li><strong>Email:</strong> artom.devv@gmail.com</li>
+                        <li><strong>Telegram:</strong> <a href="https://t.me/artom_dev" className="text-blue-400 hover:underline">@artom_dev</a></li>
                         <li><strong>Сайт:</strong> <a href="https://artom.dev" className="text-blue-400 hover:underline">artom.dev</a></li>
                     </ul>
                     <p className="mt-4 text-sm">
