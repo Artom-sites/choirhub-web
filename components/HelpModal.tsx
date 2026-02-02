@@ -166,14 +166,18 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                                         </ul>
                                     </div>
 
-                                    <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/20">
+                                    <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
                                         <div className="flex items-center gap-3 mb-2">
-                                            <User className="w-5 h-5 text-cyan-400" />
-                                            <h4 className="font-bold text-white">Голова партії</h4>
+                                            <User className="w-5 h-5 text-emerald-400" />
+                                            <h4 className="font-bold text-white">Помічник регента</h4>
                                         </div>
+                                        <p className="text-sm text-text-secondary mb-2">
+                                            Хорист з розширеними правами через Адмін-код:
+                                        </p>
                                         <ul className="text-sm text-text-secondary space-y-2 list-disc pl-5">
-                                            <li>Права звичайного хориста</li>
-                                            <li>Може відмічати присутність хористів своєї партії</li>
+                                            <li>Може додавати пісні до репертуару</li>
+                                            <li>Може бачити статистику відвідувань</li>
+                                            <li>Може редагувати служіння</li>
                                         </ul>
                                     </div>
 
@@ -188,21 +192,6 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                                             <li>Завантаження PDF та аудіо</li>
                                             <li>Синхронізація (офлайн режим)</li>
                                         </ul>
-                                    </div>
-
-                                    <div className="p-4 rounded-2xl bg-orange-500/10 border border-orange-500/20">
-                                        <div className="flex items-center gap-3 mb-2">
-                                            <Settings className="w-5 h-5 text-orange-400" />
-                                            <h4 className="font-bold text-white">Спеціальні права (Адмін-коди)</h4>
-                                        </div>
-                                        <p className="text-sm text-text-secondary mb-3">
-                                            Регент може надати окремі права хористу через спеціальні коди:
-                                        </p>
-                                        <div className="flex flex-wrap gap-2">
-                                            <span className="text-[10px] px-2 py-1 bg-orange-500/20 text-orange-300 rounded-lg">Бачити статистику</span>
-                                            <span className="text-[10px] px-2 py-1 bg-orange-500/20 text-orange-300 rounded-lg">Додавати пісні</span>
-                                            <span className="text-[10px] px-2 py-1 bg-orange-500/20 text-orange-300 rounded-lg">Редагувати служіння</span>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
