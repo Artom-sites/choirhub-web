@@ -206,7 +206,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
     }
 
     return (
-        <div className="max-w-5xl mx-auto px-4 pt-6 space-y-4 pb-32">
+        <div className="max-w-5xl mx-auto px-4 pt-6 space-y-5 pb-32">
             {/* Sub-Tab Switcher */}
             <div className="flex bg-surface rounded-xl p-1 card-shadow">
                 <button
@@ -231,7 +231,6 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                 </button>
             </div>
 
-            {/* Trash Bin Toggle (Only for Regnets) */}
 
             {/* Catalog View */}
             {subTab === 'catalog' ? (
@@ -285,7 +284,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                         </div>
                     </div>
                     {/* Search & Filter - iOS Style */}
-                    <div className="sticky top-[64px] z-20 -mx-4 px-4 py-4 bg-background/95 backdrop-blur-xl border-b border-border">
+                    <div className="sticky top-[64px] z-20 -mx-4 px-4 pb-4 bg-background/95 backdrop-blur-xl border-b border-border">
                         <div className="space-y-4">
                             {/* Search Bar */}
                             <div className="relative flex-1 group">
