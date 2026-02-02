@@ -276,26 +276,26 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
     return (
         <div className="pb-32 bg-background min-h-screen">
             {/* Header */}
-            <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-white/5 px-4 pt-12 pb-4 flex items-center gap-4">
+            <div className="sticky top-0 z-20 bg-surface border-b border-border px-4 pt-12 pb-4 flex items-center gap-4">
                 <button
                     onClick={onBack}
-                    className="p-2 -ml-2 text-text-secondary hover:text-white rounded-full hover:bg-white/5 transition-colors"
+                    className="p-2 -ml-2 text-text-secondary hover:text-text-primary rounded-full hover:bg-surface-highlight transition-colors"
                 >
                     <ChevronLeft className="w-6 h-6" />
                 </button>
                 <div className="flex-1">
-                    <h1 className="text-xl font-bold text-white leading-tight">{currentService.title}</h1>
+                    <h1 className="text-xl font-bold text-text-primary leading-tight">{currentService.title}</h1>
                 </div>
             </div>
 
             <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
 
                 {/* Date Badge - Compact */}
-                <div className="flex items-center gap-3 text-text-secondary bg-surface/50 p-3 rounded-2xl border border-white/5">
+                <div className="flex items-center gap-3 text-text-secondary bg-surface/50 p-3 rounded-2xl border border-border">
                     <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
                         <Calendar className="w-4 h-4 text-blue-400" />
                     </div>
-                    <p className="text-white font-medium text-sm">
+                    <p className="text-text-primary font-medium text-sm">
                         {new Date(currentService.date).toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' })}
                         {currentService.time && <span className="text-blue-400 ml-2">о {currentService.time}</span>}
                     </p>
@@ -317,12 +317,12 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                     </div>
 
                     {currentService.songs.length === 0 ? (
-                        <div className="text-center py-10 bg-surface border border-white/5 rounded-3xl flex flex-col items-center justify-center gap-3">
-                            <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center text-text-secondary">
+                        <div className="text-center py-10 bg-surface border border-border rounded-3xl flex flex-col items-center justify-center gap-3">
+                            <div className="w-16 h-16 rounded-full flex items-center justify-center transition-colors glass-frost-circle text-zinc-700">
                                 <Music className="w-8 h-8" />
                             </div>
                             <div>
-                                <p className="text-white font-medium">Список порожній</p>
+                                <p className="text-text-primary font-medium">Список порожній</p>
                                 <p className="text-sm text-text-secondary">Додайте пісні до цього служіння</p>
                             </div>
                         </div>
@@ -339,13 +339,13 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                         disabled={!canEdit}
                                         className="rounded-2xl"
                                     >
-                                        <div className="flex items-center gap-4 bg-surface hover:bg-surface-highlight border border-white/5 p-4 rounded-2xl group transition-colors">
-                                            <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-xs font-mono text-text-secondary">
+                                        <div className="flex items-center gap-4 bg-surface hover:bg-surface-highlight border border-border p-4 rounded-2xl group transition-colors">
+                                            <div className="w-8 h-8 rounded-full bg-surface-highlight flex items-center justify-center text-xs font-mono text-text-secondary">
                                                 {index + 1}
                                             </div>
 
                                             <div className="flex-1 min-w-0" onClick={() => handleViewPdf(song.songId)}>
-                                                <h3 className="text-white font-medium truncate text-lg">{song.songTitle}</h3>
+                                                <h3 className="text-text-primary font-medium truncate text-lg">{song.songTitle}</h3>
                                                 {/* Credits Display */}
                                                 <div className="flex flex-wrap gap-2 mt-1">
                                                     {song.performedBy && (
@@ -371,7 +371,7 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                                         e.stopPropagation();
                                                         openEditCredits(index);
                                                     }}
-                                                    className="p-3 text-text-secondary hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-colors"
+                                                    className="p-3 text-text-secondary hover:text-text-primary bg-surface-highlight hover:bg-surface-highlight/80 rounded-xl transition-colors"
                                                 >
                                                     <UserIcon className="w-5 h-5" />
                                                 </button>
@@ -387,7 +387,7 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                     {canEdit && currentService.songs.length > 0 && (
                         <button
                             onClick={() => setShowAddSong(true)}
-                            className="w-full py-4 border border-dashed border-white/10 rounded-3xl text-text-secondary hover:text-white hover:bg-white/5 transition-all flex items-center justify-center gap-2"
+                            className="w-full py-4 border border-dashed border-border rounded-3xl text-text-secondary hover:text-text-primary hover:bg-surface-highlight transition-all flex items-center justify-center gap-2"
                         >
                             <Plus className="w-5 h-5" />
                             Додати ще пісню
@@ -397,7 +397,7 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
 
                 {/* Voting Section - Compact */}
                 {isFuture && (
-                    <div className="bg-surface border border-white/5 rounded-2xl p-4">
+                    <div className="bg-surface border border-border rounded-2xl p-4">
                         <h3 className="text-xs font-bold text-text-secondary uppercase tracking-wide mb-3">Ваша участь</h3>
                         <div className="grid grid-cols-2 gap-2">
                             <button
@@ -405,10 +405,10 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                 disabled={votingLoading}
                                 className={`p-3 rounded-xl border-2 transition-all flex items-center justify-center gap-2 ${myStatus === 'present'
                                     ? 'bg-green-500/20 border-green-500'
-                                    : 'bg-black/20 border-white/5 hover:border-white/20'
+                                    : 'bg-black/5 dark:bg-black/20 border-border hover:border-border/50'
                                     }`}
                             >
-                                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${myStatus === 'present' ? 'bg-green-500 text-black' : 'bg-white/10 text-text-secondary'}`}>
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${myStatus === 'present' ? 'bg-green-500 text-black' : 'bg-surface-highlight text-text-secondary'}`}>
                                     <Check className="w-4 h-4" strokeWidth={3} />
                                 </div>
                                 <span className={`text-sm font-bold ${myStatus === 'present' ? 'text-green-400' : 'text-text-secondary'}`}>Буду</span>
@@ -419,10 +419,10 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                 disabled={votingLoading}
                                 className={`p-3 rounded-xl border-2 transition-all flex items-center justify-center gap-2 ${myStatus === 'absent'
                                     ? 'bg-red-500/20 border-red-500'
-                                    : 'bg-black/20 border-white/5 hover:border-white/20'
+                                    : 'bg-black/5 dark:bg-black/20 border-border hover:border-border/50'
                                     }`}
                             >
-                                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${myStatus === 'absent' ? 'bg-red-500 text-white' : 'bg-white/10 text-text-secondary'}`}>
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${myStatus === 'absent' ? 'bg-red-500 text-white' : 'bg-surface-highlight text-text-secondary'}`}>
                                     <X className="w-4 h-4" strokeWidth={3} />
                                 </div>
                                 <span className={`text-sm font-bold ${myStatus === 'absent' ? 'text-red-400' : 'text-text-secondary'}`}>Не буду</span>
@@ -433,26 +433,26 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
 
                 {/* Attendees Section - Simplified (no avatars, just counts) */}
                 {(canEdit || !isFuture) && (
-                    <div onClick={() => canEdit && setShowAttendance(true)} className={`p-4 bg-surface border border-white/5 rounded-2xl ${canEdit ? 'cursor-pointer hover:border-white/20 transition-colors' : ''}`}>
+                    <div onClick={() => canEdit && setShowAttendance(true)} className={`p-4 bg-surface border border-border rounded-2xl ${canEdit ? 'cursor-pointer hover:border-border/50 transition-colors' : ''}`}>
                         <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-2 text-white font-bold">
+                            <div className="flex items-center gap-2 text-text-primary font-bold">
                                 <Users className="w-5 h-5 text-indigo-400" />
                                 <span>Учасники</span>
                             </div>
-                            {canEdit && <span className="text-xs text-text-secondary bg-white/5 px-2 py-1 rounded-full">Переглянути</span>}
+                            {canEdit && <span className="text-xs text-text-secondary bg-surface-highlight px-2 py-1 rounded-full">Переглянути</span>}
                         </div>
 
                         {!membersLoading && (
                             <div className="flex items-center gap-4 mt-3 text-sm">
                                 <div className="flex items-center gap-1">
                                     <UserCheck className="w-4 h-4 text-green-400" />
-                                    <span className="text-white font-bold">{displayConfirmedCount}</span>
+                                    <span className="text-text-primary font-bold">{displayConfirmedCount}</span>
                                     <span className="text-text-secondary">буде</span>
                                 </div>
                                 {absentCount > 0 && (
                                     <div className="flex items-center gap-1">
                                         <UserX className="w-4 h-4 text-red-400" />
-                                        <span className="text-white font-bold">{absentCount}</span>
+                                        <span className="text-text-primary font-bold">{absentCount}</span>
                                         <span className="text-text-secondary">не буде</span>
                                     </div>
                                 )}
@@ -471,25 +471,25 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
             {/* Modals remain mostly simple, just style updates */}
             {/* Add Song Sheet - Full Screen Multiselect */}
             {showAddSong && (
-                <div className="fixed inset-0 z-[60] bg-[#09090b] flex flex-col animate-in slide-in-from-bottom duration-300">
-                    <div className="p-4 pt-safe border-b border-white/5 flex justify-between items-center bg-surface/50 backdrop-blur-xl sticky top-0 z-10">
+                <div className="fixed inset-0 z-[60] bg-background flex flex-col animate-in slide-in-from-bottom duration-300">
+                    <div className="p-4 pt-safe border-b border-border flex justify-between items-center bg-surface/50 backdrop-blur-xl sticky top-0 z-10">
                         <div className="flex items-center gap-3">
-                            <button onClick={() => setShowAddSong(false)} className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors text-white">
+                            <button onClick={() => setShowAddSong(false)} className="p-2 -ml-2 hover:bg-surface-highlight rounded-full transition-colors text-text-primary">
                                 <ChevronLeft className="w-6 h-6" />
                             </button>
                             <div>
-                                <h3 className="text-xl font-bold text-white">Додати пісні</h3>
+                                <h3 className="text-xl font-bold text-text-primary">Додати пісні</h3>
                                 <p className="text-xs text-text-secondary">Оберіть пісні зі списку</p>
                             </div>
                         </div>
                         <div className="w-10" /> {/* Spacer for balance */}
                     </div>
 
-                    <div className="p-4 bg-background sticky top-[73px] z-10 border-b border-white/5">
+                    <div className="p-4 bg-background sticky top-[73px] z-10 border-b border-border">
                         <input
                             type="text"
                             placeholder="Пошук пісні..."
-                            className="w-full px-5 py-4 bg-surface rounded-2xl text-white border border-white/5 focus:outline-none focus:border-white/20 text-lg placeholder:text-text-secondary/50"
+                            className="w-full px-5 py-4 bg-surface rounded-2xl text-text-primary border border-border focus:outline-none focus:border-border/50 text-lg placeholder:text-text-secondary/50"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
@@ -506,14 +506,14 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                     onClick={() => !alreadyInService && toggleSongSelection(song.id)}
                                     disabled={alreadyInService}
                                     className={`w-full text-left p-4 rounded-2xl border flex justify-between items-center group transition-all ${alreadyInService
-                                        ? 'bg-surface/50 border-white/5 opacity-50 cursor-not-allowed'
+                                        ? 'bg-surface/50 border-border opacity-50 cursor-not-allowed'
                                         : isSelected
                                             ? 'bg-blue-500/10 border-blue-500/50'
-                                            : 'bg-surface border-white/5 hover:bg-white/10'
+                                            : 'bg-surface border-border hover:bg-surface-highlight'
                                         }`}
                                 >
                                     <div className="flex-1 min-w-0 pr-4">
-                                        <div className={`font-medium text-lg leading-tight ${alreadyInService ? 'text-text-secondary' : isSelected ? 'text-blue-400' : 'text-white'}`}>{song.title}</div>
+                                        <div className={`font-medium text-lg leading-tight ${alreadyInService ? 'text-text-secondary' : isSelected ? 'text-blue-400' : 'text-text-primary'}`}>{song.title}</div>
                                         {alreadyInService ? (
                                             <div className="text-xs text-green-500 mt-1 flex items-center gap-1">
                                                 <Check className="w-3 h-3" />
@@ -529,7 +529,7 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                     {!alreadyInService && (
                                         <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${isSelected
                                             ? 'bg-blue-500 text-white'
-                                            : 'bg-white/5 text-text-secondary group-hover:bg-white/20'
+                                            : 'bg-surface-highlight text-text-secondary group-hover:bg-surface-highlight/80'
                                             }`}>
                                             {isSelected ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
                                         </div>
@@ -540,11 +540,11 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                     </div>
 
                     {/* Bottom Action Bar */}
-                    <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#09090b]/90 backdrop-blur-xl border-t border-white/5 pb-safe">
+                    <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/90 backdrop-blur-xl border-t border-border pb-safe">
                         <button
                             onClick={handleBatchAddSongs}
                             disabled={selectedSongsToService.length === 0}
-                            className="w-full py-4 bg-white text-black rounded-2xl font-bold text-lg hover:bg-gray-200 transition-colors shadow-lg disabled:opacity-50 disabled:bg-gray-600 disabled:text-gray-400 flex items-center justify-center gap-2"
+                            className="w-full py-4 bg-primary text-background rounded-2xl font-bold text-lg hover:opacity-90 transition-colors shadow-lg disabled:opacity-50 disabled:bg-surface-highlight disabled:text-text-secondary flex items-center justify-center gap-2"
                         >
                             Додати
                             {selectedSongsToService.length > 0 && (
@@ -559,19 +559,19 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
 
             {/* Attendance Sheet */}
             {showAttendance && (
-                <div className="fixed inset-0 z-50 bg-[#09090b] flex flex-col animate-in slide-in-from-bottom duration-300">
+                <div className="fixed inset-0 z-50 bg-background flex flex-col animate-in slide-in-from-bottom duration-300">
                     <div className="flex-1 overflow-hidden flex flex-col">
-                        <div className="p-6 border-b border-white/5 flex justify-between items-center bg-surface">
+                        <div className="p-6 border-b border-border flex justify-between items-center bg-surface">
                             <div className="space-y-1">
-                                <h3 className="text-xl font-bold text-white">Учасники</h3>
+                                <h3 className="text-xl font-bold text-text-primary">Учасники</h3>
                                 <p className="text-xs text-text-secondary">Натисніть щоб змінити статус</p>
                             </div>
-                            <button onClick={() => setShowAttendance(false)} className="p-2 bg-white/10 rounded-full hover:bg-white/20">
-                                <X className="w-6 h-6 text-white" />
+                            <button onClick={() => setShowAttendance(false)} className="p-2 bg-surface-highlight rounded-full hover:bg-surface-highlight/80">
+                                <X className="w-6 h-6 text-text-primary" />
                             </button>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-black/20">
+                        <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-background/50">
                             {choirMembers.map(member => {
                                 const isAbsent = absentMembers.includes(member.id);
                                 return (
@@ -580,15 +580,15 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                         onClick={() => toggleAbsent(member.id)}
                                         className={`w-full text-left p-4 rounded-2xl border flex justify-between items-center transition-all ${isAbsent
                                             ? 'bg-red-500/10 border-red-500/30'
-                                            : 'bg-surface border-white/5 hover:bg-white/10'
+                                            : 'bg-surface border-border hover:bg-surface-highlight'
                                             }`}
                                     >
                                         <div className="flex items-center gap-4">
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${isAbsent ? 'bg-red-500/20 text-red-400' : 'bg-white/10 text-white'
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${isAbsent ? 'bg-red-500/20 text-red-400' : 'bg-surface-highlight text-text-primary'
                                                 }`}>
                                                 {member.name?.[0]?.toUpperCase()}
                                             </div>
-                                            <span className={`font-medium text-lg ${isAbsent ? 'text-red-400' : 'text-white'}`}>
+                                            <span className={`font-medium text-lg ${isAbsent ? 'text-red-400' : 'text-text-primary'}`}>
                                                 {member.name}
                                             </span>
                                         </div>
@@ -604,10 +604,10 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                             })}
                         </div>
 
-                        <div className="p-6 bg-surface border-t border-white/5 safe-area-bottom">
+                        <div className="p-6 bg-surface border-t border-border safe-area-bottom">
                             <button
                                 onClick={handleSaveAttendance}
-                                className="w-full py-4 bg-white text-black rounded-2xl font-bold text-lg hover:bg-gray-200 transition-colors shadow-lg"
+                                className="w-full py-4 bg-primary text-background rounded-2xl font-bold text-lg hover:opacity-90 transition-colors shadow-lg"
                             >
                                 Зберегти зміни
                             </button>
@@ -625,13 +625,13 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
             {/* Confirmation Modal for Song Deletion */}
             {songToDeleteIndex !== null && (
                 <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-                    <div className="bg-[#18181b] border border-white/10 w-full max-w-xs p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
+                    <div className="bg-surface border border-border w-full max-w-xs p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
                         <div className="flex flex-col items-center text-center gap-4">
                             <div className="w-14 h-14 bg-red-500/10 rounded-full flex items-center justify-center">
                                 <Trash2 className="w-6 h-6 text-red-500" />
                             </div>
                             <div>
-                                <h3 className="text-lg font-bold text-white">Видалити пісню?</h3>
+                                <h3 className="text-lg font-bold text-text-primary">Видалити пісню?</h3>
                                 <p className="text-text-secondary text-sm mt-1">
                                     "{currentService.songs[songToDeleteIndex]?.songTitle}" буде прибрано з цієї програми.
                                 </p>
@@ -639,7 +639,7 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                             <div className="flex gap-3 w-full mt-2">
                                 <button
                                     onClick={() => setSongToDeleteIndex(null)}
-                                    className="flex-1 py-3 border border-white/10 rounded-xl text-white hover:bg-white/5 transition-colors font-medium text-sm"
+                                    className="flex-1 py-3 border border-border rounded-xl text-text-primary hover:bg-surface-highlight transition-colors font-medium text-sm"
                                 >
                                     Скасувати
                                 </button>
@@ -658,11 +658,11 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
             {/* Credits Editing Modal */}
             {editingSongIndex !== null && (
                 <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-                    <div className="bg-[#18181b] border border-white/10 w-full max-w-sm p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
+                    <div className="bg-surface border border-border w-full max-w-sm p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
                         <div className="space-y-5">
                             <div className="flex justify-between items-center">
-                                <h3 className="text-lg font-bold text-white">Хто виконував?</h3>
-                                <button onClick={() => setEditingSongIndex(null)} className="p-1 hover:bg-white/10 rounded-full">
+                                <h3 className="text-lg font-bold text-text-primary">Хто виконував?</h3>
+                                <button onClick={() => setEditingSongIndex(null)} className="p-1 hover:bg-surface-highlight rounded-full">
                                     <X className="w-5 h-5 text-text-secondary" />
                                 </button>
                             </div>
@@ -675,7 +675,7 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                     value={tempConductor}
                                     onChange={(e) => setTempConductor(e.target.value)}
                                     placeholder="Введіть або оберіть ім'я"
-                                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/30"
+                                    className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl text-text-primary focus:outline-none focus:border-border/50"
                                 />
                                 <datalist id="conductor-list">
                                     {knownConductors.map(name => <option key={name} value={name} />)}
@@ -690,7 +690,7 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                     value={tempPianist}
                                     onChange={(e) => setTempPianist(e.target.value)}
                                     placeholder="Введіть або оберіть ім'я"
-                                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/30"
+                                    className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl text-text-primary focus:outline-none focus:border-border/50"
                                 />
                                 <datalist id="pianist-list">
                                     {knownPianists.map(name => <option key={name} value={name} />)}
@@ -699,7 +699,7 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
 
                             <button
                                 onClick={handleSaveCredits}
-                                className="w-full py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors"
+                                className="w-full py-4 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-colors"
                             >
                                 Зберегти
                             </button>

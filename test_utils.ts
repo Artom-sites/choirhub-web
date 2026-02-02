@@ -1,17 +1,12 @@
-/**
- * Extracts and cleans the instrument name from a part name.
- * 
- * @param partName - The full name of the part (e.g., "Song Title - Violin 1")
- * @param songTitle - The title of the song to remove from the part name
- * @returns The cleaned instrument name (e.g., "Violin 1")
- */
-export const extractInstrument = (partName: string, songTitle: string): string => {
+
+// Copied from lib/utils.ts (Latest Bidirectional Logic)
+const extractInstrument = (partName: string, songTitle: string): string => {
     if (!partName || !songTitle) return "Загальна";
 
     // 1. First cleanup: extension, underscores to spaces
     let name = partName.replace(/\.pdf$/i, '').replace(/_/g, ' ').trim();
 
-    // 2. Remove leading ordering numbers (e.g. "00 ", "01 - ", "1.")
+    // 2. Remove leading ordering numbers
     name = name.replace(/^\d+[\s.\-_]*/, '');
 
     // 3. Normalization Helper
@@ -34,18 +29,14 @@ export const extractInstrument = (partName: string, songTitle: string): string =
     const normName = normalizeString(name);
     const normTitle = normalizeString(songTitle);
 
-    // 4. Exact or fuzzy match for "Whole Score"
+    // 4. Exact match
     if (normName === normTitle) return "Загальна";
     if (normTitle.includes(normName) && normName.length > 4) return "Загальна";
 
     // 5. Intelligent Separation Check
-    // We check if the name contains the title, or if the title is on one side of a separator.
-
-    // We try to split by standard separators
-    const separators = [' - ', ' – ', ' — ', '-']; // priority order
+    const separators = [' - ', ' – ', ' — ', '-'];
     let parts: string[] = [];
 
-    // Try to split by the first valid separator found
     for (const sep of separators) {
         if (name.includes(sep)) {
             parts = name.split(sep).map(p => p.trim()).filter(p => p.length > 0);
@@ -54,21 +45,16 @@ export const extractInstrument = (partName: string, songTitle: string): string =
     }
 
     if (parts.length > 1) {
-        // Find which part matches the title best
         let bestMatchIndex = -1;
 
         for (let i = 0; i < parts.length; i++) {
             const pNorm = normalizeString(parts[i]);
-            // Check if this part IS the title or START of title
             if (normTitle.includes(pNorm) || pNorm.includes(normTitle) || normTitle.startsWith(pNorm.substring(0, 10)) || pNorm.startsWith(normTitle.substring(0, 10))) {
                 bestMatchIndex = i;
                 break;
             }
-
-            // Check word overlap - strict check to avoid false positives with common words
             const pWords = pNorm.split(' ');
             const tWords = normTitle.split(' ');
-            // If the first word matches the title's first word, it's a strong indicator
             if (pWords.length > 0 && tWords.length > 0 && pWords[0] === tWords[0] && pWords[0].length > 3) {
                 bestMatchIndex = i;
                 break;
@@ -76,8 +62,6 @@ export const extractInstrument = (partName: string, songTitle: string): string =
         }
 
         if (bestMatchIndex !== -1) {
-            // The title is at parts[bestMatchIndex].
-            // The instrument is the OTHER part(s).
             const instrumentParts = parts.filter((_, idx) => idx !== bestMatchIndex);
             if (instrumentParts.length > 0) {
                 const candidate = instrumentParts.join(' ').trim();
@@ -87,8 +71,7 @@ export const extractInstrument = (partName: string, songTitle: string): string =
         }
     }
 
-    // 6. Fallback: Word Removal (Standard Left-to-Right removal)
-    // If no explicit separator matched, assumes "Title Instrument"
+    // 6. Fallback: Word Removal
     const nameWords = normName.split(/\s+/);
     const titleWords = normTitle.split(/\s+/);
 
@@ -99,8 +82,6 @@ export const extractInstrument = (partName: string, songTitle: string): string =
     }
 
     if (matchCount > 0) {
-        // Starts with title -> remove it
-        // We need to cut the original string based on words roughly
         const originalWords = name.split(/[\s\-–—]+/);
         if (originalWords.length > matchCount) {
             const tail = originalWords.slice(matchCount).join(' ');
@@ -109,22 +90,9 @@ export const extractInstrument = (partName: string, songTitle: string): string =
     }
 
     // 7. Final attempt: parens
-    // Check if the content INSIDE parens is the title?
     const parenMatch = name.match(/\(([^)]+)\)$/);
-    if (parenMatch) {
-        const inside = parenMatch[1].trim();
-        const insideNorm = normalizeString(inside);
-        // If inside matches title, return valid OUTER part
-        if (normTitle.includes(insideNorm) || insideNorm.includes(normTitle)) {
-            // Return everything BEFORE the parenthesis
-            // "Viola (Христос)" -> "Viola"
-            return finalizeCleanup(name.replace(/\(.*\)$/, ''));
-        }
-        return finalizeCleanup(inside);
-    }
+    if (parenMatch) return finalizeCleanup(parenMatch[1]);
 
-    // If we're here, we failed to extract.
-    // If result is basically the title, return General.
     if (normalizeString(name) === normTitle) return "Загальна";
 
     return finalizeCleanup(name);
@@ -137,11 +105,59 @@ const finalizeCleanup = (str: string): string => {
         .replace(/\)+$/, '')
         .replace(/^\(+/, '')
         .replace(/^\((.*)\)$/, '$1')
-        // STRIP UNBALANCED PAREN if matches specific end pattern
-        // e.g. "Trumpet (Христос" -> "Trumpet"
-        .replace(/\s*\([^)]*$/, '')
         .trim();
-
     if (!s) return "Загальна";
     return s.charAt(0).toUpperCase() + s.slice(1);
 };
+
+// Test Cases
+const songTitle = "Христос - надежда тех сердец";
+
+// Case 1: "00 Христос надежда" -> Should be "Загальна"
+console.log(`\nTest 1: "00 Христос надежда"`);
+console.log(`Result: "${extractInstrument("00 Христос надежда", songTitle)}"`);
+
+// Case 2: "Христос надежда" -> Should be "Загальна" (because it's just title words)
+console.log(`\nTest 2: "Христос надежда"`);
+console.log(`Result: "${extractInstrument("Христос надежда", songTitle)}"`);
+// Case 9: Inverted Naming "02 Instrument - Song"
+const songTitle2 = "Христос - надежда тех сердец";
+
+console.log(`\nTest 9a: "02 Кларнет B 1,2 - Христос надія"`);
+// Current logic likely returns "Христос надія"
+console.log(`Result: "${extractInstrument("02 Кларнет B 1,2 - Христос надія", songTitle2)}"`);
+
+console.log(`\nTest 9b: "05 Тромбони 1,2 - Христос надія"`);
+console.log(`Result: "${extractInstrument("05 Тромбони 1,2 - Христос надія", songTitle2)}"`);
+
+// Case 10: Parenthesis Splitting Bug
+// Likely filename: "Trumpet B I (Христос - надежда).pdf"
+console.log(`\nTest 10: "Trumpet B I (Христос - надежда)"`);
+console.log(`Result: "${extractInstrument("Trumpet B I (Христос - надежда)", songTitle)}"`);
+
+console.log(`\nTest 11: "Viola (Христос)"`);
+console.log(`Result: "${extractInstrument("Viola (Христос)", songTitle)}"`);
+// Case 3: "Something resulting in надежда)"
+// Attempting to guess original string that produces this.
+// Maybe: "Христос надежда (надежда)"?
+console.log(`\nTest 3: "Христос надежда (надежда)"`);
+console.log(`Result: "${extractInstrument("Христос надежда (надежда)", songTitle)}"`);
+
+// Case 4: Unbalanced paren
+console.log(`\nTest 4: "Христос надежда (надежда"`);
+console.log(`Result: "${extractInstrument("Христос надежда (надежда", songTitle)}"`);
+
+// Case 6: Mismatched Title (Simulating "songTitle" being empty or different)
+console.log(`\nTest 6: "надежда)" with DIFFERENT title`);
+console.log(`Result: "${extractInstrument("надежда)", "Other Song")}"`);
+
+// Case 7: Mixed Cyrillic/Latin (Latin 'a' in 'надежда')
+// Cyrillic: н а д е ж д а (code points: 1085 1072 1076 1077 1078 1076 1072)
+// Latin 'a': 97
+const latinA = "нaдеждa)".replace(/а/g, 'a'); // replaced cyrillic а with latin a
+console.log(`\nTest 7: Mixed Latin/Cyrillic "надежда)" with Cyrillic Title`);
+console.log(`Result: "${extractInstrument(latinA, songTitle)}"`);
+
+// Case 8: Unbalanced paren at end
+console.log(`\nTest 8: "Violin)"`);
+console.log(`Result: "${extractInstrument("Violin)", songTitle)}"`);

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Search, FileText, Music2, ChevronRight, Filter, Plus, Eye, User, Loader2, Trash2, Pencil, MoreVertical, Library } from "lucide-react";
+import { Search, FileText, Music2, ChevronRight, Filter, Plus, Eye, User, Loader2, Trash2, Pencil, MoreVertical, Library, X } from "lucide-react";
 import { SimpleSong } from "@/types";
 import { CATEGORIES, Category } from "@/lib/themes";
 import { motion, AnimatePresence } from "framer-motion";
@@ -206,14 +206,14 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
     }
 
     return (
-        <div className="max-w-5xl mx-auto px-4 py-4 space-y-4 pb-24">
+        <div className="max-w-5xl mx-auto px-4 pt-6 space-y-4 pb-32">
             {/* Sub-Tab Switcher */}
-            <div className="flex bg-surface rounded-2xl p-1 border border-white/5">
+            <div className="flex bg-surface rounded-xl p-1 card-shadow">
                 <button
                     onClick={() => setSubTab('repertoire')}
-                    className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${subTab === 'repertoire'
-                        ? 'bg-white text-black'
-                        : 'text-text-secondary hover:text-white'
+                    className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${subTab === 'repertoire'
+                        ? 'bg-primary text-background'
+                        : 'text-text-secondary hover:text-text-primary'
                         }`}
                 >
                     <Music2 className="w-4 h-4" />
@@ -221,9 +221,9 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                 </button>
                 <button
                     onClick={() => setSubTab('catalog')}
-                    className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${subTab === 'catalog'
-                        ? 'bg-white text-black'
-                        : 'text-text-secondary hover:text-white'
+                    className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${subTab === 'catalog'
+                        ? 'bg-primary text-background'
+                        : 'text-text-secondary hover:text-text-primary'
                         }`}
                 >
                     <Library className="w-4 h-4" />
@@ -272,47 +272,49 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                 />
             ) : (
                 <>
-                    {/* Stats Card - Soft Dark Mono */}
-                    <div className="bg-surface/50 backdrop-blur-xl border border-white/5 rounded-3xl p-6 shadow-sm">
-                        <div className="flex items-center gap-4 mb-3">
-                            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-white">
+                    {/* Stats Card - iOS Style */}
+                    <div className="bg-surface rounded-2xl p-5 card-shadow">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 glass-frost-circle rounded-full flex items-center justify-center text-zinc-700">
                                 <Music2 className="w-6 h-6" />
                             </div>
                             <div>
                                 <p className="text-text-secondary text-xs uppercase tracking-wider font-semibold">Репертуар</p>
-                                <p className="text-2xl font-bold text-white tracking-tight">{songs.length} пісень</p>
+                                <p className="text-2xl font-bold text-text-primary tracking-tight">{songs.length} пісень</p>
                             </div>
                         </div>
-                        <div className="flex gap-4 mt-2">
-                            <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/5">
-                                <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
-                                <span className="text-xs font-medium text-text-secondary">{songsWithPdf} з PDF</span>
-                            </div>
-                        </div>
-                    </div>
 
-                    {/* Search & Filter - Fixed Top Offset */}
-                    <div className="sticky top-[72px] z-20 -mx-4 bg-[#09090b]/95 backdrop-blur-xl border-b border-white/5 shadow-xl transition-all">
-                        <div className="px-4 py-3 space-y-3">
+                    </div>
+                    {/* Search & Filter - iOS Style */}
+                    <div className="sticky top-[72px] z-20 -mx-4 bg-background/95 backdrop-blur-xl border-none transition-all">
+                        <div className="px-4 space-y-4">
                             {/* Search Bar */}
                             <div className="relative flex-1 group">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary group-focus-within:text-white transition-colors" />
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
                                 <input
                                     type="text"
                                     placeholder="Пошук..."
-                                    className="w-full pl-11 pr-4 py-3 bg-surface border border-white/5 rounded-2xl text-base focus:border-white/20 focus:outline-none text-white placeholder:text-text-secondary/50 transition-all shadow-sm"
+                                    className="w-full pl-11 pr-10 py-3 bg-surface rounded-xl text-base focus:outline-none text-text-primary placeholder:text-text-secondary/50 transition-all inner-shadow"
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                 />
+                                {search && (
+                                    <button
+                                        onClick={() => setSearch("")}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-secondary hover:text-text-primary hover:bg-surface-highlight rounded-full transition-all"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                )}
                             </div>
 
                             {/* Filter Chips */}
-                            <div className="flex overflow-x-auto pb-1 gap-2 scrollbar-none -mx-4 px-4 mask-linear-fade">
+                            <div className="flex overflow-x-auto gap-2 scrollbar-hide -mx-4 px-4">
                                 <button
                                     onClick={() => setSelectedCategory("All")}
-                                    className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all border ${selectedCategory === "All"
-                                        ? "bg-white text-black border-white shadow-lg shadow-white/10"
-                                        : "bg-surface border-white/5 text-text-secondary hover:bg-surface-highlight hover:text-white"
+                                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedCategory === "All"
+                                        ? "bg-primary text-background shadow-md"
+                                        : "bg-surface text-text-secondary shadow-sm border border-border"
                                         }`}
                                 >
                                     Всі
@@ -321,9 +323,9 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                                     <button
                                         key={cat}
                                         onClick={() => setSelectedCategory(cat)}
-                                        className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all border ${selectedCategory === cat
-                                            ? "bg-white text-black border-white shadow-lg shadow-white/10"
-                                            : "bg-surface border-white/5 text-text-secondary hover:bg-surface-highlight hover:text-white"
+                                        className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedCategory === cat
+                                            ? "bg-primary text-background shadow-md"
+                                            : "bg-surface text-text-secondary shadow-sm border border-border"
                                             }`}
                                     >
                                         {cat}
@@ -334,10 +336,10 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                     </div>
 
                     {/* List */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {filteredSongs.length === 0 ? (
                             <div className="col-span-full text-center py-24 opacity-40">
-                                <div className="w-16 h-16 bg-surface rounded-full flex items-center justify-center mx-auto mb-4 border border-white/5">
+                                <div className="w-16 h-16 bg-surface rounded-full flex items-center justify-center mx-auto mb-4 card-shadow">
                                     <Music2 className="w-8 h-8 text-text-secondary" />
                                 </div>
                                 <p className="text-text-secondary">Пісень не знайдено</p>
@@ -355,10 +357,10 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                                             onClick={() => handleSongClick(song)}
                                             role="button"
                                             tabIndex={0}
-                                            className="w-full bg-surface hover:bg-surface-highlight border border-white/5 hover:border-white/10 rounded-2xl p-4 transition-all text-left group relative active:scale-[0.99] h-full flex flex-col cursor-pointer"
+                                            className="w-full bg-surface card-shadow hover:bg-surface rounded-2xl p-4 transition-all text-left group relative active:scale-[0.99] h-full flex flex-col cursor-pointer"
                                         >
                                             <div className="flex items-start gap-4 relative z-10 h-full">
-                                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${song.hasPdf ? 'bg-white text-black' : 'bg-white/5 text-text-secondary'}`}>
+                                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors glass-frost-circle text-zinc-700`}>
                                                     {song.hasPdf ? (
                                                         <Eye className="w-6 h-6" />
                                                     ) : (
@@ -367,17 +369,17 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                                                 </div>
 
                                                 <div className="flex-1 min-w-0 py-0.5 flex flex-col h-full justify-between">
-                                                    <h3 className="font-semibold text-lg text-white truncate mb-1.5 group-hover:text-white transition-colors">
+                                                    <h3 className="font-semibold text-lg text-text-primary truncate mb-1.5 group-hover:text-text-primary transition-colors">
                                                         {song.title}
                                                     </h3>
 
                                                     <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className="text-xs font-medium text-text-secondary bg-white/5 px-2 py-1 rounded-lg border border-white/5">
+                                                        <span className="text-xs font-medium text-text-secondary bg-background px-2 py-1 rounded-lg">
                                                             {song.category}
                                                         </span>
 
                                                         {song.conductor && (
-                                                            <div className="flex items-center gap-1.5 text-xs text-text-secondary bg-white/5 px-2 py-1 rounded-lg border border-white/5">
+                                                            <div className="flex items-center gap-1.5 text-xs text-text-secondary bg-background px-2 py-1 rounded-lg">
                                                                 <User className="w-3 h-3" />
                                                                 <span>{song.conductor}</span>
                                                             </div>
@@ -395,7 +397,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                                                                     e.stopPropagation();
                                                                     handleEditClick(e, song);
                                                                 }}
-                                                                className="p-2 rounded-lg text-text-secondary hover:text-white hover:bg-white/10 transition-colors"
+                                                                className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-highlight transition-colors"
                                                                 title="Редагувати"
                                                             >
                                                                 <Pencil className="w-5 h-5" />
@@ -414,10 +416,10 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
 
                     {/* Floating Add Button - White Circle */}
                     {effectiveCanAdd && (
-                        <div className="fixed bottom-24 right-5 z-20">
+                        <div className="fixed bottom-20 right-5 z-40">
                             <button
                                 onClick={() => setShowAddModal(true)}
-                                className="w-14 h-14 bg-white text-black rounded-full shadow-[0_4px_20px_rgba(255,255,255,0.2)] flex items-center justify-center hover:scale-105 active:scale-95 transition-all border border-white/50"
+                                className="w-14 h-14 bg-zinc-900 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-zinc-800 transition-colors z-50"
                             >
                                 <Plus className="w-7 h-7" />
                             </button>

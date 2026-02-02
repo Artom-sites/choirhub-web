@@ -255,21 +255,29 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
 
                 {/* Search Bar with Filter Toggle */}
                 <div className="flex gap-2 mb-4">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary" />
+                    <div className="relative flex-1 group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary group-focus-within:text-text-primary transition-colors" />
                         <input
                             type="text"
                             placeholder="Пошук пісні..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-12 pr-4 py-3 bg-surface rounded-2xl text-white placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent/50"
+                            className="w-full pl-12 pr-10 py-3 bg-surface rounded-2xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
                         />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery("")}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-secondary hover:text-text-primary hover:bg-surface-highlight rounded-full transition-all"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        )}
                     </div>
                     <button
                         onClick={() => setShowFilters(!showFilters)}
                         className={`px-4 rounded-2xl flex items-center gap-2 transition-all ${showFilters || activeFiltersCount > 0
-                            ? "bg-white text-black"
-                            : "bg-surface text-text-secondary hover:text-white"
+                            ? "bg-primary text-background"
+                            : "bg-surface text-text-secondary hover:text-text-primary"
                             }`}
                     >
                         <Filter className="w-5 h-5" />
@@ -286,19 +294,19 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                             exit={{ height: 0, opacity: 0 }}
                             className="overflow-hidden"
                         >
-                            <div className="bg-surface rounded-2xl p-4 mb-4 space-y-4 border border-white/5">
+                            <div className="bg-surface rounded-2xl p-4 mb-4 space-y-4 border border-border">
                                 {/* Row 1: Language */}
                                 <div>
                                     <p className="text-xs text-text-secondary uppercase font-bold tracking-wider mb-2">Мова</p>
                                     <div className="flex bg-black/20 rounded-xl p-1 w-fit">
-                                        <button onClick={() => setSelectedLanguage('all')} className={`px-3 py-1.5 rounded-lg text-sm transition-all ${selectedLanguage === 'all' ? 'bg-white/20 text-white' : 'text-text-secondary'}`}>Всі</button>
-                                        <button onClick={() => setSelectedLanguage('cyrillic')} className={`px-3 py-1.5 rounded-lg text-sm transition-all ${selectedLanguage === 'cyrillic' ? 'bg-white/20 text-white' : 'text-text-secondary'}`}>АБВ</button>
-                                        <button onClick={() => setSelectedLanguage('latin')} className={`px-3 py-1.5 rounded-lg text-sm transition-all ${selectedLanguage === 'latin' ? 'bg-white/20 text-white' : 'text-text-secondary'}`}>ABC</button>
+                                        <button onClick={() => setSelectedLanguage('all')} className={`px-3 py-1.5 rounded-lg text-sm transition-all ${selectedLanguage === 'all' ? 'bg-primary/20 text-text-primary' : 'text-text-secondary'}`}>Всі</button>
+                                        <button onClick={() => setSelectedLanguage('cyrillic')} className={`px-3 py-1.5 rounded-lg text-sm transition-all ${selectedLanguage === 'cyrillic' ? 'bg-primary/20 text-text-primary' : 'text-text-secondary'}`}>АБВ</button>
+                                        <button onClick={() => setSelectedLanguage('latin')} className={`px-3 py-1.5 rounded-lg text-sm transition-all ${selectedLanguage === 'latin' ? 'bg-primary/20 text-text-primary' : 'text-text-secondary'}`}>ABC</button>
                                     </div>
                                 </div>
 
                                 {/* Row 2: Main Category */}
-                                <div className="border-b border-white/5 pb-4">
+                                <div className="border-b border-border pb-4">
                                     <p className="text-xs text-text-secondary uppercase font-bold tracking-wider mb-2">Категорія</p>
                                     <div className="flex flex-wrap gap-2">
                                         {CATEGORIES.map(cat => (
@@ -309,8 +317,8 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                                     setSelectedSubCategory(null);
                                                 }}
                                                 className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-all border ${selectedCategory === cat.id
-                                                    ? "bg-white text-black border-white font-semibold"
-                                                    : "bg-transparent text-text-secondary border-white/10 hover:border-white/30"
+                                                    ? "bg-primary text-background border-primary font-semibold"
+                                                    : "bg-transparent text-text-secondary border-border hover:border-border/50"
                                                     }`}
                                             >
                                                 <cat.icon className="w-4 h-4" />
@@ -328,8 +336,8 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                             <button
                                                 onClick={() => setSelectedSubCategory(null)}
                                                 className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${!selectedSubCategory
-                                                    ? "bg-white text-black border-white"
-                                                    : "bg-transparent text-text-secondary border-white/10 hover:border-white/30"
+                                                    ? "bg-primary text-background border-primary"
+                                                    : "bg-transparent text-text-secondary border-border hover:border-border/50"
                                                     }`}
                                             >
                                                 Всі
@@ -339,8 +347,8 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                                     key={sub.id}
                                                     onClick={() => setSelectedSubCategory(selectedSubCategory === sub.id ? null : sub.id)}
                                                     className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${selectedSubCategory === sub.id
-                                                        ? "bg-white text-black border-white"
-                                                        : "bg-transparent text-text-secondary border-white/10 hover:border-white/30"
+                                                        ? "bg-primary text-background border-primary"
+                                                        : "bg-transparent text-text-secondary border-border hover:border-border/50"
                                                         }`}
                                                 >
                                                     {sub.label}
@@ -357,8 +365,8 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                         <button
                                             onClick={() => setSelectedTheme(null)}
                                             className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs border transition-all ${!selectedTheme
-                                                ? "bg-white text-black border-white"
-                                                : "bg-transparent text-text-secondary border-white/10 hover:border-white/30"
+                                                ? "bg-primary text-background border-primary"
+                                                : "bg-transparent text-text-secondary border-border hover:border-border/50"
                                                 }`}
                                         >
                                             Всі теми
@@ -368,8 +376,8 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                                 key={theme}
                                                 onClick={() => setSelectedTheme(selectedTheme === theme ? null : theme)}
                                                 className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs border transition-all ${selectedTheme === theme
-                                                    ? "bg-white text-black border-white"
-                                                    : "bg-transparent text-text-secondary border-white/10 hover:border-white/30"
+                                                    ? "bg-primary text-background border-primary"
+                                                    : "bg-transparent text-text-secondary border-border hover:border-border/50"
                                                     }`}
                                             >
                                                 {theme}
@@ -386,9 +394,9 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                 <div className="flex items-center justify-between mb-2 px-2">
                     <span className="text-sm text-text-secondary">
                         {searchQuery || activeFiltersCount > 0 ? (
-                            <>Знайдено: <strong className="text-white">{filteredSongs.length}</strong> з {songs.length}</>
+                            <>Знайдено: <strong className="text-text-primary">{filteredSongs.length}</strong> з {songs.length}</>
                         ) : (
-                            <>Всього: <strong className="text-white">{songs.length}</strong> пісень</>
+                            <>Всього: <strong className="text-text-primary">{songs.length}</strong> пісень</>
                         )}
                     </span>
                     {activeFiltersCount > 0 && (
@@ -427,33 +435,33 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -20 }}
                                     transition={{ delay: Math.min(index * 0.02, 0.5) }}
-                                    className="bg-surface rounded-2xl p-4 flex items-center gap-4 border border-white/5 hover:border-white/10 transition-colors"
+                                    className="bg-surface rounded-2xl p-4 flex items-center gap-4 border border-border hover:border-border/50 transition-colors"
                                 >
                                     {/* Icon */}
                                     <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
                                         {song.parts && song.parts.length > 0 ? (
-                                            <FileText className="w-6 h-6 text-white" />
+                                            <FileText className="w-6 h-6 text-text-primary" />
                                         ) : (
-                                            <Music className="w-6 h-6 text-gray-400" />
+                                            <Music className="w-6 h-6 text-text-secondary" />
                                         )}
                                     </div>
 
                                     {/* Info */}
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="font-semibold text-white truncate">{song.title}</h3>
+                                        <h3 className="font-semibold text-text-primary truncate">{song.title}</h3>
                                         <div className="flex flex-wrap gap-1.5 items-center mt-1">
                                             {song.subcategory && (
-                                                <span className="text-[10px] bg-white/5 text-gray-400 px-1.5 py-0.5 rounded">
+                                                <span className="text-[10px] bg-surface-highlight text-text-secondary px-1.5 py-0.5 rounded">
                                                     {getSubcategoryLabel(song.category, song.subcategory)}
                                                 </span>
                                             )}
                                             {song.theme && (
-                                                <span className="text-[10px] bg-white/10 text-gray-300 px-1.5 py-0.5 rounded border border-white/20">
+                                                <span className="text-[10px] bg-surface-highlight text-text-secondary px-1.5 py-0.5 rounded border border-border">
                                                     {song.theme}
                                                 </span>
                                             )}
                                             {song.parts && song.parts.length > 1 && (
-                                                <span className="text-[10px] bg-white/5 text-gray-400 px-1.5 py-0.5 rounded">
+                                                <span className="text-[10px] bg-surface-highlight text-text-secondary px-1.5 py-0.5 rounded">
                                                     {song.parts.length} партій
                                                 </span>
                                             )}
@@ -468,17 +476,17 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                                     setPreviewSong(song);
                                                     setPreviewPartIndex(0);
                                                 }}
-                                                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors"
+                                                className="p-2 rounded-xl bg-surface-highlight hover:bg-surface-highlight/80 transition-colors"
                                             >
-                                                <Eye className="w-5 h-5 text-white" />
+                                                <Eye className="w-5 h-5 text-text-primary" />
                                             </button>
                                         )}
                                         {onAddSong && (
                                             <button
                                                 onClick={() => handleAddSong(song)}
-                                                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors"
+                                                className="p-2 rounded-xl bg-surface-highlight hover:bg-surface-highlight/80 transition-colors"
                                             >
-                                                <Plus className="w-5 h-5 text-white" />
+                                                <Plus className="w-5 h-5 text-text-primary" />
                                             </button>
                                         )}
                                     </div>

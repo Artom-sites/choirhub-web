@@ -175,3 +175,14 @@ export interface SongMeta {
     partCount: number;
     source: SongSource;
 }
+
+export interface ChoirNotification {
+    id: string;
+    title: string;
+    body: string;
+    choirId: string;
+    senderId: string;
+    senderName: string;
+    createdAt: string;
+    readBy: string[]; // Array of user IDs who have read this
+}

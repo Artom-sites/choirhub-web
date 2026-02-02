@@ -87,30 +87,30 @@ export default function StatisticsView({ choir, services, onBack }: StatisticsVi
     }, [attendanceData]);
 
     return (
-        <div className="min-h-screen bg-[#09090b] text-white">
+        <div className="min-h-screen bg-background text-text-primary">
             {/* Header */}
-            <div className="sticky top-0 z-30 bg-[#09090b]/80 backdrop-blur-xl border-b border-white/5 px-4 py-3 flex items-center gap-3">
+            <div className="sticky top-0 z-30 bg-surface border-b border-border px-4 py-3 flex items-center gap-3">
                 <button
                     onClick={onBack}
-                    className="p-2 hover:bg-white/10 rounded-xl transition-colors"
+                    className="p-2 hover:bg-surface-highlight rounded-xl transition-colors"
                 >
                     <ArrowLeft className="w-5 h-5 text-text-secondary" />
                 </button>
-                <h1 className="font-bold text-lg">Статистика хору</h1>
+                <h1 className="font-bold text-lg text-text-primary">Статистика хору</h1>
             </div>
 
             <div className="p-4 space-y-6 pb-24 max-w-lg mx-auto">
 
                 {/* Summary Cards */}
                 <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-surface border border-white/5 rounded-2xl p-4">
+                    <div className="bg-surface border border-border rounded-2xl p-4">
                         <div className="flex items-center gap-2 mb-2">
                             <Users className="w-4 h-4 text-blue-400" />
                             <span className="text-xs font-bold text-text-secondary uppercase">Учасників</span>
                         </div>
                         <p className="text-2xl font-bold">{(choir.members || []).length}</p>
                     </div>
-                    <div className="bg-surface border border-white/5 rounded-2xl p-4">
+                    <div className="bg-surface border border-border rounded-2xl p-4">
                         <div className="flex items-center gap-2 mb-2">
                             <TrendingUp className="w-4 h-4 text-green-400" />
                             <span className="text-xs font-bold text-text-secondary uppercase">Середня явки</span>
@@ -120,7 +120,7 @@ export default function StatisticsView({ choir, services, onBack }: StatisticsVi
                 </div>
 
                 {/* Voice Balance Chart */}
-                <div className="bg-surface border border-white/5 rounded-3xl p-6">
+                <div className="bg-surface border border-border rounded-3xl p-6">
                     <h3 className="font-bold mb-6 flex items-center gap-2">
                         <Mic2 className="w-5 h-5 text-purple-400" />
                         Баланс голосів
@@ -142,21 +142,21 @@ export default function StatisticsView({ choir, services, onBack }: StatisticsVi
                                     ))}
                                 </Pie>
                                 <Tooltip
-                                    contentStyle={{ backgroundColor: '#18181b', borderColor: '#333', borderRadius: '12px', color: '#fff' }}
-                                    itemStyle={{ color: '#fff' }}
+                                    contentStyle={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', borderRadius: '12px', color: 'var(--text-primary)' }}
+                                    itemStyle={{ color: 'var(--text-primary)' }}
                                 />
                                 <Legend />
                             </PieChart>
                         </ResponsiveContainer>
                         {/* Center Text */}
                         <div className="absolute inset-0 bottom-12 flex items-center justify-center pointer-events-none">
-                            <span className="text-3xl font-bold text-white">{(choir.members || []).length}</span>
+                            <span className="text-3xl font-bold text-text-primary">{(choir.members || []).length}</span>
                         </div>
                     </div>
                 </div>
 
                 {/* Attendance Chart */}
-                <div className="bg-surface border border-white/5 rounded-3xl p-6">
+                <div className="bg-surface border border-border rounded-3xl p-6">
                     <h3 className="font-bold mb-6 flex items-center gap-2">
                         <Calendar className="w-5 h-5 text-orange-400" />
                         Динаміка відвідуваності
@@ -186,7 +186,7 @@ export default function StatisticsView({ choir, services, onBack }: StatisticsVi
                                     unit="%"
                                 />
                                 <Tooltip
-                                    contentStyle={{ backgroundColor: '#18181b', borderColor: '#333', borderRadius: '12px', color: '#fff' }}
+                                    contentStyle={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', borderRadius: '12px', color: 'var(--text-primary)' }}
                                 />
                                 <Area
                                     type="monotone"
@@ -204,7 +204,7 @@ export default function StatisticsView({ choir, services, onBack }: StatisticsVi
 
                 {/* Most Performed Songs */}
                 {songFrequencyData.length > 0 && (
-                    <div className="bg-surface border border-white/5 rounded-3xl p-6">
+                    <div className="bg-surface border border-border rounded-3xl p-6">
                         <h3 className="font-bold mb-4 flex items-center gap-2">
                             <Music className="w-5 h-5 text-pink-400" />
                             Найпопулярніші пісні
@@ -215,10 +215,10 @@ export default function StatisticsView({ choir, services, onBack }: StatisticsVi
                                     <span className="text-xs text-text-secondary w-5 font-mono">{idx + 1}</span>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between mb-1">
-                                            <span className="text-sm font-medium text-white truncate">{song.title}</span>
+                                            <span className="text-sm font-medium text-text-primary truncate">{song.title}</span>
                                             <span className="text-xs text-text-secondary ml-2">{song.count}×</span>
                                         </div>
-                                        <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                        <div className="h-1.5 bg-surface-highlight rounded-full overflow-hidden">
                                             <div
                                                 className="h-full bg-gradient-to-r from-pink-500 to-purple-500 rounded-full"
                                                 style={{ width: `${(song.count / songFrequencyData[0].count) * 100}%` }}
@@ -232,7 +232,7 @@ export default function StatisticsView({ choir, services, onBack }: StatisticsVi
                         {allSongFrequencyData.length > 10 && (
                             <button
                                 onClick={() => setShowAllSongs(true)}
-                                className="w-full mt-4 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-sm text-text-secondary hover:text-white transition-colors flex items-center justify-center gap-2"
+                                className="w-full mt-4 py-3 bg-surface-highlight hover:bg-surface-highlight/80 rounded-xl text-sm text-text-secondary hover:text-text-primary transition-colors flex items-center justify-center gap-2"
                             >
                                 Показати все ({allSongFrequencyData.length})
                                 <ChevronRight className="w-4 h-4" />
@@ -244,9 +244,9 @@ export default function StatisticsView({ choir, services, onBack }: StatisticsVi
 
             {/* Show All Songs Modal */}
             {showAllSongs && (
-                <div className="fixed inset-0 z-[70] bg-[#09090b] flex flex-col animate-in slide-in-from-bottom duration-300">
-                    <div className="sticky top-0 z-10 bg-[#09090b]/80 backdrop-blur-xl border-b border-white/5 px-4 py-3 flex items-center gap-3">
-                        <button onClick={() => setShowAllSongs(false)} className="p-2 hover:bg-white/10 rounded-xl">
+                <div className="fixed inset-0 z-[70] bg-background flex flex-col animate-in slide-in-from-bottom duration-300">
+                    <div className="sticky top-0 z-10 bg-surface border-b border-border px-4 py-3 flex items-center gap-3">
+                        <button onClick={() => setShowAllSongs(false)} className="p-2 hover:bg-surface-highlight rounded-xl">
                             <X className="w-5 h-5" />
                         </button>
                         <h2 className="font-bold text-lg">Статистика по пісням ({allSongFrequencyData.length})</h2>
@@ -254,11 +254,11 @@ export default function StatisticsView({ choir, services, onBack }: StatisticsVi
                     <div className="flex-1 overflow-y-auto p-4 pb-safe">
                         <div className="space-y-2 max-w-lg mx-auto">
                             {allSongFrequencyData.map((song, idx) => (
-                                <div key={idx} className="flex items-center gap-3 bg-surface border border-white/5 p-3 rounded-xl">
+                                <div key={idx} className="flex items-center gap-3 bg-surface border border-border p-3 rounded-xl">
                                     <span className="text-xs text-text-secondary w-6 text-center font-mono">{idx + 1}</span>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between">
-                                            <span className="text-sm font-medium text-white truncate">{song.title}</span>
+                                            <span className="text-sm font-medium text-text-primary truncate">{song.title}</span>
                                             <span className="text-sm text-pink-400 font-bold ml-2">{song.count}×</span>
                                         </div>
                                         <div className="h-1 bg-white/5 rounded-full overflow-hidden mt-1">

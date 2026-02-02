@@ -167,7 +167,7 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
     };
 
     return (
-        <div className="max-w-5xl mx-auto px-4 py-4 space-y-6 pb-24">
+        <div className="max-w-5xl mx-auto px-4 py-4 space-y-6 pb-32">
 
             {/* Header with Archive Toggle */}
             <div className="flex items-center justify-between">
@@ -177,14 +177,14 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setShowArchive(!showArchive)}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${showArchive ? 'bg-white text-black border-white' : 'bg-white/5 text-text-secondary border-white/5 hover:text-white'}`}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${showArchive ? 'bg-primary text-background' : 'bg-surface text-text-secondary card-shadow'}`}
                     >
                         {showArchive ? 'Актуальні' : 'Архів'}
                     </button>
                     {effectiveCanEdit && !showArchive && (
                         <button
                             onClick={() => setShowTrashBin(true)}
-                            className="p-2 rounded-xl text-text-secondary hover:text-red-400 hover:bg-white/5 transition-colors"
+                            className="p-2 rounded-xl text-text-secondary hover:text-red-400 hover:bg-surface-highlight transition-colors"
                             title="Корзина"
                         >
                             <Trash2 className="w-5 h-5" />
@@ -193,7 +193,7 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
                     {effectiveCanEdit && !showArchive && (
                         <button
                             onClick={() => setShowCreateModal(true)}
-                            className="bg-white text-black hover:bg-gray-200 p-2 rounded-xl transition-colors shadow-lg shadow-white/10"
+                            className="bg-zinc-900 text-white hover:bg-zinc-800 p-2 rounded-xl transition-colors shadow-md"
                             title="Додати служіння"
                         >
                             <Plus className="w-5 h-5" />
@@ -218,8 +218,8 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
 
                 if (displayServices.length === 0) {
                     return (
-                        <div className="text-center py-20 bg-surface/30 rounded-3xl border border-white/5 mx-2">
-                            <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white/50">
+                        <div className="text-center py-20 bg-surface rounded-2xl mx-2 card-shadow">
+                            <div className="w-16 h-16 bg-surface-highlight rounded-2xl flex items-center justify-center mx-auto mb-4 text-text-secondary">
                                 <Calendar className="w-8 h-8" />
                             </div>
                             <p className="text-text-secondary font-medium">
@@ -228,7 +228,7 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
                             {!showArchive && effectiveCanEdit && (
                                 <button
                                     onClick={() => setShowCreateModal(true)}
-                                    className="mt-6 px-6 py-3 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-colors font-medium text-sm border border-white/5"
+                                    className="mt-6 px-6 py-3 bg-accent text-white rounded-xl hover:bg-accent/90 transition-colors font-medium text-sm"
                                 >
                                     Створити перше
                                 </button>
@@ -252,28 +252,27 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
                                 >
                                     <div
                                         onClick={() => onSelectService(service)}
-                                        className={`relative group p-5 rounded-2xl border transition-all cursor-pointer h-full flex flex-col justify-between ${isToday(service.date) ? 'bg-white/10 border-white/20' : 'bg-surface border-white/5 hover:border-white/10'}`}
+                                        className={`relative group p-5 rounded-2xl transition-all cursor-pointer h-full flex flex-col justify-between card-shadow ${isToday(service.date) ? 'bg-accent/10 border border-accent/20' : 'bg-surface'}`}
                                     >
                                         <div className="flex justify-between items-start">
                                             <div>
-                                                <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${isToday(service.date) ? 'text-white' : 'text-text-secondary'}`}>
+                                                <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${isToday(service.date) ? 'text-accent' : 'text-text-secondary'}`}>
                                                     {isToday(service.date) ? 'Сьогодні' : formatDate(service.date)}
                                                 </p>
-                                                <h3 className="text-xl font-bold text-white mb-2">{service.title}</h3>
+                                                <h3 className="text-xl font-bold text-text-primary mb-2">{service.title}</h3>
 
                                                 <div className="flex items-center gap-2 mb-3">
-                                                    <div className={`px-2 py-0.5 rounded-lg text-xs font-medium border ${isToday(service.date) ? 'bg-white text-black border-white' : 'bg-white/5 text-text-secondary border-white/5'}`}>
+                                                    <div className={`px-2.5 py-1 rounded-full text-xs font-medium border ${isToday(service.date) ? 'bg-transparent border-white/30 text-white' : 'bg-transparent border-border text-text-secondary'}`}>
                                                         {service.songs.length} пісень
                                                     </div>
                                                 </div>
 
-                                                {/* Voting Area */}
                                                 {isFuture && (
                                                     <div className="flex gap-2 mt-3" onClick={e => e.stopPropagation()}>
                                                         {(status === 'unknown' || status === 'present') && (
                                                             <button
                                                                 onClick={(e) => handleVote(e, service.id, 'present')}
-                                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${status === 'present' ? 'bg-green-500 text-white ring-2 ring-green-500/50' : 'bg-white/5 text-text-secondary hover:bg-white/10 hover:text-white'}`}
+                                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${status === 'present' ? 'bg-success text-white ring-2 ring-success/50' : 'bg-background text-text-secondary hover:bg-surface-highlight'}`}
                                                             >
                                                                 <Check className="w-3.5 h-3.5" />
                                                                 {status === 'present' ? 'Я буду' : 'Буду'}
@@ -283,7 +282,7 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
                                                         {(status === 'unknown' || status === 'absent') && (
                                                             <button
                                                                 onClick={(e) => handleVote(e, service.id, 'absent')}
-                                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${status === 'absent' ? 'bg-red-500/20 text-red-400 ring-1 ring-red-500/50' : 'bg-white/5 text-text-secondary hover:bg-white/10 hover:text-white'}`}
+                                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${status === 'absent' ? 'bg-danger/20 text-danger ring-1 ring-danger/50' : 'bg-background text-text-secondary hover:bg-surface-highlight'}`}
                                                             >
                                                                 <X className="w-3.5 h-3.5" />
                                                                 {status === 'absent' ? 'Не буду' : 'Не буду'}
@@ -293,7 +292,7 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
                                                 )}
                                             </div>
 
-                                            <ChevronRight className="w-5 h-5 text-white/20 group-hover:text-white transition-colors" />
+                                            <ChevronRight className="w-5 h-5 text-text-secondary group-hover:text-text-primary transition-colors" />
                                         </div>
                                     </div>
                                 </SwipeableCard>
@@ -315,12 +314,12 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
 
             {/* Create Modal */}
             {showCreateModal && (
-                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-[#18181b] w-full max-w-sm rounded-3xl border border-white/10 p-6 shadow-2xl animate-in zoom-in-95">
+                <div className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-surface w-full max-w-sm rounded-3xl border border-border p-6 shadow-2xl animate-in zoom-in-95">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold text-white">Нове служіння</h3>
+                            <h3 className="text-xl font-bold text-text-primary">Нове служіння</h3>
                             <button onClick={() => setShowCreateModal(false)}>
-                                <X className="w-6 h-6 text-text-secondary hover:text-white" />
+                                <X className="w-6 h-6 text-text-secondary hover:text-text-primary" />
                             </button>
                         </div>
 
@@ -331,7 +330,7 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
                                     type="text"
                                     value={newTitle}
                                     onChange={(e) => setNewTitle(e.target.value)}
-                                    className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/30"
+                                    className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl text-text-primary focus:outline-none focus:border-text-secondary/50 focus:bg-surface transition-all"
                                 />
                             </div>
                             <div className="grid grid-cols-2 gap-3">
@@ -341,7 +340,7 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
                                         type="date"
                                         value={newDate}
                                         onChange={(e) => setNewDate(e.target.value)}
-                                        className="w-full h-12 px-4 bg-black/20 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/30 [color-scheme:dark]"
+                                        className="w-full h-12 px-4 bg-surface-highlight border border-border rounded-xl text-text-primary focus:outline-none focus:border-text-secondary/50"
                                     />
                                 </div>
                                 <div>
@@ -350,14 +349,14 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
                                         type="time"
                                         value={newTime}
                                         onChange={(e) => setNewTime(e.target.value)}
-                                        className="w-full h-12 px-4 bg-black/20 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/30 [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-50"
+                                        className="w-full h-12 px-4 bg-surface-highlight border border-border rounded-xl text-text-primary focus:outline-none focus:border-text-secondary/50"
                                     />
                                 </div>
                             </div>
 
                             <button
                                 onClick={handleCreate}
-                                className="w-full py-4 bg-white text-black font-bold rounded-xl mt-4 hover:bg-gray-200 transition-colors"
+                                className="w-full py-4 bg-primary text-background font-bold rounded-xl mt-4 hover:opacity-90 transition-colors"
                             >
                                 Створити
                             </button>

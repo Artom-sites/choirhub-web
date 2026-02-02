@@ -1,22 +1,51 @@
 @import "tailwindcss";
 
 :root {
-  /* Soft Monochrome Palette */
+  /* Soft Monochrome Palette (Dark Default) */
   --background: #09090b;
-  /* Deep matte black/gray */
   --surface: #18181b;
-  /* Zinc-900 */
   --surface-highlight: #27272a;
-  /* Zinc-800 */
   --primary: #ffffff;
-  /* White as primary accent */
   --accent: #3b82f6;
-  /* Blue-500 - for interactive elements */
   --text-primary: #ffffff;
   --text-secondary: #a1a1aa;
-  /* Zinc-400 */
   --danger: #ef4444;
   --success: #22c55e;
+  --border: rgba(255, 255, 255, 0.1);
+  --card-shadow: none;
+}
+
+
+[data-theme='light'] {
+  /* THEME: Modern Organic ("Porcelain") */
+  /* A refined, high-end aesthetic using clean whites, warm grays, and diffuse shadows. */
+
+  --background: #FAFAFA;
+  /* Neutral 50 - Warm, premium paper feel */
+  --surface: #FFFFFF;
+  /* Pure White - Crisply lifts off background */
+  --surface-highlight: #F4F4F5;
+  /* Zinc 100 - Subtle interaction state */
+
+  --primary: #18181B;
+  /* Zinc 900 - Strong, confident brand color */
+  --accent: #18181B;
+  /* Keeping it monochrome/luxury for UI chrome */
+
+  --text-primary: #18181B;
+  /* High contrast but not harsh #000 */
+  --text-secondary: #71717A;
+  /* Zinc 500 - Perfectly readable metadata */
+
+  --danger: #EF4444;
+  --success: #10B981;
+
+  --border: rgba(0, 0, 0, 0.06);
+  /* Extremely subtle definition */
+  --card-shadow:
+    0 2px 8px -2px rgba(0, 0, 0, 0.05),
+    0 4px 16px -4px rgba(0, 0, 0, 0.02);
+  /* "Airy" Shadow */
 }
 
 @theme inline {
@@ -29,6 +58,7 @@
   --color-text-secondary: var(--text-secondary);
   --color-danger: var(--danger);
   --color-success: var(--success);
+  --color-border: var(--border);
 }
 
 /* Custom Utilities */
@@ -48,67 +78,170 @@ body {
   background: var(--background);
   color: var(--text-primary);
   font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
 }
 
-/* Custom scrollbar for webkit - Dark & Soft */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+[data-theme='light'] body {
+  background: var(--background);
+  background-attachment: fixed;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
+/* --- Modern Organic Utilities --- */
+
+/* 1. Organically Floating Card */
+.neu-flat {
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
+  border-radius: 16px;
+  /* Golden mean radius */
+  border: 1px solid var(--border);
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-::-webkit-scrollbar-thumb {
+.neu-flat:active {
+  transform: scale(0.98);
+  /* Tactile feedback */
   background: var(--surface-highlight);
-  border-radius: 99px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--primary);
+/* 2. Pressed / Active State */
+.neu-pressed {
+  background: var(--surface-highlight);
+  box-shadow: none;
+  border-radius: 12px;
+  border: none;
+  color: var(--text-primary);
+}
+
+/* 3. Filled Input (Modern Standard) */
+.neu-inset {
+  background: #F4F4F5;
+  /* Zinc 100 - Filled style */
+  box-shadow: none;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.neu-inset:focus-within {
+  background: #FFFFFF;
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  /* Lifts up on focus */
+}
+
+/* 4. Action Buttons (Pill) */
+.neu-convex {
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
+  border-radius: 99px;
+  /* Pill shape */
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+}
+
+.neu-convex:active {
+  background: var(--surface-highlight);
+  transform: scale(0.95);
+}
+
+/* Floating Glass Header/Nav */
+header.neu-flat,
+nav.neu-flat {
+  background: rgba(255, 255, 255, 0.85);
+  /* Milky glass */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: none;
+}
+
+/* Dark Theme Overrides */
+[data-theme='dark'] .neu-flat,
+[data-theme='dark'] .neu-pressed,
+[data-theme='dark'] .neu-inset,
+[data-theme='dark'] .neu-convex {
+  background: var(--surface);
+  box-shadow: none;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+/* Mappings for legacy classes */
+.card-shadow {
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+}
+
+.inner-shadow {
+  background: var(--surface);
+  box-shadow: none !important;
+  /* Force no shadow */
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+/* iOS-style grouped section */
+.ios-section {
+  background: var(--surface);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+}
+
+.ios-section>*+* {
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+[data-theme='dark'] .ios-section>*+* {
+  border-top-color: rgba(255, 255, 255, 0.05);
 }
 
 /* Hide scrollbar utility */
 .scrollbar-hide {
   -ms-overflow-style: none;
-  /* IE and Edge */
   scrollbar-width: none;
-  /* Firefox */
 }
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
-  /* Chrome, Safari, Opera */
 }
 
-/* Fix for native date picker icon visibility in dark mode */
-input[type="date"] {
-  color-scheme: dark;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
+/* Frosted Glass Effect - with subtle tint */
+/* Frosted Glass Effect - with subtle tint */
+.glass-frost {
+  background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.85) 0%,
+      rgba(236, 254, 255, 0.75) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.3) inset,
+    0 8px 32px rgba(0, 0, 0, 0.08);
 }
 
-input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(1) brightness(2);
-  opacity: 1;
-  cursor: pointer;
-  padding: 4px;
+[data-theme='dark'] .glass-frost {
+  background: linear-gradient(180deg,
+      rgba(39, 39, 42, 0.70) 0%,
+      rgba(24, 24, 27, 0.80) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
-/* Firefox */
-input[type="date"]::-moz-calendar-picker-indicator {
-  filter: invert(1) brightness(2);
+/* Circle Icon - Always Solid White */
+.glass-frost-circle {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
-/* Additional dark mode form styling */
-input[type="date"]::-webkit-datetime-edit {
-  color: white;
-}
-
-input[type="date"]::-webkit-datetime-edit-fields-wrapper {
-  color: white;
+[data-theme='dark'] .glass-frost-circle {
+  background: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }

@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { ChoirMember, UserRole } from "@/types";
-import { X, Trash2, Save, User, Merge } from "lucide-react";
+import { X, Trash2, Save, Merge } from "lucide-react";
 import ConfirmationModal from "./ConfirmationModal";
 
 interface EditMemberModalProps {
     isOpen: boolean;
     onClose: () => void;
-    member: ChoirMember | null; // null = adding new
+    member: ChoirMember | null;
     onSave: (member: ChoirMember) => Promise<void>;
     onDelete?: (memberId: string) => Promise<void>;
     onMergeClick?: (member: ChoirMember) => void;
@@ -19,7 +19,6 @@ export default function EditMemberModal({ isOpen, onClose, member, onSave, onDel
     const [role, setRole] = useState<UserRole>('member');
     const [voice, setVoice] = useState<string>("");
     const [loading, setLoading] = useState(false);
-
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     useEffect(() => {
@@ -68,13 +67,13 @@ export default function EditMemberModal({ isOpen, onClose, member, onSave, onDel
 
     return (
         <>
-            <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-                <div className="bg-[#18181b] border border-white/10 w-full max-w-sm p-6 rounded-3xl shadow-2xl">
+            <div className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+                <div className="bg-surface border border-border w-full max-w-sm p-6 rounded-3xl shadow-2xl">
                     <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-xl font-bold text-white">
+                        <h3 className="text-xl font-bold text-text-primary">
                             {isEditing ? "Редагувати учасника" : "Новий учасник"}
                         </h3>
-                        <button onClick={onClose} className="p-2 text-text-secondary hover:text-white">
+                        <button onClick={onClose} className="p-2 text-text-secondary hover:text-text-primary transition-colors">
                             <X className="w-5 h-5" />
                         </button>
                     </div>
@@ -87,7 +86,7 @@ export default function EditMemberModal({ isOpen, onClose, member, onSave, onDel
                                 value={name}
                                 onChange={e => setName(e.target.value)}
                                 placeholder="Ім'я..."
-                                className="w-full p-3 bg-black/20 text-white border border-white/10 rounded-xl focus:border-white/30 outline-none transition-all"
+                                className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl focus:border-text-secondary/50 focus:bg-surface outline-none transition-all"
                             />
                         </div>
 
@@ -98,14 +97,14 @@ export default function EditMemberModal({ isOpen, onClose, member, onSave, onDel
                                 <button
                                     type="button"
                                     onClick={() => setRole('member')}
-                                    className={`p-3 rounded-xl text-sm font-bold transition-all ${role === 'member' ? 'bg-white text-black' : 'bg-white/5 text-text-secondary hover:bg-white/10'}`}
+                                    className={`p-3 rounded-xl text-sm font-bold transition-all ${role === 'member' ? 'bg-primary text-background' : 'bg-surface-highlight text-text-secondary hover:bg-surface-highlight/80'}`}
                                 >
                                     Хорист
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setRole('regent')}
-                                    className={`p-3 rounded-xl text-sm font-bold transition-all ${role === 'regent' ? 'bg-white text-black' : 'bg-white/5 text-text-secondary hover:bg-white/10'}`}
+                                    className={`p-3 rounded-xl text-sm font-bold transition-all ${role === 'regent' ? 'bg-primary text-background' : 'bg-surface-highlight text-text-secondary hover:bg-surface-highlight/80'}`}
                                 >
                                     Регент
                                 </button>
@@ -121,7 +120,7 @@ export default function EditMemberModal({ isOpen, onClose, member, onSave, onDel
                                         key={v}
                                         type="button"
                                         onClick={() => setVoice(voice === v ? "" : v)}
-                                        className={`p-3 rounded-xl text-sm font-bold transition-all ${voice === v ? 'bg-blue-500 text-white' : 'bg-white/5 text-text-secondary hover:bg-white/10'}`}
+                                        className={`p-3 rounded-xl text-sm font-bold transition-all ${voice === v ? 'bg-primary text-background' : 'bg-surface-highlight text-text-secondary hover:bg-surface-highlight/80'}`}
                                     >
                                         {v === 'Soprano' ? 'Сопрано' : v === 'Alto' ? 'Альт' : v === 'Tenor' ? 'Тенор' : 'Бас'}
                                     </button>
@@ -144,7 +143,7 @@ export default function EditMemberModal({ isOpen, onClose, member, onSave, onDel
                                 <button
                                     type="button"
                                     onClick={() => onMergeClick(member)}
-                                    className="p-3 bg-purple-500/10 text-purple-400 rounded-xl hover:bg-purple-500/20 transition-colors"
+                                    className="p-3 bg-purple-500/10 text-purple-500 rounded-xl hover:bg-purple-500/20 transition-colors"
                                     title="Об'єднати дублікат"
                                 >
                                     <Merge className="w-5 h-5" />
@@ -153,9 +152,9 @@ export default function EditMemberModal({ isOpen, onClose, member, onSave, onDel
                             <button
                                 type="submit"
                                 disabled={loading || !name.trim()}
-                                className="flex-1 p-3 bg-white text-black rounded-xl font-bold hover:bg-gray-200 disabled:opacity-50 flex items-center justify-center gap-2"
+                                className="flex-1 p-3 bg-primary text-background rounded-xl font-bold hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
                             >
-                                {loading ? <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" /> : <><Save className="w-4 h-4" /> Зберегти</>}
+                                {loading ? <div className="w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin" /> : <><Save className="w-4 h-4" /> Зберегти</>}
                             </button>
                         </div>
                     </form>

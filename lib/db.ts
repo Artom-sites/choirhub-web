@@ -407,6 +407,51 @@ export async function addKnownPianist(choirId: string, name: string): Promise<vo
     }
 }
 
+export async function deleteAdminCode(choirId: string, codeToDelete: string): Promise<void> {
+    try {
+        const choirRef = doc(db, "choirs", choirId);
+        const choirSnap = await getDoc(choirRef);
+
+        if (!choirSnap.exists()) throw new Error("Choir not found");
+
+        const data = choirSnap.data();
+        const adminCodes = data.adminCodes || [];
+        const updatedCodes = adminCodes.filter((ac: any) => ac.code !== codeToDelete);
+
+        await updateDoc(choirRef, { adminCodes: updatedCodes });
+    } catch (error) {
+        console.error("Error deleting admin code:", error);
+        throw error;
+    }
+}
+
+// ============ NOTIFICATIONS ============
+
+export async function getChoirNotifications(choirId: string): Promise<any[]> {
+    try {
+        const q = query(
+            collection(db, `choirs/${choirId}/notifications`),
+            orderBy("createdAt", "desc")
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error fetching notifications:", error);
+        return [];
+    }
+}
+
+export async function markNotificationAsRead(choirId: string, notificationId: string, userId: string): Promise<void> {
+    try {
+        const docRef = doc(db, `choirs/${choirId}/notifications`, notificationId);
+        await updateDoc(docRef, {
+            readBy: arrayUnion(userId)
+        });
+    } catch (error) {
+        console.error("Error marking notification as read:", error);
+    }
+}
+
 // ============ USER ============
 
 export async function createUser(userId: string, data: Partial<UserData>): Promise<void> {

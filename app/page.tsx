@@ -3,37 +3,59 @@
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon, mergeMembers, updateChoir, deleteUserAccount } from "@/lib/db";
+import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon, mergeMembers, updateChoir, deleteUserAccount, deleteAdminCode, getChoirNotifications } from "@/lib/db";
 import { Service, Choir, UserMembership, ChoirMember, Permission, AdminCode } from "@/types";
 import SongList from "@/components/SongList";
+import SwipeableCard from "@/components/SwipeableCard";
 import ServiceList from "@/components/ServiceList";
 import Preloader from "@/components/Preloader";
 import ServiceView from "@/components/ServiceView";
 import StatisticsView from "@/components/StatisticsView"; // New
 import EditMemberModal from "@/components/EditMemberModal"; // New
 import MergeMemberModal from "@/components/MergeMemberModal"; // New
-import NotificationSettings from "@/components/NotificationSettings";
+import InstallPrompt from "@/components/InstallPrompt";
+
+
+import ThemeSettings from "@/components/ThemeSettings";
 import LegalModal from "@/components/LegalModal";
 import SupportModal from "@/components/SupportModal";
 import HelpModal from "@/components/HelpModal";
+import NotificationsModal from "@/components/NotificationsModal";
 import DeleteAccountModal from "@/components/DeleteAccountModal";
+import ConfirmationModal from "@/components/ConfirmationModal";
 import {
   Music2, Loader2, Copy, Check, HelpCircle,
   LogOut, ChevronLeft, Home, User, Users, Repeat,
-  PlusCircle, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell
+  PlusCircle, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon
 } from "lucide-react";
 import SendNotificationModal from "@/components/SendNotificationModal";
 import { collection as firestoreCollection, addDoc, getDocs, where, query, doc, updateDoc, arrayUnion, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+
 
 function HomePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, userData, loading: authLoading, signOut, refreshProfile } = useAuth();
 
+
+
   const [choir, setChoir] = useState<Choir | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [pageLoading, setPageLoading] = useState(true);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+
+  useEffect(() => {
+    if (userData?.choirId) {
+      getChoirNotifications(userData.choirId).then(notifs => {
+        if (userData.id) {
+          const unread = notifs.filter((n: any) => !n.readBy?.includes(userData.id));
+          setUnreadNotifications(unread.length);
+        }
+      });
+    }
+  }, [userData?.choirId, userData?.id, showNotificationModal]); // Re-check when modal closes
 
   // Navigation
   const activeTabRaw = searchParams.get('tab');
@@ -62,6 +84,8 @@ function HomePageContent() {
   const [mergingMember, setMergingMember] = useState<ChoirMember | null>(null); // New merge state
 
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [deletingAdminCode, setDeletingAdminCode] = useState<string | null>(null);
+
 
   // Choir Manager State
   const [managerMode, setManagerMode] = useState<'list' | 'create' | 'join'>('list');
@@ -109,7 +133,7 @@ function HomePageContent() {
   ];
 
   // Fetch Choir Data replaced by real-time listeners below
-  // const fetchChoirData = async () => { ... }
+  // const fetchChoirData = async () => {... }
 
   useEffect(() => {
     if (authLoading) return;
@@ -628,7 +652,7 @@ function HomePageContent() {
   // If viewing a specific service, render ServiceView full screen
   if (selectedService) {
     return (
-      <main className="min-h-screen bg-[#09090b] selection:bg-white/30">
+      <main className="min-h-screen bg-background selection:bg-white/30">
         <ServiceView
           service={selectedService}
           onBack={() => handleSelectService(null)}
@@ -639,14 +663,14 @@ function HomePageContent() {
   }
 
   const getRoleBadge = (role: string) => {
-    const roleConfig: Record<string, { label: string; bg: string; text: string }> = {
-      head: { label: "Регент", bg: "bg-amber-500/20", text: "text-amber-400" },
-      regent: { label: "Регент", bg: "bg-blue-500/20", text: "text-blue-400" },
-      member: { label: "Хорист", bg: "bg-white/10", text: "text-gray-400" },
+    const roleConfig: Record<string, { label: string; className: string }> = {
+      head: { label: "Регент", className: "bg-primary/10 text-primary border border-primary/20" },
+      regent: { label: "Регент", className: "bg-primary/10 text-primary border border-primary/20" },
+      member: { label: "Хорист", className: "bg-surface-highlight text-text-secondary border border-border" },
     };
     const config = roleConfig[role] || roleConfig.member;
     return (
-      <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${config.bg} ${config.text}`}>
+      <span className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full ${config.className}`}>
         {config.label}
       </span>
     );
@@ -672,18 +696,19 @@ function HomePageContent() {
   };
 
   return (
-    <main className="min-h-screen bg-[#09090b] pb-24 selection:bg-white/30">
+    <main className="min-h-screen bg-background pb-24 selection:bg-white/30">
+      <InstallPrompt />
 
       {/* Logout Confirmation Modal */}
       {showLogoutConfirm && (
         <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-[#18181b] border border-white/10 w-full max-w-xs p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="bg-surface card-shadow w-full max-w-xs p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="flex flex-col items-center text-center gap-4">
-              <div className="w-14 h-14 bg-white/5 rounded-full flex items-center justify-center">
+              <div className="w-14 h-14 bg-surface-highlight rounded-full flex items-center justify-center">
                 <LogOut className="w-6 h-6 text-text-secondary" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white">Вийти з акаунту?</h3>
+                <h3 className="text-lg font-bold text-text-primary">Вийти з акаунту?</h3>
                 <p className="text-text-secondary text-sm mt-1">
                   Для повторного входу знадобиться увійти через Google.
                 </p>
@@ -691,13 +716,13 @@ function HomePageContent() {
               <div className="flex gap-3 w-full mt-2">
                 <button
                   onClick={() => setShowLogoutConfirm(false)}
-                  className="flex-1 py-3 border border-white/10 rounded-xl text-white hover:bg-white/5 transition-colors font-medium text-sm"
+                  className="flex-1 py-3 border border-border rounded-xl text-text-primary hover:bg-surface-highlight transition-colors font-medium text-sm"
                 >
                   Скасувати
                 </button>
                 <button
                   onClick={handleLogout}
-                  className="flex-1 py-3 bg-white text-black rounded-xl font-bold hover:bg-gray-200 transition-colors text-sm"
+                  className="flex-1 py-3 bg-primary text-background rounded-xl font-bold hover:opacity-90 transition-colors text-sm"
                 >
                   Вийти
                 </button>
@@ -710,12 +735,12 @@ function HomePageContent() {
       {/* Choir Settings Modal */}
       {showChoirSettings && (
         <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-[#18181b] border border-white/10 w-full max-w-sm p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="bg-surface card-shadow w-full max-w-sm p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-white">Налаштування хору</h3>
+              <h3 className="text-lg font-bold text-text-primary">Налаштування хору</h3>
               <button
                 onClick={() => setShowChoirSettings(false)}
-                className="p-2 text-text-secondary hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                className="p-2 text-text-secondary hover:text-text-primary hover:bg-surface-highlight rounded-full transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -725,12 +750,12 @@ function HomePageContent() {
             <div className="flex flex-col items-center mb-6">
               <button
                 onClick={() => iconInputRef.current?.click()}
-                className="w-24 h-24 bg-white/10 rounded-2xl flex items-center justify-center border border-white/10 overflow-hidden relative group cursor-pointer hover:border-white/30 transition-colors"
+                className="w-24 h-24 bg-surface-highlight rounded-2xl flex items-center justify-center border border-border overflow-hidden relative group cursor-pointer hover:border-primary/30 transition-colors"
               >
                 {choir?.icon ? (
                   <img src={choir.icon} alt="Choir" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-4xl text-white font-bold">{choir?.name?.[0]?.toUpperCase() || "C"}</span>
+                  <span className="text-4xl text-text-primary font-bold">{choir?.name?.[0]?.toUpperCase() || "C"}</span>
                 )}
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                   <Camera className="w-6 h-6 text-white" />
@@ -747,7 +772,7 @@ function HomePageContent() {
                 value={editChoirName}
                 onChange={(e) => setEditChoirName(e.target.value)}
                 placeholder="Назва хору"
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-text-secondary focus:outline-none focus:border-white/30"
+                className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:border-primary/50"
               />
             </div>
 
@@ -767,7 +792,7 @@ function HomePageContent() {
                 }
               }}
               disabled={savingChoirSettings || !editChoirName.trim()}
-              className="w-full py-3 bg-white text-black rounded-xl font-bold hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-3 bg-primary text-background rounded-xl font-bold hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {savingChoirSettings && <Loader2 className="w-4 h-4 animate-spin" />}
               Зберегти
@@ -779,32 +804,32 @@ function HomePageContent() {
       {/* Choir Manager Modal */}
       {showChoirManager && (
         <div className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-[#18181b] border border-white/10 w-full max-w-sm p-6 rounded-3xl shadow-2xl overflow-hidden relative">
-            <button onClick={() => { setShowChoirManager(false); setManagerMode('list'); setManagerError(""); }} className="absolute top-4 right-4 p-2 text-text-secondary hover:text-white">
+          <div className="bg-surface card-shadow w-full max-w-sm p-6 rounded-3xl shadow-2xl overflow-hidden relative">
+            <button onClick={() => { setShowChoirManager(false); setManagerMode('list'); setManagerError(""); }} className="absolute top-4 right-4 p-2 text-text-secondary hover:text-text-primary">
               <X className="w-5 h-5" />
             </button>
 
             {managerMode === 'list' && (
               <div className="space-y-4">
-                <h3 className="text-xl font-bold text-white text-center mb-6">Мої хори</h3>
+                <h3 className="text-xl font-bold text-text-primary text-center mb-6">Мої хори</h3>
 
                 <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                  <div className="p-4 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-between">
+                  <div className="p-4 rounded-2xl bg-success/10 border border-success/30 flex items-center justify-between">
                     <div>
-                      <p className="text-white font-bold">{userData?.choirName}</p>
-                      <p className="text-xs text-green-400 font-medium tracking-wide">ПОТОЧНИЙ</p>
+                      <p className="text-text-primary font-bold">{userData?.choirName}</p>
+                      <p className="text-xs text-success font-medium tracking-wide">ПОТОЧНИЙ</p>
                     </div>
-                    <Check className="w-5 h-5 text-green-400" />
+                    <Check className="w-5 h-5 text-success" />
                   </div>
 
                   {userData?.memberships?.filter(m => m.choirId !== userData.choirId).map(m => (
                     <button
                       key={m.choirId}
                       onClick={() => handleSwitchChoir(m)}
-                      className="w-full p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/20 flex items-center justify-between transition-all"
+                      className="w-full p-4 rounded-2xl bg-surface-highlight border border-border hover:bg-surface-highlight/80 flex items-center justify-between transition-all"
                     >
                       <div className="text-left">
-                        <p className="text-white font-bold">{m.choirName}</p>
+                        <p className="text-text-primary font-bold">{m.choirName}</p>
                         <p className="text-xs text-text-secondary uppercase">{m.role === 'head' ? 'Регент' : m.role === 'regent' ? 'Регент' : 'Хорист'}</p>
                       </div>
                       <Repeat className="w-4 h-4 text-text-secondary" />
@@ -813,10 +838,10 @@ function HomePageContent() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 pt-4">
-                  <button onClick={() => setManagerMode('create')} className="p-3 bg-white text-black rounded-xl text-sm font-bold hover:bg-gray-200">
+                  <button onClick={() => setManagerMode('create')} className="p-3 bg-primary text-background rounded-xl text-sm font-bold hover:opacity-90">
                     Створити
                   </button>
-                  <button onClick={() => setManagerMode('join')} className="p-3 bg-white/10 text-white rounded-xl text-sm font-bold hover:bg-white/20 border border-white/5">
+                  <button onClick={() => setManagerMode('join')} className="p-3 bg-surface-highlight text-text-primary rounded-xl text-sm font-bold hover:bg-surface-highlight/80 border border-border">
                     Приєднатись
                   </button>
                 </div>
@@ -825,18 +850,18 @@ function HomePageContent() {
 
             {managerMode === 'create' && (
               <div className="space-y-4">
-                <button onClick={() => setManagerMode('list')} className="text-xs text-text-secondary hover:text-white mb-2">← Назад</button>
-                <h3 className="text-xl font-bold text-white">Новий хор</h3>
+                <button onClick={() => setManagerMode('list')} className="text-xs text-text-secondary hover:text-text-primary mb-2">← Назад</button>
+                <h3 className="text-xl font-bold text-text-primary">Новий хор</h3>
                 <input
                   value={newChoirName}
                   onChange={e => setNewChoirName(e.target.value)}
                   placeholder="Назва хору"
-                  className="w-full p-3 bg-black/20 text-white border border-white/10 rounded-xl"
+                  className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl placeholder:text-text-secondary"
                 />
                 <button
                   onClick={handleCreateChoir}
                   disabled={managerLoading}
-                  className="w-full p-3 bg-white text-black rounded-xl font-bold hover:bg-gray-200 disabled:opacity-50"
+                  className="w-full p-3 bg-primary text-background rounded-xl font-bold hover:opacity-90 disabled:opacity-50"
                 >
                   {managerLoading ? <Loader2 className="animate-spin mx-auto" /> : "Створити"}
                 </button>
@@ -845,20 +870,20 @@ function HomePageContent() {
 
             {managerMode === 'join' && (
               <div className="space-y-4">
-                <button onClick={() => { setManagerMode('list'); setManagerError(""); }} className="text-xs text-text-secondary hover:text-white mb-2">← Назад</button>
-                <h3 className="text-xl font-bold text-white">Приєднатись</h3>
+                <button onClick={() => { setManagerMode('list'); setManagerError(""); }} className="text-xs text-text-secondary hover:text-text-primary mb-2">← Назад</button>
+                <h3 className="text-xl font-bold text-text-primary">Приєднатись</h3>
                 <input
                   value={joinCode}
                   onChange={e => setJoinCode(e.target.value.toUpperCase())}
                   placeholder="Код (6 символів)"
                   maxLength={6}
-                  className="w-full p-3 bg-black/20 text-white border border-white/10 rounded-xl text-center font-mono uppercase tracking-widest"
+                  className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl text-center font-mono uppercase tracking-widest placeholder:text-text-secondary"
                 />
                 {managerError && <p className="text-red-400 text-xs">{managerError}</p>}
                 <button
                   onClick={handleJoinChoir}
                   disabled={managerLoading}
-                  className="w-full p-3 bg-white text-black rounded-xl font-bold hover:bg-gray-200 disabled:opacity-50"
+                  className="w-full p-3 bg-primary text-background rounded-xl font-bold hover:opacity-90 disabled:opacity-50"
                 >
                   {managerLoading ? <Loader2 className="animate-spin mx-auto" /> : "Додатись"}
                 </button>
@@ -898,11 +923,11 @@ function HomePageContent() {
 
       {/* Account Overlay */}
       {showAccount && (
-        <div className="fixed inset-0 z-50 bg-[#09090b] animate-in slide-in-from-right duration-300 flex flex-col">
-          <div className="p-4 border-b border-white/5 bg-[#18181b]/50 backdrop-blur-md">
+        <div className="fixed inset-0 z-[60] animate-in slide-in-from-right duration-300 flex flex-col" style={{ background: 'var(--background)' }}>
+          <div className="p-4 border-b border-border" style={{ background: 'var(--surface)' }}>
             <button
               onClick={() => setShowAccount(false)}
-              className="flex items-center gap-2 text-white font-medium hover:text-white/80 transition-colors py-1"
+              className="flex items-center gap-2 text-text-primary font-medium hover:text-text-secondary transition-colors py-1"
             >
               <ChevronLeft className="w-5 h-5" />
               Назад
@@ -910,12 +935,28 @@ function HomePageContent() {
           </div>
 
           <div className="max-w-md mx-auto w-full h-full flex flex-col p-6 overflow-y-auto">
-            <h2 className="text-3xl font-bold text-white mb-8 tracking-tight">Акаунт</h2>
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-3xl font-bold text-text-primary tracking-tight">Акаунт</h2>
+              <button
+                onClick={() => setShowNotificationModal(true)}
+                className="p-2 rounded-full hover:bg-surface-highlight transition-colors relative"
+                title="Сповіщення"
+              >
+                {unreadNotifications > 0 ? (
+                  <>
+                    <Bell className="w-5 h-5 text-text-secondary" />
+                    <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-green-500 border-2 border-background rounded-full" />
+                  </>
+                ) : (
+                  <Bell className="w-5 h-5 text-text-secondary" />
+                )}
+              </button>
+            </div>
 
             <div className="space-y-6 flex-1">
               {/* Profile Card */}
-              <div className="bg-white/5 border border-white/5 rounded-3xl p-6 flex items-center gap-5">
-                <div className="w-16 h-16 rounded-full bg-white text-black flex items-center justify-center text-xl font-bold shadow-lg overflow-hidden">
+              <div className="bg-surface rounded-2xl p-6 flex items-center gap-5 card-shadow">
+                <div className="w-16 h-16 rounded-full bg-accent text-white flex items-center justify-center text-xl font-bold shadow-lg overflow-hidden">
                   {user?.photoURL ? (
                     <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
@@ -924,10 +965,10 @@ function HomePageContent() {
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-xl font-bold text-white">{userData?.name}</h3>
+                    <h3 className="text-xl font-bold text-text-primary">{userData?.name}</h3>
                     <button
                       onClick={() => { setNewName(userData?.name || ""); setShowEditName(true); }}
-                      className="p-1.5 rounded-full hover:bg-white/10 transition-colors text-text-secondary hover:text-white"
+                      className="p-1.5 rounded-full hover:bg-surface-highlight transition-colors text-text-secondary hover:text-text-primary"
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
@@ -941,143 +982,138 @@ function HomePageContent() {
               {/* Change Choir Button */}
               <button
                 onClick={() => { setShowAccount(false); setShowChoirManager(true); }}
-                className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 transition-all group"
+                className="w-full flex items-center justify-between p-4 bg-surface hover:bg-surface rounded-2xl transition-all group card-shadow"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full bg-accent/10 text-accent flex items-center justify-center">
                     <Repeat className="w-5 h-5" />
                   </div>
                   <div className="text-left">
-                    <p className="text-white font-bold text-sm">Змінити хор</p>
-                    <p className="text-xs text-text-secondary group-hover:text-white/80">Додати або перемкнути</p>
+                    <p className="text-text-primary font-bold text-sm">Змінити хор</p>
+                    <p className="text-xs text-text-secondary group-hover:text-text-primary/80">Додати або перемкнути</p>
                   </div>
                 </div>
-                <PlusCircle className="w-5 h-5 text-text-secondary group-hover:text-white" />
+                <PlusCircle className="w-5 h-5 text-text-secondary group-hover:text-text-primary" />
               </button>
 
               {/* Codes for admin */}
               {(userData?.role === 'head' || userData?.role === 'regent') && choir && (
-                <div className="space-y-4 pt-4">
-                  <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest pl-2">Коди доступу</h3>
+                <div className="space-y-3 pt-4">
+                  <div className="flex items-center justify-between pl-2">
+                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest">Коди доступу</h3>
+                    <button
+                      onClick={() => setShowAdminCodeModal(true)}
+                      className="p-1.5 hover:bg-surface-highlight rounded-lg text-text-secondary hover:text-text-primary transition-colors flex items-center gap-1"
+                      title="Створити адмін-код"
+                    >
+                      <PlusCircle className="w-4 h-4" />
+                    </button>
+                  </div>
 
-                  <button
-                    onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.memberCode}`)}
-                    className="w-full bg-[#18181b] border border-white/5 hover:border-white/30 p-4 rounded-2xl flex items-center justify-between group transition-all"
-                  >
-                    <div className="text-left">
-                      <p className="text-sm text-text-secondary mb-1">Хористи</p>
-                      <code className="text-xl font-mono text-white font-bold tracking-wider">{choir.memberCode}</code>
-                    </div>
-                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-white/20 transition-colors">
-                      {copiedCode === `https://${window.location.host}/setup?code=${choir.memberCode}` ? <Check className="w-5 h-5 text-green-500" /> : <Link2 className="w-5 h-5 text-text-secondary group-hover:text-white" />}
-                    </div>
-                  </button>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.memberCode}`)}
+                      className="flex flex-col items-start gap-1 p-4 bg-surface hover:bg-surface-highlight rounded-2xl transition-all card-shadow group"
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-xs text-text-secondary">Хористи</span>
+                        {copiedCode === `https://${window.location.host}/setup?code=${choir.memberCode}` ? <Check className="w-4 h-4 text-success" /> : <Link2 className="w-4 h-4 text-text-secondary group-hover:text-accent" />}
+                      </div>
+                      <code className="text-lg font-mono font-bold text-text-primary">{choir.memberCode}</code>
+                    </button>
 
-                  <button
-                    onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.regentCode}`)}
-                    className="w-full bg-[#18181b] border border-white/5 hover:border-white/30 p-4 rounded-2xl flex items-center justify-between group transition-all"
-                  >
-                    <div className="text-left">
-                      <p className="text-sm text-text-secondary mb-1">Регенти</p>
-                      <code className="text-xl font-mono text-white font-bold tracking-wider">{choir.regentCode}</code>
-                    </div>
-                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-white/20 transition-colors">
-                      {copiedCode === `https://${window.location.host}/setup?code=${choir.regentCode}` ? <Check className="w-5 h-5 text-green-500" /> : <Link2 className="w-5 h-5 text-text-secondary group-hover:text-white" />}
-                    </div>
-                  </button>
+                    <button
+                      onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.regentCode}`)}
+                      className="flex flex-col items-start gap-1 p-4 bg-surface hover:bg-surface-highlight rounded-2xl transition-all card-shadow group"
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-xs text-text-secondary">Регенти</span>
+                        {copiedCode === `https://${window.location.host}/setup?code=${choir.regentCode}` ? <Check className="w-4 h-4 text-success" /> : <Link2 className="w-4 h-4 text-text-secondary group-hover:text-accent" />}
+                      </div>
+                      <code className="text-lg font-mono font-bold text-text-primary">{choir.regentCode}</code>
+                    </button>
+                  </div>
 
-                  {/* Admin Codes Section */}
-                  <div className="mt-6 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-bold text-text-secondary uppercase tracking-widest">Адмін-коди</h4>
-                      <button
-                        onClick={() => setShowAdminCodeModal(true)}
-                        className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-text-secondary hover:text-white transition-colors"
-                      >
-                        <PlusCircle className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    {(choir.adminCodes?.length || 0) === 0 ? (
-                      <p className="text-xs text-text-secondary/50">Ще немає адмін-кодів</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {choir.adminCodes?.map((ac, idx) => (
-                          <div key={idx} className="bg-black/20 border border-white/5 p-3 rounded-xl">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-xs text-text-secondary">{ac.label || 'Адміністратор'}</p>
-                                <code className="text-white font-mono font-bold">{ac.code}</code>
+                  {/* Admin Codes List (Compact) */}
+                  {choir.adminCodes && choir.adminCodes.length > 0 && (
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      {choir.adminCodes.map((ac, idx) => (
+                        <SwipeableCard
+                          key={idx}
+                          onDelete={() => setDeletingAdminCode(ac.code)}
+                          disabled={false}
+                          className="rounded-xl"
+                        >
+                          <div className="bg-surface/50 border border-border/50 p-2 rounded-xl flex flex-col group hover:bg-surface transition-colors h-full">
+                            <div className="flex items-start justify-between">
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-[9px] text-text-secondary uppercase tracking-wider truncate">{ac.label || 'Адмін'}</span>
+                                <code className="text-xs font-mono font-bold text-text-primary">{ac.code}</code>
                               </div>
                               <button
                                 onClick={() => copyCode(`https://${window.location.host}/setup?code=${ac.code}`)}
-                                className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
+                                className="p-1 text-text-secondary hover:text-text-primary transition-colors flex-shrink-0"
                               >
-                                {copiedCode === `https://${window.location.host}/setup?code=${ac.code}` ? (
-                                  <Check className="w-4 h-4 text-green-500" />
-                                ) : (
-                                  <Link2 className="w-4 h-4 text-text-secondary" />
-                                )}
+                                {copiedCode === `https://${window.location.host}/setup?code=${ac.code}` ? <Check className="w-3 h-3 text-success" /> : <Link2 className="w-3 h-3" />}
                               </button>
                             </div>
-                            <div className="flex flex-wrap gap-1 mt-2">
+                            <div className="flex gap-1 mt-1">
                               {ac.permissions.map(p => (
-                                <span key={p} className="text-[10px] px-1.5 py-0.5 bg-indigo-500/10 text-indigo-400 rounded">
-                                  {AVAILABLE_PERMISSIONS.find(ap => ap.key === p)?.label?.split(' ')[0]}
-                                </span>
+                                <div key={p} className="w-1 h-1 rounded-full bg-accent/40" title={p} />
                               ))}
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                        </SwipeableCard>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
-            {/* Notification Settings */}
+            {/* Theme Settings */}
             <div className="mt-6">
-              <NotificationSettings />
+              <ThemeSettings />
             </div>
+
 
             <button
               onClick={() => setShowHelpModal(true)}
-              className="w-full py-4 bg-white/5 border border-white/5 text-white hover:bg-white/10 rounded-2xl font-bold transition-all mt-4 flex items-center justify-center gap-2"
+              className="w-full py-4 bg-surface text-text-primary hover:bg-surface rounded-xl font-bold transition-all mt-4 flex items-center justify-center gap-2 card-shadow"
             >
-              <HelpCircle className="w-5 h-5 text-indigo-400" />
+              <HelpCircle className="w-5 h-5 text-accent" />
               Довідка
             </button>
 
             <button
               onClick={() => setShowLegalModal(true)}
-              className="w-full py-4 bg-white/5 border border-white/5 text-white hover:bg-white/10 rounded-2xl font-bold transition-all mt-3 flex items-center justify-center gap-2"
+              className="w-full py-4 bg-surface text-text-primary hover:bg-surface rounded-xl font-bold transition-all mt-3 flex items-center justify-center gap-2 card-shadow"
             >
-              <FileText className="w-5 h-5 text-gray-400" />
+              <FileText className="w-5 h-5 text-text-secondary" />
               Sources & Content (Legal)
             </button>
 
             <button
               onClick={() => setShowSupportModal(true)}
-              className="w-full py-4 bg-gradient-to-r from-pink-500/10 to-rose-500/10 border border-pink-500/20 text-pink-200 hover:bg-pink-500/20 rounded-2xl font-bold transition-all mt-3 flex items-center justify-center gap-2 group"
+              className="w-full py-4 bg-pink-500/10 text-pink-500 hover:bg-pink-500/15 rounded-xl font-bold transition-all mt-3 flex items-center justify-center gap-2 group"
             >
-              <Heart className="w-5 h-5 text-pink-400 group-hover:scale-110 transition-transform" />
+              <Heart className="w-5 h-5 text-pink-500 group-hover:scale-110 transition-transform" />
               Підтримати проєкт
             </button>
 
             <button
               onClick={() => setShowLogoutConfirm(true)}
-              className="w-full py-4 border border-white/10 text-white hover:bg-white/10 rounded-2xl font-bold transition-all mt-6 flex items-center justify-center gap-2"
+              className="w-full py-4 bg-surface text-text-primary hover:bg-surface rounded-xl font-bold transition-all mt-6 flex items-center justify-center gap-2 card-shadow"
             >
               <LogOut className="w-5 h-5" />
               Вийти з акаунту
             </button>
 
             {/* Delete Account Button */}
-            <div className="mt-8 border-t border-white/5 pt-4">
+            <div className="mt-8 pt-4">
               <button
                 onClick={() => setShowDeleteModal(true)}
-                className="w-full py-3 text-red-500 hover:bg-red-500/10 rounded-2xl text-sm font-bold transition-all"
+                className="w-full py-3 text-danger hover:bg-danger/10 rounded-xl text-sm font-bold transition-all"
               >
                 Видалити акаунт
               </button>
@@ -1105,7 +1141,7 @@ function HomePageContent() {
       />
 
       {/* Header */}
-      <header className="bg-[#09090b]/80 backdrop-blur-xl border-b border-white/5 sticky top-0 z-30">
+      <header className="bg-surface/80 backdrop-blur-2xl sticky top-0 z-30 border-b border-border shadow-[0_4px_20px_rgba(0,0,0,0.06)]">
         <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {/* Logo - clickable to change icon (for regent/head only) */}
@@ -1123,12 +1159,12 @@ function HomePageContent() {
                   setShowChoirSettings(true);
                 }
               }}
-              className={`w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/5 overflow-hidden relative group ${canEdit ? 'cursor-pointer hover:border-white/30' : ''}`}
+              className={`w-10 h-10 bg-surface-highlight rounded-xl flex items-center justify-center border border-border overflow-hidden relative group ${canEdit ? 'cursor-pointer hover:border-accent/30' : ''}`}
             >
               {choir?.icon ? (
                 <img src={choir.icon} alt="Choir" className="w-full h-full object-cover" />
               ) : (
-                <span className="text-xl text-white font-bold">{choir?.name?.[0]?.toUpperCase() || "C"}</span>
+                <span className="text-xl text-text-primary font-bold">{choir?.name?.[0]?.toUpperCase() || "C"}</span>
               )}
               {canEdit && (
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
@@ -1137,7 +1173,7 @@ function HomePageContent() {
               )}
             </button>
             <div>
-              <h1 className="text-lg font-bold text-white leading-tight">
+              <h1 className="text-lg font-bold text-text-primary leading-tight">
                 {activeTab === 'home' ? 'Головна' : activeTab === 'songs' ? 'Пісні' : 'Учасники'}
               </h1>
               <p className="text-xs text-text-secondary font-medium">
@@ -1145,18 +1181,20 @@ function HomePageContent() {
               </p>
             </div>
           </div>
-          <button
-            onClick={() => setShowAccount(true)}
-            className="w-10 h-10 rounded-full border border-white/10 hover:border-white/50 transition-colors overflow-hidden"
-          >
-            <div className="w-full h-full bg-[#18181b] flex items-center justify-center text-text-secondary font-bold text-sm">
-              {user?.photoURL ? (
-                <img src={user.photoURL} alt="User" className="w-full h-full object-cover" />
-              ) : (
-                <span>{userData?.name?.[0]?.toUpperCase() || "U"}</span>
-              )}
-            </div>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowAccount(true)}
+              className="w-10 h-10 rounded-full border border-border hover:border-accent/50 transition-colors overflow-hidden"
+            >
+              <div className="w-full h-full bg-accent flex items-center justify-center text-white font-bold text-sm">
+                {user?.photoURL ? (
+                  <img src={user.photoURL} alt="User" className="w-full h-full object-cover" />
+                ) : (
+                  <span>{userData?.name?.[0]?.toUpperCase() || "U"}</span>
+                )}
+              </div>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -1178,7 +1216,7 @@ function HomePageContent() {
           <div className="max-w-md mx-auto p-4">
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-3">
-                <h2 className="text-xl font-bold text-white">Учасники</h2>
+                <h2 className="text-xl font-bold text-text-primary">Учасники</h2>
                 {/* Stats Button */}
                 <button
                   onClick={() => setShowStats(true)}
@@ -1235,10 +1273,10 @@ function HomePageContent() {
                           setShowEditMemberModal(true);
                         }
                       }}
-                      className={`p-4 bg-white/5 border border-white/5 rounded-2xl flex items-center justify-between group hover:bg-white/10 transition-colors ${canEdit ? 'cursor-pointer active:scale-[0.99]' : ''}`}
+                      className={`p-4 bg-surface card-shadow rounded-2xl flex items-center justify-between group hover:bg-surface-highlight transition-colors ${canEdit ? 'cursor-pointer active:scale-[0.99]' : ''}`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white font-bold text-sm relative">
+                        <div className="w-10 h-10 rounded-full bg-surface-highlight flex items-center justify-center text-text-primary font-bold text-sm relative">
                           {member.name?.[0]?.toUpperCase() || "?"}
                           {absences > 0 && (
                             <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
@@ -1247,7 +1285,7 @@ function HomePageContent() {
                           )}
                         </div>
                         <div>
-                          <p className="text-white font-bold flex items-center gap-2">
+                          <p className="text-text-primary font-bold flex items-center gap-2 mb-1">
                             {member.name}
                             {getVoiceBadge(member.voice)}
                           </p>
@@ -1263,7 +1301,7 @@ function HomePageContent() {
                       </div>
 
                       {canEdit && (
-                        <div className="text-text-secondary/50 group-hover:text-white transition-colors">
+                        <div className="text-text-secondary/50 group-hover:text-text-primary transition-colors">
                           <User className="w-4 h-4" />
                         </div>
                       )}
@@ -1275,8 +1313,8 @@ function HomePageContent() {
 
             {/* Stats summary */}
             {services.length > 0 && (choir?.members || []).length > 0 && (
-              <div className="mt-8 p-4 bg-white/5 border border-white/5 rounded-2xl">
-                <p className="text-white text-sm font-bold mb-2">📊 Статистика</p>
+              <div className="mt-8 p-4 bg-surface card-shadow rounded-2xl">
+                <p className="text-text-primary text-sm font-bold mb-2">📊 Статистика</p>
                 <p className="text-text-secondary text-sm">
                   Всього служінь: {services.length} • Учасників: {choir?.members?.length || 0}
                 </p>
@@ -1288,30 +1326,30 @@ function HomePageContent() {
       </div >
 
       {/* Bottom Nav */}
-      < nav className="fixed bottom-0 left-0 right-0 bg-[#09090b]/90 backdrop-blur-xl border-t border-white/5 px-4 pb-safe pt-2 z-20" >
+      <nav className="fixed bottom-0 left-0 right-0 bg-surface/90 backdrop-blur-xl px-4 pb-safe pt-2 z-50 border-t border-border">
         <div className="max-w-md mx-auto flex justify-around items-center h-16">
 
           <button
             onClick={() => setActiveTab('home')}
-            className={`flex flex-col items-center gap-1 flex-1 p-2 rounded-xl active:scale-95 transition-all ${activeTab === 'home' ? 'text-white' : 'text-text-secondary'}`}
+            className={`flex flex-col items-center gap-1 flex-1 p-2 rounded-xl active:scale-95 transition-all ${activeTab === 'home' ? 'text-primary' : 'text-text-secondary'}`}
           >
-            <Home className={`w-6 h-6 ${activeTab === 'home' ? 'fill-white/20' : ''}`} />
+            <Home className={`w-6 h-6 ${activeTab === 'home' ? 'fill-primary/20' : ''}`} />
             <span className="text-[10px] font-bold uppercase tracking-wide">Головна</span>
           </button>
 
           <button
             onClick={() => setActiveTab('songs')}
-            className={`flex flex-col items-center gap-1 flex-1 p-2 rounded-xl active:scale-95 transition-all ${activeTab === 'songs' ? 'text-white' : 'text-text-secondary'}`}
+            className={`flex flex-col items-center gap-1 flex-1 p-2 rounded-xl active:scale-95 transition-all ${activeTab === 'songs' ? 'text-primary' : 'text-text-secondary'}`}
           >
-            <Music2 className={`w-6 h-6 ${activeTab === 'songs' ? 'fill-white/20' : ''}`} />
+            <Music2 className={`w-6 h-6 ${activeTab === 'songs' ? 'fill-primary/20' : ''}`} />
             <span className="text-[10px] font-bold uppercase tracking-wide">Пісні</span>
           </button>
 
           <button
             onClick={() => setActiveTab('members')}
-            className={`flex flex-col items-center gap-1 flex-1 p-2 rounded-xl active:scale-95 transition-all ${activeTab === 'members' ? 'text-white' : 'text-text-secondary'}`}
+            className={`flex flex-col items-center gap-1 flex-1 p-2 rounded-xl active:scale-95 transition-all ${activeTab === 'members' ? 'text-primary' : 'text-text-secondary'}`}
           >
-            <Users className={`w-6 h-6 ${activeTab === 'members' ? 'fill-white/20' : ''}`} />
+            <Users className={`w-6 h-6 ${activeTab === 'members' ? 'fill-primary/20' : ''}`} />
             <span className="text-[10px] font-bold uppercase tracking-wide">Учасники</span>
           </button>
 
@@ -1321,11 +1359,11 @@ function HomePageContent() {
       {
         showAdminCodeModal && (
           <div className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <div className="bg-[#18181b] border border-white/10 w-full max-w-sm p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="bg-surface card-shadow w-full max-w-sm p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
               <div className="space-y-5">
                 <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-bold text-white">Створити адмін-код</h3>
-                  <button onClick={() => setShowAdminCodeModal(false)} className="p-1 hover:bg-white/10 rounded-full">
+                  <h3 className="text-lg font-bold text-text-primary">Створити адмін-код</h3>
+                  <button onClick={() => setShowAdminCodeModal(false)} className="p-1 hover:bg-surface-highlight rounded-full">
                     <X className="w-5 h-5 text-text-secondary" />
                   </button>
                 </div>
@@ -1339,7 +1377,7 @@ function HomePageContent() {
                     value={newAdminLabel}
                     onChange={(e) => setNewAdminLabel(e.target.value)}
                     placeholder="напр. Секретар"
-                    className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/30"
+                    className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:border-primary/50"
                   />
                 </div>
 
@@ -1353,12 +1391,12 @@ function HomePageContent() {
                         key={perm.key}
                         onClick={() => togglePermission(perm.key)}
                         className={`w-full p-3 rounded-xl border text-left text-sm transition-all ${selectedPermissions.includes(perm.key)
-                          ? 'bg-indigo-500/20 border-indigo-500/50 text-white'
-                          : 'bg-black/20 border-white/5 text-text-secondary hover:border-white/20'
+                          ? 'bg-indigo-500/20 border-indigo-500/50 text-text-primary'
+                          : 'bg-surface-highlight border-border text-text-secondary hover:border-primary/30'
                           }`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className={`w-5 h-5 rounded border flex items-center justify-center ${selectedPermissions.includes(perm.key) ? 'bg-indigo-500 border-indigo-500' : 'border-white/20'
+                          <div className={`w-5 h-5 rounded border flex items-center justify-center ${selectedPermissions.includes(perm.key) ? 'bg-indigo-500 border-indigo-500' : 'border-border'
                             }`}>
                             {selectedPermissions.includes(perm.key) && <Check className="w-3 h-3 text-white" />}
                           </div>
@@ -1372,7 +1410,7 @@ function HomePageContent() {
                 <button
                   onClick={createAdminCode}
                   disabled={selectedPermissions.length === 0 || creatingAdminCode}
-                  className="w-full py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full py-4 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {creatingAdminCode ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Створити код'}
                 </button>
@@ -1389,14 +1427,14 @@ function HomePageContent() {
             onClick={() => setShowEditName(false)}
           >
             <div
-              className="bg-[#18181b] w-full max-w-sm rounded-3xl border border-white/10 p-6 shadow-2xl animate-in zoom-in-95"
+              className="bg-surface w-full max-w-sm rounded-3xl border border-border p-6 shadow-2xl animate-in zoom-in-95"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex justify-between items-start mb-6">
-                <h3 className="text-xl font-bold text-white">Змінити ім'я</h3>
+                <h3 className="text-xl font-bold text-text-primary">Змінити ім'я</h3>
                 <button
                   onClick={() => setShowEditName(false)}
-                  className="p-1 text-text-secondary hover:text-white transition-colors"
+                  className="p-1 text-text-secondary hover:text-text-primary transition-colors"
                 >
                   <X className="w-6 h-6" />
                 </button>
@@ -1412,7 +1450,7 @@ function HomePageContent() {
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     placeholder="Введіть нове ім'я"
-                    className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl focus:outline-none focus:border-white/20 text-white"
+                    className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl focus:outline-none focus:border-primary/50 text-text-primary placeholder:text-text-secondary"
                     autoFocus
                   />
                 </div>
@@ -1420,7 +1458,7 @@ function HomePageContent() {
                 <button
                   onClick={handleSaveName}
                   disabled={savingName || !newName.trim()}
-                  className="w-full py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full py-4 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {savingName ? <Loader2 className="animate-spin" /> : "Зберегти"}
                 </button>
@@ -1453,6 +1491,32 @@ function HomePageContent() {
           />
         )
       }
+
+      {/* Delete Admin Code Confirmation */}
+      <ConfirmationModal
+        isOpen={!!deletingAdminCode}
+        onClose={() => setDeletingAdminCode(null)}
+        onConfirm={async () => {
+          if (userData?.choirId && deletingAdminCode) {
+            await deleteAdminCode(userData.choirId, deletingAdminCode);
+            const updated = await getChoir(userData.choirId);
+            if (updated) setChoir(updated);
+          }
+          setDeletingAdminCode(null);
+        }}
+        title="Видалити адмін-код?"
+        message="Цей адмін-код буде видалено. Користувачі з цим кодом не зможуть долучитися."
+        confirmLabel="Видалити"
+        isDestructive
+      />
+
+      {/* Notifications Modal */}
+      <NotificationsModal
+        isOpen={showNotificationModal}
+        onClose={() => setShowNotificationModal(false)}
+      />
+
+
     </main >
   );
 }

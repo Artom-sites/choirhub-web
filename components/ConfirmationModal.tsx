@@ -31,7 +31,7 @@ export default function ConfirmationModal({
             onClick={onClose}
         >
             <div
-                className="bg-[#18181b] w-full max-w-sm rounded-3xl border border-white/10 p-6 shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-4"
+                className="bg-surface w-full max-w-sm rounded-3xl border border-border p-6 shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-4"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Icon */}
@@ -41,7 +41,7 @@ export default function ConfirmationModal({
                     </div>
                 )}
 
-                <h3 className="text-xl font-bold text-white text-center mb-2">{title}</h3>
+                <h3 className="text-xl font-bold text-text-primary text-center mb-2">{title}</h3>
                 <p className="text-text-secondary text-center mb-8">{message}</p>
 
                 <div className="flex flex-col gap-3">
@@ -52,7 +52,7 @@ export default function ConfirmationModal({
                         }}
                         className={`w-full py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 active:scale-[0.98] ${isDestructive
                             ? "bg-red-500 hover:bg-red-600 text-white"
-                            : "bg-white hover:bg-gray-200 text-black"
+                            : "bg-primary hover:opacity-90 text-background"
                             }`}
                     >
                         {isDestructive && <Trash2 className="w-4 h-4" />}
@@ -60,7 +60,7 @@ export default function ConfirmationModal({
                     </button>
                     <button
                         onClick={onClose}
-                        className="w-full py-4 bg-white/5 border border-white/10 text-white rounded-2xl hover:bg-white/10 transition-colors font-medium"
+                        className="w-full py-4 bg-surface-highlight border border-border text-text-primary rounded-2xl hover:bg-surface-highlight/80 transition-colors font-medium"
                     >
                         {cancelLabel}
                     </button>

@@ -37,9 +37,9 @@ export function getAdmin() {
     const privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
     if (!projectId || !clientEmail || !privateKey) {
-        // Fallback: Check for service account JSON file path if env vars are missing
-        // or just return null/throw error if critical
-        console.error("Firebase Admin Environment Variables missing.");
+        if (!projectId) console.error("Missing FIREBASE_PROJECT_ID");
+        if (!clientEmail) console.error("Missing FIREBASE_CLIENT_EMAIL");
+        if (!privateKey) console.error("Missing FIREBASE_PRIVATE_KEY");
         return null;
     }
 

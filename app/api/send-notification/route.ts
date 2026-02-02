@@ -106,6 +106,17 @@ export async function POST(req: NextRequest) {
 
         const response = await getMessaging(adminApp).sendEachForMulticast(message);
 
+        // 5. Save Notification to Firestore (for history/unread status)
+        await db.collection(`choirs/${choirId}/notifications`).add({
+            title,
+            body,
+            choirId,
+            senderId: uid,
+            senderName: userData?.name || "Regent",
+            createdAt: new Date().toISOString(), // Use string for client compatibility
+            readBy: [uid] // Sender implicitly reads it
+        });
+
         // Optional: Cleanup invalid tokens from response
         if (response.failureCount > 0) {
             const failedTokens: string[] = [];

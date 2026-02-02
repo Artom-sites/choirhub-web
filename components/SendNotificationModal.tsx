@@ -60,9 +60,9 @@ export default function SendNotificationModal({ isOpen, onClose }: SendNotificat
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <div className="bg-[#18181b] w-full max-w-md rounded-3xl border border-white/10 p-6 shadow-2xl scale-100 animate-in zoom-in-95 duration-200">
-                <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="bg-surface w-full max-w-md rounded-3xl border border-border p-6 shadow-2xl scale-100 animate-in zoom-in-95 duration-200">
+                <h3 className="text-xl font-bold text-text-primary mb-6 flex items-center gap-2">
                     <Send className="w-5 h-5" />
                     Сповіщення хору
                 </h3>
@@ -77,7 +77,7 @@ export default function SendNotificationModal({ isOpen, onClose }: SendNotificat
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
                             placeholder="Наприклад: Зміна часу репетиції"
-                            className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/30"
+                            className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent/30"
                         />
                     </div>
 
@@ -90,21 +90,21 @@ export default function SendNotificationModal({ isOpen, onClose }: SendNotificat
                             onChange={(e) => setBody(e.target.value)}
                             placeholder="Введіть текст..."
                             rows={4}
-                            className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/30 resize-none"
+                            className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent/30 resize-none"
                         />
                     </div>
 
                     <div className="flex gap-3 mt-6">
                         <button
                             onClick={onClose}
-                            className="flex-1 py-3 bg-white/5 text-white font-medium rounded-xl hover:bg-white/10 transition-colors"
+                            className="flex-1 py-3 bg-surface-highlight text-text-primary font-medium rounded-xl hover:bg-surface transition-colors"
                         >
                             Скасувати
                         </button>
                         <button
                             onClick={handleSend}
                             disabled={loading || !title.trim() || !body.trim()}
-                            className="flex-1 py-3 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex-1 py-3 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Надіслати"}
                         </button>
