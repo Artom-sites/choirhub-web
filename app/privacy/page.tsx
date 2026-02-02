@@ -1,8 +1,31 @@
+"use client";
+
+import { ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
+
 export default function PrivacyPage() {
+    const router = useRouter();
+
+    const handleBack = () => {
+        // Try to go back in history, if no history - go to main page
+        if (window.history.length > 1) {
+            router.back();
+        } else {
+            router.push('/');
+        }
+    };
+
     return (
         <div className="min-h-screen bg-[#09090b] text-text-secondary p-6 md:p-12 font-sans">
             <div className="max-w-3xl mx-auto space-y-8">
                 <header className="border-b border-white/10 pb-6">
+                    <button
+                        onClick={handleBack}
+                        className="flex items-center gap-2 text-text-secondary hover:text-white transition-colors mb-4"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                        <span>Назад</span>
+                    </button>
                     <h1 className="text-3xl font-bold text-white mb-2">Політика конфіденційності</h1>
                     <p className="text-sm">Останнє оновлення: 3 лютого 2026</p>
                 </header>
