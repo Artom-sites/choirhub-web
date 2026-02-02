@@ -292,7 +292,7 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                                     <div className="bg-white/5 p-5 rounded-2xl border border-white/5">
                                         <h4 className="font-bold text-white mb-2">✅ Відмітка присутності</h4>
                                         <p className="text-sm text-text-secondary">
-                                            Регент або голова партії можуть відмічати присутніх на служінні.
+                                            Регент може відмічати присутніх на служінні.
                                             Статистика відвідувань зберігається та доступна в профілях учасників.
                                         </p>
                                     </div>
