@@ -134,6 +134,22 @@ function HomePageContent() {
     { key: 'notify_members', label: 'Надсилати сповіщення' },
   ];
 
+  // Handle Android back gesture for modals
+  useEffect(() => {
+    if (showAccount) {
+      // Push a fake history state when modal opens
+      window.history.pushState({ modal: 'account' }, '');
+
+      const handlePopState = () => {
+        // Close modal when back gesture is used
+        setShowAccount(false);
+      };
+
+      window.addEventListener('popstate', handlePopState);
+      return () => window.removeEventListener('popstate', handlePopState);
+    }
+  }, [showAccount]);
+
   // Fetch Choir Data replaced by real-time listeners below
   // const fetchChoirData = async () => {... }
 
