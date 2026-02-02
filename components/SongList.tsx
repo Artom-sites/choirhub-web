@@ -211,7 +211,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
             <div className="flex bg-surface rounded-xl p-1 card-shadow">
                 <button
                     onClick={() => setSubTab('repertoire')}
-                    className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${subTab === 'repertoire'
+                    className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${subTab === 'repertoire'
                         ? 'bg-primary text-background'
                         : 'text-text-secondary hover:text-text-primary'
                         }`}
@@ -221,7 +221,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                 </button>
                 <button
                     onClick={() => setSubTab('catalog')}
-                    className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${subTab === 'catalog'
+                    className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${subTab === 'catalog'
                         ? 'bg-primary text-background'
                         : 'text-text-secondary hover:text-text-primary'
                         }`}
@@ -232,17 +232,6 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
             </div>
 
             {/* Trash Bin Toggle (Only for Regnets) */}
-            {canAddSongs && subTab === 'repertoire' && (
-                <div className="flex justify-end">
-                    <button
-                        onClick={() => setShowTrashBin(true)}
-                        className="text-xs text-text-secondary hover:text-red-400 flex items-center gap-1 transition-colors mt-2"
-                    >
-                        <Trash2 className="w-3 h-3" />
-                        Відкрити Кошик
-                    </button>
-                </div>
-            )}
 
             {/* Catalog View */}
             {subTab === 'catalog' ? (
@@ -274,16 +263,26 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                 <>
                     {/* Stats Card - iOS Style */}
                     <div className="bg-surface rounded-2xl p-5 card-shadow">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 glass-frost-circle rounded-full flex items-center justify-center text-zinc-700">
-                                <Music2 className="w-6 h-6" />
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 glass-frost-circle rounded-full flex items-center justify-center text-zinc-700">
+                                    <Music2 className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <p className="text-text-secondary text-xs uppercase tracking-wider font-semibold">Репертуар</p>
+                                    <p className="text-2xl font-bold text-text-primary tracking-tight">{songs.length} пісень</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-text-secondary text-xs uppercase tracking-wider font-semibold">Репертуар</p>
-                                <p className="text-2xl font-bold text-text-primary tracking-tight">{songs.length} пісень</p>
-                            </div>
+                            {canAddSongs && (
+                                <button
+                                    onClick={() => setShowTrashBin(true)}
+                                    className="p-2 rounded-full hover:bg-surface-highlight transition-colors text-text-secondary hover:text-danger"
+                                    title="Кошик"
+                                >
+                                    <Trash2 className="w-5 h-5" />
+                                </button>
+                            )}
                         </div>
-
                     </div>
                     {/* Search & Filter - iOS Style */}
                     <div className="sticky top-[64px] z-20 -mx-4 px-4 py-4 bg-background/95 backdrop-blur-xl border-b border-border">
@@ -414,16 +413,15 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                         )}
                     </div>
 
-                    {/* Floating Add Button - White Circle */}
+                    {/* Floating Add Button */}
                     {effectiveCanAdd && (
-                        <div className="fixed bottom-20 right-5 z-40">
-                            <button
-                                onClick={() => setShowAddModal(true)}
-                                className="w-14 h-14 bg-zinc-900 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-zinc-800 transition-colors z-50"
-                            >
-                                <Plus className="w-7 h-7" />
-                            </button>
-                        </div>
+                        <button
+                            onClick={() => setShowAddModal(true)}
+                            className="fixed bottom-24 right-6 w-14 h-14 bg-primary text-background rounded-full shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40"
+                            title="Додати пісню"
+                        >
+                            <Plus className="w-7 h-7" />
+                        </button>
                     )}
 
                     {/* Add Song Modal */}
@@ -480,16 +478,19 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                         isDestructive
                     />
                 </>
-            )}
+            )
+            }
 
 
-            {toast && (
-                <Toast
-                    message={toast.message}
-                    type={toast.type}
-                    onClose={() => setToast(null)}
-                />
-            )}
-        </div>
+            {
+                toast && (
+                    <Toast
+                        message={toast.message}
+                        type={toast.type}
+                        onClose={() => setToast(null)}
+                    />
+                )
+            }
+        </div >
     );
 }

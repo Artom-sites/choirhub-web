@@ -169,34 +169,27 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
     return (
         <div className="max-w-5xl mx-auto px-4 py-4 space-y-6 pb-32">
 
-            {/* Header with Archive Toggle */}
-            <div className="flex items-center justify-between bg-surface rounded-2xl p-4 card-shadow">
-                <h2 className="text-sm font-bold text-text-primary uppercase tracking-widest">
+            {/* Header with Archive Toggle - Spacious & Clean */}
+            <div className="flex items-center justify-between px-2 mb-4">
+                <h2 className="text-lg font-bold text-text-primary">
                     {showArchive ? 'Архів служінь' : 'Найближчі служіння'}
                 </h2>
-                <div className="flex items-center gap-2">
+
+                <div className="flex items-center gap-3">
                     <button
                         onClick={() => setShowArchive(!showArchive)}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${showArchive ? 'bg-primary text-background' : 'bg-surface-highlight text-text-secondary border border-border'}`}
+                        className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${showArchive ? 'bg-primary text-background shadow-md' : 'text-text-secondary bg-surface hover:bg-surface-highlight hover:text-text-primary'}`}
                     >
                         {showArchive ? 'Актуальні' : 'Архів'}
                     </button>
+
                     {effectiveCanEdit && !showArchive && (
                         <button
                             onClick={() => setShowTrashBin(true)}
-                            className="p-2.5 rounded-xl text-text-secondary hover:text-red-400 bg-surface-highlight border border-border hover:border-red-400/30 transition-colors"
+                            className="p-2 rounded-lg text-text-secondary hover:text-red-400 hover:bg-surface-highlight transition-colors"
                             title="Корзина"
                         >
-                            <Trash2 className="w-4 h-4" />
-                        </button>
-                    )}
-                    {effectiveCanEdit && !showArchive && (
-                        <button
-                            onClick={() => setShowCreateModal(true)}
-                            className="bg-primary text-background p-2.5 rounded-xl transition-colors shadow-md hover:opacity-90"
-                            title="Додати служіння"
-                        >
-                            <Plus className="w-4 h-4" />
+                            <Trash2 className="w-5 h-5" />
                         </button>
                     )}
                 </div>
@@ -228,7 +221,7 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
                             {!showArchive && effectiveCanEdit && (
                                 <button
                                     onClick={() => setShowCreateModal(true)}
-                                    className="mt-6 px-6 py-3 bg-accent text-white rounded-xl hover:bg-accent/90 transition-colors font-medium text-sm"
+                                    className="mt-6 px-6 py-3 bg-primary text-background hover:opacity-90 transition-colors font-bold text-sm rounded-xl"
                                 >
                                     Створити перше
                                 </button>
@@ -363,6 +356,17 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Floating Action Button (FAB) for Adding Service */}
+            {effectiveCanEdit && !showArchive && (
+                <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="fixed bottom-24 right-6 w-14 h-14 bg-primary text-background rounded-full shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40"
+                    title="Додати служіння"
+                >
+                    <Plus className="w-7 h-7" />
+                </button>
             )}
 
             {/* Trash Bin */}

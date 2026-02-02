@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 
 /**
  * Concentric Ripples Preloader
- * Design: Three thin white rings that smoothly expand from center and fade out.
+ * Design: Three thin rings that smoothly expand from center and fade out.
  * Metaphor: Sound spreading from source (like singing), vibration, resonance.
  * Clean, minimalist, no distracting elements.
  */
@@ -16,7 +16,7 @@ export default function Preloader() {
                 {[0, 1, 2].map((i) => (
                     <motion.div
                         key={i}
-                        className="absolute border border-white/40 rounded-full"
+                        className="absolute border border-primary/40 rounded-full"
                         initial={{ width: 16, height: 16, opacity: 0.6 }}
                         animate={{
                             width: [16, 128],
@@ -33,7 +33,7 @@ export default function Preloader() {
                 ))}
 
                 {/* Small center dot for visual anchor */}
-                <div className="w-2 h-2 bg-white/30 rounded-full" />
+                <div className="w-2 h-2 bg-primary/30 rounded-full" />
             </div>
         </div>
     );

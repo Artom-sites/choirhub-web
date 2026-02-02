@@ -807,7 +807,7 @@ function HomePageContent() {
       {showChoirManager && (
         <div className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-surface card-shadow w-full max-w-sm p-6 rounded-3xl shadow-2xl overflow-hidden relative">
-            <button onClick={() => { setShowChoirManager(false); setManagerMode('list'); setManagerError(""); }} className="absolute top-4 right-4 p-2 text-text-secondary hover:text-text-primary">
+            <button onClick={() => { setShowChoirManager(false); setShowAccount(true); setManagerMode('list'); setManagerError(""); }} className="absolute top-4 right-4 p-2 text-text-secondary hover:text-text-primary">
               <X className="w-5 h-5" />
             </button>
 
@@ -940,28 +940,6 @@ function HomePageContent() {
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-3xl font-bold text-text-primary tracking-tight">Акаунт</h2>
               <div className="flex items-center gap-3">
-                {/* Theme Toggle in Header */}
-                <div className="flex items-center gap-1 bg-surface-highlight/50 rounded-full p-1 mr-2">
-                  <button
-                    onClick={() => setTheme('light')}
-                    className={`p-1.5 rounded-full transition-all ${theme === 'light' ? 'bg-surface text-primary shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
-                  >
-                    <Sun className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setTheme('dark')}
-                    className={`p-1.5 rounded-full transition-all ${theme === 'dark' ? 'bg-surface text-primary shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
-                  >
-                    <Moon className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setTheme('system')}
-                    className={`p-1.5 rounded-full transition-all ${theme === 'system' ? 'bg-surface text-primary shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
-                  >
-                    <Monitor className="w-4 h-4" />
-                  </button>
-                </div>
-
                 <button
                   onClick={() => setShowNotificationModal(true)}
                   className="p-2 rounded-full hover:bg-surface-highlight transition-colors relative"
@@ -1005,88 +983,93 @@ function HomePageContent() {
                 </div>
               </div>
 
-              {/* Change Choir Button */}
-              <button
-                onClick={() => { setShowAccount(false); setShowChoirManager(true); }}
-                className="w-full flex items-center justify-between p-4 bg-surface hover:bg-surface rounded-2xl transition-all group card-shadow"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-accent/10 text-accent flex items-center justify-center">
-                    <Repeat className="w-5 h-5" />
+
+
+              {/* Management Block (Choir & Codes) */}
+              <div className="bg-surface rounded-2xl p-4 card-shadow">
+                {/* Change Choir Button */}
+                <button
+                  onClick={() => { setShowAccount(false); setShowChoirManager(true); }}
+                  className="w-full flex items-center justify-between py-2 transition-all group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-accent/10 text-accent flex items-center justify-center">
+                      <Repeat className="w-5 h-5" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-text-primary font-bold text-sm">Змінити хор</p>
+                      <p className="text-xs text-text-secondary group-hover:text-text-primary/80">Додати або перемкнути</p>
+                    </div>
                   </div>
-                  <div className="text-left">
-                    <p className="text-text-primary font-bold text-sm">Змінити хор</p>
-                    <p className="text-xs text-text-secondary group-hover:text-text-primary/80">Додати або перемкнути</p>
-                  </div>
-                </div>
-                <PlusCircle className="w-5 h-5 text-text-secondary group-hover:text-text-primary" />
-              </button>
+                  <PlusCircle className="w-5 h-5 text-text-secondary group-hover:text-text-primary" />
+                </button>
 
-              {/* Codes for admin */}
-              {(userData?.role === 'head' || userData?.role === 'regent') && choir && (
-                <div className="pt-6 border-t border-border mt-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm text-text-secondary">Коди доступу</h3>
-                    <button
-                      onClick={() => setShowAdminCodeModal(true)}
-                      className="text-xs text-accent hover:underline flex items-center gap-1"
-                    >
-                      <PlusCircle className="w-3 h-3" />
-                      Додати
-                    </button>
-                  </div>
-
-                  <div className="space-y-3">
-                    <button
-                      onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.memberCode}`)}
-                      className="w-full flex items-center justify-between py-2 group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-text-secondary text-sm">Хористи</span>
-                        <code className="text-lg font-mono font-bold text-text-primary">{choir.memberCode}</code>
-                      </div>
-                      {copiedCode === `https://${window.location.host}/setup?code=${choir.memberCode}`
-                        ? <Check className="w-4 h-4 text-success" />
-                        : <Link2 className="w-4 h-4 text-text-secondary group-hover:text-accent transition-colors" />}
-                    </button>
-
-                    <button
-                      onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.regentCode}`)}
-                      className="w-full flex items-center justify-between py-2 group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-text-secondary text-sm">Регенти</span>
-                        <code className="text-lg font-mono font-bold text-text-primary">{choir.regentCode}</code>
-                      </div>
-                      {copiedCode === `https://${window.location.host}/setup?code=${choir.regentCode}`
-                        ? <Check className="w-4 h-4 text-success" />
-                        : <Link2 className="w-4 h-4 text-text-secondary group-hover:text-accent transition-colors" />}
-                    </button>
-
-                    {/* Admin Codes - inline */}
-                    {choir.adminCodes && choir.adminCodes.length > 0 && choir.adminCodes.map((ac, idx) => (
-                      <SwipeableCard
-                        key={idx}
-                        onDelete={() => setDeletingAdminCode(ac.code)}
-                        disabled={false}
+                {/* Codes for admin */}
+                {(userData?.role === 'head' || userData?.role === 'regent') && choir && (
+                  <div className="pt-4 border-t border-border mt-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-sm text-text-secondary">Коди доступу</h3>
+                      <button
+                        onClick={() => setShowAdminCodeModal(true)}
+                        className="text-xs text-accent hover:underline flex items-center gap-1"
                       >
-                        <button
-                          onClick={() => copyCode(`https://${window.location.host}/setup?code=${ac.code}`)}
-                          className="w-full flex items-center justify-between py-2 group"
+                        <PlusCircle className="w-3 h-3" />
+                        Додати
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      <button
+                        onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.memberCode}`)}
+                        className="w-full flex items-center justify-between py-2 group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-text-secondary text-sm">Хористи</span>
+                          <code className="text-lg font-mono font-bold text-text-primary">{choir.memberCode}</code>
+                        </div>
+                        {copiedCode === `https://${window.location.host}/setup?code=${choir.memberCode}`
+                          ? <Check className="w-4 h-4 text-success" />
+                          : <Link2 className="w-4 h-4 text-text-secondary group-hover:text-accent transition-colors" />}
+                      </button>
+
+                      <button
+                        onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.regentCode}`)}
+                        className="w-full flex items-center justify-between py-2 group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-text-secondary text-sm">Регенти</span>
+                          <code className="text-lg font-mono font-bold text-text-primary">{choir.regentCode}</code>
+                        </div>
+                        {copiedCode === `https://${window.location.host}/setup?code=${choir.regentCode}`
+                          ? <Check className="w-4 h-4 text-success" />
+                          : <Link2 className="w-4 h-4 text-text-secondary group-hover:text-accent transition-colors" />}
+                      </button>
+
+                      {/* Admin Codes - inline */}
+                      {choir.adminCodes && choir.adminCodes.length > 0 && choir.adminCodes.map((ac, idx) => (
+                        <SwipeableCard
+                          key={idx}
+                          onDelete={() => setDeletingAdminCode(ac.code)}
+                          disabled={false}
                         >
-                          <div className="flex items-center gap-3">
-                            <span className="text-text-secondary text-sm">{ac.label || 'Адмін'}</span>
-                            <code className="text-sm font-mono font-bold text-text-primary">{ac.code}</code>
-                          </div>
-                          {copiedCode === `https://${window.location.host}/setup?code=${ac.code}`
-                            ? <Check className="w-4 h-4 text-success" />
-                            : <Link2 className="w-4 h-4 text-text-secondary group-hover:text-accent transition-colors" />}
-                        </button>
-                      </SwipeableCard>
-                    ))}
+                          <button
+                            onClick={() => copyCode(`https://${window.location.host}/setup?code=${ac.code}`)}
+                            className="w-full flex items-center justify-between py-2 group"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="text-text-secondary text-sm">{ac.label || 'Адмін'}</span>
+                              <code className="text-sm font-mono font-bold text-text-primary">{ac.code}</code>
+                            </div>
+                            {copiedCode === `https://${window.location.host}/setup?code=${ac.code}`
+                              ? <Check className="w-4 h-4 text-success" />
+                              : <Link2 className="w-4 h-4 text-text-secondary group-hover:text-accent transition-colors" />}
+                          </button>
+                        </SwipeableCard>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
 
@@ -1176,8 +1159,9 @@ function HomePageContent() {
 
       {/* Header */}
       <header className="bg-surface/80 backdrop-blur-2xl sticky top-0 z-30 border-b border-border shadow-[0_4px_20px_rgba(0,0,0,0.06)]">
-        <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="max-w-md mx-auto px-4 py-3 flex items-center gap-3">
+          {/* Left: Logo + Title */}
+          <div className="flex items-center gap-3 shrink-0">
             {/* Logo - clickable to change icon (for regent/head only) */}
             <input
               type="file"
@@ -1215,20 +1199,40 @@ function HomePageContent() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowAccount(true)}
-              className="w-10 h-10 rounded-full border border-border hover:border-accent/50 transition-colors overflow-hidden"
-            >
-              <div className="w-full h-full bg-accent flex items-center justify-center text-white font-bold text-sm">
-                {user?.photoURL ? (
-                  <img src={user.photoURL} alt="User" className="w-full h-full object-cover" />
-                ) : (
-                  <span>{userData?.name?.[0]?.toUpperCase() || "U"}</span>
-                )}
-              </div>
-            </button>
+
+          {/* Center: Theme Toggle (flex centered) */}
+          <div className="flex-1 flex justify-center">
+            <div className="flex items-center gap-1 bg-surface-highlight/50 rounded-full p-1">
+              <button
+                onClick={() => setTheme('light')}
+                className={`p-1.5 rounded-full transition-all ${theme === 'light' ? 'bg-surface text-primary shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
+              >
+                <Sun className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setTheme('dark')}
+                className={`p-1.5 rounded-full transition-all ${theme === 'dark' ? 'bg-surface text-primary shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
+              >
+                <Moon className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setTheme('system')}
+                className={`p-1.5 rounded-full transition-all ${theme === 'system' ? 'bg-surface text-primary shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
+              >
+                <Monitor className="w-4 h-4" />
+              </button>
+            </div>
           </div>
+
+          {/* Right: Account Button */}
+          <button
+            onClick={() => setShowAccount(true)}
+            className="w-10 h-10 shrink-0 rounded-full border border-border hover:border-accent/50 transition-colors overflow-hidden"
+          >
+            <div className="w-full h-full bg-primary text-background flex items-center justify-center font-bold text-sm">
+              <span>{userData?.name?.[0]?.toUpperCase() || "U"}</span>
+            </div>
+          </button>
         </div>
       </header>
 
