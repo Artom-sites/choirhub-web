@@ -155,8 +155,8 @@ export default function PrivacyPage() {
                         скористатись своїми правами, зв&apos;яжіться з нами:
                     </p>
                     <ul className="list-none space-y-1 mt-2">
-                        <li><strong>Email:</strong> support@mychoir.app</li>
-                        <li><strong>Telegram:</strong> @mychoir_support</li>
+                        <li><strong>Email:</strong> artom.devv@gmail.com</li>
+                        <li><strong>Сайт:</strong> <a href="https://artom.dev" className="text-blue-400 hover:underline">artom.dev</a></li>
                     </ul>
                     <p className="mt-4 text-sm">
                         Ми зобов&apos;язуємось відповісти на ваш запит протягом 30 днів.
