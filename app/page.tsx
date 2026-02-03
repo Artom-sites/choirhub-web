@@ -14,6 +14,7 @@ import ServiceView from "@/components/ServiceView";
 import StatisticsView from "@/components/StatisticsView"; // New
 import EditMemberModal from "@/components/EditMemberModal"; // New
 import MergeMemberModal from "@/components/MergeMemberModal"; // New
+import MemberStatsModal from "@/components/MemberStatsModal";
 import InstallPrompt from "@/components/InstallPrompt";
 
 
@@ -84,6 +85,7 @@ function HomePageContent() {
   const [editingMember, setEditingMember] = useState<ChoirMember | null>(null);
   const [showEditMemberModal, setShowEditMemberModal] = useState(false);
   const [mergingMember, setMergingMember] = useState<ChoirMember | null>(null); // New merge state
+  const [viewingMemberStats, setViewingMemberStats] = useState<ChoirMember | null>(null); // Member stats view
 
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [deletingAdminCode, setDeletingAdminCode] = useState<string | null>(null);
@@ -945,6 +947,15 @@ function HomePageContent() {
         />
       )}
 
+      {/* Member Stats Modal */}
+      {viewingMemberStats && (
+        <MemberStatsModal
+          member={viewingMemberStats}
+          services={services}
+          onClose={() => setViewingMemberStats(null)}
+        />
+      )}
+
       {/* Account Overlay */}
       {showAccount && (
         <div className="fixed inset-0 z-[60] animate-in slide-in-from-right duration-300 flex flex-col" style={{ background: 'var(--background)' }}>
@@ -1327,24 +1338,31 @@ function HomePageContent() {
                   return (
                     <div
                       key={member.id}
-                      onClick={() => {
-                        if (canEdit) {
-                          setEditingMember(member);
-                          setShowEditMemberModal(true);
-                        }
-                      }}
-                      className={`p-4 bg-surface card-shadow rounded-2xl flex items-center justify-between group hover:bg-surface-highlight transition-colors ${canEdit ? 'cursor-pointer active:scale-[0.99]' : ''}`}
+                      className="p-4 bg-surface card-shadow rounded-2xl flex items-center justify-between group hover:bg-surface-highlight transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-surface-highlight flex items-center justify-center text-text-primary font-bold text-sm relative">
+                        {/* Avatar - clickable for everyone to view stats */}
+                        <button
+                          onClick={() => setViewingMemberStats(member)}
+                          className="w-10 h-10 rounded-full bg-surface-highlight flex items-center justify-center text-text-primary font-bold text-sm relative hover:ring-2 hover:ring-primary/50 transition-all active:scale-95"
+                        >
                           {member.name?.[0]?.toUpperCase() || "?"}
                           {absences > 0 && (
                             <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                               {absences}
                             </span>
                           )}
-                        </div>
-                        <div>
+                        </button>
+                        {/* Name and info - clickable for admins to edit */}
+                        <div
+                          onClick={() => {
+                            if (canEdit) {
+                              setEditingMember(member);
+                              setShowEditMemberModal(true);
+                            }
+                          }}
+                          className={canEdit ? 'cursor-pointer' : ''}
+                        >
                           <p className="text-text-primary font-bold flex items-center gap-2 mb-1">
                             {member.name}
                             {getVoiceBadge(member.voice)}
@@ -1361,9 +1379,15 @@ function HomePageContent() {
                       </div>
 
                       {canEdit && (
-                        <div className="text-text-secondary/50 group-hover:text-text-primary transition-colors">
-                          <User className="w-4 h-4" />
-                        </div>
+                        <button
+                          onClick={() => {
+                            setEditingMember(member);
+                            setShowEditMemberModal(true);
+                          }}
+                          className="text-text-secondary/50 group-hover:text-text-primary transition-colors p-2 hover:bg-surface rounded-lg"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
                       )}
                     </div>
                   );
