@@ -689,12 +689,12 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                     initial={{ opacity: 0, y: 50 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 50 }}
-                    className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-black/90 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 border border-white/10"
+                    className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[60] bg-zinc-900/90 backdrop-blur-md text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/10 max-w-[90vw]"
                 >
-                    <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center">
-                        <Plus className="w-4 h-4 text-green-400" />
+                    <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                        <Check className="w-5 h-5 text-green-400" />
                     </div>
-                    <span className="font-medium text-sm">{toastMessage}</span>
+                    <span className="font-medium text-sm leading-snug">{toastMessage}</span>
                 </motion.div>
             )}
             {/* Floating Add Button */}
