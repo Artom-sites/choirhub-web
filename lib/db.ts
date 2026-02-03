@@ -684,7 +684,7 @@ export async function updateGlobalSong(songId: string, updates: Partial<GlobalSo
 /**
  * Submit a song for approval to the global archive
  */
-export async function submitSong(song: Omit<PendingSong, "id" | "status" | "submittedAt">): Promise<string> {
+export async function submitSong(song: Record<string, any>): Promise<string> {
     try {
         const docRef = await addDoc(collection(db, "pending_songs"), {
             ...song,

@@ -109,18 +109,21 @@ export default function SubmitSongModal({ onClose, onSuccess }: Props) {
 
         try {
             // Step 1: Create pending song record in Firestore
-            const pendingData: Omit<PendingSong, "id" | "status" | "submittedAt"> = {
+            // Build data object, only including non-empty fields
+            const pendingData: Record<string, any> = {
                 title: form.title,
-                composer: form.composer || undefined,
-                poet: form.poet || undefined,
                 category: form.category,
-                theme: form.theme || undefined,
                 keywords: [form.title, form.composer, form.poet, form.theme].filter(Boolean).map(s => s.toLowerCase()),
                 parts: [],
                 submittedBy: user.uid,
                 submittedByName: userData?.name || user.displayName || "Unknown",
-                submittedChoirId: userData?.choirId,
             };
+
+            // Add optional fields only if they have values
+            if (form.composer) pendingData.composer = form.composer;
+            if (form.poet) pendingData.poet = form.poet;
+            if (form.theme) pendingData.theme = form.theme;
+            if (userData?.choirId) pendingData.submittedChoirId = userData.choirId;
 
             try {
                 songId = await submitSong(pendingData);
