@@ -86,6 +86,29 @@ body {
   background-attachment: fixed;
 }
 
+/* iOS date/time input styling */
+input[type="date"],
+input[type="time"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  min-height: 48px;
+  line-height: 48px;
+}
+
+/* Ensure proper text color in iOS inputs */
+input[type="date"]::-webkit-date-and-time-value,
+input[type="time"]::-webkit-date-and-time-value {
+  text-align: left;
+}
+
+/* Hide native calendar/clock icons on iOS */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  opacity: 0.6;
+  cursor: pointer;
+}
+
 /* --- Modern Organic Utilities --- */
 
 /* 1. Organically Floating Card */

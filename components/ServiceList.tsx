@@ -308,48 +308,54 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
             {/* Create Modal */}
             {showCreateModal && (
                 <div className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-[#18181b] w-full max-w-sm rounded-3xl border border-white/10 p-6 shadow-2xl animate-in zoom-in-95">
+                    <div className="bg-surface w-full max-w-sm rounded-3xl border border-border p-6 shadow-2xl animate-in zoom-in-95">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold text-white">Нове служіння</h3>
+                            <h3 className="text-xl font-bold text-text-primary">Нове служіння</h3>
                             <button onClick={() => setShowCreateModal(false)}>
-                                <X className="w-6 h-6 text-[#a1a1aa] hover:text-white" />
+                                <X className="w-6 h-6 text-text-secondary hover:text-text-primary" />
                             </button>
                         </div>
 
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-xs font-semibold text-[#a1a1aa] uppercase tracking-wider mb-2">Назва</label>
+                                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Назва</label>
                                 <input
                                     type="text"
                                     value={newTitle}
                                     onChange={(e) => setNewTitle(e.target.value)}
-                                    className="w-full px-4 py-3 bg-[#27272a] border border-white/10 rounded-xl text-white placeholder:text-[#71717a] focus:outline-none focus:border-white/20 transition-all"
+                                    className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                                 />
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-xs font-semibold text-[#a1a1aa] uppercase tracking-wider mb-2">Дата</label>
-                                    <input
-                                        type="date"
-                                        value={newDate}
-                                        onChange={(e) => setNewDate(e.target.value)}
-                                        className="w-full h-12 px-4 bg-[#27272a] border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/20 [color-scheme:dark]"
-                                    />
+                                    <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Дата</label>
+                                    <div className="relative">
+                                        <input
+                                            type="date"
+                                            value={newDate}
+                                            onChange={(e) => setNewDate(e.target.value)}
+                                            className="w-full h-12 px-4 bg-surface-highlight border border-border rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none"
+                                            style={{ colorScheme: 'auto' }}
+                                        />
+                                    </div>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-semibold text-[#a1a1aa] uppercase tracking-wider mb-2">Час</label>
-                                    <input
-                                        type="time"
-                                        value={newTime}
-                                        onChange={(e) => setNewTime(e.target.value)}
-                                        className="w-full h-12 px-4 bg-[#27272a] border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/20 [color-scheme:dark]"
-                                    />
+                                    <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Час</label>
+                                    <div className="relative">
+                                        <input
+                                            type="time"
+                                            value={newTime}
+                                            onChange={(e) => setNewTime(e.target.value)}
+                                            className="w-full h-12 px-4 bg-surface-highlight border border-border rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none"
+                                            style={{ colorScheme: 'auto' }}
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
                             <button
                                 onClick={handleCreate}
-                                className="w-full py-4 bg-white text-black font-bold rounded-xl mt-4 hover:bg-gray-100 transition-colors"
+                                className="w-full py-4 bg-primary text-background font-bold rounded-xl mt-4 hover:opacity-90 transition-colors"
                             >
                                 Створити
                             </button>
