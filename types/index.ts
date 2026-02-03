@@ -114,6 +114,7 @@ export interface GlobalSong {
     id?: string;
     title: string;
     composer?: string;
+    poet?: string;          // Author of lyrics (text)
     category: SongCategory | string;
 
     subcategory?: ChoirSubcategory | string;  // For choir: mixed/female/etc, for orchestra: custom
