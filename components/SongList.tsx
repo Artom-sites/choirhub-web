@@ -65,7 +65,8 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
 
             const fetchedSongs: SimpleSong[] = snapshot.docs
                 .map(doc => ({ id: doc.id, ...doc.data() } as SimpleSong))
-                .filter(song => !song.deletedAt); // Filter out soft-deleted songs
+                .filter(song => !song.deletedAt)
+                .sort((a, b) => a.title.localeCompare(b.title, 'uk')); // Ensure client-side sorting
 
             setSongsState(fetchedSongs);
             setLoading(false);
