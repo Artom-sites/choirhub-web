@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Service } from "@/types";
 import { getServices, addService, deleteService, setServiceAttendance } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
-import { Calendar, Plus, ChevronRight, X, Trash2, Loader2, Check } from "lucide-react";
+import { Calendar, Plus, ChevronRight, X, Trash2, Loader2, Check, Clock } from "lucide-react";
 import { collection, query, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import ConfirmationModal from "./ConfirmationModal";
@@ -334,9 +334,10 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
                                             type="date"
                                             value={newDate}
                                             onChange={(e) => setNewDate(e.target.value)}
-                                            className="w-full h-12 px-4 bg-surface-highlight border border-border rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none"
+                                            className="w-full h-12 pl-4 pr-10 bg-surface-highlight border border-border rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none"
                                             style={{ colorScheme: 'auto' }}
                                         />
+                                        <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary pointer-events-none" />
                                     </div>
                                 </div>
                                 <div>
@@ -346,9 +347,10 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
                                             type="time"
                                             value={newTime}
                                             onChange={(e) => setNewTime(e.target.value)}
-                                            className="w-full h-12 px-4 bg-surface-highlight border border-border rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none"
+                                            className="w-full h-12 pl-4 pr-10 bg-surface-highlight border border-border rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none"
                                             style={{ colorScheme: 'auto' }}
                                         />
+                                        <Clock className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary pointer-events-none" />
                                     </div>
                                 </div>
                             </div>
