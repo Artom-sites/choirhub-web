@@ -14,7 +14,8 @@ import ArchiveLoader from "./ArchiveLoader";
 import Fuse from "fuse.js";
 import { useAuth } from "@/contexts/AuthContext";
 import SubmitSongModal from "./SubmitSongModal";
-import { getPendingSongs, approveSong, rejectSong, PendingSong } from "@/lib/db";
+import { getPendingSongs, approveSong, rejectSong } from "@/lib/db";
+import { PendingSong } from "@/types";
 
 interface GlobalArchiveProps {
     onAddSong?: (song: GlobalSong) => void;
