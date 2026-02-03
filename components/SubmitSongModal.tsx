@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { X, Upload, Loader2, Check, ChevronDown } from "lucide-react";
 import { PendingSong } from "@/types";
 import { submitSong } from "@/lib/db";
-import { uploadFileToR2 } from "@/lib/storage";
+import { uploadPendingSongPdf } from "@/lib/storage";
 import { useAuth } from "@/contexts/AuthContext";
 import { OFFICIAL_THEMES } from "@/lib/themes";
 
@@ -133,15 +133,13 @@ export default function SubmitSongModal({ onClose, onSuccess }: Props) {
                 return;
             }
 
-            // Step 2: Upload PDF to R2
+            // Step 2: Upload PDF to Firebase Storage
             let downloadUrl: string;
             try {
-                const fileExt = file.name.split('.').pop() || 'pdf';
-                const storageKey = `pending/${songId}/${Date.now()}.${fileExt}`;
-                downloadUrl = await uploadFileToR2(storageKey, file);
+                downloadUrl = await uploadPendingSongPdf(songId, file);
             } catch (err: any) {
-                console.error("R2 upload error:", err);
-                alert("Помилка завантаження файлу. Сховище може бути недоступне.");
+                console.error("Storage upload error:", err);
+                alert("Помилка завантаження файлу. Спробуйте ще раз.");
                 return;
             }
 

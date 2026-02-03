@@ -1,40 +1,43 @@
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { storage } from "./firebase";
+
 /**
- * Upload a file to R2 via the API (using Presigned URL)
+ * Upload a file to Firebase Storage
+ * @param path - Storage path (e.g., "pending/songId/filename.pdf")
+ * @param file - File to upload
+ * @returns Download URL of the uploaded file
  */
-export async function uploadFileToR2(key: string, file: File | Blob): Promise<string> {
-    // 1. Get Presigned URL
-    const res = await fetch("/api/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key, contentType: file.type })
-    });
-
-    if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to get upload URL");
-    }
-
-    const { signedUrl, publicUrl } = await res.json();
-
-    // 2. Upload to R2
-    const uploadRes = await fetch(signedUrl, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file
-    });
-
-    if (!uploadRes.ok) throw new Error("Failed to upload file to R2");
-
-    return publicUrl;
+export async function uploadFile(path: string, file: File | Blob): Promise<string> {
+    const storageRef = ref(storage, path);
+    await uploadBytes(storageRef, file);
+    return getDownloadURL(storageRef);
 }
 
-export async function uploadPdf(choirId: string, songId: string, file: File | Blob): Promise<string> {
-    return uploadFileToR2(`choirs/${choirId}/${songId}.pdf`, file);
+/**
+ * Upload a PDF for a pending song submission
+ */
+export async function uploadPendingSongPdf(songId: string, file: File): Promise<string> {
+    const ext = file.name.split('.').pop() || 'pdf';
+    const path = `pending_songs/${songId}/${Date.now()}.${ext}`;
+    return uploadFile(path, file);
 }
 
-export async function uploadChoirIconToR2(choirId: string, file: File): Promise<string> {
-    // Preserve extension if possible, or default to generic
+/**
+ * Upload a choir icon
+ */
+export async function uploadChoirIcon(choirId: string, file: File): Promise<string> {
     const ext = file.name.split('.').pop() || 'png';
-    const key = `choirs/${choirId}/icon.${ext}`;
-    return uploadFileToR2(key, file);
+    const path = `choirs/${choirId}/icon.${ext}`;
+    return uploadFile(path, file);
 }
+
+/**
+ * Upload a PDF for a choir's local song
+ */
+export async function uploadPdf(choirId: string, songId: string, file: File | Blob): Promise<string> {
+    return uploadFile(`choirs/${choirId}/${songId}.pdf`, file);
+}
+
+// Legacy R2 functions (kept for backwards compatibility, will use Firebase instead)
+export const uploadFileToR2 = uploadFile;
+export const uploadChoirIconToR2 = uploadChoirIcon;
