@@ -2,7 +2,7 @@
 // Updated to force recompile and fix stale cache
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { collection, getDocs, query, orderBy, onSnapshot } from "firebase/firestore";
+import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { GlobalSong, SongPart } from "@/types";
 import { extractInstrument } from "@/lib/utils";
@@ -113,32 +113,97 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
     // Allow Regents and Heads to submit
     const canSubmit = userData?.role === 'head' || userData?.role === 'regent';
 
-    useEffect(() => {
-        setLoading(true);
+    // Cache keys
+    const CACHE_KEY = 'global_songs_cache';
+    const CACHE_TIMESTAMP_KEY = 'global_songs_cache_time';
+    const CACHE_DURATION = 1000 * 60 * 30; // 30 minutes
+
+    const loadSongsFromCache = (): GlobalSong[] | null => {
+        try {
+            const cached = localStorage.getItem(CACHE_KEY);
+            const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+            if (cached && timestamp) {
+                const age = Date.now() - parseInt(timestamp);
+                if (age < CACHE_DURATION) {
+                    return JSON.parse(cached);
+                }
+            }
+        } catch (e) {
+            console.warn('Cache read error:', e);
+        }
+        return null;
+    };
+
+    const saveSongsToCache = (data: GlobalSong[]) => {
+        try {
+            localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+            localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+        } catch (e) {
+            console.warn('Cache write error:', e);
+        }
+    };
+
+    const fetchSongsFromFirestore = async () => {
         const q = query(collection(db, "global_songs"), orderBy("title"));
+        const snapshot = await getDocs(q);
+        console.log(`Fetched ${snapshot.docs.length} docs from Firestore`);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GlobalSong));
+    };
 
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            console.log(`Fetched ${snapshot.docs.length} docs`);
-            const allSongs: GlobalSong[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GlobalSong));
-            const sortedSongs = allSongs.sort((a, b) =>
-                normalizeForSort(a.title).localeCompare(normalizeForSort(b.title), 'uk')
-            );
+    const processSongs = (allSongs: GlobalSong[]) => {
+        const sortedSongs = allSongs.sort((a, b) =>
+            normalizeForSort(a.title).localeCompare(normalizeForSort(b.title), 'uk')
+        );
+        setSongs(sortedSongs);
+        setFuseInstance(new Fuse(sortedSongs, fuseOptions));
 
-            setSongs(sortedSongs);
-            setFuseInstance(new Fuse(sortedSongs, fuseOptions));
-
-            const themes = new Set<string>();
-            sortedSongs.forEach(song => {
-                if (song.theme) themes.add(song.theme);
-            });
-            setAvailableThemes(Array.from(themes).sort());
-            setLoading(false);
-        }, (error) => {
-            console.error(error);
-            setLoading(false);
+        const themes = new Set<string>();
+        sortedSongs.forEach(song => {
+            if (song.theme) themes.add(song.theme);
         });
+        setAvailableThemes(Array.from(themes).sort());
+    };
 
-        return () => unsubscribe();
+    // Force refresh function (can be called after adding a song)
+    const refreshSongs = async () => {
+        setLoading(true);
+        try {
+            const freshSongs = await fetchSongsFromFirestore();
+            processSongs(freshSongs);
+            saveSongsToCache(freshSongs);
+        } catch (error) {
+            console.error('Error refreshing songs:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        const loadSongs = async () => {
+            setLoading(true);
+
+            // 1. Try to load from cache first (instant)
+            const cachedSongs = loadSongsFromCache();
+            if (cachedSongs && cachedSongs.length > 0) {
+                console.log(`Loaded ${cachedSongs.length} songs from cache`);
+                processSongs(cachedSongs);
+                setLoading(false);
+                return; // Use cache, don't fetch from Firestore
+            }
+
+            // 2. No cache - fetch from Firestore (costs reads)
+            try {
+                const freshSongs = await fetchSongsFromFirestore();
+                processSongs(freshSongs);
+                saveSongsToCache(freshSongs);
+            } catch (error) {
+                console.error('Error loading songs:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadSongs();
     }, []);
 
     // Load Pending Songs if moderation mode is ON
@@ -677,6 +742,9 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                 <SubmitSongModal
                     onClose={() => setShowSubmitModal(false)}
                     onSuccess={() => {
+                        // Clear cache so new songs appear on next visit
+                        localStorage.removeItem('global_songs_cache');
+                        localStorage.removeItem('global_songs_cache_time');
                         alert("Заявка надіслана! Дякуємо за внесок.");
                     }}
                 />
