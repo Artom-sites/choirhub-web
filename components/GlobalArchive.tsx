@@ -354,6 +354,7 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
             // Clear cache to show new song in archive
             localStorage.removeItem('global_songs_cache');
             localStorage.removeItem('global_songs_cache_time');
+            await refreshSongs();
             setAlertModal({ isOpen: true, title: 'Успішно!', message: 'Пісню додано до архіву', variant: 'success' });
         } catch (e) {
             setApproveModal({ isOpen: false, song: null, loading: false });
