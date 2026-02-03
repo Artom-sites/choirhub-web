@@ -701,7 +701,7 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
             {canSubmit && !isModerationMode && (
                 <button
                     onClick={() => setShowSubmitModal(true)}
-                    className="fixed bottom-24 right-5 w-14 h-14 bg-primary text-background rounded-full shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40"
+                    className="fixed bottom-24 right-6 w-14 h-14 bg-primary text-background rounded-full shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40"
                     title="Запропонувати пісню"
                 >
                     <Plus className="w-7 h-7" />
