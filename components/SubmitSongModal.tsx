@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { X, Upload, Loader2, Check, Music } from "lucide-react";
+import { X, Upload, Loader2, Check, Music, ChevronDown } from "lucide-react";
 import { PendingSong } from "@/types";
 import { submitSong } from "@/lib/db";
 import { uploadFileToR2 } from "@/lib/storage";
 import { useAuth } from "@/contexts/AuthContext";
+import { OFFICIAL_THEMES } from "@/lib/themes";
 
 interface Props {
     onClose: () => void;
@@ -146,23 +147,30 @@ export default function SubmitSongModal({ onClose, onSuccess }: Props) {
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-text-secondary mb-1">Категорія</label>
-                            <select
-                                value={form.category}
-                                onChange={e => setForm({ ...form, category: e.target.value })}
-                                className="w-full px-4 py-3 bg-surface-highlight rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none"
-                            >
-                                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                            </select>
+                            <div className="relative">
+                                <select
+                                    value={form.category}
+                                    onChange={e => setForm({ ...form, category: e.target.value })}
+                                    className="w-full px-4 py-3 bg-surface-highlight rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none pr-10"
+                                >
+                                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary pointer-events-none" />
+                            </div>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-text-secondary mb-1">Тема (опц.)</label>
-                            <input
-                                type="text"
-                                value={form.theme}
-                                onChange={e => setForm({ ...form, theme: e.target.value })}
-                                className="w-full px-4 py-3 bg-surface-highlight rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                placeholder="Різдво, Пасха..."
-                            />
+                            <div className="relative">
+                                <select
+                                    value={form.theme}
+                                    onChange={e => setForm({ ...form, theme: e.target.value })}
+                                    className="w-full px-4 py-3 bg-surface-highlight rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none pr-10"
+                                >
+                                    <option value="">Не вказано</option>
+                                    {OFFICIAL_THEMES.filter(t => t !== "Інші").map(t => <option key={t} value={t}>{t}</option>)}
+                                </select>
+                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary pointer-events-none" />
+                            </div>
                         </div>
                     </div>
 
