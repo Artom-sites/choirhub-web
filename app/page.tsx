@@ -719,28 +719,34 @@ function HomePageContent() {
 
       {/* Logout Confirmation Modal */}
       {showLogoutConfirm && (
-        <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-surface card-shadow w-full max-w-xs p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
+        <div
+          className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={(e) => { e.stopPropagation(); setShowLogoutConfirm(false); }}
+        >
+          <div
+            className="bg-[#18181b] w-full max-w-xs p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200 border border-white/10"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex flex-col items-center text-center gap-4">
-              <div className="w-14 h-14 bg-surface-highlight rounded-full flex items-center justify-center">
-                <LogOut className="w-6 h-6 text-text-secondary" />
+              <div className="w-14 h-14 bg-[#27272a] rounded-full flex items-center justify-center">
+                <LogOut className="w-6 h-6 text-[#a1a1aa]" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-text-primary">Вийти з акаунту?</h3>
-                <p className="text-text-secondary text-sm mt-1">
+                <h3 className="text-lg font-bold text-white">Вийти з акаунту?</h3>
+                <p className="text-[#a1a1aa] text-sm mt-1">
                   Для повторного входу знадобиться увійти через Google.
                 </p>
               </div>
               <div className="flex gap-3 w-full mt-2">
                 <button
                   onClick={() => setShowLogoutConfirm(false)}
-                  className="flex-1 py-3 border border-border rounded-xl text-text-primary hover:bg-surface-highlight transition-colors font-medium text-sm"
+                  className="flex-1 py-3 border border-white/10 rounded-xl text-white hover:bg-[#27272a] transition-colors font-medium text-sm"
                 >
                   Скасувати
                 </button>
                 <button
                   onClick={handleLogout}
-                  className="flex-1 py-3 bg-primary text-background rounded-xl font-bold hover:opacity-90 transition-colors text-sm"
+                  className="flex-1 py-3 bg-white text-black rounded-xl font-bold hover:bg-gray-100 transition-colors text-sm"
                 >
                   Вийти
                 </button>
