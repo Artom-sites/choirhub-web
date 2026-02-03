@@ -284,7 +284,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                         </div>
                     </div>
                     {/* Search & Filter - iOS Style */}
-                    <div className="sticky top-[64px] z-20 -mx-4 px-4 pb-4 bg-background/95 backdrop-blur-xl border-b border-border">
+                    <div className="sticky top-[64px] z-20 -mx-4 px-4 pt-3 pb-4 bg-background/95 backdrop-blur-xl border-b border-border shadow-sm">
                         <div className="space-y-4">
                             {/* Search Bar */}
                             <div className="relative flex-1 group">
