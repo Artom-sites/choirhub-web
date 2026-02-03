@@ -283,11 +283,11 @@ function SetupPageContent() {
     if (!user && view !== 'email_auth') {
         return (
             <div className="min-h-screen bg-[#09090b] flex flex-col items-center justify-center p-6 text-center">
-                <div className="w-24 h-24 bg-surface rounded-3xl flex items-center justify-center mb-8 border border-white/10 shadow-2xl">
+                <div className="w-24 h-24 bg-[#18181b] rounded-3xl flex items-center justify-center mb-8 border border-white/10 shadow-2xl">
                     <Music2 className="w-10 h-10 text-white" />
                 </div>
                 <h1 className="text-4xl font-bold text-white mb-2">MyChoir</h1>
-                <p className="text-text-secondary mb-12">Ваш хоровий асистент</p>
+                <p className="text-[#a1a1aa] mb-12">Ваш хоровий асистент</p>
 
                 <div className="w-full max-w-sm space-y-3">
                     <button
@@ -302,7 +302,7 @@ function SetupPageContent() {
 
                     <button
                         onClick={() => { setView('email_auth'); setIsRegistering(false); setEmail(""); setPassword(""); setAuthName(""); setError(""); }}
-                        className="w-full py-4 bg-surface text-white font-bold rounded-xl flex items-center justify-center gap-3 hover:bg-white/10 transition-colors border border-white/5"
+                        className="w-full py-4 bg-[#18181b] text-white font-bold rounded-xl flex items-center justify-center gap-3 hover:bg-[#27272a] transition-colors border border-white/10"
                     >
                         <Mail className="w-5 h-5" />
                         Увійти через пошту
