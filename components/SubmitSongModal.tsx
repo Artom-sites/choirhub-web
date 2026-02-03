@@ -56,7 +56,7 @@ export default function SubmitSongModal({ onClose, onSuccess }: Props) {
                 submittedBy: user.uid,
                 submittedByName: userData?.name || user.displayName || "Unknown",
                 submittedChoirId: userData?.choirId,
-                mainCategory: form.category.includes("хор") ? "Хор" : form.category.includes("оркестр") ? "Орекстры" : "Всі", // Simple mapping
+
             };
 
             const songId = await submitSong(pendingData);

@@ -6,7 +6,7 @@ import { db } from "@/lib/firebase";
 import { GlobalSong, SongPart } from "@/types";
 import { extractInstrument } from "@/lib/utils";
 import { OFFICIAL_THEMES } from "@/lib/themes";
-import { Search, Music, Users, User, Loader2, FolderOpen, Plus, Eye, FileText, ChevronDown, Filter, X, LayoutGrid, Music2, Mic2, Sparkles, ShieldAlert } from "lucide-react";
+import { Search, Music, Users, User, Loader2, FolderOpen, Plus, Eye, FileText, ChevronDown, Filter, X, LayoutGrid, Music2, Mic2, Sparkles, ShieldAlert, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import PDFViewer from "./PDFViewer";
 import ConfirmationModal from "./ConfirmationModal";
@@ -486,11 +486,7 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                             onClick={() => {
                                                 // Preview Mock
                                                 const preview: GlobalSong = {
-                                                    id: song.id!,
-                                                    title: song.title,
-                                                    category: song.category as any,
-                                                    subcategory: '',
-                                                    mainCategory: 'choir', // fallback
+                                                    ...song,
                                                     parts: song.parts || [],
                                                 };
                                                 setPreviewSong(preview);
@@ -672,8 +668,8 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                 onConfirm={confirmAddSong}
                 title="Додати пісню?"
                 message={`Ви дійсно хочете додати "${songToAdd?.title}" до репертуару вашого хору?`}
-                confirmText="Додати"
-                cancelText="Скасувати"
+                confirmLabel="Додати"
+                cancelLabel="Скасувати"
             />
 
             {showSubmitModal && (
