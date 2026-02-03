@@ -298,7 +298,7 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
             <div className="sticky top-[64px] z-10 bg-background/95 backdrop-blur-lg pb-2 border-b border-border -mx-4 px-4">
                 <div className="flex items-center justify-between pt-4 mb-4">
                     <h2 className="text-xl font-bold text-text-primary">Архів МХО</h2>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                         {isModerator && (
                             <button
                                 onClick={() => {
@@ -311,22 +311,20 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                 <ShieldAlert className="w-5 h-5" />
                             </button>
                         )}
-                    </div>
-                </div>
-
-                {!isModerationMode ? (
-                    <>
-                        {/* Search & Stats */}
-                        <div className="flex justify-between items-center mb-2 px-1">
-                            <span className="text-sm text-text-secondary">
+                        {!isModerationMode && (
+                            <span className="text-sm text-text-secondary whitespace-nowrap">
                                 {searchQuery || activeFiltersCount > 0 ? (
                                     <>Знайдено: <strong className="text-text-primary">{filteredSongs.length}</strong></>
                                 ) : (
                                     <><strong className="text-text-primary">{songs.length}</strong> пісень</>
                                 )}
                             </span>
-                        </div>
+                        )}
+                    </div>
+                </div>
 
+                {!isModerationMode ? (
+                    <>
                         <div className="flex gap-2 mb-4">
                             <div className="relative flex-1 group">
                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary group-focus-within:text-text-primary transition-colors" />
