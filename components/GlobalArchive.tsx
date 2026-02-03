@@ -6,18 +6,22 @@ import { db } from "@/lib/firebase";
 import { GlobalSong, SongPart } from "@/types";
 import { extractInstrument } from "@/lib/utils";
 import { OFFICIAL_THEMES } from "@/lib/themes";
-import { Search, Music, Users, User, Loader2, FolderOpen, Plus, Eye, FileText, ChevronDown, Filter, X, LayoutGrid, Music2, Mic2 } from "lucide-react";
+import { Search, Music, Users, User, Loader2, FolderOpen, Plus, Eye, FileText, ChevronDown, Filter, X, LayoutGrid, Music2, Mic2, Sparkles, ShieldAlert } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import PDFViewer from "./PDFViewer";
 import ConfirmationModal from "./ConfirmationModal";
-import ArchiveLoader from "./ArchiveLoader";  // Musical note + waves loader for archive
+import ArchiveLoader from "./ArchiveLoader";
 import Fuse from "fuse.js";
+import { useAuth } from "@/contexts/AuthContext";
+import SubmitSongModal from "./SubmitSongModal";
+import { getPendingSongs, approveSong, rejectSong, PendingSong } from "@/lib/db";
 
 interface GlobalArchiveProps {
     onAddSong?: (song: GlobalSong) => void;
 }
 
 const CATEGORIES = [
+    { id: "new", label: "Новинки 🔥", icon: Sparkles },
     { id: "all", label: "Всі", icon: LayoutGrid },
     { id: "choir", label: "Хор", icon: Users },
     { id: "orchestra", label: "Оркестр", icon: Music2 },
@@ -45,33 +49,28 @@ const SUBCATEGORIES: Record<string, { id: string; label: string }[]> = {
     ],
 };
 
-// Helper to get Ukrainian label for subcategory
 const getSubcategoryLabel = (category: string | undefined, subcategoryId: string | undefined): string | null => {
     if (!subcategoryId || !category) return null;
     const subs = SUBCATEGORIES[category];
-    if (!subs) return subcategoryId; // fallback to ID
+    if (!subs) return subcategoryId;
     const found = subs.find(s => s.id === subcategoryId);
     return found ? found.label : subcategoryId;
 };
 
-const PAGE_SIZE = 50;  // Songs per page for display
+const PAGE_SIZE = 50;
 
-// Normalize title for sorting
 const normalizeForSort = (text: string): string => {
     return text.replace(/^["""«»''„"'\s]+/, '').toLowerCase();
 };
 
-// Check if text starts with Cyrillic character (ignoring punctuation)
 const isCyrillic = (text: string): boolean => {
     const cleanText = text.replace(/^["""«»''„"'\s\d\.,!?-]+/, '');
     return /^[\u0400-\u04FF]/.test(cleanText);
 };
 
-// Fuse.js options
 const fuseOptions = {
     keys: [
         { name: "title", weight: 0.5 },
-        // { name: "composer", weight: 0.3 }, // Hidden from UI and search
         { name: "keywords", weight: 0.2 }
     ],
     threshold: 0.3,
@@ -81,11 +80,12 @@ const fuseOptions = {
 };
 
 export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
+    const { user, userData } = useAuth();
     const [songs, setSongs] = useState<GlobalSong[]>([]);
     const [filteredSongs, setFilteredSongs] = useState<GlobalSong[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
-    const [selectedCategory, setSelectedCategory] = useState("all");
+    const [selectedCategory, setSelectedCategory] = useState("all"); // Default to 'all' or 'new'? keep 'all' 
     const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
     const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
     const [selectedLanguage, setSelectedLanguage] = useState<'all' | 'cyrillic' | 'latin'>('all');
@@ -95,26 +95,28 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
     const [previewPartIndex, setPreviewPartIndex] = useState(0);
     const [fuseInstance, setFuseInstance] = useState<Fuse<GlobalSong> | null>(null);
 
-    // NEW: State for filter panel visibility
     const [showFilters, setShowFilters] = useState(false);
-
-    // NEW: Add Options Modal State
     const [showAddOptions, setShowAddOptions] = useState(false);
-
-    // Confirmation State
     const [songToAdd, setSongToAdd] = useState<GlobalSong | null>(null);
-
-    // Toast notification state
     const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-    // Load ALL songs from Firestore using onSnapshot for instant cache feedback
+    // Submission & Moderation
+    const [showSubmitModal, setShowSubmitModal] = useState(false);
+    const [pendingSongs, setPendingSongs] = useState<PendingSong[]>([]);
+    const [isModerationMode, setIsModerationMode] = useState(false);
+    const [moderationLoading, setModerationLoading] = useState(false);
+
+    // Check if user is Admin/Moderator (Exclusive to artemdula0@gmail.com)
+    const isModerator = userData?.email === "artemdula0@gmail.com";
+    // Allow Regents and Heads to submit
+    const canSubmit = userData?.role === 'head' || userData?.role === 'regent';
+
     useEffect(() => {
         setLoading(true);
         const q = query(collection(db, "global_songs"), orderBy("title"));
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            console.log(`Fetched ${snapshot.docs.length} documents from global_songs (Source: ${snapshot.metadata.fromCache ? 'Cache' : 'Server'})`);
-
+            console.log(`Fetched ${snapshot.docs.length} docs`);
             const allSongs: GlobalSong[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GlobalSong));
             const sortedSongs = allSongs.sort((a, b) =>
                 normalizeForSort(a.title).localeCompare(normalizeForSort(b.title), 'uk')
@@ -130,24 +132,43 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
             setAvailableThemes(Array.from(themes).sort());
             setLoading(false);
         }, (error) => {
-            console.error("Error loading songs:", error);
+            console.error(error);
             setLoading(false);
         });
 
         return () => unsubscribe();
     }, []);
 
-    // Reset to page 1 when filters/search change
+    // Load Pending Songs if moderation mode is ON
+    useEffect(() => {
+        if (isModerationMode) {
+            setModerationLoading(true);
+            getPendingSongs().then(list => {
+                setPendingSongs(list);
+                setModerationLoading(false);
+            });
+        }
+    }, [isModerationMode]);
+
     useEffect(() => {
         setCurrentPage(1);
     }, [searchQuery, selectedCategory, selectedSubCategory, selectedTheme, selectedLanguage]);
 
-    // Filter songs locally
     useEffect(() => {
         let results = songs;
 
-        if (selectedCategory !== 'all') {
+        if (selectedCategory === 'new') {
+            // Sort by createdAt desc (newest first)
+            // Filter out song without createdAt if essential, or just push to bottom
+            results = [...results].sort((a, b) => {
+                const tA = (a.createdAt as any)?.seconds || 0;
+                const tB = (b.createdAt as any)?.seconds || 0;
+                return tB - tA;
+            });
+            // Maybe limit to top 100? No, let user scroll
+        } else if (selectedCategory !== 'all') {
             results = results.filter(s => s.category === selectedCategory);
+            // Default alphabetic sort is already applied
         }
 
         if (selectedSubCategory) {
@@ -167,22 +188,35 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
         if (searchQuery.trim() && fuseInstance) {
             const fuseResults = fuseInstance.search(searchQuery, { limit: 100 });
             const searchIds = new Set(fuseResults.map(r => r.item.id));
-            results = results.filter(s => searchIds.has(s.id));
+            if (selectedCategory === 'new') {
+                // If searching in 'new', keep sort order of results? Fuse returns by relevance
+                results = results.filter(s => searchIds.has(s.id));
+            } else {
+                // Use fuse relevance order
+                results = fuseResults.map(r => r.item);
+                // Re-apply other filters? Fuse searches ALL songs. We need to intersect.
+                // Simpler: filter the Fuse results by current filters
+                if (selectedCategory !== 'all' && selectedCategory !== 'new') {
+                    results = results.filter(s => s.category === selectedCategory);
+                }
+                if (selectedSubCategory) results = results.filter(s => s.subcategory === selectedSubCategory);
+                if (selectedTheme) results = results.filter(s => s.theme === selectedTheme);
+                // Language
+                if (selectedLanguage === 'cyrillic') results = results.filter(s => isCyrillic(s.title));
+                else if (selectedLanguage === 'latin') results = results.filter(s => !isCyrillic(s.title));
+            }
         }
 
         setFilteredSongs(results);
     }, [searchQuery, songs, fuseInstance, selectedCategory, selectedSubCategory, selectedTheme, selectedLanguage]);
 
-    // Infinite Scroll
     const [displayedCount, setDisplayedCount] = useState(PAGE_SIZE);
     const loaderRef = useRef<HTMLDivElement>(null);
 
-    // Reset displayed count when filters change
     useEffect(() => {
         setDisplayedCount(PAGE_SIZE);
-    }, [searchQuery, selectedCategory, selectedSubCategory, selectedTheme, selectedLanguage]);
+    }, [searchQuery, selectedCategory]);
 
-    // Intersection Observer for loading more
     useEffect(() => {
         const observer = new IntersectionObserver(
             (entries) => {
@@ -192,20 +226,14 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
             },
             { threshold: 0.1 }
         );
-
-        if (loaderRef.current) {
-            observer.observe(loaderRef.current);
-        }
-
+        if (loaderRef.current) observer.observe(loaderRef.current);
         return () => observer.disconnect();
     }, [filteredSongs]);
 
     const visibleSongs = filteredSongs.slice(0, displayedCount);
 
-    const handleAddSong = (song: GlobalSong) => {
-        if (onAddSong) {
-            setSongToAdd(song);
-        }
+    const handleAddSongWrapper = (song: GlobalSong) => {
+        if (onAddSong) setSongToAdd(song);
     };
 
     const confirmAddSong = () => {
@@ -217,7 +245,6 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
         }
     };
 
-    // Add specific part only (creates a modified song with just that part)
     const handleAddPart = (song: GlobalSong, partIndex: number) => {
         if (onAddSong) {
             const singlePartSong: GlobalSong = {
@@ -230,19 +257,37 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
         setPreviewSong(null);
     };
 
-    // Handler for the Add button click - shows modal if multiple parts
     const handleAddClick = () => {
         if (!previewSong) return;
-
-        if (previewSong.parts.length > 1) {
+        if (previewSong.parts && previewSong.parts.length > 1) {
             setShowAddOptions(true);
         } else {
-            handleAddSong(previewSong);
+            handleAddSongWrapper(previewSong);
             setPreviewSong(null);
         }
     };
 
-    // Calculate active filter count
+    const handleApprove = async (ps: PendingSong) => {
+        if (!confirm(`Схвалити пісню "${ps.title}"?`)) return;
+        try {
+            await approveSong(ps, user!.uid);
+            setPendingSongs(prev => prev.filter(s => s.id !== ps.id));
+        } catch (e) {
+            alert("Помилка при схваленні");
+        }
+    };
+
+    const handleReject = async (ps: PendingSong) => {
+        const reason = prompt("Причина відхилення:");
+        if (!reason) return;
+        try {
+            await rejectSong(ps.id!, user!.uid, reason);
+            setPendingSongs(prev => prev.filter(s => s.id !== ps.id));
+        } catch (e) {
+            alert("Помилка при відхиленні");
+        }
+    };
+
     const activeFiltersCount =
         (selectedLanguage !== 'all' ? 1 : 0) +
         (selectedTheme ? 1 : 0) +
@@ -253,174 +298,224 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
             <div className="sticky top-[64px] z-10 bg-background/95 backdrop-blur-lg pb-2 border-b border-border -mx-4 px-4">
                 <div className="flex items-center justify-between pt-4 mb-4">
                     <h2 className="text-xl font-bold text-text-primary">Архів МХО</h2>
-                    <span className="text-sm text-text-secondary">
-                        {searchQuery || activeFiltersCount > 0 ? (
-                            <>Знайдено: <strong className="text-text-primary">{filteredSongs.length}</strong> з {songs.length}</>
-                        ) : (
-                            <><strong className="text-text-primary">{songs.length}</strong> пісень</>
-                        )}
-                    </span>
-                </div>
-
-                {/* Search Bar with Filter Toggle */}
-                <div className="flex gap-2 mb-4">
-                    <div className="relative flex-1 group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary group-focus-within:text-text-primary transition-colors" />
-                        <input
-                            type="text"
-                            placeholder="Пошук пісні..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-12 pr-10 py-3 bg-surface rounded-2xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
-                        />
-                        {searchQuery && (
+                    <div className="flex items-center gap-2">
+                        {canSubmit && (
                             <button
-                                onClick={() => setSearchQuery("")}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-secondary hover:text-text-primary hover:bg-surface-highlight rounded-full transition-all"
+                                onClick={() => setShowSubmitModal(true)}
+                                className="p-2 bg-primary/20 text-primary rounded-xl flex items-center gap-2 text-sm font-bold hover:bg-primary/30 transition-colors"
                             >
-                                <X className="w-4 h-4" />
+                                <Plus className="w-5 h-5" />
+                                <span className="hidden sm:inline">Запропонувати</span>
+                            </button>
+                        )}
+                        {isModerator && (
+                            <button
+                                onClick={() => {
+                                    setIsModerationMode(!isModerationMode);
+                                    if (!isModerationMode) setSelectedCategory('all');
+                                }}
+                                className={`p-2 rounded-xl transition-colors ${isModerationMode ? 'bg-orange-500 text-white' : 'bg-surface text-text-secondary hover:text-text-primary'}`}
+                                title="Модерація"
+                            >
+                                <ShieldAlert className="w-5 h-5" />
                             </button>
                         )}
                     </div>
-                    <button
-                        onClick={() => setShowFilters(!showFilters)}
-                        className={`px-4 rounded-2xl flex items-center gap-2 transition-all ${showFilters || activeFiltersCount > 0
-                            ? "bg-primary text-background"
-                            : "bg-surface text-text-secondary hover:text-text-primary"
-                            }`}
-                    >
-                        <Filter className="w-5 h-5" />
-                        {activeFiltersCount > 0 && <span className="bg-black/20 px-1.5 rounded-full text-xs">{activeFiltersCount}</span>}
-                    </button>
                 </div>
 
-                {/* Collapsible Filter Panel */}
-                <AnimatePresence>
-                    {showFilters && (
-                        <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="overflow-hidden"
-                        >
-                            <div className="bg-surface rounded-2xl p-4 mb-4 space-y-4 border border-border">
-                                {/* Row 1: Language */}
-                                <div>
-                                    <p className="text-xs text-text-secondary uppercase font-bold tracking-wider mb-2">Мова</p>
-                                    <div className="flex bg-black/20 rounded-xl p-1 w-fit">
-                                        <button onClick={() => setSelectedLanguage('all')} className={`px-3 py-1.5 rounded-lg text-sm transition-all ${selectedLanguage === 'all' ? 'bg-primary/20 text-text-primary' : 'text-text-secondary'}`}>Всі</button>
-                                        <button onClick={() => setSelectedLanguage('cyrillic')} className={`px-3 py-1.5 rounded-lg text-sm transition-all ${selectedLanguage === 'cyrillic' ? 'bg-primary/20 text-text-primary' : 'text-text-secondary'}`}>АБВ</button>
-                                        <button onClick={() => setSelectedLanguage('latin')} className={`px-3 py-1.5 rounded-lg text-sm transition-all ${selectedLanguage === 'latin' ? 'bg-primary/20 text-text-primary' : 'text-text-secondary'}`}>ABC</button>
-                                    </div>
-                                </div>
+                {!isModerationMode ? (
+                    <>
+                        {/* Search & Stats */}
+                        <div className="flex justify-between items-center mb-2 px-1">
+                            <span className="text-sm text-text-secondary">
+                                {searchQuery || activeFiltersCount > 0 ? (
+                                    <>Знайдено: <strong className="text-text-primary">{filteredSongs.length}</strong></>
+                                ) : (
+                                    <><strong className="text-text-primary">{songs.length}</strong> пісень</>
+                                )}
+                            </span>
+                        </div>
 
-                                {/* Row 2: Main Category */}
-                                <div className="border-b border-border pb-4">
-                                    <p className="text-xs text-text-secondary uppercase font-bold tracking-wider mb-2">Категорія</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {CATEGORIES.map(cat => (
-                                            <button
-                                                key={cat.id}
-                                                onClick={() => {
-                                                    setSelectedCategory(cat.id);
-                                                    setSelectedSubCategory(null);
-                                                }}
-                                                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-all border ${selectedCategory === cat.id
-                                                    ? "bg-primary text-background border-primary font-semibold"
-                                                    : "bg-transparent text-text-secondary border-border hover:border-border/50"
-                                                    }`}
-                                            >
-                                                <cat.icon className="w-4 h-4" />
-                                                {cat.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
+                        <div className="flex gap-2 mb-4">
+                            <div className="relative flex-1 group">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary group-focus-within:text-text-primary transition-colors" />
+                                <input
+                                    type="text"
+                                    placeholder="Пошук пісні..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full pl-12 pr-10 py-3 bg-surface rounded-2xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
+                                />
+                                {searchQuery && (
+                                    <button
+                                        onClick={() => setSearchQuery("")}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-secondary hover:text-text-primary hover:bg-surface-highlight rounded-full transition-all"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                )}
+                            </div>
+                            <button
+                                onClick={() => setShowFilters(!showFilters)}
+                                className={`px-4 rounded-2xl flex items-center gap-2 transition-all ${showFilters || activeFiltersCount > 0
+                                    ? "bg-primary text-background"
+                                    : "bg-surface text-text-secondary hover:text-text-primary"
+                                    }`}
+                            >
+                                <Filter className="w-5 h-5" />
+                                {activeFiltersCount > 0 && <span className="bg-black/20 px-1.5 rounded-full text-xs">{activeFiltersCount}</span>}
+                            </button>
+                        </div>
 
-                                {/* Row 2: Subcategories */}
-                                {selectedCategory !== "all" && SUBCATEGORIES[selectedCategory] && (
-                                    <div className="space-y-2">
-                                        <p className="text-xs text-text-secondary uppercase font-bold tracking-wider">Склад</p>
-                                        <div className="flex flex-wrap gap-2">
-                                            <button
-                                                onClick={() => setSelectedSubCategory(null)}
-                                                className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${!selectedSubCategory
-                                                    ? "bg-primary text-background border-primary"
-                                                    : "bg-transparent text-text-secondary border-border hover:border-border/50"
-                                                    }`}
-                                            >
-                                                Всі
-                                            </button>
-                                            {SUBCATEGORIES[selectedCategory].map(sub => (
-                                                <button
-                                                    key={sub.id}
-                                                    onClick={() => setSelectedSubCategory(selectedSubCategory === sub.id ? null : sub.id)}
-                                                    className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${selectedSubCategory === sub.id
-                                                        ? "bg-primary text-background border-primary"
-                                                        : "bg-transparent text-text-secondary border-border hover:border-border/50"
-                                                        }`}
-                                                >
-                                                    {sub.label}
-                                                </button>
-                                            ))}
+                        {/* Filters Panel */}
+                        <AnimatePresence>
+                            {showFilters && (
+                                <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: "auto", opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    className="overflow-hidden"
+                                >
+                                    <div className="bg-surface rounded-2xl p-4 mb-4 space-y-4 border border-border">
+                                        {/* Language */}
+                                        <div>
+                                            <p className="text-xs text-text-secondary uppercase font-bold tracking-wider mb-2">Мова</p>
+                                            <div className="flex bg-black/20 rounded-xl p-1 w-fit">
+                                                <button onClick={() => setSelectedLanguage('all')} className={`px-3 py-1.5 rounded-lg text-sm transition-all ${selectedLanguage === 'all' ? 'bg-primary/20 text-text-primary' : 'text-text-secondary'}`}>Всі</button>
+                                                <button onClick={() => setSelectedLanguage('cyrillic')} className={`px-3 py-1.5 rounded-lg text-sm transition-all ${selectedLanguage === 'cyrillic' ? 'bg-primary/20 text-text-primary' : 'text-text-secondary'}`}>АБВ</button>
+                                                <button onClick={() => setSelectedLanguage('latin')} className={`px-3 py-1.5 rounded-lg text-sm transition-all ${selectedLanguage === 'latin' ? 'bg-primary/20 text-text-primary' : 'text-text-secondary'}`}>ABC</button>
+                                            </div>
+                                        </div>
+
+                                        {/* Categories */}
+                                        <div className="border-b border-border pb-4">
+                                            <p className="text-xs text-text-secondary uppercase font-bold tracking-wider mb-2">Категорія</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {CATEGORIES.map(cat => (
+                                                    <button
+                                                        key={cat.id}
+                                                        onClick={() => {
+                                                            setSelectedCategory(cat.id);
+                                                            setSelectedSubCategory(null);
+                                                        }}
+                                                        className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-all border ${selectedCategory === cat.id
+                                                            ? "bg-primary text-background border-primary font-semibold"
+                                                            : "bg-transparent text-text-secondary border-border hover:border-border/50"
+                                                            }`}
+                                                    >
+                                                        <cat.icon className="w-4 h-4" />
+                                                        {cat.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Subcategories */}
+                                        {selectedCategory !== "all" && selectedCategory !== "new" && SUBCATEGORIES[selectedCategory] && (
+                                            <div className="space-y-2">
+                                                <p className="text-xs text-text-secondary uppercase font-bold tracking-wider">Склад</p>
+                                                <div className="flex flex-wrap gap-2">
+                                                    <button
+                                                        onClick={() => setSelectedSubCategory(null)}
+                                                        className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${!selectedSubCategory
+                                                            ? "bg-primary text-background border-primary"
+                                                            : "bg-transparent text-text-secondary border-border hover:border-border/50"
+                                                            }`}
+                                                    >
+                                                        Всі
+                                                    </button>
+                                                    {SUBCATEGORIES[selectedCategory].map(sub => (
+                                                        <button
+                                                            key={sub.id}
+                                                            onClick={() => setSelectedSubCategory(selectedSubCategory === sub.id ? null : sub.id)}
+                                                            className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${selectedSubCategory === sub.id
+                                                                ? "bg-primary text-background border-primary"
+                                                                : "bg-transparent text-text-secondary border-border hover:border-border/50"
+                                                                }`}
+                                                        >
+                                                            {sub.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Themes */}
+                                        <div className="space-y-2">
+                                            <p className="text-xs text-text-secondary uppercase font-bold tracking-wider">Тематика</p>
+                                            <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+                                                <button onClick={() => setSelectedTheme(null)} className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs border ${!selectedTheme ? "bg-primary text-background border-primary" : "bg-transparent text-text-secondary border-border"}`}>Всі теми</button>
+                                                {OFFICIAL_THEMES.map(theme => (
+                                                    <button key={theme} onClick={() => setSelectedTheme(selectedTheme === theme ? null : theme)} className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs border ${selectedTheme === theme ? "bg-primary text-background border-primary" : "bg-transparent text-text-secondary border-border"}`}>{theme}</button>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
-                                )}
-
-                                {/* Row 3: Themes - horizontal scroll on mobile */}
-                                <div className="space-y-2">
-                                    <p className="text-xs text-text-secondary uppercase font-bold tracking-wider">Тематика</p>
-                                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-                                        <button
-                                            onClick={() => setSelectedTheme(null)}
-                                            className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs border transition-all ${!selectedTheme
-                                                ? "bg-primary text-background border-primary"
-                                                : "bg-transparent text-text-secondary border-border hover:border-border/50"
-                                                }`}
-                                        >
-                                            Всі теми
-                                        </button>
-                                        {OFFICIAL_THEMES.map(theme => (
-                                            <button
-                                                key={theme}
-                                                onClick={() => setSelectedTheme(selectedTheme === theme ? null : theme)}
-                                                className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs border transition-all ${selectedTheme === theme
-                                                    ? "bg-primary text-background border-primary"
-                                                    : "bg-transparent text-text-secondary border-border hover:border-border/50"
-                                                    }`}
-                                            >
-                                                {theme}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                {activeFiltersCount > 0 && (
-                    <div className="flex justify-end mb-2 px-2">
-                        <button
-                            onClick={() => {
-                                setSelectedLanguage('all');
-                                setSelectedTheme(null);
-                                setSelectedSubCategory(null);
-                                setSelectedCategory('all');
-                            }}
-                            className="text-xs text-accent hover:underline flex items-center gap-1"
-                        >
-                            <X className="w-3 h-3" /> Скинути фільтри
-                        </button>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </>
+                ) : (
+                    <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-xl mb-4">
+                        <h3 className="font-bold text-orange-400 flex items-center gap-2">
+                            <ShieldAlert className="w-5 h-5" />
+                            Панель Модератора
+                        </h3>
+                        <p className="text-sm text-text-secondary mt-1">
+                            Перевіряйте заявки користувачів.
+                        </p>
                     </div>
                 )}
             </div>
 
-            {/* Song List */}
+            {/* List */}
             <div className="flex-1 overflow-y-auto space-y-2 pt-4">
-                {/* ... (Existing List Logic) ... */}
-                {loading ? (
+                {loading || moderationLoading ? (
                     <ArchiveLoader />
+                ) : isModerationMode ? (
+                    pendingSongs.length === 0 ? (
+                        <div className="text-center py-12 text-text-secondary">
+                            <p>Заявок не знайдено</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {pendingSongs.map(song => (
+                                <div key={song.id} className="bg-surface rounded-2xl p-4 border border-border">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+                                            <FileText className="w-5 h-5 text-purple-400" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-semibold text-white">{song.title}</h3>
+                                            <p className="text-xs text-text-secondary">{song.composer} • {song.category}</p>
+                                            <p className="text-[10px] text-text-secondary/60 mt-0.5">Від: {song.submittedByName}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => {
+                                                // Preview Mock
+                                                const preview: GlobalSong = {
+                                                    id: song.id!,
+                                                    title: song.title,
+                                                    category: song.category as any,
+                                                    subcategory: '',
+                                                    mainCategory: 'choir', // fallback
+                                                    parts: song.parts || [],
+                                                };
+                                                setPreviewSong(preview);
+                                            }}
+                                            className="flex-1 py-1.5 bg-surface-highlight rounded-lg text-xs font-medium"
+                                        >
+                                            Переглянути
+                                        </button>
+                                        <button onClick={() => handleReject(song)} className="flex-1 py-1.5 bg-red-500/10 text-red-400 rounded-lg text-xs font-medium">Відхилити</button>
+                                        <button onClick={() => handleApprove(song)} className="flex-1 py-1.5 bg-green-500/10 text-green-400 rounded-lg text-xs font-medium">Схвалити</button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )
                 ) : filteredSongs.length === 0 ? (
                     <div className="text-center py-12 text-text-secondary">
                         <FolderOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
@@ -438,7 +533,6 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                     transition={{ delay: Math.min(index * 0.02, 0.5) }}
                                     className="bg-surface rounded-2xl p-4 flex items-center gap-4 border border-border hover:border-border/50 transition-colors"
                                 >
-                                    {/* Icon */}
                                     <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
                                         {song.parts && song.parts.length > 0 ? (
                                             <FileText className="w-6 h-6 text-text-primary" />
@@ -447,7 +541,6 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                         )}
                                     </div>
 
-                                    {/* Info */}
                                     <div className="flex-1 min-w-0">
                                         <h3 className="font-semibold text-text-primary truncate">{song.title}</h3>
                                         <div className="flex flex-wrap gap-1.5 items-center mt-1">
@@ -469,7 +562,6 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                         </div>
                                     </div>
 
-                                    {/* Actions */}
                                     <div className="flex items-center gap-2">
                                         {song.parts && song.parts.length > 0 && (
                                             <button
@@ -484,7 +576,7 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                         )}
                                         {onAddSong && (
                                             <button
-                                                onClick={() => handleAddSong(song)}
+                                                onClick={() => handleAddSongWrapper(song)}
                                                 className="p-2 rounded-xl bg-surface-highlight hover:bg-surface-highlight/80 transition-colors"
                                             >
                                                 <Plus className="w-5 h-5 text-text-primary" />
@@ -494,8 +586,6 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                 </motion.div>
                             ))}
                         </AnimatePresence>
-
-                        {/* Loader / Spacer for Infinite Scroll */}
                         {visibleSongs.length < filteredSongs.length && (
                             <div ref={loaderRef} className="py-8 flex justify-center">
                                 <Loader2 className="w-6 h-6 animate-spin text-white/20" />
@@ -505,7 +595,7 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                 )}
             </div>
 
-            {/* PDF Preview Modal */}
+            {/* Modals and Overlays */}
             <AnimatePresence>
                 {previewSong && previewSong.parts && previewSong.parts.length > 0 && (
                     <motion.div
@@ -514,45 +604,26 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                         exit={{ opacity: 0 }}
                         className="fixed inset-0 z-50 bg-white flex flex-col"
                     >
-                        {/* Header - fixed at top */}
                         <div className="bg-white border-b border-gray-200 z-40">
-                            {/* Row 1: Close button, title, add button */}
                             <div className="flex items-center justify-between px-4 py-3">
-                                <button
-                                    onClick={() => setPreviewSong(null)}
-                                    className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition-colors"
-                                >
+                                <button onClick={() => setPreviewSong(null)} className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition-colors">
                                     <X className="w-5 h-5 text-gray-600" />
                                 </button>
-
-                                <h3 className="text-sm font-medium text-gray-900 truncate flex-1 text-center mx-4">
-                                    {previewSong.title}
-                                </h3>
-
-                                {/* Always show + button if onAddSong exists, or show placeholder */}
+                                <h3 className="text-sm font-medium text-gray-900 truncate flex-1 text-center mx-4">{previewSong.title}</h3>
                                 {onAddSong ? (
-                                    <button
-                                        onClick={handleAddClick}
-                                        className="p-2 -mr-2 rounded-full hover:bg-gray-100 transition-colors"
-                                    >
+                                    <button onClick={handleAddClick} className="p-2 -mr-2 rounded-full hover:bg-gray-100 transition-colors">
                                         <Plus className="w-5 h-5 text-gray-700" />
                                     </button>
-                                ) : (
-                                    <div className="w-10" /> /* Spacer */
-                                )}
+                                ) : <div className="w-10" />}
                             </div>
 
-                            {/* Row 2: Part tabs - only if multiple parts */}
                             {previewSong.parts.length > 1 && (
                                 <div className="px-4 pb-3 flex gap-2 overflow-x-auto scrollbar-hide">
                                     {previewSong.parts.map((part, idx) => (
                                         <button
                                             key={idx}
                                             onClick={() => setPreviewPartIndex(idx)}
-                                            className={`px-4 py-2 rounded-full whitespace-nowrap transition-all text-sm font-medium ${idx === previewPartIndex
-                                                ? "bg-gray-900 text-white"
-                                                : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                                                }`}
+                                            className={`px-4 py-2 rounded-full whitespace-nowrap transition-all text-sm font-medium ${idx === previewPartIndex ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
                                         >
                                             {extractInstrument(part.name || `Партія ${idx + 1}`, previewSong.title)}
                                         </button>
@@ -561,7 +632,6 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                             )}
                         </div>
 
-                        {/* PDF Content */}
                         <div className="flex-1 overflow-hidden">
                             <PDFViewer
                                 url={`/api/pdf-proxy?url=${encodeURIComponent(previewSong.parts[previewPartIndex].pdfUrl)}`}
@@ -570,7 +640,6 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                             />
                         </div>
 
-                        {/* Add Options Modal */}
                         <AnimatePresence>
                             {showAddOptions && previewSong && (
                                 <motion.div
@@ -588,33 +657,15 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         <h3 className="text-lg font-bold text-white mb-2">Додати до репертуару</h3>
-                                        <p className="text-text-secondary text-sm mb-5">
-                                            Оберіть що додати:
-                                        </p>
+                                        <p className="text-text-secondary text-sm mb-5">Оберіть що додати:</p>
                                         <div className="flex flex-col gap-3">
-                                            <button
-                                                onClick={() => handleAddPart(previewSong, previewPartIndex)}
-                                                className="w-full py-4 px-4 bg-accent/20 border border-accent text-white font-semibold rounded-xl hover:bg-accent/30 transition-colors text-left"
-                                            >
+                                            <button onClick={() => handleAddPart(previewSong, previewPartIndex)} className="w-full py-4 px-4 bg-accent/20 border border-accent text-white font-semibold rounded-xl hover:bg-accent/30 transition-colors text-left">
                                                 <div className="text-xs opacity-70 mb-1">Тільки поточна партія:</div>
                                                 <div className="truncate text-accent">{extractInstrument(previewSong.parts[previewPartIndex]?.name || 'Поточна партія', previewSong.title)}</div>
                                             </button>
-                                            <button
-                                                onClick={() => {
-                                                    handleAddSong(previewSong);
-                                                    setShowAddOptions(false);
-                                                    setPreviewSong(null);
-                                                }}
-                                                className="w-full py-4 px-4 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-colors text-left"
-                                            >
-                                                <div className="text-xs opacity-70 mb-1">Вся партитура:</div>
-                                                <div>Усі {previewSong.parts.length} партій</div>
-                                            </button>
-                                            <button
-                                                onClick={() => setShowAddOptions(false)}
-                                                className="w-full py-2 text-text-secondary hover:text-white transition-colors text-sm mt-2"
-                                            >
-                                                Скасувати
+                                            <button onClick={() => { handleAddSongWrapper(previewSong); setShowAddOptions(false); setPreviewSong(null); }} className="w-full py-4 px-4 bg-surface-highlight border border-border text-white font-semibold rounded-xl hover:bg-surface-highlight/80 transition-colors text-left">
+                                                <div className="text-xs opacity-70 mb-1">Всю пісню:</div>
+                                                <div className="truncate">{previewSong.parts.length} партій</div>
                                             </button>
                                         </div>
                                     </motion.div>
@@ -625,32 +676,38 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                 )}
             </AnimatePresence>
 
-            {/* Toast Notification */}
-            <AnimatePresence>
-                {toastMessage && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 50 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 50 }}
-                        className="fixed bottom-24 left-4 right-4 z-[60] flex justify-center pointer-events-none"
-                    >
-                        <div className="bg-white text-black px-4 py-3 rounded-xl shadow-lg text-sm font-medium max-w-[90%] text-center">
-                            {toastMessage}
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Confirmation Modal */}
             <ConfirmationModal
                 isOpen={!!songToAdd}
                 onClose={() => setSongToAdd(null)}
                 onConfirm={confirmAddSong}
                 title="Додати пісню?"
-                message={`Ви дійсно хочете додати "${songToAdd?.title}" до списку?`}
-                confirmLabel="Додати"
-                cancelLabel="Скасувати"
+                message={`Ви дійсно хочете додати "${songToAdd?.title}" до репертуару вашого хору?`}
+                confirmText="Додати"
+                cancelText="Скасувати"
             />
+
+            {showSubmitModal && (
+                <SubmitSongModal
+                    onClose={() => setShowSubmitModal(false)}
+                    onSuccess={() => {
+                        alert("Заявка надіслана! Дякуємо за внесок.");
+                    }}
+                />
+            )}
+
+            {toastMessage && (
+                <motion.div
+                    initial={{ opacity: 0, y: 50 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 50 }}
+                    className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-black/90 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 border border-white/10"
+                >
+                    <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center">
+                        <Plus className="w-4 h-4 text-green-400" />
+                    </div>
+                    <span className="font-medium text-sm">{toastMessage}</span>
+                </motion.div>
+            )}
         </div>
     );
 }
