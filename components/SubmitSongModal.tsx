@@ -40,57 +40,64 @@ export default function SubmitSongModal({ onClose, onSuccess }: Props) {
         if (!user || !file) return;
 
         setLoading(true);
-        try {
-            // 1. Create pending record first to get ID (or we can just upload first with random ID)
-            // Ideally we want atomic operation, but Firestore + Storage is hard.
-            // Let's create doc first.
+        let songId: string | null = null;
 
-            // Actually, let's prepare the object
+        try {
+            // Step 1: Create pending song record in Firestore
             const pendingData: Omit<PendingSong, "id" | "status" | "submittedAt"> = {
                 title: form.title,
                 composer: form.composer,
                 category: form.category,
                 theme: form.theme,
                 keywords: [form.title, form.composer, form.theme].filter(Boolean).map(s => s.toLowerCase()),
-                parts: [], // will fill after upload
+                parts: [],
                 submittedBy: user.uid,
                 submittedByName: userData?.name || user.displayName || "Unknown",
                 submittedChoirId: userData?.choirId,
-
             };
 
-            const songId = await submitSong(pendingData);
+            try {
+                songId = await submitSong(pendingData);
+            } catch (err: any) {
+                console.error("Firestore create error:", err);
+                alert("Помилка: не вдалося створити запис. Перевірте інтернет-з'єднання.");
+                return;
+            }
 
-            // 2. Upload file
-            const fileExt = file.name.split('.').pop() || 'pdf';
-            const storageKey = `pending/${songId}/${Date.now()}.${fileExt}`;
-            const downloadUrl = await uploadFileToR2(storageKey, file);
+            // Step 2: Upload PDF to R2
+            let downloadUrl: string;
+            try {
+                const fileExt = file.name.split('.').pop() || 'pdf';
+                const storageKey = `pending/${songId}/${Date.now()}.${fileExt}`;
+                downloadUrl = await uploadFileToR2(storageKey, file);
+            } catch (err: any) {
+                console.error("R2 upload error:", err);
+                alert("Помилка завантаження файлу. Сховище може бути недоступне.");
+                return;
+            }
 
-            // 3. Update doc with file URL
-            // We need a clear way to update, accessing db directly here or adding an update function
-            // For simplicity/speed, I'll rely on submitSong returning ID and then running an update
-            // Wait, I should probably update submitSong to handle this or generic update
+            // Step 3: Update doc with file URL
+            try {
+                const { doc, updateDoc } = await import("firebase/firestore");
+                const { db } = await import("@/lib/firebase");
 
-            // Let's import updateDoc/doc/db here or add updatePendingSong to db.ts
-            // Actually, let's just make submitSong accept parts if we want, but we need connection
-
-            // QUICK FIX: I will use a direct update here via db import, or better, add updatePendingSong to db.ts
-            // Improvised: import { doc, updateDoc } from "firebase/firestore"; import { db } from "@/lib/firebase";
-            const { doc, updateDoc } = await import("firebase/firestore");
-            const { db } = await import("@/lib/firebase");
-
-            await updateDoc(doc(db, "pending_songs", songId), {
-                parts: [{
-                    name: "Партитура",
-                    pdfUrl: downloadUrl
-                }]
-            });
+                await updateDoc(doc(db, "pending_songs", songId), {
+                    parts: [{
+                        name: "Партитура",
+                        pdfUrl: downloadUrl
+                    }]
+                });
+            } catch (err: any) {
+                console.error("Firestore update error:", err);
+                alert("Помилка: файл завантажено, але не вдалося оновити запис.");
+                return;
+            }
 
             onSuccess();
             onClose();
-        } catch (error) {
-            console.error("Error submitting song:", error);
-            alert("Помилка при подачі заявки");
+        } catch (error: any) {
+            console.error("Unexpected error:", error);
+            alert(`Неочікувана помилка: ${error.message || "Спробуйте ще раз"}`);
         } finally {
             setLoading(false);
         }
@@ -192,7 +199,7 @@ export default function SubmitSongModal({ onClose, onSuccess }: Props) {
                     <button
                         type="submit"
                         disabled={loading || !file || !form.title}
-                        className="w-full py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        className="w-full py-3 bg-primary text-background font-bold rounded-xl hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                         {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Надіслати"}
                     </button>
