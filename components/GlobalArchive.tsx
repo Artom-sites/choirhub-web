@@ -1,4 +1,5 @@
 "use client";
+// Updated to force recompile and fix stale cache
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { collection, getDocs, query, orderBy, onSnapshot } from "firebase/firestore";
