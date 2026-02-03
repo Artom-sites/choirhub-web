@@ -17,6 +17,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import SubmitSongModal from "./SubmitSongModal";
 import { getPendingSongs, approveSong, rejectSong } from "@/lib/db";
 import { PendingSong } from "@/types";
+import { ConfirmModal, AlertModal, InputModal } from "./ui/Modal";
 
 interface GlobalArchiveProps {
     onAddSong?: (song: GlobalSong) => void;
@@ -107,6 +108,11 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
     const [pendingSongs, setPendingSongs] = useState<PendingSong[]>([]);
     const [isModerationMode, setIsModerationMode] = useState(false);
     const [moderationLoading, setModerationLoading] = useState(false);
+
+    // Custom Modal State
+    const [approveModal, setApproveModal] = useState<{ isOpen: boolean; song: PendingSong | null; loading: boolean }>({ isOpen: false, song: null, loading: false });
+    const [rejectModal, setRejectModal] = useState<{ isOpen: boolean; song: PendingSong | null; loading: boolean }>({ isOpen: false, song: null, loading: false });
+    const [alertModal, setAlertModal] = useState<{ isOpen: boolean; title: string; message: string; variant: 'success' | 'error' | 'warning' | 'info' }>({ isOpen: false, title: '', message: '', variant: 'info' });
 
     // Check if user is Admin/Moderator (Exclusive to artemdula0@gmail.com)
     const isModerator = userData?.email === "artemdula0@gmail.com";
@@ -334,24 +340,42 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
         }
     };
 
-    const handleApprove = async (ps: PendingSong) => {
-        if (!confirm(`Схвалити пісню "${ps.title}"?`)) return;
+    const handleApproveClick = (ps: PendingSong) => {
+        setApproveModal({ isOpen: true, song: ps, loading: false });
+    };
+
+    const handleApproveConfirm = async () => {
+        if (!approveModal.song) return;
+        setApproveModal(prev => ({ ...prev, loading: true }));
         try {
-            await approveSong(ps, user!.uid);
-            setPendingSongs(prev => prev.filter(s => s.id !== ps.id));
+            await approveSong(approveModal.song, user!.uid);
+            setPendingSongs(prev => prev.filter(s => s.id !== approveModal.song!.id));
+            setApproveModal({ isOpen: false, song: null, loading: false });
+            // Clear cache to show new song in archive
+            localStorage.removeItem('global_songs_cache');
+            localStorage.removeItem('global_songs_cache_time');
+            setAlertModal({ isOpen: true, title: 'Успішно!', message: 'Пісню додано до архіву', variant: 'success' });
         } catch (e) {
-            alert("Помилка при схваленні");
+            setApproveModal({ isOpen: false, song: null, loading: false });
+            setAlertModal({ isOpen: true, title: 'Помилка', message: 'Не вдалося схвалити пісню', variant: 'error' });
         }
     };
 
-    const handleReject = async (ps: PendingSong) => {
-        const reason = prompt("Причина відхилення:");
-        if (!reason) return;
+    const handleRejectClick = (ps: PendingSong) => {
+        setRejectModal({ isOpen: true, song: ps, loading: false });
+    };
+
+    const handleRejectConfirm = async (reason: string) => {
+        if (!rejectModal.song || !reason.trim()) return;
+        setRejectModal(prev => ({ ...prev, loading: true }));
         try {
-            await rejectSong(ps.id!, user!.uid, reason);
-            setPendingSongs(prev => prev.filter(s => s.id !== ps.id));
+            await rejectSong(rejectModal.song.id!, user!.uid, reason);
+            setPendingSongs(prev => prev.filter(s => s.id !== rejectModal.song!.id));
+            setRejectModal({ isOpen: false, song: null, loading: false });
+            setAlertModal({ isOpen: true, title: 'Відхилено', message: 'Заявку відхилено', variant: 'warning' });
         } catch (e) {
-            alert("Помилка при відхиленні");
+            setRejectModal({ isOpen: false, song: null, loading: false });
+            setAlertModal({ isOpen: true, title: 'Помилка', message: 'Не вдалося відхилити заявку', variant: 'error' });
         }
     };
 
@@ -561,8 +585,8 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                         >
                                             Переглянути
                                         </button>
-                                        <button onClick={() => handleReject(song)} className="flex-1 py-1.5 bg-red-500/10 text-red-400 rounded-lg text-xs font-medium">Відхилити</button>
-                                        <button onClick={() => handleApprove(song)} className="flex-1 py-1.5 bg-green-500/10 text-green-400 rounded-lg text-xs font-medium">Схвалити</button>
+                                        <button onClick={() => handleRejectClick(song)} className="flex-1 py-1.5 bg-red-500/10 text-red-400 rounded-lg text-xs font-medium">Відхилити</button>
+                                        <button onClick={() => handleApproveClick(song)} className="flex-1 py-1.5 bg-green-500/10 text-green-400 rounded-lg text-xs font-medium">Схвалити</button>
                                     </div>
                                 </div>
                             ))}
@@ -745,10 +769,48 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                         // Clear cache so new songs appear on next visit
                         localStorage.removeItem('global_songs_cache');
                         localStorage.removeItem('global_songs_cache_time');
-                        alert("Заявка надіслана! Дякуємо за внесок.");
+                        setAlertModal({
+                            isOpen: true,
+                            title: 'Успішно!',
+                            message: 'Заявка надіслана! Дякуємо за внесок.',
+                            variant: 'success'
+                        });
                     }}
                 />
             )}
+
+            {/* Moderation Modals */}
+            <ConfirmModal
+                isOpen={approveModal.isOpen}
+                onClose={() => setApproveModal({ ...approveModal, isOpen: false })}
+                onConfirm={handleApproveConfirm}
+                title="Схвалити пісню?"
+                message={`Ви дійсно хочете схвалити пісню "${approveModal.song?.title}"? Вона стане доступною для всіх.`}
+                confirmText="Схвалити"
+                variant="success"
+                loading={approveModal.loading}
+            />
+
+            <InputModal
+                isOpen={rejectModal.isOpen}
+                onClose={() => setRejectModal({ ...rejectModal, isOpen: false })}
+                onSubmit={handleRejectConfirm}
+                title="Відхилити пісню"
+                message={`Вкажіть причину відхилення для пісні "${rejectModal.song?.title}":`}
+                placeholder="Наприклад: Неякісний PDF, дублікат..."
+                submitText="Відхилити"
+                cancelText="Скасувати"
+                required
+                loading={rejectModal.loading}
+            />
+
+            <AlertModal
+                isOpen={alertModal.isOpen}
+                onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+                title={alertModal.title}
+                message={alertModal.message}
+                variant={alertModal.variant}
+            />
 
             {toastMessage && (
                 <motion.div
