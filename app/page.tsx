@@ -1378,17 +1378,26 @@ function HomePageContent() {
                         </div>
                       </div>
 
-                      {canEdit && (
+                      <div className="flex items-center gap-2">
                         <button
-                          onClick={() => {
-                            setEditingMember(member);
-                            setShowEditMemberModal(true);
-                          }}
-                          className="text-text-secondary/50 group-hover:text-text-primary transition-colors p-2 hover:bg-surface rounded-lg"
+                          onClick={() => setViewingMemberStats(member)}
+                          className="text-text-secondary/50 hover:text-primary transition-colors p-2 hover:bg-surface rounded-lg"
                         >
-                          <Pencil className="w-4 h-4" />
+                          <BarChart2 className="w-4 h-4" />
                         </button>
-                      )}
+
+                        {canEdit && (
+                          <button
+                            onClick={() => {
+                              setEditingMember(member);
+                              setShowEditMemberModal(true);
+                            }}
+                            className="text-text-secondary/50 group-hover:text-text-primary transition-colors p-2 hover:bg-surface rounded-lg"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   );
                 })
