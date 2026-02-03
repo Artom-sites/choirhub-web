@@ -126,8 +126,8 @@ export default function MSCCatalog({ onAddSong }: MSCCatalogProps) {
     const [pendingSongs, setPendingSongs] = useState<PendingSong[]>([]);
     const [isModerationMode, setIsModerationMode] = useState(false);
 
-    // Check if user is Admin/Moderator
-    const isModerator = userData?.email === "artem_shent@ukr.net" || userData?.role === 'head';
+    // Check if user is Admin/Moderator (Exclusive)
+    const isModerator = userData?.email === "artemdula0@gmail.com";
     // Allow Regents and Heads to submit
     const canSubmit = userData?.role === 'head' || userData?.role === 'regent';
 
