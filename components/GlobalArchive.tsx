@@ -299,15 +299,6 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                 <div className="flex items-center justify-between pt-4 mb-4">
                     <h2 className="text-xl font-bold text-text-primary">Архів МХО</h2>
                     <div className="flex items-center gap-2">
-                        {canSubmit && (
-                            <button
-                                onClick={() => setShowSubmitModal(true)}
-                                className="p-2 bg-primary/20 text-primary rounded-xl flex items-center gap-2 text-sm font-bold hover:bg-primary/30 transition-colors"
-                            >
-                                <Plus className="w-5 h-5" />
-                                <span className="hidden sm:inline">Запропонувати</span>
-                            </button>
-                        )}
                         {isModerator && (
                             <button
                                 onClick={() => {
@@ -707,6 +698,16 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                     </div>
                     <span className="font-medium text-sm">{toastMessage}</span>
                 </motion.div>
+            )}
+            {/* Floating Add Button */}
+            {canSubmit && !isModerationMode && (
+                <button
+                    onClick={() => setShowSubmitModal(true)}
+                    className="fixed bottom-24 right-5 w-14 h-14 bg-primary text-background rounded-full shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40"
+                    title="Запропонувати пісню"
+                >
+                    <Plus className="w-7 h-7" />
+                </button>
             )}
         </div>
     );
