@@ -126,6 +126,19 @@ export interface GlobalSong {
     updatedAt?: string;
 }
 
+export type SongSubmissionStatus = 'pending' | 'approved' | 'rejected';
+
+export interface PendingSong extends GlobalSong {
+    status: SongSubmissionStatus;
+    submittedBy: string;        // User ID
+    submittedByName?: string;   // User Name
+    submittedChoirId?: string;  // Choir ID (optional context)
+    submittedAt: string;
+    reviewedBy?: string;        // Admin ID
+    reviewedAt?: string;
+    rejectionReason?: string;
+}
+
 // Local song in choir's private repertoire
 export interface LocalSong extends GlobalSong {
     addedBy: string;        // User ID who added it

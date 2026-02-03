@@ -19,7 +19,8 @@ import {
 import { db } from "./firebase";
 import {
     Service, SimpleSong, Choir, UserData, ServiceSong,
-    GlobalSong, LocalSong, SongMeta, SongCategory, SongSource
+    GlobalSong, LocalSong, SongMeta, SongCategory, SongSource,
+    PendingSong, SongSubmissionStatus
 } from "@/types";
 
 // Converters to handle Timestamp <-> Date/String conversions
@@ -674,6 +675,100 @@ export async function updateGlobalSong(songId: string, updates: Partial<GlobalSo
         });
     } catch (error) {
         console.error("Error updating global song:", error);
+        throw error;
+    }
+}
+
+// ============ PENDING SONGS (Community Submissions) ============
+
+/**
+ * Submit a song for approval to the global archive
+ */
+export async function submitSong(song: Omit<PendingSong, "id" | "status" | "submittedAt">): Promise<string> {
+    try {
+        const docRef = await addDoc(collection(db, "pending_songs"), {
+            ...song,
+            status: 'pending' as SongSubmissionStatus,
+            submittedAt: serverTimestamp()
+        });
+        return docRef.id;
+    } catch (error) {
+        console.error("Error submitting song:", error);
+        throw error;
+    }
+}
+
+/**
+ * Get all pending songs (for admin review)
+ */
+export async function getPendingSongs(): Promise<PendingSong[]> {
+    try {
+        const q = query(
+            collection(db, "pending_songs"),
+            where("status", "==", "pending"),
+            orderBy("submittedAt", "desc")
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            submittedAt: doc.data().submittedAt?.toDate?.()?.toISOString() || doc.data().submittedAt,
+        } as PendingSong));
+    } catch (error) {
+        console.error("Error fetching pending songs:", error);
+        return [];
+    }
+}
+
+/**
+ * Approve a pending song:
+ * 1. Add to global_songs
+ * 2. Delete from pending_songs (or mark approved)
+ */
+export async function approveSong(pendingSong: PendingSong, adminId: string): Promise<void> {
+    try {
+        // 1. Prepare global song data
+        const { id, status, submittedBy, submittedByName, submittedChoirId, submittedAt, reviewedBy, reviewedAt, rejectionReason, ...songData } = pendingSong;
+
+        const globalSongData = {
+            ...songData,
+            sortTitle: songData.title.toUpperCase(), // Critical for catalog sorting
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+        };
+
+        // 2. Add to global catalog (mscCatalog)
+        await addDoc(collection(db, "mscCatalog"), globalSongData);
+
+        // 3. Mark pending song as approved (or delete it if you prefer cleanup)
+        // We'll mark it approved to keep history for the user
+        const pendingRef = doc(db, "pending_songs", pendingSong.id!);
+        await updateDoc(pendingRef, {
+            status: 'approved',
+            reviewedBy: adminId,
+            reviewedAt: serverTimestamp()
+        });
+
+    } catch (error) {
+        console.error("Error approving song:", error);
+        throw error;
+    }
+}
+
+/**
+ * Reject a pending song
+ */
+export async function rejectSong(songId: string, adminId: string, reason: string): Promise<void> {
+    try {
+        const docRef = doc(db, "pending_songs", songId);
+        await updateDoc(docRef, {
+            status: 'rejected',
+            reviewedBy: adminId,
+            reviewedAt: serverTimestamp(),
+            rejectionReason: reason
+        });
+    } catch (error) {
+        console.error("Error rejecting song:", error);
         throw error;
     }
 }
