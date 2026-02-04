@@ -141,10 +141,7 @@ export default function StatisticsView({ choir, services, onBack }: StatisticsVi
                                         <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
                                     ))}
                                 </Pie>
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)', borderRadius: '12px', color: 'var(--text-primary)' }}
-                                    itemStyle={{ color: 'var(--text-primary)' }}
-                                />
+
                                 <Legend />
                             </PieChart>
                         </ResponsiveContainer>
