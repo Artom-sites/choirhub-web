@@ -431,41 +431,74 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                     </div>
                 )}
 
-                {/* Attendees Section - Simplified (no avatars, just counts) */}
-                {(canEdit || !isFuture) && (
-                    <div onClick={() => canEdit && setShowAttendance(true)} className={`p-4 bg-surface border border-border rounded-2xl ${canEdit ? 'cursor-pointer hover:border-border/50 transition-colors' : ''}`}>
-                        <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-2 text-text-primary font-bold">
-                                <Users className="w-5 h-5 text-indigo-400" />
-                                <span>Учасники</span>
-                            </div>
-                            {canEdit && <span className="text-xs text-text-secondary bg-surface-highlight px-2 py-1 rounded-full">Переглянути</span>}
-                        </div>
+                {/* Attendees Section - Enhanced */}
+                {(canEdit || !isFuture) && (() => {
+                    // Calculate stats
+                    const confirmedIds = confirmedMembers;
+                    const confirmedList = choirMembers.filter(m => confirmedIds.includes(m.id));
 
-                        {!membersLoading && (
-                            <div className="flex items-center gap-4 mt-3 text-sm">
-                                <div className="flex items-center gap-1">
-                                    <UserCheck className="w-4 h-4 text-green-400" />
-                                    <span className="text-text-primary font-bold">{displayConfirmedCount}</span>
-                                    <span className="text-text-secondary">буде</span>
+                    const voiceStats = {
+                        Soprano: confirmedList.filter(m => m.voice === 'Soprano').length,
+                        Alto: confirmedList.filter(m => m.voice === 'Alto').length,
+                        Tenor: confirmedList.filter(m => m.voice === 'Tenor').length,
+                        Bass: confirmedList.filter(m => m.voice === 'Bass').length,
+                        Unknown: confirmedList.filter(m => !m.voice).length
+                    };
+
+                    const realUserCount = confirmedList.filter(m => m.hasAccount).length;
+                    const listUserCount = confirmedList.length - realUserCount;
+
+                    return (
+                        <div onClick={() => setShowAttendance(true)} className="bg-surface border border-border rounded-2xl cursor-pointer hover:border-border/50 transition-colors overflow-hidden">
+                            <div className="p-4 border-b border-border/50 flex justify-between items-center bg-surface-highlight/10">
+                                <div className="flex items-center gap-2 text-text-primary font-bold">
+                                    <Users className="w-5 h-5 text-indigo-400" />
+                                    <span>Учасники</span>
                                 </div>
-                                {absentCount > 0 && (
-                                    <div className="flex items-center gap-1">
-                                        <UserX className="w-4 h-4 text-red-400" />
-                                        <span className="text-text-primary font-bold">{absentCount}</span>
-                                        <span className="text-text-secondary">не буде</span>
+                                <span className="text-xs text-text-secondary bg-surface-highlight px-2 py-1 rounded-full">Переглянути список</span>
+                            </div>
+
+                            <div className="p-4 space-y-3">
+                                {/* Main Count */}
+                                <div className="flex items-center gap-6">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"></div>
+                                        <span className="text-xl font-bold text-text-primary">{confirmedMembers.length}</span>
+                                        <span className="text-sm text-text-secondary">всього</span>
                                     </div>
-                                )}
-                                {displayWaitingCount > 0 && (
-                                    <div className="flex items-center gap-1 text-text-secondary">
-                                        <span className="font-bold">{displayWaitingCount}</span>
-                                        <span>очікують</span>
+
+                                    {/* Real vs List breakdown */}
+                                    <div className="flex items-center gap-3 text-xs text-text-secondary border-l border-border pl-4">
+                                        <div className="flex items-center gap-1" title="Користувачі додатка">
+                                            <span className="font-bold text-text-primary">{realUserCount}</span>
+                                            <span>real users</span>
+                                        </div>
+                                        <div className="flex items-center gap-1" title="Користувачі списку">
+                                            <span className="font-bold text-text-primary">{listUserCount}</span>
+                                            <span>list users</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Voice Parts Breakdown */}
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                    {voiceStats.Soprano > 0 && <div className="flex justify-between px-2 py-1 bg-surface-highlight rounded-lg"><span className="text-text-secondary">Soprano</span> <span className="font-bold text-text-primary">{voiceStats.Soprano}</span></div>}
+                                    {voiceStats.Alto > 0 && <div className="flex justify-between px-2 py-1 bg-surface-highlight rounded-lg"><span className="text-text-secondary">Alto</span> <span className="font-bold text-text-primary">{voiceStats.Alto}</span></div>}
+                                    {voiceStats.Tenor > 0 && <div className="flex justify-between px-2 py-1 bg-surface-highlight rounded-lg"><span className="text-text-secondary">Tenor</span> <span className="font-bold text-text-primary">{voiceStats.Tenor}</span></div>}
+                                    {voiceStats.Bass > 0 && <div className="flex justify-between px-2 py-1 bg-surface-highlight rounded-lg"><span className="text-text-secondary">Bass</span> <span className="font-bold text-text-primary">{voiceStats.Bass}</span></div>}
+                                </div>
+
+                                {absentCount > 0 && (
+                                    <div className="flex items-center gap-1 text-xs text-red-400 mt-2 pt-2 border-t border-border/30">
+                                        <UserX className="w-3 h-3" />
+                                        <span className="font-bold">{absentCount}</span>
+                                        <span>не буде</span>
                                     </div>
                                 )}
                             </div>
-                        )}
-                    </div>
-                )}
+                        </div>
+                    );
+                })()}
             </div>
 
             {/* Modals remain mostly simple, just style updates */}
@@ -557,68 +590,149 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                 </div>
             )}
 
-            {/* Attendance Sheet */}
+            {/* Attendance Sheet - Enhanced List View */}
             {showAttendance && (
                 <div className="fixed inset-0 z-50 bg-background flex flex-col animate-in slide-in-from-bottom duration-300">
                     <div className="flex-1 overflow-hidden flex flex-col">
-                        <div className="p-6 border-b border-border flex justify-between items-center bg-surface">
-                            <div className="space-y-1">
+                        <div className="p-4 border-b border-border flex justify-between items-center bg-surface sticky top-0 z-10">
+                            <div>
                                 <h3 className="text-xl font-bold text-text-primary">Учасники</h3>
-                                <p className="text-xs text-text-secondary">Натисніть щоб змінити статус</p>
+                                <div className="flex items-center gap-2 text-xs text-text-secondary">
+                                    <span>Всього: {choirMembers.length}</span>
+                                    <span>•</span>
+                                    <span>Буде: {confirmedMembers.length}</span>
+                                </div>
                             </div>
                             <button onClick={() => setShowAttendance(false)} className="p-2 bg-surface-highlight rounded-full hover:bg-surface-highlight/80">
                                 <X className="w-6 h-6 text-text-primary" />
                             </button>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-background/50">
-                            {choirMembers.map(member => {
-                                const isAbsent = absentMembers.includes(member.id);
+                        {/* Filters */}
+                        <div className="px-4 py-3 border-b border-border bg-background/50 backdrop-blur-sm flex gap-2 overflow-x-auto scrollbar-hide">
+                            {['Всі', 'Soprano', 'Alto', 'Tenor', 'Bass', 'Real Users'].map(filter => {
+                                const isActive =
+                                    (search === filter) ||
+                                    (filter === 'Всі' && search === '') ||
+                                    (filter === 'Real Users' && search === 'real');
+
                                 return (
                                     <button
-                                        key={member.id}
-                                        onClick={() => toggleAbsent(member.id)}
-                                        className={`w-full text-left p-4 rounded-2xl border flex justify-between items-center transition-all ${isAbsent
-                                            ? 'bg-red-500/10 border-red-500/30'
-                                            : 'bg-surface border-border hover:bg-surface-highlight'
+                                        key={filter}
+                                        onClick={() => setSearch(filter === 'Всі' ? '' : filter === 'Real Users' ? 'real' : filter)}
+                                        className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${isActive
+                                                ? 'bg-primary text-background font-bold'
+                                                : 'bg-surface-highlight text-text-secondary hover:text-text-primary'
                                             }`}
                                     >
-                                        <div className="flex items-center gap-4">
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${isAbsent ? 'bg-red-500/20 text-red-400' : 'bg-surface-highlight text-text-primary'
-                                                }`}>
-                                                {member.name?.[0]?.toUpperCase()}
-                                            </div>
-                                            <span className={`font-medium text-lg ${isAbsent ? 'text-red-400' : 'text-text-primary'}`}>
-                                                {member.name}
-                                            </span>
-                                        </div>
-                                        {isAbsent ? (
-                                            <span className="text-xs font-bold bg-red-500 text-white px-3 py-1 rounded-full">Відсутній</span>
-                                        ) : (
-                                            <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
-                                                <Check className="w-5 h-5 text-green-500" />
-                                            </div>
-                                        )}
+                                        {filter === 'Real Users' ? '📱 App Users' : filter}
                                     </button>
                                 );
                             })}
                         </div>
 
-                        <div className="p-6 bg-surface border-t border-border safe-area-bottom">
-                            <button
-                                onClick={handleSaveAttendance}
-                                className="w-full py-4 bg-primary text-background rounded-2xl font-bold text-lg hover:opacity-90 transition-colors shadow-lg"
-                            >
-                                Зберегти зміни
-                            </button>
+                        <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-background/50 pb-32">
+                            {(() => {
+                                // Group members by Voice Part (or "Other")
+                                const filteredMembers = choirMembers.filter(m => {
+                                    if (!search) return true;
+                                    if (search === 'real') return m.hasAccount;
+                                    if (['Soprano', 'Alto', 'Tenor', 'Bass'].includes(search)) return m.voice === search;
+                                    return true;
+                                });
 
-                            <button
-                                onClick={markRestAsPresent}
-                                className="w-full mt-3 py-3 text-blue-400 font-medium text-sm hover:bg-blue-500/10 rounded-xl transition-colors"
-                            >
-                                Відмітити всіх інших як "Буде"
-                            </button>
+                                // Sort: Confirmed first, then alphabetical
+                                const sortedMembers = [...filteredMembers].sort((a, b) => {
+                                    const aConf = confirmedMembers.includes(a.id);
+                                    const bConf = confirmedMembers.includes(b.id);
+                                    if (aConf && !bConf) return -1;
+                                    if (!aConf && bConf) return 1;
+                                    return a.name.localeCompare(b.name);
+                                });
+
+                                return sortedMembers.map(member => {
+                                    const isAbsent = absentMembers.includes(member.id);
+                                    const isConfirmed = confirmedMembers.includes(member.id);
+
+                                    return (
+                                        <button
+                                            key={member.id}
+                                            onClick={() => canEdit && toggleAbsent(member.id)}
+                                            disabled={!canEdit}
+                                            className={`w-full text-left p-3 rounded-2xl border flex justify-between items-center transition-all ${isAbsent
+                                                ? 'bg-red-500/5 border-red-500/20 opacity-70'
+                                                : isConfirmed
+                                                    ? 'bg-surface border-green-500/30 shadow-sm'
+                                                    : 'bg-surface/50 border-border opacity-60'
+                                                }`}
+                                        >
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <div className="relative">
+                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${isAbsent ? 'bg-red-500/10 text-red-400'
+                                                            : isConfirmed ? 'bg-green-500/10 text-green-500'
+                                                                : 'bg-surface-highlight text-text-secondary'
+                                                        }`}>
+                                                        {member.name?.[0]?.toUpperCase()}
+                                                    </div>
+                                                    {member.hasAccount && (
+                                                        <div className="absolute -bottom-1 -right-1 bg-blue-500 text-white p-0.5 rounded-full border-2 border-surface" title="App User">
+                                                            <div className="w-2 h-2 rounded-full bg-white" />
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="min-w-0">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`font-medium truncate ${isAbsent ? 'text-red-400 line-through' : 'text-text-primary'}`}>
+                                                            {member.name}
+                                                        </span>
+                                                        {member.hasAccount && <span className="text-[10px] bg-blue-500/10 text-blue-400 mb-0.5 px-1.5 rounded-sm">APP</span>}
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-xs text-text-secondary">
+                                                        <span>{member.voice || 'Без партії'}</span>
+                                                        {member.role !== 'member' && (
+                                                            <>
+                                                                <span>•</span>
+                                                                <span className="capitalize">{member.role}</span>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="shrink-0 ml-3">
+                                                {isAbsent ? (
+                                                    <span className="text-xs font-bold text-red-400 bg-red-500/10 px-2 py-1 rounded-lg">Не буде</span>
+                                                ) : isConfirmed ? (
+                                                    <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
+                                                        <Check className="w-5 h-5 text-green-500" />
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-xs text-text-secondary bg-surface-highlight px-2 py-1 rounded-lg">Очікуємо</span>
+                                                )}
+                                            </div>
+                                        </button>
+                                    );
+                                });
+                            })()}
                         </div>
+
+                        {canEdit && (
+                            <div className="p-4 bg-surface border-t border-border safe-area-bottom">
+                                <button
+                                    onClick={handleSaveAttendance}
+                                    className="w-full py-3 bg-primary text-background rounded-xl font-bold hover:opacity-90 transition-colors shadow-lg"
+                                >
+                                    Зберегти
+                                </button>
+                                <button
+                                    onClick={markRestAsPresent}
+                                    className="w-full mt-2 py-3 text-blue-400 font-medium text-sm hover:bg-blue-500/10 rounded-xl transition-colors"
+                                >
+                                    Відмітити решту як "Буде"
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
