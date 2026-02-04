@@ -18,6 +18,7 @@ import { AnimatePresence } from "framer-motion";
 import { getPdfFromCache, savePdfToCache } from "../lib/cache";
 import AnnotationToolbar, { ToolType, EraserSize } from "./AnnotationToolbar";
 import AnnotationCanvas from "./AnnotationCanvas";
+import { usePinchZoom } from "../hooks/usePinchZoom";
 
 // Dynamically import react-pdf to avoid SSR issues
 const Document = dynamic(
@@ -63,6 +64,13 @@ export default function PDFViewer({ url, title, onClose, onAddAction, isAnnotati
     const [triggerClear, setTriggerClear] = useState(0);
     const [triggerUndo, setTriggerUndo] = useState(0);
     const [triggerRedo, setTriggerRedo] = useState(0);
+
+    // Pinch-to-zoom for annotation mode
+    const pinchZoom = usePinchZoom({
+        minScale: 1,
+        maxScale: 4,
+        enabled: isAnnotating
+    });
 
     // Stable callback for history changes
     const handleHistoryChange = useCallback((canUndo: boolean, canRedo: boolean) => {
@@ -234,13 +242,17 @@ export default function PDFViewer({ url, title, onClose, onAddAction, isAnnotati
                 </div>
             </div>
 
-            {/* Content (Scrollable) */}
+            {/* Content (Scrollable with pinch-zoom support) */}
             <div
                 ref={containerRef}
-                className={`flex-1 overflow-y-auto bg-white scrollbar-hide ${isAnnotating ? 'touch-none' : ''}`}
+                className={`flex-1 overflow-auto bg-white scrollbar-hide ${isAnnotating ? 'touch-pan-y' : ''}`}
                 style={{ WebkitOverflowScrolling: 'touch' }}
+                {...(isAnnotating ? pinchZoom.handlers : {})}
             >
-                <div className="min-h-full flex flex-col items-center py-2 px-0 pb-32">
+                <div
+                    className="min-h-full flex flex-col items-center py-2 px-0 pb-32"
+                    style={isAnnotating ? pinchZoom.style : undefined}
+                >
                     {isLoading && (
                         <div className="flex items-center justify-center py-20">
                             <Loader2 className="w-10 h-10 text-primary animate-spin" />
