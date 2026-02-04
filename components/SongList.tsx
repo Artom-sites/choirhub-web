@@ -234,7 +234,12 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
 
 
             {/* Catalog View */}
-            <div className={subTab === 'catalog' ? 'block h-full' : 'hidden'}>
+            <motion.div
+                initial={false}
+                animate={subTab === 'catalog' ? { opacity: 1, y: 0, display: "block" } : { opacity: 0, y: 10, display: "none", transition: { duration: 0.2 } }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className={subTab === 'catalog' ? 'block h-full' : 'hidden'}
+            >
                 <GlobalArchive
                     onAddSong={async (globalSong) => {
                         // Add song from global archive to choir repertoire
@@ -259,9 +264,14 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                         }
                     }}
                 />
-            </div>
+            </motion.div>
 
-            <div className={subTab === 'repertoire' ? 'block' : 'hidden'}>
+            <motion.div
+                initial={false}
+                animate={subTab === 'repertoire' ? { opacity: 1, y: 0, display: "block" } : { opacity: 0, y: 10, display: "none", transition: { duration: 0.2 } }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className={subTab === 'repertoire' ? 'block' : 'hidden'}
+            >
                 {/* Stats Card - iOS Style */}
                 <div className="bg-surface rounded-2xl p-5 card-shadow">
                     <div className="flex items-center justify-between">
@@ -478,18 +488,18 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                     confirmLabel="Видалити"
                     isDestructive
                 />
-            </div>
+        </div>
 
 
             {
-                toast && (
-                    <Toast
-                        message={toast.message}
-                        type={toast.type}
-                        onClose={() => setToast(null)}
-                    />
-                )
-            }
+        toast && (
+            <Toast
+                message={toast.message}
+                type={toast.type}
+                onClose={() => setToast(null)}
+            />
+        )
+    }
         </div >
     );
 }

@@ -30,6 +30,7 @@ import {
   LogOut, ChevronLeft, ChevronRight, Home, User, Users, Repeat,
   PlusCircle, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import SendNotificationModal from "@/components/SendNotificationModal";
 import { collection as firestoreCollection, addDoc, getDocs, where, query, doc, updateDoc, arrayUnion, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -1349,20 +1350,35 @@ function HomePageContent() {
 
       {/* Tab Content */}
       <div className="animate-in fade-in duration-300">
-        <div className={activeTab === 'home' ? 'block' : 'hidden'}>
+        <motion.div
+          initial={false}
+          animate={activeTab === 'home' ? { opacity: 1, y: 0, display: "block" } : { opacity: 0, y: 10, display: "none", transition: { duration: 0.2 } }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className={activeTab === 'home' ? 'block' : 'hidden'}
+        >
           <ServiceList onSelectService={handleSelectService} canEdit={canEdit} services={services} />
-        </div>
+        </motion.div>
 
-        <div className={activeTab === 'songs' ? 'block' : 'hidden'}>
+        <motion.div
+          initial={false}
+          animate={activeTab === 'songs' ? { opacity: 1, y: 0, display: "block" } : { opacity: 0, y: 10, display: "none", transition: { duration: 0.2 } }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className={activeTab === 'songs' ? 'block' : 'hidden'}
+        >
           <SongList
             canAddSongs={canAddSongs}
             regents={choir?.regents || []}
             knownConductors={choir?.knownConductors || []}
             knownCategories={choir?.knownCategories || []}
           />
-        </div>
+        </motion.div>
 
-        <div className={activeTab === 'members' ? 'block' : 'hidden'}>
+        <motion.div
+          initial={false}
+          animate={activeTab === 'members' ? { opacity: 1, y: 0, display: "block" } : { opacity: 0, y: 10, display: "none", transition: { duration: 0.2 } }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className={activeTab === 'members' ? 'block' : 'hidden'}
+        >
           <div className="max-w-md mx-auto p-4 pb-32">
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-3">
@@ -1465,36 +1481,39 @@ function HomePageContent() {
               </div>
             )}
           </div>
-        </div>
+        </motion.div>
       </div >
 
       {/* Bottom Nav */}
       <nav className="fixed bottom-0 left-0 right-0 bg-surface/90 backdrop-blur-xl px-4 pb-safe pt-2 z-50 border-t border-border">
         <div className="max-w-md mx-auto flex justify-around items-center h-16">
 
-          <button
+          <motion.button
+            whileTap={{ scale: 0.9 }}
             onClick={() => setActiveTab('home')}
-            className={`flex flex-col items-center gap-1 flex-1 p-2 rounded-xl active:scale-95 transition-all ${activeTab === 'home' ? 'text-primary' : 'text-text-secondary'}`}
+            className={`flex flex-col items-center gap-1 flex-1 p-2 rounded-xl transition-all ${activeTab === 'home' ? 'text-primary' : 'text-text-secondary'}`}
           >
             <Home className={`w-6 h-6 ${activeTab === 'home' ? 'fill-primary/20' : ''}`} />
             <span className="text-[10px] font-bold uppercase tracking-wide">Служіння</span>
-          </button>
+          </motion.button>
 
-          <button
+          <motion.button
+            whileTap={{ scale: 0.9 }}
             onClick={() => setActiveTab('songs')}
-            className={`flex flex-col items-center gap-1 flex-1 p-2 rounded-xl active:scale-95 transition-all ${activeTab === 'songs' ? 'text-primary' : 'text-text-secondary'}`}
+            className={`flex flex-col items-center gap-1 flex-1 p-2 rounded-xl transition-all ${activeTab === 'songs' ? 'text-primary' : 'text-text-secondary'}`}
           >
             <Music2 className={`w-6 h-6 ${activeTab === 'songs' ? 'fill-primary/20' : ''}`} />
             <span className="text-[10px] font-bold uppercase tracking-wide">Пісні</span>
-          </button>
+          </motion.button>
 
-          <button
+          <motion.button
+            whileTap={{ scale: 0.9 }}
             onClick={() => setActiveTab('members')}
-            className={`flex flex-col items-center gap-1 flex-1 p-2 rounded-xl active:scale-95 transition-all ${activeTab === 'members' ? 'text-primary' : 'text-text-secondary'}`}
+            className={`flex flex-col items-center gap-1 flex-1 p-2 rounded-xl transition-all ${activeTab === 'members' ? 'text-primary' : 'text-text-secondary'}`}
           >
             <Users className={`w-6 h-6 ${activeTab === 'members' ? 'fill-primary/20' : ''}`} />
             <span className="text-[10px] font-bold uppercase tracking-wide">Учасники</span>
-          </button>
+          </motion.button>
 
         </div>
       </nav >
