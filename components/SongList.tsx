@@ -234,7 +234,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
 
 
             {/* Catalog View */}
-            {subTab === 'catalog' ? (
+            <div className={subTab === 'catalog' ? 'block h-full' : 'hidden'}>
                 <GlobalArchive
                     onAddSong={async (globalSong) => {
                         // Add song from global archive to choir repertoire
@@ -259,227 +259,226 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                         }
                     }}
                 />
-            ) : (
-                <>
-                    {/* Stats Card - iOS Style */}
-                    <div className="bg-surface rounded-2xl p-5 card-shadow">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 glass-frost-circle rounded-full flex items-center justify-center text-zinc-700">
-                                    <Music2 className="w-6 h-6" />
-                                </div>
-                                <div>
-                                    <p className="text-text-secondary text-xs uppercase tracking-wider font-semibold">Репертуар</p>
-                                    <p className="text-2xl font-bold text-text-primary tracking-tight">{songs.length} пісень</p>
-                                </div>
+            </div>
+
+            <div className={subTab === 'repertoire' ? 'block' : 'hidden'}>
+                {/* Stats Card - iOS Style */}
+                <div className="bg-surface rounded-2xl p-5 card-shadow">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 glass-frost-circle rounded-full flex items-center justify-center text-zinc-700">
+                                <Music2 className="w-6 h-6" />
                             </div>
-                            {canAddSongs && (
+                            <div>
+                                <p className="text-text-secondary text-xs uppercase tracking-wider font-semibold">Репертуар</p>
+                                <p className="text-2xl font-bold text-text-primary tracking-tight">{songs.length} пісень</p>
+                            </div>
+                        </div>
+                        {canAddSongs && (
+                            <button
+                                onClick={() => setShowTrashBin(true)}
+                                className="p-2 rounded-full hover:bg-surface-highlight transition-colors text-text-secondary hover:text-danger"
+                                title="Кошик"
+                            >
+                                <Trash2 className="w-5 h-5" />
+                            </button>
+                        )}
+                    </div>
+                </div>
+                {/* Search & Filter - iOS Style */}
+                <div className="sticky top-[64px] z-20 -mx-4 px-4 pt-3 pb-4 bg-background/95 backdrop-blur-xl border-b border-border shadow-sm">
+                    <div className="space-y-4">
+                        {/* Search Bar */}
+                        <div className="relative flex-1 group">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
+                            <input
+                                type="text"
+                                placeholder="Пошук..."
+                                className="w-full pl-11 pr-10 py-3 bg-surface rounded-xl text-base focus:outline-none text-text-primary placeholder:text-text-secondary/50 transition-all inner-shadow"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                            {search && (
                                 <button
-                                    onClick={() => setShowTrashBin(true)}
-                                    className="p-2 rounded-full hover:bg-surface-highlight transition-colors text-text-secondary hover:text-danger"
-                                    title="Кошик"
+                                    onClick={() => setSearch("")}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-secondary hover:text-text-primary hover:bg-surface-highlight rounded-full transition-all"
                                 >
-                                    <Trash2 className="w-5 h-5" />
+                                    <X className="w-4 h-4" />
                                 </button>
                             )}
                         </div>
-                    </div>
-                    {/* Search & Filter - iOS Style */}
-                    <div className="sticky top-[64px] z-20 -mx-4 px-4 pt-3 pb-4 bg-background/95 backdrop-blur-xl border-b border-border shadow-sm">
-                        <div className="space-y-4">
-                            {/* Search Bar */}
-                            <div className="relative flex-1 group">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
-                                <input
-                                    type="text"
-                                    placeholder="Пошук..."
-                                    className="w-full pl-11 pr-10 py-3 bg-surface rounded-xl text-base focus:outline-none text-text-primary placeholder:text-text-secondary/50 transition-all inner-shadow"
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                />
-                                {search && (
-                                    <button
-                                        onClick={() => setSearch("")}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-secondary hover:text-text-primary hover:bg-surface-highlight rounded-full transition-all"
-                                    >
-                                        <X className="w-4 h-4" />
-                                    </button>
-                                )}
-                            </div>
 
-                            {/* Filter Chips */}
-                            <div className="flex overflow-x-auto gap-2 scrollbar-hide -mx-4 px-4 pb-1">
+                        {/* Filter Chips */}
+                        <div className="flex overflow-x-auto gap-2 scrollbar-hide -mx-4 px-4 pb-1">
+                            <button
+                                onClick={() => setSelectedCategory("All")}
+                                className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedCategory === "All"
+                                    ? "bg-primary text-background shadow-md"
+                                    : "bg-surface text-text-secondary shadow-sm border border-border"
+                                    }`}
+                            >
+                                Всі
+                            </button>
+                            {Array.from(new Set([...CATEGORIES, ...(knownCategories || [])])).map(cat => (
                                 <button
-                                    onClick={() => setSelectedCategory("All")}
-                                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedCategory === "All"
+                                    key={cat}
+                                    onClick={() => setSelectedCategory(cat)}
+                                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedCategory === cat
                                         ? "bg-primary text-background shadow-md"
                                         : "bg-surface text-text-secondary shadow-sm border border-border"
                                         }`}
                                 >
-                                    Всі
+                                    {cat}
                                 </button>
-                                {Array.from(new Set([...CATEGORIES, ...(knownCategories || [])])).map(cat => (
-                                    <button
-                                        key={cat}
-                                        onClick={() => setSelectedCategory(cat)}
-                                        className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedCategory === cat
-                                            ? "bg-primary text-background shadow-md"
-                                            : "bg-surface text-text-secondary shadow-sm border border-border"
-                                            }`}
-                                    >
-                                        {cat}
-                                    </button>
-                                ))}
-                            </div>
+                            ))}
                         </div>
                     </div>
+                </div>
 
-                    {/* List */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {filteredSongs.length === 0 ? (
-                            <div className="col-span-full text-center py-24 opacity-40">
-                                <div className="w-16 h-16 bg-surface rounded-full flex items-center justify-center mx-auto mb-4 card-shadow">
-                                    <Music2 className="w-8 h-8 text-text-secondary" />
-                                </div>
-                                <p className="text-text-secondary">Пісень не знайдено</p>
+                {/* List */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredSongs.length === 0 ? (
+                        <div className="col-span-full text-center py-24 opacity-40">
+                            <div className="w-16 h-16 bg-surface rounded-full flex items-center justify-center mx-auto mb-4 card-shadow">
+                                <Music2 className="w-8 h-8 text-text-secondary" />
                             </div>
-                        ) : (
-                            <AnimatePresence mode="popLayout">
-                                {filteredSongs.map((song, index) => (
-                                    <SwipeableCard
-                                        key={song.id}
-                                        onDelete={() => initiateDelete(null, song.id)}
-                                        disabled={!effectiveCanAdd}
-                                        className="h-full rounded-2xl"
+                            <p className="text-text-secondary">Пісень не знайдено</p>
+                        </div>
+                    ) : (
+                        <AnimatePresence mode="popLayout">
+                            {filteredSongs.map((song, index) => (
+                                <SwipeableCard
+                                    key={song.id}
+                                    onDelete={() => initiateDelete(null, song.id)}
+                                    disabled={!effectiveCanAdd}
+                                    className="h-full rounded-2xl"
+                                >
+                                    <div
+                                        onClick={() => handleSongClick(song)}
+                                        role="button"
+                                        tabIndex={0}
+                                        className="w-full bg-surface card-shadow hover:bg-surface rounded-2xl p-4 transition-all text-left group relative active:scale-[0.99] h-full flex flex-col cursor-pointer"
                                     >
-                                        <div
-                                            onClick={() => handleSongClick(song)}
-                                            role="button"
-                                            tabIndex={0}
-                                            className="w-full bg-surface card-shadow hover:bg-surface rounded-2xl p-4 transition-all text-left group relative active:scale-[0.99] h-full flex flex-col cursor-pointer"
-                                        >
-                                            <div className="flex items-start gap-4 relative z-10 h-full">
-                                                <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-text-primary">
-                                                    {song.hasPdf ? (
-                                                        <Eye className="w-6 h-6 text-background" />
-                                                    ) : (
-                                                        <FileText className="w-6 h-6 text-background" />
-                                                    )}
-                                                </div>
+                                        <div className="flex items-start gap-4 relative z-10 h-full">
+                                            <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-text-primary">
+                                                {song.hasPdf ? (
+                                                    <Eye className="w-6 h-6 text-background" />
+                                                ) : (
+                                                    <FileText className="w-6 h-6 text-background" />
+                                                )}
+                                            </div>
 
-                                                <div className="flex-1 min-w-0 py-0.5 flex flex-col h-full justify-between">
-                                                    <h3 className="font-semibold text-lg text-text-primary truncate mb-1.5 group-hover:text-text-primary transition-colors">
-                                                        {song.title}
-                                                    </h3>
+                                            <div className="flex-1 min-w-0 py-0.5 flex flex-col h-full justify-between">
+                                                <h3 className="font-semibold text-lg text-text-primary truncate mb-1.5 group-hover:text-text-primary transition-colors">
+                                                    {song.title}
+                                                </h3>
 
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className="text-xs font-medium text-text-secondary bg-background px-2 py-1 rounded-lg">
-                                                            {song.category}
-                                                        </span>
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="text-xs font-medium text-text-secondary bg-background px-2 py-1 rounded-lg">
+                                                        {song.category}
+                                                    </span>
 
-                                                        {song.conductor && (
-                                                            <div className="flex items-center gap-1.5 text-xs text-text-secondary bg-background px-2 py-1 rounded-lg">
-                                                                <User className="w-3 h-3" />
-                                                                <span>{song.conductor}</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-
-                                                <div className="flex items-center gap-1 mt-3.5 relative">
-                                                    {effectiveCanAdd && (
-                                                        <div className="flex items-center gap-1 z-20" onClick={(e) => e.stopPropagation()}>
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.preventDefault();
-                                                                    e.stopPropagation();
-                                                                    handleEditClick(e, song);
-                                                                }}
-                                                                className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-highlight transition-colors"
-                                                                title="Редагувати"
-                                                            >
-                                                                <Pencil className="w-5 h-5" />
-                                                            </button>
-                                                            {/* Delete is now via Swipe */}
+                                                    {song.conductor && (
+                                                        <div className="flex items-center gap-1.5 text-xs text-text-secondary bg-background px-2 py-1 rounded-lg">
+                                                            <User className="w-3 h-3" />
+                                                            <span>{song.conductor}</span>
                                                         </div>
                                                     )}
                                                 </div>
                                             </div>
+
+
+                                            <div className="flex items-center gap-1 mt-3.5 relative">
+                                                {effectiveCanAdd && (
+                                                    <div className="flex items-center gap-1 z-20" onClick={(e) => e.stopPropagation()}>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                handleEditClick(e, song);
+                                                            }}
+                                                            className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-highlight transition-colors"
+                                                            title="Редагувати"
+                                                        >
+                                                            <Pencil className="w-5 h-5" />
+                                                        </button>
+                                                        {/* Delete is now via Swipe */}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                    </SwipeableCard>
-                                ))}
-                            </AnimatePresence>
-                        )}
-                    </div>
-
-                    {/* Floating Add Button */}
-                    {effectiveCanAdd && (
-                        <button
-                            onClick={() => setShowAddModal(true)}
-                            className="fixed bottom-24 right-6 w-14 h-14 bg-primary text-background rounded-full shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40"
-                            title="Додати пісню"
-                        >
-                            <Plus className="w-7 h-7" />
-                        </button>
+                                    </div>
+                                </SwipeableCard>
+                            ))}
+                        </AnimatePresence>
                     )}
+                </div>
 
-                    {/* Add Song Modal */}
-                    {showAddModal && (
-                        <AddSongModal
-                            isOpen={showAddModal}
-                            onClose={() => setShowAddModal(false)}
-                            onAdd={handleAddSong}
-                            regents={regents}
-                            knownConductors={knownConductors}
-                            knownCategories={knownCategories}
-                        />
-                    )}
+                {/* Floating Add Button */}
+                {effectiveCanAdd && (
+                    <button
+                        onClick={() => setShowAddOptions(!showAddOptions)}
+                        className="fixed bottom-24 right-6 w-14 h-14 bg-primary text-background rounded-full shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40"
+                        title="Додати"
+                    >
+                        <Plus className="w-7 h-7" />
+                    </button>
+                )}
 
-                    {/* Edit Song Modal */}
-                    {editingSong && (
-                        <EditSongModal
-                            key={editingSong.id}
-                            isOpen={!!editingSong}
-                            onClose={() => setEditingSong(null)}
-                            onSave={handleEditSave}
-                            initialData={editingSong}
-                            regents={regents}
-                            knownConductors={knownConductors}
-                            knownCategories={knownCategories}
-                        />
-                    )}
-
-                    {/* Trash Bin Modal */}
-                    {showTrashBin && (
-                        <>
-                            <TrashBin
-                                choirId={userData?.choirId || ""}
-                                onClose={() => setShowTrashBin(false)}
-                                initialFilter="song"
-                                onRestore={() => {
-                                    // No manual fetch logic needed with onSnapshot
-                                    // if (userData?.choirId) {
-                                    //     getSongs(userData.choirId).then(setSongsState);
-                                    // }
-                                }}
-                            />
-                        </>
-                    )}
-
-                    {/* Confirmation Modal */}
-                    <ConfirmationModal
-                        isOpen={!!deletingSongId}
-                        onClose={() => setDeletingSongId(null)}
-                        onConfirm={confirmDelete}
-                        title="Видалити пісню?"
-                        message="Цю пісню буде видалено з репертуару назавжди."
-                        confirmLabel="Видалити"
-                        isDestructive
+                {/* Add Song Modal */}
+                {showAddModal && (
+                    <AddSongModal
+                        isOpen={showAddModal}
+                        onClose={() => setShowAddModal(false)}
+                        onAdd={handleAddSong}
+                        regents={regents}
+                        knownConductors={knownConductors}
+                        knownCategories={knownCategories}
                     />
-                </>
-            )
-            }
+                )}
+
+                {/* Edit Song Modal */}
+                {editingSong && (
+                    <EditSongModal
+                        key={editingSong.id}
+                        isOpen={!!editingSong}
+                        onClose={() => setEditingSong(null)}
+                        onSave={handleEditSave}
+                        initialData={editingSong}
+                        regents={regents}
+                        knownConductors={knownConductors}
+                        knownCategories={knownCategories}
+                    />
+                )}
+
+                {/* Trash Bin Modal */}
+                {showTrashBin && (
+                    <>
+                        <TrashBin
+                            choirId={userData?.choirId || ""}
+                            onClose={() => setShowTrashBin(false)}
+                            initialFilter="song"
+                            onRestore={() => {
+                                // No manual fetch logic needed with onSnapshot
+                                // if (userData?.choirId) {
+                                //     getSongs(userData.choirId).then(setSongsState);
+                                // }
+                            }}
+                        />
+                    </>
+                )}
+
+                {/* Confirmation Modal */}
+                <ConfirmationModal
+                    isOpen={!!deletingSongId}
+                    onClose={() => setDeletingSongId(null)}
+                    onConfirm={confirmDelete}
+                    title="Видалити пісню?"
+                    message="Цю пісню буде видалено з репертуару назавжди."
+                    confirmLabel="Видалити"
+                    isDestructive
+                />
+            </div>
 
 
             {
