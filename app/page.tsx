@@ -1409,7 +1409,7 @@ function HomePageContent() {
                       key={filter}
                       onClick={() => setMemberFilter(filter === 'Всі' ? '' : filter === 'Real Users' ? 'real' : filter)}
                       className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${(memberFilter === (filter === 'Всі' ? '' : filter === 'Real Users' ? 'real' : filter))
-                        ? 'bg-primary text-black'
+                        ? 'bg-primary text-background'
                         : 'bg-white/5 text-text-secondary hover:bg-white/10'
                         }`}
                     >
