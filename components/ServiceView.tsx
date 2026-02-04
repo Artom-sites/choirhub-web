@@ -476,6 +476,7 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                     {voiceStats.Alto > 0 && <div className="flex justify-between px-2 py-1 bg-surface-highlight rounded-lg"><span className="text-text-secondary">Alto</span> <span className="font-bold text-text-primary">{voiceStats.Alto}</span></div>}
                                     {voiceStats.Tenor > 0 && <div className="flex justify-between px-2 py-1 bg-surface-highlight rounded-lg"><span className="text-text-secondary">Tenor</span> <span className="font-bold text-text-primary">{voiceStats.Tenor}</span></div>}
                                     {voiceStats.Bass > 0 && <div className="flex justify-between px-2 py-1 bg-surface-highlight rounded-lg"><span className="text-text-secondary">Bass</span> <span className="font-bold text-text-primary">{voiceStats.Bass}</span></div>}
+                                    {voiceStats.Unknown > 0 && <div className="flex justify-between px-2 py-1 bg-surface-highlight rounded-lg"><span className="text-text-secondary">Без партії</span> <span className="font-bold text-text-primary">{voiceStats.Unknown}</span></div>}
                                 </div>
 
                                 {absentCount > 0 && (
