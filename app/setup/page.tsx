@@ -376,7 +376,7 @@ function SetupPageContent() {
                         <button
                             onClick={handleEmailAuth}
                             disabled={formLoading}
-                            className="w-full py-4 bg-white text-black rounded-xl font-bold mt-4 hover:bg-gray-200 transition-colors flex justify-center"
+                            className="w-full py-4 bg-text-primary text-background rounded-2xl font-bold mt-4 hover:opacity-90 transition-all flex justify-center shadow-lg"
                         >
                             {formLoading ? <Loader2 className="animate-spin" /> : (isRegistering ? "Зареєструватися" : "Увійти")}
                         </button>
