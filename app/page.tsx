@@ -1451,6 +1451,7 @@ function HomePageContent() {
                     </div>
                   );
                 })()
+              )}
             </div>
 
             {/* Stats summary */}
