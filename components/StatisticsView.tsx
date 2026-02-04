@@ -138,7 +138,13 @@ export default function StatisticsView({ choir, services, onBack }: StatisticsVi
                                     dataKey="value"
                                 >
                                     {voiceData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                                        <Cell
+                                            key={`cell-${index}`}
+                                            fill={entry.color}
+                                            stroke="none"
+                                            className="outline-none focus:outline-none"
+                                            style={{ outline: 'none' }}
+                                        />
                                     ))}
                                 </Pie>
 
