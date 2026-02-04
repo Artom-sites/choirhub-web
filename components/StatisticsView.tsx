@@ -78,17 +78,13 @@ export default function StatisticsView({ choir, services, onBack }: StatisticsVi
 
     const songFrequencyData = allSongFrequencyData.slice(0, 10); // Top 10 for preview
 
-    const [showAllSongs, setShowAllSongs] = useState(false);
-
-    const averageAttendance = useMemo(() => {
-        if (!attendanceData.length) return 0;
-        const sum = attendanceData.reduce((acc, curr) => acc + curr.percentage, 0);
-        return Math.round(sum / attendanceData.length);
-    }, [attendanceData]);
+    const [activeIndex, setActiveIndex] = useState<number | null>(null);
+    const onPieEnter = (_: any, index: number) => setActiveIndex(index);
+    const onPieLeave = () => setActiveIndex(null);
 
     return (
         <div className="min-h-screen bg-background text-text-primary">
-            {/* Header */}
+            {/* ... Header ... */}
             <div className="sticky top-0 z-30 bg-surface border-b border-border px-4 py-3 flex items-center gap-3">
                 <button
                     onClick={onBack}
@@ -101,7 +97,7 @@ export default function StatisticsView({ choir, services, onBack }: StatisticsVi
 
             <div className="p-4 space-y-6 pb-24 max-w-lg mx-auto">
 
-                {/* Summary Cards */}
+                {/* Summary Cards ... */}
                 <div className="grid grid-cols-2 gap-3">
                     <div className="bg-surface border border-border rounded-2xl p-4">
                         <div className="flex items-center gap-2 mb-2">
@@ -136,13 +132,16 @@ export default function StatisticsView({ choir, services, onBack }: StatisticsVi
                                     outerRadius={80}
                                     paddingAngle={5}
                                     dataKey="value"
+                                    onClick={onPieEnter}
+                                    onMouseEnter={onPieEnter}
+                                    onMouseLeave={onPieLeave}
                                 >
                                     {voiceData.map((entry, index) => (
                                         <Cell
                                             key={`cell-${index}`}
                                             fill={entry.color}
                                             stroke="none"
-                                            className="outline-none focus:outline-none"
+                                            className="outline-none focus:outline-none cursor-pointer hover:opacity-80 transition-opacity"
                                             style={{ outline: 'none' }}
                                         />
                                     ))}
@@ -152,8 +151,18 @@ export default function StatisticsView({ choir, services, onBack }: StatisticsVi
                             </PieChart>
                         </ResponsiveContainer>
                         {/* Center Text */}
-                        <div className="absolute inset-0 bottom-12 flex items-center justify-center pointer-events-none">
-                            <span className="text-3xl font-bold text-text-primary">{(choir.members || []).length}</span>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-6">
+                            {activeIndex !== null && voiceData[activeIndex] ? (
+                                <>
+                                    <span className="text-sm font-medium text-text-secondary mb-1">{voiceData[activeIndex].name}</span>
+                                    <span className="text-4xl font-bold text-text-primary">{voiceData[activeIndex].value}</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span className="text-sm font-medium text-text-secondary mb-1">Всього</span>
+                                    <span className="text-4xl font-bold text-text-primary">{(choir.members || []).length}</span>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
