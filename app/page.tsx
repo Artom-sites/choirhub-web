@@ -1450,7 +1450,7 @@ function HomePageContent() {
                       {sortedMembers.map(member => renderMemberCard(member))}
                     </div>
                   );
-              )}
+                })()
             </div>
 
             {/* Stats summary */}
