@@ -610,11 +610,11 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                     transition={{ delay: Math.min(index * 0.02, 0.5) }}
                                     className="bg-surface rounded-2xl p-4 flex items-center gap-4 border border-border hover:border-border/50 transition-colors"
                                 >
-                                    <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
+                                    <div className="w-12 h-12 rounded-xl bg-text-primary flex items-center justify-center flex-shrink-0">
                                         {song.parts && song.parts.length > 0 ? (
-                                            <FileText className="w-6 h-6 text-text-primary" />
+                                            <FileText className="w-6 h-6 text-background" />
                                         ) : (
-                                            <Music className="w-6 h-6 text-text-secondary" />
+                                            <Music className="w-6 h-6 text-background" />
                                         )}
                                     </div>
 
