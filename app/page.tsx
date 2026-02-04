@@ -1437,43 +1437,22 @@ function HomePageContent() {
 
                   // Grouping Logic
                   const grouped = filtered.reduce((acc, member) => {
-                    const key = memberFilter ? 'Всі' : (member.voice || 'Без партії');
-                    if (!acc[key]) acc[key] = [];
-                    acc[key].push(member);
-                    return acc;
-                  }, {} as Record<string, typeof choir.members>);
+                    // User requested flat list for "All" (no grouping)
+                    // Sorting: Alphabetical by name
+                    const sortedMembers = [...filtered].sort((a, b) =>
+                      (a.name || '').localeCompare(b.name || '', 'uk')
+                    );
 
-                  // Order keys: Soprano, Alto, Tenor, Bass, others...
-                  const voiceOrder = ['Soprano', 'Alto', 'Tenor', 'Bass'];
-                  const sortedKeys = Object.keys(grouped).sort((a, b) => {
-                    const idxA = voiceOrder.indexOf(a);
-                    const idxB = voiceOrder.indexOf(b);
-                    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-                    if (idxA !== -1) return -1;
-                    if (idxB !== -1) return 1;
-                    return a.localeCompare(b);
-                  });
+                    if (sortedMembers.length === 0) {
+                      return <div className="text-center py-8 text-text-secondary">Нікого не знайдено</div>;
+                    }
 
-                  if (memberFilter) {
-                    // If filtering, don't show headers, just list
-                    return filtered.length === 0 ? (
-                      <div className="text-center py-8 text-text-secondary">Нікого не знайдено</div>
-                    ) : (
+                    return (
                       <div className="space-y-2">
-                        {filtered.sort((a, b) => a.name.localeCompare(b.name)).map(member => renderMemberCard(member))}
+                        {sortedMembers.map(member => renderMemberCard(member))}
                       </div>
                     );
-                  }
-
-                  return sortedKeys.map(group => (
-                    <div key={group}>
-                      <h3 className="text-sm font-bold text-text-secondary uppercase tracking-wider mb-2 pl-2 border-l-2 border-primary">{group} <span className="text-xs opacity-50 ml-1">({grouped[group].length})</span></h3>
-                      <div className="space-y-2">
-                        {grouped[group].sort((a, b) => a.name.localeCompare(b.name)).map(member => renderMemberCard(member))}
-                      </div>
-                    </div>
-                  ));
-                })()
+                  })()
               )}
             </div>
 
