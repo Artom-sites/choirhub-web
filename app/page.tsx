@@ -71,6 +71,84 @@ function HomePageContent() {
     router.replace(`/?${newParams.toString()}`, { scroll: false });
   };
 
+  const [memberFilter, setMemberFilter] = useState('');
+
+  // Helper to render member card
+  const renderMemberCard = (member: ChoirMember) => {
+    const absences = getAbsenceCount(member.id);
+    return (
+      <div
+        key={member.id}
+        className="p-4 bg-surface card-shadow rounded-2xl flex items-center justify-between group hover:bg-surface-highlight transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          {/* Avatar - clickable for everyone to view stats */}
+          <button
+            onClick={() => setViewingMemberStats(member)}
+            className="w-10 h-10 rounded-full bg-surface-highlight flex items-center justify-center text-text-primary font-bold text-sm relative hover:ring-2 hover:ring-primary/50 transition-all active:scale-95"
+          >
+            {member.name?.[0]?.toUpperCase() || "?"}
+            {absences > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                {absences}
+              </span>
+            )}
+            {member.hasAccount && (
+              <div className="absolute -bottom-1 -right-1 bg-blue-500 text-white p-0.5 rounded-full border-2 border-surface" title="App User">
+                <div className="w-2 h-2 rounded-full bg-white" />
+              </div>
+            )}
+          </button>
+
+          <div
+            onClick={() => {
+              if (canEdit) {
+                setEditingMember(member);
+                setShowEditMemberModal(true);
+              }
+            }}
+            className={canEdit ? 'cursor-pointer' : ''}
+          >
+            <p className="text-text-primary font-bold flex items-center gap-2 mb-1">
+              {member.name}
+              {getVoiceBadge(member.voice)}
+              {member.hasAccount && <span className="text-[10px] bg-blue-500/10 text-blue-400 mb-0.5 px-1.5 rounded-sm flex items-center gap-1">📱 APP</span>}
+            </p>
+            <div className="flex items-center gap-2">
+              {getRoleBadge(member.role)}
+              {absences > 0 && (
+                <span className="text-[10px] text-orange-400">
+                  {absences} {absences === 1 ? 'пропуск' : absences < 5 ? 'пропуски' : 'пропусків'}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setViewingMemberStats(member)}
+            className="text-text-secondary/50 hover:text-primary transition-colors p-2 hover:bg-surface rounded-lg"
+          >
+            <BarChart2 className="w-4 h-4" />
+          </button>
+
+          {canEdit && (
+            <button
+              onClick={() => {
+                setEditingMember(member);
+                setShowEditMemberModal(true);
+              }}
+              className="text-text-secondary/50 group-hover:text-text-primary transition-colors p-2 hover:bg-surface rounded-lg"
+            >
+              <Pencil className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const [selectedService, setSelectedService] = useState<Service | null>(null);
 
   // Stats
@@ -1284,11 +1362,10 @@ function HomePageContent() {
         />}
 
         {activeTab === 'members' && (
-          <div className="max-w-md mx-auto p-4">
+          <div className="max-w-md mx-auto p-4 pb-32">
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-3">
                 <h2 className="text-xl font-bold text-text-primary">Учасники</h2>
-                {/* Stats Button */}
                 <button
                   onClick={() => setShowStats(true)}
                   className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-text-secondary hover:text-white hover:bg-white/10 transition-colors"
@@ -1297,10 +1374,7 @@ function HomePageContent() {
                 </button>
               </div>
 
-
-
               <div className="flex items-center gap-2">
-                {/* Send Notification Button */}
                 {(canEdit || userData?.permissions?.includes('notify_members')) && (
                   <button
                     onClick={() => setShowSendNotificationModal(true)}
@@ -1323,7 +1397,30 @@ function HomePageContent() {
               </div>
             </div>
 
-            <div className="space-y-2">
+            {/* Filters */}
+            <div className="mb-6 overflow-x-auto scrollbar-hide -mx-4 px-4">
+              <div className="flex gap-2">
+                {['Всі', 'Soprano', 'Alto', 'Tenor', 'Bass', 'Real Users'].map(filter => {
+                  // Reuse search state for filter
+
+
+                  return (
+                    <button
+                      key={filter}
+                      onClick={() => setMemberFilter(filter === 'Всі' ? '' : filter === 'Real Users' ? 'real' : filter)}
+                      className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${(memberFilter === (filter === 'Всі' ? '' : filter === 'Real Users' ? 'real' : filter))
+                        ? 'bg-primary text-black'
+                        : 'bg-white/5 text-text-secondary hover:bg-white/10'
+                        }`}
+                    >
+                      {filter === 'Real Users' ? '📱 App Users' : filter}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-6">
               {(choir?.members || []).length === 0 ? (
                 <div className="text-center py-12 text-text-secondary">
                   <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
@@ -1331,81 +1428,57 @@ function HomePageContent() {
                   {canEdit && <p className="text-sm mt-2">Додайте учасників, щоб відстежувати відвідуваність</p>}
                 </div>
               ) : (
-                [...(choir?.members || [])].sort((a, b) =>
-                  (a.name || '').localeCompare(b.name || '', 'uk')
-                ).map((member) => {
-                  const absences = getAbsenceCount(member.id);
-                  return (
-                    <div
-                      key={member.id}
-                      className="p-4 bg-surface card-shadow rounded-2xl flex items-center justify-between group hover:bg-surface-highlight transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        {/* Avatar - clickable for everyone to view stats */}
-                        <button
-                          onClick={() => setViewingMemberStats(member)}
-                          className="w-10 h-10 rounded-full bg-surface-highlight flex items-center justify-center text-text-primary font-bold text-sm relative hover:ring-2 hover:ring-primary/50 transition-all active:scale-95"
-                        >
-                          {member.name?.[0]?.toUpperCase() || "?"}
-                          {absences > 0 && (
-                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                              {absences}
-                            </span>
-                          )}
-                        </button>
-                        {/* Name and info - clickable for admins to edit */}
-                        <div
-                          onClick={() => {
-                            if (canEdit) {
-                              setEditingMember(member);
-                              setShowEditMemberModal(true);
-                            }
-                          }}
-                          className={canEdit ? 'cursor-pointer' : ''}
-                        >
-                          <p className="text-text-primary font-bold flex items-center gap-2 mb-1">
-                            {member.name}
-                            {getVoiceBadge(member.voice)}
-                          </p>
-                          <div className="flex items-center gap-2">
-                            {getRoleBadge(member.role)}
-                            {absences > 0 && (
-                              <span className="text-[10px] text-orange-400">
-                                {absences} {absences === 1 ? 'пропуск' : absences < 5 ? 'пропуски' : 'пропусків'}
-                              </span>
-                            )}
-                          </div>
-                        </div>
+                (() => {
+                  const filtered = (choir?.members || []).filter(m => {
+                    if (!memberFilter) return true;
+                    if (memberFilter === 'real') return m.hasAccount;
+                    return m.voice === memberFilter;
+                  });
+
+                  // Grouping Logic
+                  const grouped = filtered.reduce((acc, member) => {
+                    const key = memberFilter ? 'Всі' : (member.voice || 'Без партії');
+                    if (!acc[key]) acc[key] = [];
+                    acc[key].push(member);
+                    return acc;
+                  }, {} as Record<string, typeof choir.members>);
+
+                  // Order keys: Soprano, Alto, Tenor, Bass, others...
+                  const voiceOrder = ['Soprano', 'Alto', 'Tenor', 'Bass'];
+                  const sortedKeys = Object.keys(grouped).sort((a, b) => {
+                    const idxA = voiceOrder.indexOf(a);
+                    const idxB = voiceOrder.indexOf(b);
+                    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                    if (idxA !== -1) return -1;
+                    if (idxB !== -1) return 1;
+                    return a.localeCompare(b);
+                  });
+
+                  if (memberFilter) {
+                    // If filtering, don't show headers, just list
+                    return filtered.length === 0 ? (
+                      <div className="text-center py-8 text-text-secondary">Нікого не знайдено</div>
+                    ) : (
+                      <div className="space-y-2">
+                        {filtered.sort((a, b) => a.name.localeCompare(b.name)).map(member => renderMemberCard(member))}
                       </div>
+                    );
+                  }
 
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setViewingMemberStats(member)}
-                          className="text-text-secondary/50 hover:text-primary transition-colors p-2 hover:bg-surface rounded-lg"
-                        >
-                          <BarChart2 className="w-4 h-4" />
-                        </button>
-
-                        {canEdit && (
-                          <button
-                            onClick={() => {
-                              setEditingMember(member);
-                              setShowEditMemberModal(true);
-                            }}
-                            className="text-text-secondary/50 group-hover:text-text-primary transition-colors p-2 hover:bg-surface rounded-lg"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                        )}
+                  return sortedKeys.map(group => (
+                    <div key={group}>
+                      <h3 className="text-sm font-bold text-text-secondary uppercase tracking-wider mb-2 pl-2 border-l-2 border-primary">{group} <span className="text-xs opacity-50 ml-1">({grouped[group].length})</span></h3>
+                      <div className="space-y-2">
+                        {grouped[group].sort((a, b) => a.name.localeCompare(b.name)).map(member => renderMemberCard(member))}
                       </div>
                     </div>
-                  );
-                })
+                  ));
+                })()
               )}
             </div>
 
             {/* Stats summary */}
-            {services.length > 0 && (choir?.members || []).length > 0 && (
+            {services.length > 0 && (choir?.members || []).length > 0 && !memberFilter && (
               <div className="mt-8 p-4 bg-surface card-shadow rounded-2xl">
                 <p className="text-text-primary text-sm font-bold mb-2">📊 Статистика</p>
                 <p className="text-text-secondary text-sm">

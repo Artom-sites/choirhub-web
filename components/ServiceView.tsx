@@ -467,17 +467,7 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                         <span className="text-sm text-text-secondary">всього</span>
                                     </div>
 
-                                    {/* Real vs List breakdown */}
-                                    <div className="flex items-center gap-3 text-xs text-text-secondary border-l border-border pl-4">
-                                        <div className="flex items-center gap-1" title="Користувачі додатка">
-                                            <span className="font-bold text-text-primary">{realUserCount}</span>
-                                            <span>real users</span>
-                                        </div>
-                                        <div className="flex items-center gap-1" title="Користувачі списку">
-                                            <span className="font-bold text-text-primary">{listUserCount}</span>
-                                            <span>list users</span>
-                                        </div>
-                                    </div>
+
                                 </div>
 
                                 {/* Voice Parts Breakdown */}
@@ -619,13 +609,13 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                 return (
                                     <button
                                         key={filter}
-                                        onClick={() => setSearch(filter === 'Всі' ? '' : filter === 'Real Users' ? 'real' : filter)}
+                                        onClick={() => setSearch(filter === 'Всі' ? '' : filter)}
                                         className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${isActive
-                                                ? 'bg-primary text-background font-bold'
-                                                : 'bg-surface-highlight text-text-secondary hover:text-text-primary'
+                                            ? 'bg-primary text-background font-bold'
+                                            : 'bg-surface-highlight text-text-secondary hover:text-text-primary'
                                             }`}
                                     >
-                                        {filter === 'Real Users' ? '📱 App Users' : filter}
+                                        {filter}
                                     </button>
                                 );
                             })}
@@ -669,16 +659,11 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                             <div className="flex items-center gap-3 min-w-0">
                                                 <div className="relative">
                                                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${isAbsent ? 'bg-red-500/10 text-red-400'
-                                                            : isConfirmed ? 'bg-green-500/10 text-green-500'
-                                                                : 'bg-surface-highlight text-text-secondary'
+                                                        : isConfirmed ? 'bg-green-500/10 text-green-500'
+                                                            : 'bg-surface-highlight text-text-secondary'
                                                         }`}>
                                                         {member.name?.[0]?.toUpperCase()}
                                                     </div>
-                                                    {member.hasAccount && (
-                                                        <div className="absolute -bottom-1 -right-1 bg-blue-500 text-white p-0.5 rounded-full border-2 border-surface" title="App User">
-                                                            <div className="w-2 h-2 rounded-full bg-white" />
-                                                        </div>
-                                                    )}
                                                 </div>
 
                                                 <div className="min-w-0">
@@ -686,7 +671,6 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                                         <span className={`font-medium truncate ${isAbsent ? 'text-red-400 line-through' : 'text-text-primary'}`}>
                                                             {member.name}
                                                         </span>
-                                                        {member.hasAccount && <span className="text-[10px] bg-blue-500/10 text-blue-400 mb-0.5 px-1.5 rounded-sm">APP</span>}
                                                     </div>
                                                     <div className="flex items-center gap-2 text-xs text-text-secondary">
                                                         <span>{member.voice || 'Без партії'}</span>
