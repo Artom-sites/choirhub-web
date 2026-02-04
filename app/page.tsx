@@ -1435,24 +1435,21 @@ function HomePageContent() {
                     return m.voice === memberFilter;
                   });
 
-                  // Grouping Logic
-                  const grouped = filtered.reduce((acc, member) => {
-                    // User requested flat list for "All" (no grouping)
-                    // Sorting: Alphabetical by name
-                    const sortedMembers = [...filtered].sort((a, b) =>
-                      (a.name || '').localeCompare(b.name || '', 'uk')
-                    );
+                  // User requested flat list for "All" (no grouping)
+                  // Sorting: Alphabetical by name
+                  const sortedMembers = [...filtered].sort((a, b) =>
+                    (a.name || '').localeCompare(b.name || '', 'uk')
+                  );
 
-                    if (sortedMembers.length === 0) {
-                      return <div className="text-center py-8 text-text-secondary">Нікого не знайдено</div>;
-                    }
+                  if (sortedMembers.length === 0) {
+                    return <div className="text-center py-8 text-text-secondary">Нікого не знайдено</div>;
+                  }
 
-                    return (
-                      <div className="space-y-2">
-                        {sortedMembers.map(member => renderMemberCard(member))}
-                      </div>
-                    );
-                  })()
+                  return (
+                    <div className="space-y-2">
+                      {sortedMembers.map(member => renderMemberCard(member))}
+                    </div>
+                  );
               )}
             </div>
 
