@@ -178,12 +178,19 @@ export default function AnnotationToolbar({
 
                 {/* Eraser Size Indicator (Only for Eraser) */}
                 {activeTool === 'eraser' && (
-                    <div className="flex items-center gap-1 px-1.5 border-r border-white/10 shrink-0">
+                    <div className="flex items-center gap-1 px-1 border-r border-white/10 shrink-0">
                         <button
                             onClick={() => setShowEraserSizes(!showEraserSizes)}
-                            className="px-2 py-1 rounded-lg text-xs font-bold text-white/80 hover:text-white bg-white/10 hover:bg-white/20 transition-colors"
+                            className="w-8 h-8 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 transition-colors"
+                            title="Eraser size"
                         >
-                            {eraserSize.toUpperCase()}
+                            <div
+                                className="rounded-full bg-white"
+                                style={{
+                                    width: eraserSize === 'small' ? 6 : eraserSize === 'medium' ? 10 : 16,
+                                    height: eraserSize === 'small' ? 6 : eraserSize === 'medium' ? 10 : 16
+                                }}
+                            />
                         </button>
                     </div>
                 )}
