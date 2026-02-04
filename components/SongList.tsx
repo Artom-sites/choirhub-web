@@ -488,18 +488,18 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                     confirmLabel="Видалити"
                     isDestructive
                 />
-        </div>
+            </motion.div>
 
 
             {
-        toast && (
-            <Toast
-                message={toast.message}
-                type={toast.type}
-                onClose={() => setToast(null)}
-            />
-        )
-    }
+                toast && (
+                    <Toast
+                        message={toast.message}
+                        type={toast.type}
+                        onClose={() => setToast(null)}
+                    />
+                )
+            }
         </div >
     );
 }

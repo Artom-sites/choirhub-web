@@ -58,6 +58,12 @@ export default function StatisticsView({ choir, services, onBack }: StatisticsVi
         });
     }, [services, choir.members]);
 
+    const averageAttendance = useMemo(() => {
+        if (attendanceData.length === 0) return 0;
+        const sum = attendanceData.reduce((acc, curr) => acc + curr.percentage, 0);
+        return Math.round(sum / attendanceData.length);
+    }, [attendanceData]);
+
     // 3. Most Performed Songs
     const allSongFrequencyData = useMemo(() => {
         const songCounts: Record<string, { title: string; count: number }> = {};
