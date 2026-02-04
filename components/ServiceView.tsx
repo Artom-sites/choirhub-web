@@ -600,7 +600,7 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
 
                         {/* Filters */}
                         <div className="px-4 py-3 border-b border-border bg-background/50 backdrop-blur-sm flex gap-2 overflow-x-auto scrollbar-hide">
-                            {['Всі', 'Soprano', 'Alto', 'Tenor', 'Bass', 'Real Users'].map(filter => {
+                            {['Всі', 'Soprano', 'Alto', 'Tenor', 'Bass'].map(filter => {
                                 const isActive =
                                     (search === filter) ||
                                     (filter === 'Всі' && search === '') ||
