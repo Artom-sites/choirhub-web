@@ -1225,7 +1225,7 @@ function HomePageContent() {
             </button>
             <div>
               <h1 className="text-lg font-bold text-text-primary leading-tight">
-                {activeTab === 'home' ? 'Головна' : activeTab === 'songs' ? 'Пісні' : 'Учасники'}
+                {activeTab === 'home' ? 'Служіння' : activeTab === 'songs' ? 'Пісні' : 'Учасники'}
               </h1>
               <p className="text-xs text-text-secondary font-medium">
                 {choir?.name || "ChoirHub"}
@@ -1427,7 +1427,7 @@ function HomePageContent() {
             className={`flex flex-col items-center gap-1 flex-1 p-2 rounded-xl active:scale-95 transition-all ${activeTab === 'home' ? 'text-primary' : 'text-text-secondary'}`}
           >
             <Home className={`w-6 h-6 ${activeTab === 'home' ? 'fill-primary/20' : ''}`} />
-            <span className="text-[10px] font-bold uppercase tracking-wide">Головна</span>
+            <span className="text-[10px] font-bold uppercase tracking-wide">Служіння</span>
           </button>
 
           <button

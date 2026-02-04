@@ -49,6 +49,9 @@ export default function SongPage() {
     // Archive Modal State
     const [showArchiveModal, setShowArchiveModal] = useState(false);
 
+    // Annotation State
+    const [isAnnotating, setIsAnnotating] = useState(false);
+
     const handleLinkArchive = async (globalSong: GlobalSong) => {
         if (!song || !userData?.choirId) return;
 
@@ -281,13 +284,22 @@ export default function SongPage() {
                             )}
                         </div>
 
-                        <button
-                            onClick={handleDownload}
-                            className="p-2 -mr-2 rounded-full hover:bg-gray-100 transition-colors"
-                            title="Завантажити PDF"
-                        >
-                            <Download className="w-6 h-6 text-gray-700" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => setIsAnnotating(!isAnnotating)}
+                                className={`p-2 rounded-full transition-colors ${isAnnotating ? 'bg-gray-900 text-white' : 'hover:bg-gray-100 text-gray-700'}`}
+                                title="Малювати на PDF"
+                            >
+                                <Pencil className="w-6 h-6" />
+                            </button>
+                            <button
+                                onClick={handleDownload}
+                                className="p-2 -mr-2 rounded-full hover:bg-gray-100 transition-colors"
+                                title="Завантажити PDF"
+                            >
+                                <Download className="w-6 h-6 text-gray-700" />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Parts Tabs (if multiple) */}
@@ -319,6 +331,8 @@ export default function SongPage() {
                         }
                         title={song.title}
                         onClose={() => router.back()}
+                        isAnnotating={isAnnotating}
+                        onAnnotatingChange={setIsAnnotating}
                     />
                 </div>
             </div>

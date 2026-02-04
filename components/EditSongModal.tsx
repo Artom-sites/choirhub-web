@@ -150,9 +150,9 @@ export default function EditSongModal({
                 title: title.trim(),
                 category: section, // Choir/Orchestra
                 conductor: finalConductor,
-                composer: composer.trim() || undefined,
-                poet: poet.trim() || undefined,
-                theme: finalTheme || undefined,
+                composer: composer.trim(),
+                poet: poet.trim(),
+                theme: finalTheme,
             });
 
             onClose();
