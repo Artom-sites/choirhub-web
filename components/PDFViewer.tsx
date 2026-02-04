@@ -11,7 +11,7 @@ import {
     Plus,
     WifiOff,
     Check,
-    Pencil,
+
     FileSignature
 } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
@@ -222,17 +222,7 @@ export default function PDFViewer({ url, title, onClose, onAddAction, isAnnotati
 
     return (
         <div className="flex flex-col h-full bg-white relative">
-            {/* Header / Controls Overlay - only show if no external control */}
-            {externalIsAnnotating === undefined && (
-                <div className="absolute top-4 right-4 z-50">
-                    <button
-                        onClick={() => setIsAnnotating(!isAnnotating)}
-                        className={`p-3 rounded-full shadow-lg backdrop-blur-md transition-all ${isAnnotating ? 'bg-black text-white' : 'bg-white/80 text-black hover:bg-white'}`}
-                    >
-                        <Pencil className="w-6 h-6" />
-                    </button>
-                </div>
-            )}
+
 
             {/* Offline Indicator */}
             <div className={`absolute top-4 left-1/2 -translate-x-1/2 z-40 transition-all duration-500 pointer-events-none ${showIndicator ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
