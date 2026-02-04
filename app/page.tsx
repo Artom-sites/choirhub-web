@@ -1349,19 +1349,20 @@ function HomePageContent() {
 
       {/* Tab Content */}
       <div className="animate-in fade-in duration-300">
-        {activeTab === 'home' && (
-          <ServiceList onSelectService={handleSelectService} canEdit={canEdit} />
-        )}
+        <div className={activeTab === 'home' ? 'block' : 'hidden'}>
+          <ServiceList onSelectService={handleSelectService} canEdit={canEdit} services={services} />
+        </div>
 
-        {activeTab === 'songs' && <SongList
-          canAddSongs={canAddSongs}
-          regents={choir?.regents || []}
-          knownConductors={choir?.knownConductors || []}
-          knownCategories={choir?.knownCategories || []}
+        <div className={activeTab === 'songs' ? 'block' : 'hidden'}>
+          <SongList
+            canAddSongs={canAddSongs}
+            regents={choir?.regents || []}
+            knownConductors={choir?.knownConductors || []}
+            knownCategories={choir?.knownCategories || []}
+          />
+        </div>
 
-        />}
-
-        {activeTab === 'members' && (
+        <div className={activeTab === 'members' ? 'block' : 'hidden'}>
           <div className="max-w-md mx-auto p-4 pb-32">
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-3">
@@ -1464,8 +1465,7 @@ function HomePageContent() {
               </div>
             )}
           </div>
-        )
-        }
+        </div>
       </div >
 
       {/* Bottom Nav */}

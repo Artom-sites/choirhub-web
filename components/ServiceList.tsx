@@ -14,15 +14,13 @@ import SwipeableCard from "./SwipeableCard";
 interface ServiceListProps {
     onSelectService: (service: Service) => void;
     canEdit: boolean;
+    services: Service[];
 }
 
-export default function ServiceList({ onSelectService, canEdit }: ServiceListProps) {
+export default function ServiceList({ onSelectService, canEdit, services }: ServiceListProps) {
     const { userData, user } = useAuth();
-
     const effectiveCanEdit = canEdit;
 
-    const [services, setServices] = useState<Service[]>([]);
-    const [loading, setLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [votingLoading, setVotingLoading] = useState<string | null>(null);
     const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
@@ -34,70 +32,15 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
     const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
     const [newTime, setNewTime] = useState("10:00");
 
-    useEffect(() => {
-        if (!userData?.choirId) return;
-
-        setLoading(true);
-        const q = query(
-            collection(db, `choirs/${userData.choirId}/services`)
-        );
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            console.log(`Fetched ${snapshot.docs.length} services (Source: ${snapshot.metadata.fromCache ? 'Cache' : 'Server'})`);
-
-            const fetchedServices = snapshot.docs
-                .map(doc => ({ id: doc.id, ...doc.data() } as Service))
-                .filter(s => !s.deletedAt);
-
-            // Smart Sort: Upcoming (Ascending), then Past (Descending)
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            const upcoming = fetchedServices.filter(s => new Date(s.date) >= today)
-                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-            const past = fetchedServices.filter(s => new Date(s.date) < today)
-                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-            setServices([...upcoming, ...past]);
-            setLoading(false);
-        }, (error) => {
-            console.error("Error subscribing to services:", error);
-            setLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, [userData?.choirId]);
-
     const handleVote = async (e: React.MouseEvent, serviceId: string, status: 'present' | 'absent') => {
         e.stopPropagation();
         if (!userData?.choirId || !user?.uid) return;
-
-        // Optimistic update
-        setServices(prev => prev.map(s => {
-            if (s.id === serviceId) {
-                const newConfirmed = status === 'present'
-                    ? [...(s.confirmedMembers || []), user.uid].filter((v, i, a) => a.indexOf(v) === i)
-                    : (s.confirmedMembers || []).filter(id => id !== user.uid);
-
-                const newAbsent = status === 'absent'
-                    ? [...(s.absentMembers || []), user.uid].filter((v, i, a) => a.indexOf(v) === i)
-                    : (s.absentMembers || []).filter(id => id !== user.uid);
-
-                return { ...s, confirmedMembers: newConfirmed, absentMembers: newAbsent };
-            }
-            return s;
-        }));
 
         setVotingLoading(serviceId);
         try {
             await setServiceAttendance(userData.choirId, serviceId, user.uid, status);
         } catch (error) {
             console.error("Voting failed", error);
-            // Revert handled by listener or next update
-            // If we really want to revert, we might need a way to force refresh or just let next snapshot fix it.
-            // For now, listener will eventually correct it if write failed on backend but succeeded locally? 
-            // Actually if write fails, local cache might be reverted by SDK.
         } finally {
             setVotingLoading(null);
         }
@@ -153,10 +96,6 @@ export default function ServiceList({ onSelectService, canEdit }: ServiceListPro
         const today = new Date().toISOString().split('T')[0];
         return dateStr === today;
     };
-
-    if (loading) {
-        return <div className="flex justify-center py-20"><Loader2 className="animate-spin w-8 h-8 text-white/20" /></div>;
-    }
 
     // Status helper
     const getMyStatus = (service: Service) => {
