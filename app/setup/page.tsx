@@ -318,6 +318,11 @@ function SetupPageContent() {
                 <p className="text-xs text-text-secondary mt-6 max-w-xs">
                     Синхронізація працює в обох випадках
                 </p>
+
+                <div className="mt-8 flex gap-6 text-xs text-text-secondary">
+                    <a href="/terms" className="hover:text-white transition-colors">Умови використання</a>
+                    <a href="/privacy" className="hover:text-white transition-colors">Політика конфіденційності</a>
+                </div>
             </div>
         );
     }

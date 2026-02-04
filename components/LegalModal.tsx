@@ -160,6 +160,16 @@ export default function LegalModal({ isOpen, onClose }: LegalModalProps) {
                                     Політика конфіденційності
                                     <ExternalLink className="w-3 h-3" />
                                 </a>
+                                <div className="h-2" />
+                                <a
+                                    href="/terms"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-2 text-xs font-bold text-blue-400 hover:text-blue-300 transition-colors uppercase tracking-wider"
+                                >
+                                    Умови використання
+                                    <ExternalLink className="w-3 h-3" />
+                                </a>
                             </div>
                         </section>
                     </div>
