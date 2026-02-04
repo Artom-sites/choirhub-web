@@ -359,11 +359,11 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                                             className="w-full bg-surface card-shadow hover:bg-surface rounded-2xl p-4 transition-all text-left group relative active:scale-[0.99] h-full flex flex-col cursor-pointer"
                                         >
                                             <div className="flex items-start gap-4 relative z-10 h-full">
-                                                <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-zinc-900">
+                                                <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-background">
                                                     {song.hasPdf ? (
-                                                        <Eye className="w-6 h-6 text-white" />
+                                                        <Eye className="w-6 h-6 text-text-primary" />
                                                     ) : (
-                                                        <FileText className="w-6 h-6 text-white" />
+                                                        <FileText className="w-6 h-6 text-text-primary" />
                                                     )}
                                                 </div>
 
