@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { ToolType } from './AnnotationToolbar';
+import { ToolType, EraserSize } from './AnnotationToolbar';
 
 interface AnnotationCanvasProps {
     pageNumber: number;
@@ -10,6 +10,7 @@ interface AnnotationCanvasProps {
     height: number;
     activeTool: ToolType;
     color: string;
+    eraserSize: EraserSize;
     onHistoryChange: (canUndo: boolean, canRedo: boolean) => void;
     triggerClear: number; // Increment to trigger clear
     triggerUndo: number; // Increment to trigger undo
@@ -29,6 +30,13 @@ interface Stroke {
     points: Point[]; // Normalized 0..1
 }
 
+// Eraser size multipliers
+const ERASER_WIDTH_MAP: Record<EraserSize, number> = {
+    small: 0.015,
+    medium: 0.03,
+    large: 0.06,
+};
+
 export default function AnnotationCanvas({
     pageNumber,
     pdfUrl,
@@ -36,6 +44,7 @@ export default function AnnotationCanvas({
     height,
     activeTool,
     color,
+    eraserSize,
     onHistoryChange,
     triggerClear,
     triggerUndo,
@@ -47,6 +56,10 @@ export default function AnnotationCanvas({
     const [strokes, setStrokes] = useState<Stroke[]>([]);
     const [redoStack, setRedoStack] = useState<Stroke[]>([]);
     const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
+
+    // Track active touches for multi-touch detection
+    const activeTouchesRef = useRef<number>(0);
+    const lastPointRef = useRef<Point | null>(null);
 
     // Storage Key: unique per PDF and Page
     const storageKey = `annotations_${btoa(pdfUrl).slice(0, 32)}_p${pageNumber}`;
@@ -138,9 +151,56 @@ export default function AnnotationCanvas({
         }
     }, [triggerRedo]);
 
+    // Catmull-Rom spline interpolation for smoother lines
+    const interpolatePoints = (points: Point[], tension: number = 0.5): Point[] => {
+        if (points.length < 3) return points;
+
+        const result: Point[] = [];
+        result.push(points[0]);
+
+        for (let i = 0; i < points.length - 1; i++) {
+            const p0 = points[Math.max(0, i - 1)];
+            const p1 = points[i];
+            const p2 = points[Math.min(points.length - 1, i + 1)];
+            const p3 = points[Math.min(points.length - 1, i + 2)];
+
+            // Add intermediate points
+            for (let t = 0; t <= 1; t += 0.2) {
+                if (t === 0) continue;
+
+                const t2 = t * t;
+                const t3 = t2 * t;
+
+                const x = 0.5 * (
+                    (2 * p1.x) +
+                    (-p0.x + p2.x) * t +
+                    (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 +
+                    (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3
+                );
+
+                const y = 0.5 * (
+                    (2 * p1.y) +
+                    (-p0.y + p2.y) * t +
+                    (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 +
+                    (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3
+                );
+
+                result.push({ x, y });
+            }
+        }
+
+        result.push(points[points.length - 1]);
+        return result;
+    };
+
     // Drawing Logic (Rendering)
-    const drawStroke = (ctx: CanvasRenderingContext2D, stroke: Stroke) => {
+    const drawStroke = (ctx: CanvasRenderingContext2D, stroke: Stroke, smooth: boolean = true) => {
         if (stroke.points.length < 2) return;
+
+        // Apply smoothing for final render
+        const points = smooth && stroke.points.length > 3
+            ? interpolatePoints(stroke.points)
+            : stroke.points;
 
         ctx.beginPath();
         ctx.lineCap = 'round';
@@ -149,13 +209,11 @@ export default function AnnotationCanvas({
 
         if (stroke.tool === 'marker') {
             ctx.globalAlpha = 0.4;
-            ctx.lineWidth = stroke.width * width * 3; // Thicker relative to width
-            // Optimization: Marker behind text? Canvas is on top. 
-            // We use multiply blending for marker usually, but simple alpha is okay for MVP
+            ctx.lineWidth = stroke.width * width * 3;
             ctx.globalCompositeOperation = 'multiply';
         } else if (stroke.tool === 'eraser') {
             ctx.globalCompositeOperation = 'destination-out';
-            ctx.lineWidth = stroke.width * width * 2;
+            ctx.lineWidth = stroke.width * width;
             ctx.globalAlpha = 1;
         } else {
             // Pen
@@ -165,19 +223,17 @@ export default function AnnotationCanvas({
         }
 
         // Draw path
-        if (stroke.points.length < 2) return;
-
         ctx.beginPath();
-        const first = stroke.points[0];
+        const first = points[0];
         ctx.moveTo(first.x * width, first.y * height);
 
         // Smoothing using quadratic curves
         let i = 0;
-        for (i = 1; i < stroke.points.length - 2; i++) {
-            const c = (stroke.points[i].x * width);
-            const d = (stroke.points[i].y * height);
-            const e = (stroke.points[i + 1].x * width);
-            const f = (stroke.points[i + 1].y * height);
+        for (i = 1; i < points.length - 2; i++) {
+            const c = (points[i].x * width);
+            const d = (points[i].y * height);
+            const e = (points[i + 1].x * width);
+            const f = (points[i + 1].y * height);
 
             // Midpoint
             const midX = (c + e) / 2;
@@ -187,8 +243,8 @@ export default function AnnotationCanvas({
         }
 
         // Last few points
-        for (; i < stroke.points.length; i++) {
-            const p = stroke.points[i];
+        for (; i < points.length; i++) {
+            const p = points[i];
             ctx.lineTo(p.x * width, p.y * height);
         }
 
@@ -209,12 +265,12 @@ export default function AnnotationCanvas({
         // Clear
         ctx.clearRect(0, 0, width, height);
 
-        // Draw all saved strokes
-        strokes.forEach(s => drawStroke(ctx, s));
+        // Draw all saved strokes with smoothing
+        strokes.forEach(s => drawStroke(ctx, s, true));
 
-        // Draw current stroke being drawn
+        // Draw current stroke being drawn (without smoothing for responsiveness)
         if (currentStroke) {
-            drawStroke(ctx, currentStroke);
+            drawStroke(ctx, currentStroke, false);
         }
 
     }, [strokes, currentStroke, width, height]);
@@ -224,25 +280,43 @@ export default function AnnotationCanvas({
     const getPoint = (e: React.PointerEvent): Point => {
         const rect = canvasRef.current!.getBoundingClientRect();
         return {
-            x: Number(((e.clientX - rect.left) / width).toFixed(4)), // Optimize storage
-            y: Number(((e.clientY - rect.top) / height).toFixed(4)),
+            x: Number(((e.clientX - rect.left) / width).toFixed(5)), // More precision
+            y: Number(((e.clientY - rect.top) / height).toFixed(5)),
             pressure: e.pressure
         };
     };
 
     const handlePointerDown = (e: React.PointerEvent) => {
-        e.preventDefault(); // Prevent scrolling
-        if (activeTool === 'none' as ToolType) return; // Should not happen if overlay is hidden
+        // Track number of active touches
+        activeTouchesRef.current++;
+
+        // If more than one touch, likely pinch-to-zoom - don't draw
+        if (activeTouchesRef.current > 1) {
+            // Cancel any current drawing
+            if (isDrawing) {
+                setIsDrawing(false);
+                setCurrentStroke(null);
+            }
+            return;
+        }
+
+        e.preventDefault(); // Prevent scrolling only for single touch
+        if (activeTool === 'none' as ToolType) return;
 
         canvasRef.current?.setPointerCapture(e.pointerId);
         setIsDrawing(true);
 
         const startPoint = getPoint(e);
+        lastPointRef.current = startPoint;
+
+        const strokeWidth = activeTool === 'eraser'
+            ? ERASER_WIDTH_MAP[eraserSize]
+            : activeTool === 'pen' ? 0.003 : 0.02;
 
         setCurrentStroke({
             tool: activeTool,
-            color: activeTool === 'eraser' ? '#000000' : color, // Eraser color doesn't matter
-            width: activeTool === 'pen' ? 0.003 : 0.02, // Relative width
+            color: activeTool === 'eraser' ? '#000000' : color,
+            width: strokeWidth,
             points: [startPoint]
         });
     };
@@ -254,10 +328,25 @@ export default function AnnotationCanvas({
             setCursorPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
         }
 
-        if (!isDrawing || !currentStroke) return;
+        // Don't draw if multiple touches or not in drawing mode
+        if (activeTouchesRef.current > 1 || !isDrawing || !currentStroke) return;
         e.preventDefault();
 
         const point = getPoint(e);
+
+        // Add point thinning - skip if too close to last point
+        const lastPoint = lastPointRef.current;
+        if (lastPoint) {
+            const dx = point.x - lastPoint.x;
+            const dy = point.y - lastPoint.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            // Skip if distance is too small (reduces jitter)
+            if (dist < 0.002) return;
+        }
+
+        lastPointRef.current = point;
+
         setCurrentStroke(prev => ({
             ...prev!,
             points: [...prev!.points, point]
@@ -265,18 +354,23 @@ export default function AnnotationCanvas({
     };
 
     const handlePointerUp = (e: React.PointerEvent) => {
+        activeTouchesRef.current = Math.max(0, activeTouchesRef.current - 1);
+
         if (!isDrawing || !currentStroke) return;
 
         canvasRef.current?.releasePointerCapture(e.pointerId);
         setIsDrawing(false);
+        lastPointRef.current = null;
 
-        // Add to history
-        setStrokes(prev => [...prev, currentStroke]);
-        setRedoStack([]); // Clear redo on new action
+        // Only save if we have enough points
+        if (currentStroke.points.length >= 2) {
+            setStrokes(prev => [...prev, currentStroke]);
+            setRedoStack([]); // Clear redo on new action
+        }
         setCurrentStroke(null);
     };
 
-    const eraserSize = width * 0.02 * 2; // Match eraser stroke width
+    const eraserDisplaySize = ERASER_WIDTH_MAP[eraserSize] * width;
 
     return (
         <>
@@ -284,26 +378,31 @@ export default function AnnotationCanvas({
                 ref={canvasRef}
                 width={width}
                 height={height}
-                className="absolute inset-0 z-20 touch-none"
-                style={{ width, height, cursor: activeTool === 'eraser' ? 'none' : 'crosshair' }}
+                className="absolute inset-0 z-20"
+                style={{
+                    width,
+                    height,
+                    cursor: activeTool === 'eraser' ? 'none' : 'crosshair',
+                    touchAction: 'none' // Let JS handle all touch
+                }}
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 onPointerLeave={(e) => { handlePointerUp(e); setCursorPos(null); }}
+                onPointerCancel={(e) => { handlePointerUp(e); setCursorPos(null); }}
             />
             {/* Eraser cursor indicator */}
             {activeTool === 'eraser' && cursorPos && (
                 <div
                     className="absolute pointer-events-none z-30 rounded-full border-2 border-gray-800 bg-white/30"
                     style={{
-                        width: eraserSize,
-                        height: eraserSize,
-                        left: cursorPos.x - eraserSize / 2,
-                        top: cursorPos.y - eraserSize / 2,
+                        width: eraserDisplaySize,
+                        height: eraserDisplaySize,
+                        left: cursorPos.x - eraserDisplaySize / 2,
+                        top: cursorPos.y - eraserDisplaySize / 2,
                     }}
                 />
             )}
         </>
     );
 }
-

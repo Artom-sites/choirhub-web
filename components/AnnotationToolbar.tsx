@@ -1,16 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Pen, Highlighter, Eraser, Undo, Redo, Trash2, ChevronDown, X, MoreHorizontal } from "lucide-react";
 
 export type ToolType = 'pen' | 'marker' | 'eraser';
+export type EraserSize = 'small' | 'medium' | 'large';
 
 interface AnnotationToolbarProps {
     activeTool: ToolType;
     onToolChange: (tool: ToolType) => void;
     color: string;
     onColorChange: (color: string) => void;
+    eraserSize: EraserSize;
+    onEraserSizeChange: (size: EraserSize) => void;
     onUndo: () => void;
     onRedo: () => void;
     onClear: () => void;
@@ -24,6 +27,14 @@ const COLORS = [
     { id: 'blue', value: '#007AFF' },
     { id: 'red', value: '#FF3B30' },
     { id: 'green', value: '#34C759' },
+    { id: 'yellow', value: '#FFCC00' },
+    { id: 'purple', value: '#AF52DE' },
+];
+
+const ERASER_SIZES: { id: EraserSize; label: string; size: number }[] = [
+    { id: 'small', label: 'S', size: 16 },
+    { id: 'medium', label: 'M', size: 28 },
+    { id: 'large', label: 'L', size: 44 },
 ];
 
 export default function AnnotationToolbar({
@@ -31,6 +42,8 @@ export default function AnnotationToolbar({
     onToolChange,
     color,
     onColorChange,
+    eraserSize,
+    onEraserSizeChange,
     onUndo,
     onRedo,
     onClear,
@@ -40,6 +53,7 @@ export default function AnnotationToolbar({
 }: AnnotationToolbarProps) {
     const [isMinimized, setIsMinimized] = useState(false);
     const [showColorPicker, setShowColorPicker] = useState(false);
+    const [showEraserSizes, setShowEraserSizes] = useState(false);
 
     // When minimized, show floating pen button
     if (isMinimized) {
@@ -65,23 +79,51 @@ export default function AnnotationToolbar({
             {/* Color Popover - rendered outside overflow container */}
             {showColorPicker && activeTool !== 'eraser' && (
                 <div
-                    className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-1.5 bg-zinc-800 rounded-xl shadow-2xl border border-white/20 flex gap-1.5"
+                    className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 bg-zinc-800 rounded-xl shadow-2xl border border-white/20 flex gap-2"
                     style={{ zIndex: 9999 }}
                 >
-                    {COLORS.slice(2).map((c) => (
+                    {COLORS.map((c) => (
                         <button
                             key={c.id}
                             onClick={() => {
                                 onColorChange(c.value);
                                 setShowColorPicker(false);
                             }}
-                            className={`w-6 h-6 rounded-full border-2 transition-all ${color === c.value
+                            className={`w-7 h-7 rounded-full border-2 transition-all ${color === c.value
                                 ? 'border-white scale-110'
                                 : 'border-transparent opacity-80 hover:opacity-100'
                                 }`}
                             style={{ backgroundColor: c.value }}
                             aria-label={c.id}
                         />
+                    ))}
+                </div>
+            )}
+
+            {/* Eraser Size Popover */}
+            {showEraserSizes && activeTool === 'eraser' && (
+                <div
+                    className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 bg-zinc-800 rounded-xl shadow-2xl border border-white/20 flex gap-2 items-center"
+                    style={{ zIndex: 9999 }}
+                >
+                    {ERASER_SIZES.map((s) => (
+                        <button
+                            key={s.id}
+                            onClick={() => {
+                                onEraserSizeChange(s.id);
+                                setShowEraserSizes(false);
+                            }}
+                            className={`flex items-center justify-center rounded-full border-2 transition-all ${eraserSize === s.id
+                                ? 'border-white bg-white/20'
+                                : 'border-white/30 hover:border-white/60'
+                                }`}
+                            style={{ width: s.size + 8, height: s.size + 8 }}
+                        >
+                            <div
+                                className="rounded-full bg-white"
+                                style={{ width: s.size / 2, height: s.size / 2 }}
+                            />
+                        </button>
                     ))}
                 </div>
             )}
@@ -93,19 +135,26 @@ export default function AnnotationToolbar({
                 <div className="flex items-center gap-0.5 pr-1.5 border-r border-white/10 shrink-0">
                     <ToolButton
                         isActive={activeTool === 'pen'}
-                        onClick={() => onToolChange('pen')}
+                        onClick={() => { onToolChange('pen'); setShowEraserSizes(false); }}
                         icon={<Pen className="w-4 h-4" />}
                         label="Pen"
                     />
                     <ToolButton
                         isActive={activeTool === 'marker'}
-                        onClick={() => onToolChange('marker')}
+                        onClick={() => { onToolChange('marker'); setShowEraserSizes(false); }}
                         icon={<Highlighter className="w-4 h-4" />}
                         label="Marker"
                     />
                     <ToolButton
                         isActive={activeTool === 'eraser'}
-                        onClick={() => onToolChange('eraser')}
+                        onClick={() => {
+                            onToolChange('eraser');
+                            setShowColorPicker(false);
+                            // Toggle eraser sizes on second click
+                            if (activeTool === 'eraser') {
+                                setShowEraserSizes(!showEraserSizes);
+                            }
+                        }}
                         icon={<Eraser className="w-4 h-4" />}
                         label="Eraser"
                     />
@@ -114,32 +163,27 @@ export default function AnnotationToolbar({
                 {/* Colors Group (Only for Pen/Marker) */}
                 {activeTool !== 'eraser' && (
                     <div className="flex items-center gap-1 px-1.5 border-r border-white/10 shrink-0">
-                        {/* First 2 colors always visible */}
-                        {COLORS.slice(0, 2).map((c) => (
-                            <button
-                                key={c.id}
-                                onClick={() => {
-                                    onColorChange(c.value);
-                                    setShowColorPicker(false);
-                                }}
-                                className={`w-6 h-6 rounded-full border-2 transition-all shrink-0 ${color === c.value
-                                    ? 'border-white scale-110'
-                                    : 'border-transparent opacity-70 hover:opacity-100'
-                                    }`}
-                                style={{ backgroundColor: c.value }}
-                                aria-label={c.id}
-                            />
-                        ))}
-
-                        {/* More Colors Button */}
+                        {/* Current color indicator + toggle */}
                         <button
                             onClick={() => setShowColorPicker(!showColorPicker)}
-                            className={`w-6 h-6 rounded-full flex items-center justify-center transition-all border-2 ${showColorPicker
-                                ? 'border-white bg-white/20'
-                                : 'border-white/30 hover:border-white/50'
+                            className={`w-7 h-7 rounded-full border-2 transition-all ${showColorPicker
+                                ? 'border-white scale-110'
+                                : 'border-white/50'
                                 }`}
+                            style={{ backgroundColor: color }}
                         >
-                            <MoreHorizontal className="w-4 h-4 text-white" />
+                        </button>
+                    </div>
+                )}
+
+                {/* Eraser Size Indicator (Only for Eraser) */}
+                {activeTool === 'eraser' && (
+                    <div className="flex items-center gap-1 px-1.5 border-r border-white/10 shrink-0">
+                        <button
+                            onClick={() => setShowEraserSizes(!showEraserSizes)}
+                            className="px-2 py-1 rounded-lg text-xs font-bold text-white/80 hover:text-white bg-white/10 hover:bg-white/20 transition-colors"
+                        >
+                            {eraserSize.toUpperCase()}
                         </button>
                     </div>
                 )}

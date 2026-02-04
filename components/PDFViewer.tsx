@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import { getPdfFromCache, savePdfToCache } from "../lib/cache";
-import AnnotationToolbar, { ToolType } from "./AnnotationToolbar";
+import AnnotationToolbar, { ToolType, EraserSize } from "./AnnotationToolbar";
 import AnnotationCanvas from "./AnnotationCanvas";
 
 // Dynamically import react-pdf to avoid SSR issues
@@ -56,6 +56,7 @@ export default function PDFViewer({ url, title, onClose, onAddAction, isAnnotati
     const isAnnotating = externalIsAnnotating !== undefined ? externalIsAnnotating : internalIsAnnotating;
     const setIsAnnotating = onAnnotatingChange || setInternalIsAnnotating;
     const [activeTool, setActiveTool] = useState<ToolType>('pen');
+    const [eraserSize, setEraserSize] = useState<EraserSize>('medium');
     const [color, setColor] = useState('#000000'); // Default black
     const [pageDimensions, setPageDimensions] = useState<Record<number, { width: number, height: number }>>({});
     const [historyState, setHistoryState] = useState({ canUndo: false, canRedo: false });
@@ -292,6 +293,7 @@ export default function PDFViewer({ url, title, onClose, onAddAction, isAnnotati
                                                     height={dims.height}
                                                     activeTool={activeTool}
                                                     color={color}
+                                                    eraserSize={eraserSize}
                                                     onHistoryChange={handleHistoryChange}
                                                     triggerClear={triggerClear}
                                                     triggerUndo={triggerUndo}
@@ -315,6 +317,8 @@ export default function PDFViewer({ url, title, onClose, onAddAction, isAnnotati
                         onToolChange={setActiveTool}
                         color={color}
                         onColorChange={setColor}
+                        eraserSize={eraserSize}
+                        onEraserSizeChange={setEraserSize}
                         onUndo={() => setTriggerUndo(p => p + 1)}
                         onRedo={() => setTriggerRedo(p => p + 1)}
                         onClear={() => setTriggerClear(p => p + 1)}
