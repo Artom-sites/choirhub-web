@@ -85,6 +85,7 @@ export default function StatisticsView({ choir, services, onBack }: StatisticsVi
     const songFrequencyData = allSongFrequencyData.slice(0, 10); // Top 10 for preview
 
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
+    const [showAllSongs, setShowAllSongs] = useState(false);
     const onPieEnter = (_: any, index: number) => setActiveIndex(index);
     const onPieLeave = () => setActiveIndex(null);
 

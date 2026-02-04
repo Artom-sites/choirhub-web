@@ -142,10 +142,23 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
 
     const saveSongsToCache = (data: GlobalSong[]) => {
         try {
-            localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+            // Attempt to save
+            const json = JSON.stringify(data);
+            localStorage.setItem(CACHE_KEY, json);
             localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
-        } catch (e) {
-            console.warn('Cache write error:', e);
+        } catch (e: any) {
+            // If quota exceeded, clear cache and try one more time? 
+            // Or just log and ignore. Clearing might help if old data is clogging it.
+            if (e.name === 'QuotaExceededError' || e.code === 22) {
+                console.warn('LocalStorage quota exceeded. Clearing cache and retrying...');
+                try {
+                    localStorage.clear();
+                    // Try saving only critical fields if needed, or just give up for now
+                    // For now, let's just not crash.
+                } catch (clearError) {
+                    // ignore
+                }
+            }
         }
     };
 

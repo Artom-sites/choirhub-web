@@ -110,11 +110,11 @@ function HomePageContent() {
             }}
             className={canEdit ? 'cursor-pointer' : ''}
           >
-            <p className="text-text-primary font-bold flex items-center gap-2 mb-1">
+            <div className="text-text-primary font-bold flex items-center gap-2 mb-1">
               {member.name}
               {getVoiceBadge(member.voice)}
               {member.hasAccount && <span className="text-[10px] bg-blue-500/10 text-blue-400 mb-0.5 px-1.5 rounded-sm flex items-center gap-1">📱 APP</span>}
-            </p>
+            </div>
             <div className="flex items-center gap-2">
               {getRoleBadge(member.role)}
               {absences > 0 && (
