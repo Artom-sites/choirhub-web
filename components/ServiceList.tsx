@@ -204,7 +204,7 @@ export default function ServiceList({ onSelectService, canEdit, services }: Serv
                                                         <h3 className="text-xl font-bold text-text-primary mb-2">{service.title}</h3>
 
                                                         <div className="flex items-center gap-2 mb-3">
-                                                            <div className={`px-2.5 py-1 rounded-full text-xs font-medium border ${isToday(service.date) ? 'bg-transparent border-white/30 text-white' : 'bg-transparent border-border text-text-secondary'}`}>
+                                                            <div className={`px-2.5 py-1 rounded-full text-xs font-medium border ${isToday(service.date) ? 'bg-accent/10 border-accent/30 text-accent' : 'bg-surface-highlight border-border text-text-primary'}`}>
                                                                 {service.songs.length} пісень
                                                             </div>
                                                         </div>
