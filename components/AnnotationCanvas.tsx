@@ -280,8 +280,8 @@ export default function AnnotationCanvas({
     const getPoint = (e: React.PointerEvent): Point => {
         const rect = canvasRef.current!.getBoundingClientRect();
         return {
-            x: Number(((e.clientX - rect.left) / width).toFixed(5)), // More precision
-            y: Number(((e.clientY - rect.top) / height).toFixed(5)),
+            x: Number(((e.clientX - rect.left) / rect.width).toFixed(5)), // Use rect.width (visual)
+            y: Number(((e.clientY - rect.top) / rect.height).toFixed(5)), // Use rect.height (visual)
             pressure: e.pressure
         };
     };

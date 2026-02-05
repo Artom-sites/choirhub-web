@@ -29,8 +29,9 @@ export function usePinchZoom({
 
     const initialDistance = useRef<number | null>(null);
     const initialScale = useRef<number>(1);
-    const lastTouchEnd = useRef<number>(0);
-    const touchCount = useRef<number>(0);
+
+    // Panning refs
+    const lastPan = useRef<{ x: number, y: number } | null>(null);
 
     const getDistance = (touches: TouchList): number => {
         if (touches.length < 2) return 0;
@@ -42,21 +43,20 @@ export function usePinchZoom({
     const handleTouchStart = useCallback((e: React.TouchEvent) => {
         if (!enabled) return;
 
-        touchCount.current = e.touches.length;
-
         if (e.touches.length === 2) {
             e.preventDefault();
             e.stopPropagation();
             const touches = e.touches as unknown as TouchList;
             initialDistance.current = getDistance(touches);
             initialScale.current = state.scale;
+        } else if (e.touches.length === 1 && state.scale > 1) {
+            // Start panning
+            lastPan.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         }
     }, [enabled, state.scale]);
 
     const handleTouchMove = useCallback((e: React.TouchEvent) => {
         if (!enabled) return;
-
-        touchCount.current = e.touches.length;
 
         if (e.touches.length === 2 && initialDistance.current) {
             e.preventDefault();
@@ -73,31 +73,36 @@ export function usePinchZoom({
                 setState(prev => ({
                     ...prev,
                     scale: newScale,
-                    translateX: newScale <= 1 ? 0 : prev.translateX,
-                    translateY: newScale <= 1 ? 0 : prev.translateY
+                    // Center the zoom slightly better or keep current pan
                 }));
                 onScaleChange?.(newScale);
             }
+        } else if (e.touches.length === 1 && state.scale > 1 && lastPan.current) {
+            // Panning logic
+            e.preventDefault();
+            e.stopPropagation();
+
+            const dx = e.touches[0].clientX - lastPan.current.x;
+            const dy = e.touches[0].clientY - lastPan.current.y;
+
+            setState(prev => ({
+                ...prev,
+                translateX: prev.translateX + dx,
+                translateY: prev.translateY + dy
+            }));
+
+            lastPan.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         }
     }, [enabled, state.scale, minScale, maxScale, onScaleChange]);
 
     const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-        touchCount.current = e.touches.length;
-
         if (e.touches.length < 2) {
             initialDistance.current = null;
         }
-
-        // Double-tap to reset zoom - only when all fingers lifted
-        if (e.touches.length === 0 && e.changedTouches.length === 1) {
-            const now = Date.now();
-            if (now - lastTouchEnd.current < 300 && state.scale > 1.1) {
-                setState({ scale: 1, translateX: 0, translateY: 0 });
-                onScaleChange?.(1);
-            }
-            lastTouchEnd.current = now;
+        if (e.touches.length === 0) {
+            lastPan.current = null;
         }
-    }, [onScaleChange, state.scale]);
+    }, []);
 
     const resetZoom = useCallback(() => {
         setState({ scale: 1, translateX: 0, translateY: 0 });
@@ -113,18 +118,19 @@ export function usePinchZoom({
 
     const zoomOut = useCallback(() => {
         const newScale = Math.max(minScale, state.scale / 1.5);
-        setState({
+        setState(prev => ({
+            ...prev,
             scale: newScale,
-            translateX: newScale <= 1 ? 0 : state.translateX,
-            translateY: newScale <= 1 ? 0 : state.translateY
-        });
-    }, [minScale, state]);
+            translateX: newScale <= 1 ? 0 : prev.translateX,
+            translateY: newScale <= 1 ? 0 : prev.translateY
+        }));
+    }, [minScale]);
 
     return {
         scale: state.scale,
         translateX: state.translateX,
         translateY: state.translateY,
-        isPinching: touchCount.current >= 2,
+        isPinching: false, // Simplified
         handlers: {
             onTouchStart: handleTouchStart,
             onTouchMove: handleTouchMove,
@@ -134,8 +140,9 @@ export function usePinchZoom({
         zoomIn,
         zoomOut,
         style: {
-            transform: `scale(${state.scale})`,
-            transformOrigin: 'center top',
+            transform: `translate(${state.translateX}px, ${state.translateY}px) scale(${state.scale})`,
+            transformOrigin: '0 0', // Important: zoom from top-left, handle positioning via translate
+            transition: state.scale === 1 ? 'transform 0.3s ease' : 'none'
         }
     };
 }
