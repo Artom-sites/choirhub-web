@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon, mergeMembers, updateChoir, deleteUserAccount, deleteAdminCode, getChoirNotifications } from "@/lib/db";
+import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon, mergeMembers, updateChoir, deleteUserAccount, deleteAdminCode, getChoirNotifications, getChoirUsers } from "@/lib/db";
 import { Service, Choir, UserMembership, ChoirMember, Permission, AdminCode } from "@/types";
 import SongList from "@/components/SongList";
 import SwipeableCard from "@/components/SwipeableCard";
@@ -206,6 +206,11 @@ function HomePageContent() {
   // Help Modal
   const [showHelpModal, setShowHelpModal] = useState(false);
 
+  // Registered App Users
+  const [registeredUsers, setRegisteredUsers] = useState<any[]>([]);
+  const [loadingRegisteredUsers, setLoadingRegisteredUsers] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<any>(null);
+
   const AVAILABLE_PERMISSIONS: { key: Permission; label: string }[] = [
     { key: 'add_songs', label: 'Додавати пісні' },
     { key: 'edit_attendance', label: 'Відмічати відсутніх' },
@@ -399,6 +404,19 @@ function HomePageContent() {
     }
 
   }, [searchParams, services, choir, router]);
+
+  // Load registered users when "App Users" filter is active
+  useEffect(() => {
+    if (memberFilter === 'real' && userData?.choirId) {
+      setLoadingRegisteredUsers(true);
+      getChoirUsers(userData.choirId).then(users => {
+        setRegisteredUsers(users);
+        setLoadingRegisteredUsers(false);
+      }).catch(() => {
+        setLoadingRegisteredUsers(false);
+      });
+    }
+  }, [memberFilter, userData?.choirId]);
 
   // Handle Service Selection with URL sync
   const handleSelectService = (service: Service | null) => {
@@ -1438,7 +1456,59 @@ function HomePageContent() {
             </div>
 
             <div className="space-y-6">
-              {(choir?.members || []).length === 0 ? (
+              {memberFilter === 'real' ? (
+                // Show registered app users from Firebase
+                loadingRegisteredUsers ? (
+                  <div className="text-center py-12 text-text-secondary">
+                    <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin opacity-50" />
+                    <p>Завантаження...</p>
+                  </div>
+                ) : registeredUsers.length === 0 ? (
+                  <div className="text-center py-12 text-text-secondary">
+                    <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Немає зареєстрованих користувачів</p>
+                    <p className="text-sm mt-2">Користувачі з'являться тут після входу через Google або email</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {registeredUsers.map(appUser => (
+                      <div
+                        key={appUser.id}
+                        className="p-4 bg-surface card-shadow rounded-2xl flex items-center justify-between group hover:bg-surface-highlight transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-sm">
+                            {appUser.name?.[0]?.toUpperCase() || appUser.email?.[0]?.toUpperCase() || "?"}
+                          </div>
+                          <div>
+                            <div className="text-text-primary font-bold flex items-center gap-2 mb-1">
+                              {appUser.name || 'Без імені'}
+                              <span className="text-[10px] bg-blue-500/10 text-blue-400 px-1.5 rounded-sm">📱 APP</span>
+                              {appUser.role && (
+                                <span className="text-[10px] bg-primary/10 text-primary px-1.5 rounded-sm uppercase">{appUser.role}</span>
+                              )}
+                            </div>
+                            <div className="text-text-secondary text-xs">
+                              {appUser.email}
+                              {appUser.voice && <span className="ml-2 text-primary">{appUser.voice}</span>}
+                            </div>
+                          </div>
+                        </div>
+
+                        {canEdit && (
+                          <button
+                            onClick={() => setUserToDelete(appUser)}
+                            className="text-text-secondary/50 hover:text-danger transition-colors p-2 hover:bg-danger/10 rounded-lg"
+                            title="Видалити користувача"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : (choir?.members || []).length === 0 ? (
                 <div className="text-center py-12 text-text-secondary">
                   <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>Немає учасників</p>
@@ -1448,7 +1518,6 @@ function HomePageContent() {
                 (() => {
                   const filtered = (choir?.members || []).filter(m => {
                     if (!memberFilter) return true;
-                    if (memberFilter === 'real') return m.hasAccount;
                     return m.voice === memberFilter;
                   });
 
@@ -1668,6 +1737,27 @@ function HomePageContent() {
         }}
         title="Видалити адмін-код?"
         message="Цей адмін-код буде видалено. Користувачі з цим кодом не зможуть долучитися."
+        confirmLabel="Видалити"
+        isDestructive
+      />
+
+      {/* Delete App User Confirmation */}
+      <ConfirmationModal
+        isOpen={!!userToDelete}
+        onClose={() => setUserToDelete(null)}
+        onConfirm={async () => {
+          if (userToDelete?.id) {
+            try {
+              await deleteUserAccount(userToDelete.id);
+              setRegisteredUsers(prev => prev.filter(u => u.id !== userToDelete.id));
+            } catch (e) {
+              console.error("Error deleting user:", e);
+            }
+          }
+          setUserToDelete(null);
+        }}
+        title="Видалити користувача?"
+        message={`Акаунт "${userToDelete?.name || userToDelete?.email}" буде видалено назавжди. Ця дія незворотня.`}
         confirmLabel="Видалити"
         isDestructive
       />

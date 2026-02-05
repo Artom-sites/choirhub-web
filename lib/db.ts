@@ -532,6 +532,24 @@ export async function getUserProfile(userId: string): Promise<UserData | null> {
     }
 }
 
+// Get all registered users for a specific choir
+export async function getChoirUsers(choirId: string): Promise<UserData[]> {
+    try {
+        const q = query(
+            collection(db, "users"),
+            where("choirId", "==", choirId)
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        } as UserData));
+    } catch (error) {
+        console.error("Error fetching choir users:", error);
+        return [];
+    }
+}
+
 export async function mergeMembers(
     choirId: string,
     fromMemberId: string,
