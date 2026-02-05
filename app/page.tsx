@@ -1540,32 +1540,29 @@ function HomePageContent() {
       <nav className="fixed bottom-0 left-0 right-0 bg-surface/90 backdrop-blur-xl px-4 pb-safe pt-2 z-50 border-t border-border">
         <div className="max-w-md mx-auto flex justify-around items-center h-16">
 
-          <motion.button
-            whileTap={{ scale: 0.9 }}
+          <button
             onClick={() => setActiveTab('home')}
-            className={`flex flex-col items-center gap-1 flex-1 p-2 rounded-xl transition-all ${activeTab === 'home' ? 'text-primary' : 'text-text-secondary'}`}
+            className={`flex flex-col items-center gap-1 flex-1 p-2 rounded-xl transition-all active:scale-90 ${activeTab === 'home' ? 'text-primary' : 'text-text-secondary'}`}
           >
             <Home className={`w-6 h-6 ${activeTab === 'home' ? 'fill-primary/20' : ''}`} />
             <span className="text-[10px] font-bold uppercase tracking-wide">Служіння</span>
-          </motion.button>
+          </button>
 
-          <motion.button
-            whileTap={{ scale: 0.9 }}
+          <button
             onClick={() => setActiveTab('songs')}
-            className={`flex flex-col items-center gap-1 flex-1 p-2 rounded-xl transition-all ${activeTab === 'songs' ? 'text-primary' : 'text-text-secondary'}`}
+            className={`flex flex-col items-center gap-1 flex-1 p-2 rounded-xl transition-all active:scale-90 ${activeTab === 'songs' ? 'text-primary' : 'text-text-secondary'}`}
           >
             <Music2 className={`w-6 h-6 ${activeTab === 'songs' ? 'fill-primary/20' : ''}`} />
             <span className="text-[10px] font-bold uppercase tracking-wide">Пісні</span>
-          </motion.button>
+          </button>
 
-          <motion.button
-            whileTap={{ scale: 0.9 }}
+          <button
             onClick={() => setActiveTab('members')}
-            className={`flex flex-col items-center gap-1 flex-1 p-2 rounded-xl transition-all ${activeTab === 'members' ? 'text-primary' : 'text-text-secondary'}`}
+            className={`flex flex-col items-center gap-1 flex-1 p-2 rounded-xl transition-all active:scale-90 ${activeTab === 'members' ? 'text-primary' : 'text-text-secondary'}`}
           >
             <Users className={`w-6 h-6 ${activeTab === 'members' ? 'fill-primary/20' : ''}`} />
             <span className="text-[10px] font-bold uppercase tracking-wide">Учасники</span>
-          </motion.button>
+          </button>
 
         </div>
       </nav >
