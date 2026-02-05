@@ -286,7 +286,7 @@ export default function ServiceList({ onSelectService, canEdit, services }: Serv
                                             value={newDate}
                                             onChange={(e) => setNewDate(e.target.value)}
                                             onClick={(e) => { try { (e.target as HTMLInputElement).showPicker() } catch (err) { } }}
-                                            className="w-full h-12 pl-4 pr-10 bg-surface-highlight border border-border rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none [&::-webkit-calendar-picker-indicator]:hidden"
+                                            className="w-full min-h-12 py-3 pl-4 pr-10 bg-surface-highlight border border-border rounded-xl text-text-primary text-base focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-date-and-time-value]:text-left"
                                             style={{ colorScheme: 'auto' }}
                                         />
                                         <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary pointer-events-none" />
