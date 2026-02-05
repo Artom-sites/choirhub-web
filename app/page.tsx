@@ -1341,15 +1341,9 @@ function HomePageContent() {
               </button>
               <button
                 onClick={() => setTheme('dark')}
-                className={`p-1.5 rounded-full transition-all ${theme === 'dark' ? 'bg-surface text-primary shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
+                className={`p-1.5 rounded-full transition-all ${theme === 'dark' || theme === 'system' ? 'bg-surface text-primary shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
               >
                 <Moon className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setTheme('system')}
-                className={`p-1.5 rounded-full transition-all ${theme === 'system' ? 'bg-surface text-primary shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
-              >
-                <Monitor className="w-4 h-4" />
               </button>
             </div>
           </div>
