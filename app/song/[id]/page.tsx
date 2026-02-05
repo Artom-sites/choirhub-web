@@ -601,7 +601,7 @@ export default function SongPage() {
             )}
             {/* Archive Search Modal */}
             {showArchiveModal && (
-                <div className="fixed inset-0 z-50 bg-background flex flex-col">
+                <div className="fixed inset-0 z-[60] bg-background flex flex-col">
                     <div className="flex items-center justify-between p-4 border-b border-white/10 bg-background/80 backdrop-blur-md sticky top-0 z-10">
                         <h2 className="text-lg font-bold">Знайти в архіві</h2>
                         <button
