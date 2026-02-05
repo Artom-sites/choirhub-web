@@ -342,12 +342,12 @@ export default function SongPage() {
     const canEdit = userData?.role === 'head' || userData?.role === 'regent';
 
     return (
-        <div className="min-h-screen bg-[#09090b] text-white">
+        <div className="min-h-screen bg-background text-text-primary">
             {/* Header */}
-            <header className="bg-surface/50 backdrop-blur-xl border-b border-white/5 px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
+            <header className="bg-surface/50 backdrop-blur-xl border-b border-border px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
                 <button
                     onClick={() => router.back()}
-                    className="p-2 hover:bg-white/10 rounded-xl transition-colors"
+                    className="p-2 hover:bg-surface-highlight rounded-xl transition-colors"
                 >
                     <ArrowLeft className="w-5 h-5 text-text-secondary" />
                 </button>
@@ -357,7 +357,7 @@ export default function SongPage() {
                         <span className="uppercase">{song.category}</span>
                         {song.conductor && (
                             <>
-                                <span className="w-1 h-1 rounded-full bg-white/20 shrink-0" />
+                                <span className="w-1 h-1 rounded-full bg-text-secondary/30 shrink-0" />
                                 <span className="truncate flex items-center gap-1">
                                     <User className="w-3 h-3" />
                                     {song.conductor}
@@ -386,16 +386,16 @@ export default function SongPage() {
 
             {/* Content */}
             <div className="p-4 flex flex-col items-center justify-center min-h-[calc(100vh-64px)] pb-10">
-                <div className="w-full max-w-md bg-surface/30 border border-white/5 rounded-3xl p-6 sm:p-8 backdrop-blur-sm">
+                <div className="w-full max-w-md bg-surface border border-border rounded-3xl p-6 sm:p-8 card-shadow">
                     {/* Song Metadata Card for Mobile clarity */}
                     <div className="mb-8 text-center">
-                        <h2 className="text-2xl font-bold text-white mb-2 leading-tight">{song.title}</h2>
+                        <h2 className="text-2xl font-bold text-text-primary mb-2 leading-tight">{song.title}</h2>
                         <div className="flex flex-wrap items-center justify-center gap-2 text-sm text-text-secondary mb-4">
-                            <span className="px-3 py-1 rounded-full bg-white/5 border border-white/5">
+                            <span className="px-3 py-1 rounded-full bg-surface-highlight border border-border">
                                 {song.category}
                             </span>
                             {song.conductor && (
-                                <span className="px-3 py-1 rounded-full bg-white/5 border border-white/5 flex items-center gap-1.5">
+                                <span className="px-3 py-1 rounded-full bg-surface-highlight border border-border flex items-center gap-1.5">
                                     <User className="w-3.5 h-3.5" />
                                     {song.conductor}
                                 </span>
@@ -405,7 +405,7 @@ export default function SongPage() {
                         {canEdit && (
                             <button
                                 onClick={() => setShowEditModal(true)}
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-medium text-blue-400 transition-colors mb-2"
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-xl text-sm font-medium text-primary transition-colors mb-2"
                             >
                                 <Pencil className="w-3.5 h-3.5" />
                                 Редагувати дані
@@ -416,13 +416,13 @@ export default function SongPage() {
                     {song.hasPdf && (song.pdfUrl || song.pdfData) ? (
                         // PDF exists
                         <div className="text-center">
-                            <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6 border border-white/5">
-                                <FileText className="w-10 h-10 text-white" />
+                            <div className="w-20 h-20 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-success/20">
+                                <FileText className="w-10 h-10 text-success" />
                             </div>
 
                             {isTg ? (
                                 <>
-                                    <h2 className="text-xl font-bold text-white mb-2">
+                                    <h2 className="text-xl font-bold text-text-primary mb-2">
                                         Файл у Telegram
                                     </h2>
                                     <p className="text-text-secondary text-sm mb-8">
@@ -440,7 +440,7 @@ export default function SongPage() {
                                 </>
                             ) : (
                                 <>
-                                    <h2 className="text-xl font-bold text-white mb-2">
+                                    <h2 className="text-xl font-bold text-text-primary mb-2">
                                         PDF доступний
                                     </h2>
                                     <p className="text-text-secondary text-sm mb-8">
@@ -450,13 +450,13 @@ export default function SongPage() {
                                     <div className="flex gap-3 mb-4">
                                         <button
                                             onClick={() => setShowViewer(true)}
-                                            className="flex-1 py-4 bg-white text-black rounded-xl font-bold hover:bg-gray-200 transition-colors shadow-lg shadow-white/5"
+                                            className="flex-1 py-4 bg-primary text-background rounded-xl font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
                                         >
                                             Відкрити ноти
                                         </button>
                                         <button
                                             onClick={handleDownload}
-                                            className="px-6 py-4 bg-white/10 border border-white/10 text-white rounded-xl font-bold hover:bg-white/20 transition-colors flex items-center justify-center"
+                                            className="px-6 py-4 bg-surface-highlight border border-border text-text-primary rounded-xl font-bold hover:bg-surface transition-colors flex items-center justify-center"
                                             title="Завантажити PDF"
                                         >
                                             <Download className="w-5 h-5" />
@@ -466,7 +466,7 @@ export default function SongPage() {
                             )}
 
                             {canEdit && (
-                                <div className="mt-8 pt-6 border-t border-white/5">
+                                <div className="mt-8 pt-6 border-t border-border">
                                     <p className="text-xs text-text-secondary mb-3 uppercase tracking-wider font-semibold">Оновити файл</p>
                                     <input
                                         ref={fileInputRef}
@@ -478,7 +478,7 @@ export default function SongPage() {
                                     <button
                                         onClick={() => fileInputRef.current?.click()}
                                         disabled={uploading}
-                                        className="w-full py-3 border border-white/10 rounded-xl text-text-secondary hover:text-white hover:bg-white/5 transition-colors text-sm font-medium"
+                                        className="w-full py-3 border border-border rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-highlight transition-colors text-sm font-medium"
                                     >
                                         {uploading ? "Завантаження..." : "Завантажити інший PDF"}
                                     </button>
@@ -488,10 +488,10 @@ export default function SongPage() {
                     ) : (
                         // No PDF
                         <div className="text-center">
-                            <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6 border border-white/5">
+                            <div className="w-20 h-20 bg-surface-highlight rounded-full flex items-center justify-center mx-auto mb-6 border border-border">
                                 <FileText className="w-10 h-10 text-text-secondary/50" />
                             </div>
-                            <h2 className="text-xl font-bold text-white mb-2">
+                            <h2 className="text-xl font-bold text-text-primary mb-2">
                                 Немає нот
                             </h2>
                             <p className="text-text-secondary text-sm mb-8">
@@ -511,7 +511,7 @@ export default function SongPage() {
                                     <button
                                         onClick={() => fileInputRef.current?.click()}
                                         disabled={uploading}
-                                        className="w-full py-4 bg-white/10 border border-white/10 rounded-xl text-white font-bold hover:bg-white/20 transition-all flex items-center justify-center gap-3 group"
+                                        className="w-full py-4 bg-primary/10 border border-primary/20 rounded-xl text-primary font-bold hover:bg-primary/20 transition-all flex items-center justify-center gap-3 group"
                                     >
                                         {uploading ? (
                                             <>
@@ -532,7 +532,7 @@ export default function SongPage() {
 
                                     <div className="relative my-6">
                                         <div className="absolute inset-0 flex items-center">
-                                            <div className="w-full border-t border-white/10"></div>
+                                            <div className="w-full border-t border-border"></div>
                                         </div>
                                         <div className="relative flex justify-center text-xs uppercase">
                                             <span className="bg-background px-2 text-text-secondary">Або</span>
@@ -542,7 +542,7 @@ export default function SongPage() {
                                     <button
                                         onClick={() => setShowArchiveModal(true)}
                                         disabled={uploading}
-                                        className="w-full py-4 bg-white/5 border border-white/10 rounded-xl text-white font-bold hover:bg-white/10 transition-all flex items-center justify-center gap-3"
+                                        className="w-full py-4 bg-surface-highlight border border-border rounded-xl text-text-primary font-bold hover:bg-surface transition-all flex items-center justify-center gap-3"
                                     >
                                         <Search className="w-5 h-5 text-accent" />
                                         Знайти в архіві
