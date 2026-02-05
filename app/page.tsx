@@ -34,6 +34,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import SendNotificationModal from "@/components/SendNotificationModal";
 import { collection as firestoreCollection, addDoc, getDocs, where, query, doc, updateDoc, arrayUnion, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { useFcmToken } from "@/hooks/useFcmToken";
 
 
 function HomePageContent() {
@@ -41,6 +42,9 @@ function HomePageContent() {
   const searchParams = useSearchParams();
   const { user, userData, loading: authLoading, signOut, refreshProfile } = useAuth();
   const { theme, setTheme } = useTheme();
+
+  // Global FCM Token Sync
+  useFcmToken();
 
 
 

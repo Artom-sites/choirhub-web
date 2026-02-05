@@ -29,6 +29,13 @@ export function useFcmToken() {
         setPermissionStatus(Notification.permission);
     }, []);
 
+    // Auto-register if already granted
+    useEffect(() => {
+        if (permissionStatus === 'granted' && !token && !loading && user?.uid) {
+            requestPermission();
+        }
+    }, [permissionStatus, token, loading, user?.uid]);
+
     // Request permission and get token
     const requestPermission = useCallback(async () => {
         if (permissionStatus === "unsupported") {
