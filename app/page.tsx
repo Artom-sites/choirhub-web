@@ -1433,12 +1433,9 @@ function HomePageContent() {
             </div>
 
             {/* Filters */}
-            <div className="mb-6 overflow-x-auto scrollbar-hide -mx-4 px-4">
+            <div className="mb-6 overflow-x-auto scrollbar-hide">
               <div className="flex gap-2">
                 {['Всі', 'Soprano', 'Alto', 'Tenor', 'Bass', 'Real Users'].map(filter => {
-                  // Reuse search state for filter
-
-
                   return (
                     <button
                       key={filter}
@@ -1452,8 +1449,6 @@ function HomePageContent() {
                     </button>
                   );
                 })}
-                {/* Right padding spacer */}
-                <div className="w-4 flex-shrink-0" aria-hidden="true" />
               </div>
             </div>
 
