@@ -1332,7 +1332,7 @@ function HomePageContent() {
 
           {/* Center: Theme Toggle (flex centered) */}
           <div className="flex-1 flex justify-center">
-            <div className="flex items-center gap-1 bg-surface-highlight/50 rounded-full p-1">
+            <div className="flex items-center gap-1 bg-surface-highlight border border-border rounded-full p-1">
               <button
                 onClick={() => setTheme('light')}
                 className={`p-1.5 rounded-full transition-all ${theme === 'light' ? 'bg-surface text-primary shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
