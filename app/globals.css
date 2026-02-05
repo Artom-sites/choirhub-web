@@ -17,35 +17,40 @@
 
 
 [data-theme='light'] {
-  /* THEME: Modern Organic ("Porcelain") */
-  /* A refined, high-end aesthetic using clean whites, warm grays, and diffuse shadows. */
+  /* THEME: Modern Organic ("Porcelain" v2) */
+  /* Refined for better depth and separation */
 
-  --background: #FAFAFA;
-  /* Neutral 50 - Warm, premium paper feel */
+  --background: #F1F5F9;
+  /* Slate 100 - Distinct off-white background */
+
   --surface: #FFFFFF;
   /* Pure White - Crisply lifts off background */
-  --surface-highlight: #F4F4F5;
-  /* Zinc 100 - Subtle interaction state */
 
-  --primary: #18181B;
-  /* Zinc 900 - Strong, confident brand color */
-  --accent: #18181B;
-  /* Keeping it monochrome/luxury for UI chrome */
+  --surface-highlight: #F8FAFC;
+  /* Slate 50 - Very subtle interaction state */
 
-  --text-primary: #18181B;
-  /* High contrast but not harsh #000 */
-  --text-secondary: #71717A;
-  /* Zinc 500 - Perfectly readable metadata */
+  --primary: #0F172A;
+  /* Slate 900 - Strong, confident brand color */
+
+  --accent: #334155;
+  /* Slate 700 */
+
+  --text-primary: #0F172A;
+  /* Slate 900 */
+
+  --text-secondary: #64748B;
+  /* Slate 500 */
 
   --danger: #EF4444;
   --success: #10B981;
 
-  --border: rgba(0, 0, 0, 0.06);
-  /* Extremely subtle definition */
+  --border: rgba(148, 163, 184, 0.15);
+  /* Slate 400 at 15% - Visible separation */
+
   --card-shadow:
-    0 2px 8px -2px rgba(0, 0, 0, 0.05),
-    0 4px 16px -4px rgba(0, 0, 0, 0.02);
-  /* "Airy" Shadow */
+    0 1px 3px 0 rgb(0 0 0 / 0.1),
+    0 1px 2px -1px rgb(0 0 0 / 0.1);
+  /* Tailwind standard shadow for better definition */
 }
 
 @theme inline {
