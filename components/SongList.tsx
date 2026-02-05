@@ -348,7 +348,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                 </div>
 
                 {/* List */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
                     {filteredSongs.length === 0 ? (
                         <div className="col-span-full text-center py-24 opacity-40">
                             <div className="w-16 h-16 bg-surface rounded-full flex items-center justify-center mx-auto mb-4 card-shadow">
