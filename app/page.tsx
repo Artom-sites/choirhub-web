@@ -1433,23 +1433,21 @@ function HomePageContent() {
             </div>
 
             {/* Filters */}
-            <div className="mb-6 overflow-x-auto scrollbar-hide">
-              <div className="flex gap-2">
-                {['Всі', 'Soprano', 'Alto', 'Tenor', 'Bass', 'Real Users'].map(filter => {
-                  return (
-                    <button
-                      key={filter}
-                      onClick={() => setMemberFilter(filter === 'Всі' ? '' : filter === 'Real Users' ? 'real' : filter)}
-                      className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${(memberFilter === (filter === 'Всі' ? '' : filter === 'Real Users' ? 'real' : filter))
-                        ? 'bg-primary text-background'
-                        : 'bg-white/5 text-text-secondary hover:bg-white/10'
-                        }`}
-                    >
-                      {filter === 'Real Users' ? '📱 App Users' : filter}
-                    </button>
-                  );
-                })}
-              </div>
+            <div className="flex overflow-x-auto gap-2 scrollbar-hide -mx-4 px-4 pb-1 mb-6">
+              {['Всі', 'Soprano', 'Alto', 'Tenor', 'Bass', 'Real Users'].map(filter => {
+                return (
+                  <button
+                    key={filter}
+                    onClick={() => setMemberFilter(filter === 'Всі' ? '' : filter === 'Real Users' ? 'real' : filter)}
+                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${(memberFilter === (filter === 'Всі' ? '' : filter === 'Real Users' ? 'real' : filter))
+                      ? 'bg-primary text-background'
+                      : 'bg-surface text-text-secondary shadow-sm border border-border'
+                      }`}
+                  >
+                    {filter === 'Real Users' ? '📱 App Users' : filter}
+                  </button>
+                );
+              })}
             </div>
 
             <div className="space-y-6">
