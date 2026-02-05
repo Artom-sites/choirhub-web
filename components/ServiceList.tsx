@@ -280,28 +280,34 @@ export default function ServiceList({ onSelectService, canEdit, services }: Serv
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Дата</label>
-                                    <div className="relative">
+                                    <div className="relative w-full">
+                                        {/* Visual Fake Input */}
+                                        <div className="w-full h-12 flex items-center pl-4 pr-10 bg-surface-highlight border border-border rounded-xl text-text-primary text-base">
+                                            {newDate ? newDate.split('-').reverse().join('.') : ''}
+                                        </div>
+                                        {/* Invisible Real Input */}
                                         <input
                                             type="date"
                                             value={newDate}
                                             onChange={(e) => setNewDate(e.target.value)}
-                                            onClick={(e) => { try { (e.target as HTMLInputElement).showPicker() } catch (err) { } }}
-                                            className="w-full h-12 pl-4 pr-10 bg-surface-highlight border border-border rounded-xl text-text-primary text-base focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-date-and-time-value]:text-left"
-                                            style={{ colorScheme: 'auto' }}
+                                            className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer appearance-none"
                                         />
                                         <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary pointer-events-none" />
                                     </div>
                                 </div>
                                 <div>
                                     <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Час</label>
-                                    <div className="relative">
+                                    <div className="relative w-full">
+                                        {/* Visual Fake Input */}
+                                        <div className="w-full h-12 flex items-center pl-4 pr-10 bg-surface-highlight border border-border rounded-xl text-text-primary text-base">
+                                            {newTime}
+                                        </div>
+                                        {/* Invisible Real Input */}
                                         <input
                                             type="time"
                                             value={newTime}
                                             onChange={(e) => setNewTime(e.target.value)}
-                                            onClick={(e) => { try { (e.target as HTMLInputElement).showPicker() } catch (err) { } }}
-                                            className="w-full h-12 pl-4 pr-10 bg-surface-highlight border border-border rounded-xl text-text-primary text-base focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-date-and-time-value]:text-left"
-                                            style={{ colorScheme: 'auto' }}
+                                            className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer appearance-none"
                                         />
                                         <Clock className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary pointer-events-none" />
                                     </div>
