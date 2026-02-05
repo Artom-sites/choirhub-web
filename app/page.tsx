@@ -1368,35 +1368,23 @@ function HomePageContent() {
 
       {/* Tab Content */}
       <div className="animate-in fade-in duration-300">
-        <motion.div
-          initial={false}
-          animate={activeTab === 'home' ? { opacity: 1, y: 0, display: "block" } : { opacity: 0, y: 10, display: "none", transition: { duration: 0.2 } }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
-          className={activeTab === 'home' ? 'block' : 'hidden'}
-        >
+        {/* Services Tab - always rendered, controlled by CSS */}
+        <div className={activeTab === 'home' ? 'block' : 'hidden'}>
           <ServiceList onSelectService={handleSelectService} canEdit={canEdit} services={services} />
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={false}
-          animate={activeTab === 'songs' ? { opacity: 1, y: 0, display: "block" } : { opacity: 0, y: 10, display: "none", transition: { duration: 0.2 } }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
-          className={activeTab === 'songs' ? 'block' : 'hidden'}
-        >
+        {/* Songs Tab - always rendered, controlled by CSS */}
+        <div className={activeTab === 'songs' ? 'block' : 'hidden'}>
           <SongList
             canAddSongs={canAddSongs}
             regents={choir?.regents || []}
             knownConductors={choir?.knownConductors || []}
             knownCategories={choir?.knownCategories || []}
           />
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={false}
-          animate={activeTab === 'members' ? { opacity: 1, y: 0, display: "block" } : { opacity: 0, y: 10, display: "none", transition: { duration: 0.2 } }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
-          className={activeTab === 'members' ? 'block' : 'hidden'}
-        >
+        {/* Members Tab - always rendered, controlled by CSS */}
+        <div className={activeTab === 'members' ? 'block' : 'hidden'}>
           <div className="max-w-md mx-auto p-4 pb-32">
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-3">
@@ -1545,7 +1533,7 @@ function HomePageContent() {
               </div>
             )}
           </div>
-        </motion.div>
+        </div>
       </div >
 
       {/* Bottom Nav */}
