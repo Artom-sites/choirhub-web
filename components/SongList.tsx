@@ -39,10 +39,13 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
     const [selectedCategory, setSelectedCategory] = useState<Category | "All">("All");
     // Modals
     const [showAddModal, setShowAddModal] = useState(false);
+    const [showAddOptions, setShowAddOptions] = useState(false);
     const [showTrashBin, setShowTrashBin] = useState(false);
     const [editingSong, setEditingSong] = useState<SimpleSong | null>(null);
     const [deletingSongId, setDeletingSongId] = useState<string | null>(null);
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+    const effectiveCanAdd = canAddSongs;
 
     // Sub-tab state: 'repertoire' or 'catalog'
     const [subTab, setSubTab] = useState<'repertoire' | 'catalog'>('repertoire');
