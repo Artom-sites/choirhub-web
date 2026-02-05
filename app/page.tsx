@@ -1434,7 +1434,7 @@ function HomePageContent() {
 
             {/* Filters */}
             <div className="mb-6 overflow-x-auto scrollbar-hide -mx-4 px-4">
-              <div className="flex gap-2">
+              <div className="flex gap-2 pr-4">
                 {['Всі', 'Soprano', 'Alto', 'Tenor', 'Bass', 'Real Users'].map(filter => {
                   // Reuse search state for filter
 
