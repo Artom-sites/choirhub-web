@@ -143,5 +143,12 @@ const finalizeCleanup = (str: string): string => {
         .trim();
 
     if (!s) return "Загальна";
+
+    // Filter out common keys/tonalities if that's the only thing left
+    // e.g. "C-dur", "d-moll", "F dur"
+    if (/^[A-H][hs]?[\s\-]*(dur|moll|major|minor)$/i.test(s)) {
+        return "Загальна";
+    }
+
     return s.charAt(0).toUpperCase() + s.slice(1);
 };

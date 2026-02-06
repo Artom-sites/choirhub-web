@@ -2,7 +2,7 @@
 // Updated to force recompile and fix stale cache
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, limit, startAfter, startAt, endAt, QueryDocumentSnapshot, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { GlobalSong, SongPart } from "@/types";
 import { extractInstrument } from "@/lib/utils";
@@ -15,7 +15,7 @@ import ArchiveLoader from "./ArchiveLoader";
 import Fuse from "fuse.js";
 import { useAuth } from "@/contexts/AuthContext";
 import SubmitSongModal from "./SubmitSongModal";
-import { getPendingSongs, approveSong, rejectSong } from "@/lib/db";
+import { getPendingSongs, approveSong, rejectSong, getGlobalSong } from "@/lib/db";
 import { PendingSong } from "@/types";
 import { ConfirmModal, AlertModal, InputModal } from "./ui/Modal";
 
@@ -60,7 +60,7 @@ const getSubcategoryLabel = (category: string | undefined, subcategoryId: string
     return found ? found.label : subcategoryId;
 };
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 100;
 
 const normalizeForSort = (text: string): string => {
     return text.replace(/^["""«»''„"'\s]+/, '').toLowerCase();
@@ -94,9 +94,16 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
     const [selectedLanguage, setSelectedLanguage] = useState<'all' | 'cyrillic' | 'latin'>('all');
     const [availableThemes, setAvailableThemes] = useState<string[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
+    const [isPreviewLoading, setIsPreviewLoading] = useState(false);
     const [previewSong, setPreviewSong] = useState<GlobalSong | null>(null);
     const [previewPartIndex, setPreviewPartIndex] = useState(0);
     const [fuseInstance, setFuseInstance] = useState<Fuse<GlobalSong> | null>(null);
+
+    // Pagination State
+    const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot | null>(null);
+    const [hasMore, setHasMore] = useState(true);
+    const [isSearchingServer, setIsSearchingServer] = useState(false);
+    const observer = useRef<IntersectionObserver | null>(null);
 
     const [showFilters, setShowFilters] = useState(false);
     const [showAddOptions, setShowAddOptions] = useState(false);
@@ -119,111 +126,147 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
     // Allow Regents and Heads to submit
     const canSubmit = userData?.role === 'head' || userData?.role === 'regent';
 
-    // Cache keys
-    const CACHE_KEY = 'global_songs_cache';
-    const CACHE_TIMESTAMP_KEY = 'global_songs_cache_time';
-    const CACHE_DURATION = 1000 * 60 * 30; // 30 minutes
+    // Total songs count for display
+    const [totalSongsCount, setTotalSongsCount] = useState<number>(0);
 
-    const loadSongsFromCache = (): GlobalSong[] | null => {
+    const CACHE_KEY = 'globalArchiveSongsCache';
+    const CACHE_TIMESTAMP_KEY = 'globalArchiveCacheTime';
+    const CACHE_MAX_AGE = 24 * 60 * 60 * 1000; // 24 hours
+
+    // Load from localStorage cache (for offline)
+    const loadFromCache = (): GlobalSong[] | null => {
         try {
             const cached = localStorage.getItem(CACHE_KEY);
-            const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
-            if (cached && timestamp) {
-                const age = Date.now() - parseInt(timestamp);
-                if (age < CACHE_DURATION) {
+            const cacheTime = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+            if (cached && cacheTime) {
+                const age = Date.now() - parseInt(cacheTime);
+                if (age < CACHE_MAX_AGE) {
                     return JSON.parse(cached);
                 }
             }
-        } catch (e) {
-            console.warn('Cache read error:', e);
-        }
+        } catch (e) { /* silent */ }
         return null;
     };
 
-    const saveSongsToCache = (data: GlobalSong[]) => {
+    // Save to localStorage cache
+    const saveToCache = (data: GlobalSong[]) => {
         try {
-            // Attempt to save
-            const json = JSON.stringify(data);
-            localStorage.setItem(CACHE_KEY, json);
+            localStorage.setItem(CACHE_KEY, JSON.stringify(data));
             localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
-        } catch (e: any) {
-            // If quota exceeded, clear cache and try one more time? 
-            // Or just log and ignore. Clearing might help if old data is clogging it.
-            if (e.name === 'QuotaExceededError' || e.code === 22) {
-                console.warn('LocalStorage quota exceeded. Clearing cache and retrying...');
-                try {
-                    localStorage.clear();
-                    // Try saving only critical fields if needed, or just give up for now
-                    // For now, let's just not crash.
-                } catch (clearError) {
-                    // ignore
-                }
-            }
-        }
+        } catch (e) { /* silent */ }
     };
 
-    const fetchSongsFromFirestore = async () => {
-        const q = query(collection(db, "global_songs"), orderBy("title"));
-        const snapshot = await getDocs(q);
-        console.log(`Fetched ${snapshot.docs.length} docs from Firestore`);
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GlobalSong));
+    // Setup Fuse search
+    const setupFuse = (data: GlobalSong[]) => {
+        const options = {
+            keys: [
+                { name: "title", weight: 0.5 },
+                { name: "keywords", weight: 0.2 },
+                { name: "category", weight: 0.1 },
+                { name: "theme", weight: 0.1 }
+            ],
+            threshold: 0.3,
+            distance: 100,
+            ignoreLocation: true,
+            minMatchCharLength: 2
+        };
+        setFuseInstance(new Fuse(data, options));
     };
 
-    const processSongs = (allSongs: GlobalSong[]) => {
-        const sortedSongs = allSongs.sort((a, b) =>
-            normalizeForSort(a.title).localeCompare(normalizeForSort(b.title), 'uk')
-        );
-        setSongs(sortedSongs);
-        setFuseInstance(new Fuse(sortedSongs, fuseOptions));
-
-        const themes = new Set<string>();
-        sortedSongs.forEach(song => {
-            if (song.theme) themes.add(song.theme);
+    // Process songs: deduplicate and sort
+    const processSongs = (data: GlobalSong[]): GlobalSong[] => {
+        const uniqueSongs = Array.from(new Map(data.map(s => [s.id, s])).values());
+        return uniqueSongs.sort((a, b) => {
+            const aCyr = isCyrillic(a.title);
+            const bCyr = isCyrillic(b.title);
+            if (aCyr && !bCyr) return -1;
+            if (!aCyr && bCyr) return 1;
+            return normalizeForSort(a.title).localeCompare(normalizeForSort(b.title), 'uk');
         });
-        setAvailableThemes(Array.from(themes).sort());
     };
 
-    // Force refresh function (can be called after adding a song)
-    const refreshSongs = async () => {
-        setLoading(true);
+    // Load ALL data from R2 Static Index (Zero Firestore Reads!)
+    const loadFromR2 = async (): Promise<boolean> => {
         try {
-            const freshSongs = await fetchSongsFromFirestore();
-            processSongs(freshSongs);
-            saveSongsToCache(freshSongs);
-        } catch (error) {
-            console.error('Error refreshing songs:', error);
-        } finally {
-            setLoading(false);
+            const publicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
+            if (!publicUrl) return false;
+            const indexUrl = `${publicUrl}/global_songs_index.json`;
+            const res = await fetch(indexUrl + '?t=' + Date.now());
+            if (!res.ok) throw new Error("Index not found");
+            const data: GlobalSong[] = await res.json();
+
+            const sortedSongs = processSongs(data);
+            setSongs(sortedSongs);
+            setTotalSongsCount(sortedSongs.length);
+            setHasMore(false);
+            setupFuse(sortedSongs);
+            saveToCache(sortedSongs);
+            console.log(`✅ Loaded ${sortedSongs.length} songs from R2 (0 Firestore reads)`);
+            return true;
+        } catch (e) {
+            console.warn("Failed to load from R2:", e);
+            return false;
         }
     };
 
+    // Fallback: Load from Firestore (only if R2 and cache fail)
+    const loadFromFirestore = async () => {
+        try {
+            const q = query(
+                collection(db, "global_songs"),
+                orderBy("title"),
+                limit(PAGE_SIZE)
+            );
+            const snapshot = await getDocs(q);
+            console.log(`⚠️ Fallback: Fetched ${snapshot.docs.length} docs from Firestore`);
+            const newSongs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GlobalSong));
+            const sortedSongs = processSongs(newSongs);
+            setSongs(sortedSongs);
+            setTotalSongsCount(sortedSongs.length);
+            setupFuse(sortedSongs);
+            setLastDoc(snapshot.docs[snapshot.docs.length - 1] || null);
+            setHasMore(snapshot.docs.length === PAGE_SIZE);
+        } catch (error) {
+            console.error("Error fetching from Firestore:", error);
+        }
+    };
+
+    // Effect: Initial Load - Cache -> R2 -> Firestore
     useEffect(() => {
-        const loadSongs = async () => {
+        const init = async () => {
             setLoading(true);
 
-            // 1. Try to load from cache first (instant)
-            const cachedSongs = loadSongsFromCache();
-            if (cachedSongs && cachedSongs.length > 0) {
-                console.log(`Loaded ${cachedSongs.length} songs from cache`);
-                processSongs(cachedSongs);
+            // 1. Try cache first (instant offline support)
+            const cached = loadFromCache();
+            if (cached && cached.length > 0) {
+                const sortedCached = processSongs(cached);
+                setSongs(sortedCached);
+                setTotalSongsCount(sortedCached.length);
+                setupFuse(sortedCached);
+                setHasMore(false);
                 setLoading(false);
-                return; // Use cache, don't fetch from Firestore
+                console.log(`📦 Loaded ${sortedCached.length} songs from cache`);
+                // Refresh from R2 in background
+                loadFromR2();
+                return;
             }
 
-            // 2. No cache - fetch from Firestore (costs reads)
-            try {
-                const freshSongs = await fetchSongsFromFirestore();
-                processSongs(freshSongs);
-                saveSongsToCache(freshSongs);
-            } catch (error) {
-                console.error('Error loading songs:', error);
-            } finally {
-                setLoading(false);
+            // 2. Try R2
+            const r2Success = await loadFromR2();
+            if (!r2Success) {
+                // 3. Fallback to Firestore
+                await loadFromFirestore();
             }
+            setLoading(false);
         };
-
-        loadSongs();
+        init();
     }, []);
+
+    // Effect: Debounced Search - purely local with Fuse.js
+    useEffect(() => {
+        // Search is handled in the main filtering effect below
+        // This effect is no longer needed for server search since we load all from R2
+    }, [searchQuery, fuseInstance]);
 
     // Load Pending Songs if moderation mode is ON
     useEffect(() => {
@@ -253,6 +296,8 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
             });
             // Maybe limit to top 100? No, let user scroll
         } else if (selectedCategory !== 'all') {
+            // Pagination handles initial load, but local filters still apply to LOADED songs
+            // Ideally we should query by category on server, but for now we filter locally
             results = results.filter(s => s.category === selectedCategory);
             // Default alphabetic sort is already applied
         }
@@ -272,25 +317,38 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
         }
 
         if (searchQuery.trim() && fuseInstance) {
-            const fuseResults = fuseInstance.search(searchQuery, { limit: 100 });
-            const searchIds = new Set(fuseResults.map(r => r.item.id));
+            // Fuse search on STATIC INDEX (all songs)
+            const fuseResults = fuseInstance.search(searchQuery, { limit: 200 });
+            results = fuseResults.map(r => r.item);
+
+            // Apply other filters to these search results
             if (selectedCategory === 'new') {
-                // If searching in 'new', keep sort order of results? Fuse returns by relevance
-                results = results.filter(s => searchIds.has(s.id));
-            } else {
-                // Use fuse relevance order
-                results = fuseResults.map(r => r.item);
-                // Re-apply other filters? Fuse searches ALL songs. We need to intersect.
-                // Simpler: filter the Fuse results by current filters
-                if (selectedCategory !== 'all' && selectedCategory !== 'new') {
-                    results = results.filter(s => s.category === selectedCategory);
-                }
-                if (selectedSubCategory) results = results.filter(s => s.subcategory === selectedSubCategory);
-                if (selectedTheme) results = results.filter(s => s.theme === selectedTheme);
-                // Language
-                if (selectedLanguage === 'cyrillic') results = results.filter(s => isCyrillic(s.title));
-                else if (selectedLanguage === 'latin') results = results.filter(s => !isCyrillic(s.title));
+                // Sort by date? Static index might not have dates. 
+                // Just return results as is.
+            } else if (selectedCategory !== 'all') {
+                results = results.filter(s => s.category === selectedCategory);
             }
+            if (selectedSubCategory) results = results.filter(s => s.subcategory === selectedSubCategory);
+            if (selectedTheme) results = results.filter(s => s.theme === selectedTheme);
+            // Language
+            if (selectedLanguage === 'cyrillic') results = results.filter(s => isCyrillic(s.title));
+            else if (selectedLanguage === 'latin') results = results.filter(s => !isCyrillic(s.title));
+
+            // Bypass the normal "results = songs" logic at start of effect
+            // because "songs" only has the loaded page.
+            setFilteredSongs(results);
+            return; // EXIT EARLY
+        }
+
+        // Sort: Cyrillic first, then Latin, alphabetically within each group
+        if (selectedCategory !== 'new') {
+            results = [...results].sort((a, b) => {
+                const aCyr = isCyrillic(a.title);
+                const bCyr = isCyrillic(b.title);
+                if (aCyr && !bCyr) return -1;
+                if (!aCyr && bCyr) return 1;
+                return normalizeForSort(a.title).localeCompare(normalizeForSort(b.title), 'uk');
+            });
         }
 
         setFilteredSongs(results);
@@ -322,10 +380,21 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
         if (onAddSong) setSongToAdd(song);
     };
 
-    const confirmAddSong = () => {
+    const confirmAddSong = async () => {
         if (songToAdd && onAddSong) {
-            onAddSong(songToAdd);
-            setToastMessage(`"${songToAdd.title}" додано до репертуару`);
+            let finalSong = songToAdd;
+            // Fetch full details if adding from index (where parts might be missing)
+            if ((!songToAdd.parts || songToAdd.parts.length === 0) && songToAdd.id) {
+                try {
+                    const full = await getGlobalSong(songToAdd.id);
+                    if (full) finalSong = full;
+                } catch (e) {
+                    console.error("Failed to fetch full song details", e);
+                }
+            }
+
+            onAddSong(finalSong);
+            setToastMessage(`"${finalSong.title}" додано до репертуару`);
             setTimeout(() => setToastMessage(null), 3000);
             setSongToAdd(null);
         }
@@ -365,9 +434,19 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
             setPendingSongs(prev => prev.filter(s => s.id !== approveModal.song!.id));
             setApproveModal({ isOpen: false, song: null, loading: false });
             // Clear cache to show new song in archive
-            localStorage.removeItem('global_songs_cache');
-            localStorage.removeItem('global_songs_cache_time');
-            await refreshSongs();
+            localStorage.removeItem(CACHE_KEY);
+            localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+            await loadFromR2();
+
+            // Trigger Background Index Update
+            try {
+                fetch('/api/search-index', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'add', song: approveModal.song })
+                }); // Don't await, let it run in background
+            } catch (ignore) { }
+
             setAlertModal({ isOpen: true, title: 'Успішно!', message: 'Пісню додано до архіву', variant: 'success' });
         } catch (e) {
             setApproveModal({ isOpen: false, song: null, loading: false });
@@ -416,12 +495,38 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                 <ShieldAlert className="w-5 h-5" />
                             </button>
                         )}
+                        {isModerator && (
+                            <button
+                                onClick={async () => {
+                                    // Rebuild Index
+                                    if (!confirm("Оновити пошуковий індекс? Це може зайняти час.")) return;
+                                    try {
+                                        setToastMessage("Оновлення індексу...");
+                                        const res = await fetch('/api/search-index', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ action: 'rebuild' })
+                                        });
+                                        if (!res.ok) throw new Error("API Error");
+                                        setToastMessage("Індекс оновлено! Перезавантажте сторінку.");
+                                        // Reload index locally
+                                        loadFromR2();
+                                    } catch (e) {
+                                        setToastMessage("Помилка оновлення індексу");
+                                    }
+                                }}
+                                className="p-2 rounded-xl bg-surface/50 text-text-secondary hover:text-text-primary hover:bg-surface transition-colors"
+                                title="Оновити індекс пошуку (Rebuild)"
+                            >
+                                <Search className="w-5 h-5" />
+                            </button>
+                        )}
                         {!isModerationMode && (
                             <span className="text-sm text-text-secondary whitespace-nowrap">
                                 {searchQuery || activeFiltersCount > 0 ? (
                                     <>Знайдено: <strong className="text-text-primary">{filteredSongs.length}</strong></>
                                 ) : (
-                                    <><strong className="text-text-primary">{songs.length}</strong> пісень</>
+                                    <><strong className="text-text-primary">{totalSongsCount}</strong> пісень</>
                                 )}
                             </span>
                         )}
@@ -624,7 +729,7 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                     className="bg-surface rounded-2xl p-4 flex items-center gap-4 border border-border hover:border-border/50 transition-colors"
                                 >
                                     <div className="w-12 h-12 rounded-xl bg-text-primary flex items-center justify-center flex-shrink-0">
-                                        {song.parts && song.parts.length > 0 ? (
+                                        {(song.pdfUrl || (song.partsCount && song.partsCount > 0) || (song.parts && song.parts.length > 0)) ? (
                                             <FileText className="w-6 h-6 text-background" />
                                         ) : (
                                             <Music className="w-6 h-6 text-background" />
@@ -644,24 +749,46 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                                     {song.theme}
                                                 </span>
                                             )}
-                                            {song.parts && song.parts.length > 1 && (
+                                            {((song.partsCount && song.partsCount > 1) || (song.parts && song.parts.length > 1)) && (
                                                 <span className="text-[10px] bg-surface-highlight text-text-secondary px-1.5 py-0.5 rounded">
-                                                    {song.parts.length} партій
+                                                    {song.partsCount || song.parts.length} партій
                                                 </span>
                                             )}
                                         </div>
                                     </div>
 
                                     <div className="flex items-center gap-2">
-                                        {song.parts && song.parts.length > 0 && (
+                                        {(song.pdfUrl || (song.partsCount && song.partsCount > 0) || (song.parts && song.parts.length > 0)) && (
                                             <button
-                                                onClick={() => {
+                                                onClick={async () => {
                                                     setPreviewSong(song);
                                                     setPreviewPartIndex(0);
+
+                                                    // Lazy load full details if index data is incomplete
+                                                    if (song.id && (
+                                                        (!song.parts && song.partsCount && song.partsCount > 0) ||
+                                                        (song.parts && song.parts.length < (song.partsCount || 0))
+                                                    )) {
+                                                        setIsPreviewLoading(true);
+                                                        try {
+                                                            const full = await getGlobalSong(song.id);
+                                                            if (full) {
+                                                                setPreviewSong(full);
+                                                            }
+                                                        } catch (e) {
+                                                            console.error("Failed to fetch full song for preview", e);
+                                                        } finally {
+                                                            setIsPreviewLoading(false);
+                                                        }
+                                                    }
                                                 }}
                                                 className="p-2 rounded-xl bg-surface-highlight hover:bg-surface-highlight/80 transition-colors"
                                             >
-                                                <Eye className="w-5 h-5 text-text-primary" />
+                                                {isPreviewLoading && previewSong?.id === song.id ? (
+                                                    <Loader2 className="w-5 h-5 text-text-primary animate-spin" />
+                                                ) : (
+                                                    <Eye className="w-5 h-5 text-text-primary" />
+                                                )}
                                             </button>
                                         )}
                                         {onAddSong && (
@@ -676,30 +803,31 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                 </motion.div>
                             ))}
                         </AnimatePresence>
-                        {visibleSongs.length < filteredSongs.length && (
-                            <div ref={loaderRef} className="py-8 flex justify-center">
-                                <Loader2 className="w-6 h-6 animate-spin text-white/20" />
-                            </div>
-                        )}
+
+
+                        {/* Load More no longer needed - all songs load from R2 */}
                     </>
                 )}
             </div>
 
             {/* Modals and Overlays */}
             <AnimatePresence>
-                {previewSong && previewSong.parts && previewSong.parts.length > 0 && (
+                {previewSong && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 bg-white flex flex-col"
+                        className="fixed inset-0 z-[100] bg-white flex flex-col"
                     >
                         <div className="bg-white border-b border-gray-200 z-40">
                             <div className="flex items-center justify-between px-4 py-3">
                                 <button onClick={() => setPreviewSong(null)} className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition-colors">
                                     <X className="w-5 h-5 text-gray-600" />
                                 </button>
-                                <h3 className="text-sm font-medium text-gray-900 truncate flex-1 text-center mx-4">{previewSong.title}</h3>
+                                <h3 className="text-sm font-medium text-gray-900 truncate flex-1 text-center mx-4">
+                                    {previewSong.title}
+                                    {isPreviewLoading && <Loader2 className="inline w-4 h-4 ml-2 animate-spin" />}
+                                </h3>
                                 {onAddSong ? (
                                     <button onClick={handleAddClick} className="p-2 -mr-2 rounded-full hover:bg-gray-100 transition-colors">
                                         <Plus className="w-5 h-5 text-gray-700" />
@@ -707,24 +835,37 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                 ) : <div className="w-10" />}
                             </div>
 
-                            {previewSong.parts.length > 1 && (
+                            {((previewSong.partsCount && previewSong.partsCount > 1) || (previewSong.parts && previewSong.parts.length > 1)) && (
                                 <div className="px-4 pb-3 flex gap-2 overflow-x-auto scrollbar-hide">
-                                    {previewSong.parts.map((part, idx) => (
-                                        <button
-                                            key={idx}
-                                            onClick={() => setPreviewPartIndex(idx)}
-                                            className={`px-4 py-2 rounded-full whitespace-nowrap transition-all text-sm font-medium ${idx === previewPartIndex ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
-                                        >
-                                            {extractInstrument(part.name || `Партія ${idx + 1}`, previewSong.title)}
-                                        </button>
-                                    ))}
+                                    {previewSong.parts ? previewSong.parts.map((part, idx) => {
+                                        let label = extractInstrument(part.name || `Партія ${idx + 1}`, previewSong.title);
+                                        // If label is "Загальна" or generic, use index to differentiate if multiple parts exist
+                                        // Actually simplest way: if multiple parts have same label, append index.
+                                        // We can't easily check all labels here inside map without pre-calculation.
+                                        // Let's just say if label is "Загальна", show "Партія N".
+                                        if (label === "Загальна") label = `Партія ${idx + 1}`;
+
+                                        return (
+                                            <button
+                                                key={idx}
+                                                onClick={() => setPreviewPartIndex(idx)}
+                                                className={`px-4 py-2 rounded-full whitespace-nowrap transition-all text-sm font-medium ${idx === previewPartIndex ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
+                                            >
+                                                {label}
+                                            </button>
+                                        );
+                                    }) : null}
                                 </div>
                             )}
                         </div>
 
                         <div className="flex-1 overflow-hidden">
                             <PDFViewer
-                                url={`/api/pdf-proxy?url=${encodeURIComponent(previewSong.parts[previewPartIndex].pdfUrl)}`}
+                                url={
+                                    previewSong.parts && previewSong.parts[previewPartIndex]
+                                        ? `/api/pdf-proxy?url=${encodeURIComponent(previewSong.parts[previewPartIndex].pdfUrl)}`
+                                        : (previewSong.pdfUrl ? `/api/pdf-proxy?url=${encodeURIComponent(previewSong.pdfUrl)}` : '')
+                                }
                                 title={previewSong.title}
                                 onClose={() => setPreviewSong(null)}
                             />

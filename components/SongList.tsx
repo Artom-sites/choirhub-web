@@ -357,7 +357,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                             <p className="text-text-secondary">Пісень не знайдено</p>
                         </div>
                     ) : (
-                        <AnimatePresence mode="popLayout">
+                        <AnimatePresence>
                             {filteredSongs.map((song, index) => (
                                 <SwipeableCard
                                     key={song.id}

@@ -4,18 +4,21 @@ import { useEffect, useState } from "react";
 import { Service, ServiceSong, SimpleSong, Choir, ChoirMember } from "@/types";
 import { getSongs, addSongToService, removeSongFromService, getChoir, updateService, setServiceAttendance, addKnownConductor, addKnownPianist } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
-import { ChevronLeft, Eye, X, Plus, Users, UserX, Check, Calendar, Music, UserCheck, AlertCircle, Trash2, User as UserIcon } from "lucide-react";
+import { ChevronLeft, Eye, X, Plus, Users, UserX, Check, Calendar, Music, UserCheck, AlertCircle, Trash2, User as UserIcon, CloudDownload, CheckCircle, Loader } from "lucide-react";
 import { useRouter } from "next/navigation";
 import SwipeableCard from "./SwipeableCard";
 import ConfirmationModal from "./ConfirmationModal";
+import { useOfflineCache } from "@/hooks/useOfflineCache";
 
 interface ServiceViewProps {
     service: Service;
     onBack: () => void;
     canEdit: boolean;
+    canEditCredits?: boolean; // Edit conductor/pianist
+    canEditAttendance?: boolean; // Edit attendance
 }
 
-export default function ServiceView({ service, onBack, canEdit }: ServiceViewProps) {
+export default function ServiceView({ service, onBack, canEdit, canEditCredits = false, canEditAttendance = false }: ServiceViewProps) {
     const router = useRouter();
     const { userData, user } = useAuth();
 
@@ -65,6 +68,42 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
     const [editingSongIndex, setEditingSongIndex] = useState<number | null>(null);
     const [tempConductor, setTempConductor] = useState("");
     const [tempPianist, setTempPianist] = useState("");
+
+    // Offline Caching
+    const { cacheServiceSongs, progress: cacheProgress, checkCacheStatus } = useOfflineCache();
+    const [localCacheStatus, setLocalCacheStatus] = useState<Record<string, boolean>>({});
+
+    // Auto-cache effect
+    useEffect(() => {
+        if (!currentService || availableSongs.length === 0) return;
+
+        // Check cache status for UI
+        const songIds = currentService.songs.map(s => s.songId);
+        checkCacheStatus(songIds).then(setLocalCacheStatus);
+
+        // Auto-cache if upcoming service
+        if (isUpcoming(currentService.date, currentService.time)) {
+            const songsToCache = currentService.songs.map(s => {
+                const fullSong = availableSongs.find(as => as.id === s.songId);
+                if (fullSong && (fullSong.pdfUrl || (fullSong.parts && fullSong.parts.length > 0))) {
+                    return {
+                        id: fullSong.id,
+                        title: fullSong.title,
+                        pdfUrl: fullSong.pdfUrl,
+                        parts: fullSong.parts
+                    };
+                }
+                return null;
+            }).filter(Boolean) as any[];
+
+            if (songsToCache.length > 0) {
+                cacheServiceSongs(currentService.id, songsToCache).then(() => {
+                    // Update status after caching
+                    checkCacheStatus(songIds).then(setLocalCacheStatus);
+                });
+            }
+        }
+    }, [currentService, availableSongs, cacheServiceSongs, checkCacheStatus]);
 
     const handleVote = async (status: 'present' | 'absent') => {
         if (!userData?.choirId || !user?.uid) return;
@@ -218,18 +257,18 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
         }
     };
 
-    const toggleAbsent = (memberId: string) => {
-        setAbsentMembers(prev => {
-            const isAbsent = prev.includes(memberId);
-            if (isAbsent) {
-                // Remove from absent (back to waiting)
-                return prev.filter(id => id !== memberId);
-            } else {
-                // Add to absent, remove from confirmed
-                setConfirmedMembers(curr => curr.filter(id => id !== memberId));
-                return [...prev, memberId];
-            }
-        });
+    const setMemberAttendance = (memberId: string, status: 'present' | 'absent' | 'unknown') => {
+        if (status === 'present') {
+            setConfirmedMembers(prev => [...prev.filter(id => id !== memberId), memberId]);
+            setAbsentMembers(prev => prev.filter(id => id !== memberId));
+        } else if (status === 'absent') {
+            setAbsentMembers(prev => [...prev.filter(id => id !== memberId), memberId]);
+            setConfirmedMembers(prev => prev.filter(id => id !== memberId));
+        } else {
+            // Reset to unknown/waiting
+            setConfirmedMembers(prev => prev.filter(id => id !== memberId));
+            setAbsentMembers(prev => prev.filter(id => id !== memberId));
+        }
     };
 
     const markRestAsPresent = () => {
@@ -304,7 +343,15 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                 {/* Songs Program - FIRST */}
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-bold text-text-secondary uppercase tracking-wide px-1">Програма ({currentService.songs.length})</h3>
+                        <div className="flex items-center gap-3">
+                            <h3 className="text-sm font-bold text-text-secondary uppercase tracking-wide px-1">Програма ({currentService.songs.length})</h3>
+                            {cacheProgress.isRunning && (
+                                <div className="flex items-center gap-1.5 px-2 py-0.5 bg-accent/10 rounded-full text-xs font-medium text-accent">
+                                    <Loader className="w-3 h-3 animate-spin" />
+                                    <span>{Math.round((cacheProgress.cached / cacheProgress.total) * 100)}%</span>
+                                </div>
+                            )}
+                        </div>
                         {canEdit && (
                             <button
                                 onClick={() => setShowAddSong(true)}
@@ -345,7 +392,12 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                             </div>
 
                                             <div className="flex-1 min-w-0" onClick={() => handleViewPdf(song.songId)}>
-                                                <h3 className="text-text-primary font-medium truncate text-lg">{song.songTitle}</h3>
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="text-text-primary font-medium truncate text-lg">{song.songTitle}</h3>
+                                                    {localCacheStatus[song.songId] && (
+                                                        <CheckCircle className="w-4 h-4 text-green-500 fill-green-500/10 flex-shrink-0" />
+                                                    )}
+                                                </div>
                                                 {/* Credits Display */}
                                                 <div className="flex flex-wrap gap-2 mt-1">
                                                     {song.performedBy && (
@@ -360,12 +412,12 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                                     )}
                                                 </div>
                                                 {/* Hint to edit */}
-                                                {canEdit && !song.performedBy && !song.pianist && (
+                                                {(canEdit || canEditCredits) && !song.performedBy && !song.pianist && (
                                                     <p className="text-xs text-text-secondary/50 mt-1">Натисни, щоб вказати хто диригував</p>
                                                 )}
                                             </div>
 
-                                            {canEdit && (
+                                            {(canEdit || canEditCredits) && (
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -432,17 +484,19 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                 )}
 
                 {/* Attendees Section - Enhanced */}
-                {(canEdit || !isFuture) && (() => {
+                {(canEdit || canEditAttendance || !isFuture) && (() => {
                     // Calculate stats
                     const confirmedIds = confirmedMembers;
                     const confirmedList = choirMembers.filter(m => confirmedIds.includes(m.id));
 
+                    // Case-insensitive voice matching
+                    const normalizeVoice = (v: string | undefined) => v?.toLowerCase().trim();
                     const voiceStats = {
-                        Soprano: confirmedList.filter(m => m.voice === 'Soprano').length,
-                        Alto: confirmedList.filter(m => m.voice === 'Alto').length,
-                        Tenor: confirmedList.filter(m => m.voice === 'Tenor').length,
-                        Bass: confirmedList.filter(m => m.voice === 'Bass').length,
-                        Unknown: confirmedList.filter(m => !m.voice).length
+                        Soprano: confirmedList.filter(m => normalizeVoice(m.voice) === 'soprano').length,
+                        Alto: confirmedList.filter(m => normalizeVoice(m.voice) === 'alto').length,
+                        Tenor: confirmedList.filter(m => normalizeVoice(m.voice) === 'tenor').length,
+                        Bass: confirmedList.filter(m => normalizeVoice(m.voice) === 'bass').length,
+                        Unknown: confirmedList.filter(m => !m.voice || !['soprano', 'alto', 'tenor', 'bass'].includes(normalizeVoice(m.voice)!)).length
                     };
 
                     const realUserCount = confirmedList.filter(m => m.hasAccount).length;
@@ -564,7 +618,7 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                     </div>
 
                     {/* Bottom Action Bar */}
-                    <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/90 backdrop-blur-xl border-t border-border pb-safe">
+                    <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/90 backdrop-blur-xl border-t border-border pb-safe-offset">
                         <button
                             onClick={handleBatchAddSongs}
                             disabled={selectedSongsToService.length === 0}
@@ -632,77 +686,93 @@ export default function ServiceView({ service, onBack, canEdit }: ServiceViewPro
                                     return true;
                                 });
 
-                                // Sort: Confirmed first, then alphabetical
-                                const sortedMembers = [...filteredMembers].sort((a, b) => {
-                                    const aConf = confirmedMembers.includes(a.id);
-                                    const bConf = confirmedMembers.includes(b.id);
-                                    if (aConf && !bConf) return -1;
-                                    if (!aConf && bConf) return 1;
-                                    return a.name.localeCompare(b.name);
-                                });
+                                // Sort alphabetically only
+                                const sortedMembers = [...filteredMembers].sort((a, b) =>
+                                    a.name.localeCompare(b.name)
+                                );
 
                                 return sortedMembers.map(member => {
                                     const isAbsent = absentMembers.includes(member.id);
                                     const isConfirmed = confirmedMembers.includes(member.id);
+                                    const canMarkAttendance = canEdit || canEditAttendance;
 
                                     return (
-                                        <button
+                                        <div
                                             key={member.id}
-                                            onClick={() => canEdit && toggleAbsent(member.id)}
-                                            disabled={!canEdit}
-                                            className={`w-full text-left p-3 rounded-2xl border flex justify-between items-center transition-all ${isAbsent
-                                                ? 'bg-red-500/5 border-red-500/20 opacity-70'
+                                            className={`w-full p-3 rounded-2xl border flex justify-between items-center gap-3 transition-all ${isAbsent
+                                                ? 'bg-red-500/5 border-red-500/20'
                                                 : isConfirmed
-                                                    ? 'bg-surface border-green-500/30 shadow-sm'
-                                                    : 'bg-surface/50 border-border opacity-60'
+                                                    ? 'bg-green-500/5 border-green-500/20'
+                                                    : 'bg-surface/50 border-border'
                                                 }`}
                                         >
-                                            <div className="flex items-center gap-3 min-w-0">
-                                                <div className="relative">
-                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${isAbsent ? 'bg-red-500/10 text-red-400'
-                                                        : isConfirmed ? 'bg-green-500/10 text-green-500'
-                                                            : 'bg-surface-highlight text-text-secondary'
-                                                        }`}>
-                                                        {member.name?.[0]?.toUpperCase()}
-                                                    </div>
+                                            {/* Member Info */}
+                                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${isAbsent ? 'bg-red-500/10 text-red-400'
+                                                    : isConfirmed ? 'bg-green-500/10 text-green-500'
+                                                        : 'bg-surface-highlight text-text-secondary'
+                                                    }`}>
+                                                    {member.name?.[0]?.toUpperCase()}
                                                 </div>
 
                                                 <div className="min-w-0">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className={`font-medium truncate ${isAbsent ? 'text-red-400 line-through' : 'text-text-primary'}`}>
-                                                            {member.name}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2 text-xs text-text-secondary">
-                                                        <span>{member.voice || 'Без партії'}</span>
-                                                        {member.role !== 'member' && (
-                                                            <>
-                                                                <span>•</span>
-                                                                <span className="capitalize">{member.role}</span>
-                                                            </>
-                                                        )}
-                                                    </div>
+                                                    <span className={`font-medium truncate block ${isAbsent ? 'text-red-400 line-through' : 'text-text-primary'}`}>
+                                                        {member.name}
+                                                    </span>
+                                                    <span className="text-xs text-text-secondary">
+                                                        {member.voice || 'Без партії'}
+                                                    </span>
                                                 </div>
                                             </div>
 
-                                            <div className="shrink-0 ml-3">
-                                                {isAbsent ? (
-                                                    <span className="text-xs font-bold text-red-400 bg-red-500/10 px-2 py-1 rounded-lg">Не буде</span>
-                                                ) : isConfirmed ? (
-                                                    <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
-                                                        <Check className="w-5 h-5 text-green-500" />
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-xs text-text-secondary bg-surface-highlight px-2 py-1 rounded-lg">Очікуємо</span>
-                                                )}
-                                            </div>
-                                        </button>
+                                            {/* Two Buttons: Present / Absent */}
+                                            {canMarkAttendance ? (
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    {/* Present Button */}
+                                                    <button
+                                                        onClick={() => setMemberAttendance(member.id, isConfirmed ? 'unknown' : 'present')}
+                                                        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isConfirmed
+                                                            ? 'bg-green-500 text-white shadow-md'
+                                                            : 'bg-surface-highlight text-text-secondary hover:bg-green-500/20 hover:text-green-500'
+                                                            }`}
+                                                    >
+                                                        <Check className="w-5 h-5" strokeWidth={isConfirmed ? 3 : 2} />
+                                                    </button>
+
+                                                    {/* Absent Button */}
+                                                    <button
+                                                        onClick={() => setMemberAttendance(member.id, isAbsent ? 'unknown' : 'absent')}
+                                                        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isAbsent
+                                                            ? 'bg-red-500 text-white shadow-md'
+                                                            : 'bg-surface-highlight text-text-secondary hover:bg-red-500/20 hover:text-red-500'
+                                                            }`}
+                                                    >
+                                                        <X className="w-5 h-5" strokeWidth={isAbsent ? 3 : 2} />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                /* Read-only status */
+                                                <div className="shrink-0">
+                                                    {isAbsent ? (
+                                                        <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center">
+                                                            <X className="w-5 h-5 text-red-500" />
+                                                        </div>
+                                                    ) : isConfirmed ? (
+                                                        <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
+                                                            <Check className="w-5 h-5 text-green-500" />
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-xs text-text-secondary bg-surface-highlight px-2 py-1 rounded-lg">Очікуємо</span>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                     );
                                 });
                             })()}
                         </div>
 
-                        {canEdit && (
+                        {(canEdit || canEditAttendance) && (
                             <div className="p-4 bg-surface border-t border-border safe-area-bottom">
                                 <button
                                     onClick={handleSaveAttendance}

@@ -11,11 +11,16 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'URL parameter is required' }, { status: 400 });
     }
 
-    // Validate that the URL is from mscmusic.org or our R2 bucket
+    // Validate that the URL is from allowed sources
     const r2Url = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
-    const allowed = url.startsWith('https://mscmusic.org/') || (r2Url && url.startsWith(r2Url));
+    const allowed =
+        url.startsWith('https://mscmusic.org/') ||
+        (r2Url && url.startsWith(r2Url)) ||
+        url.startsWith('https://firebasestorage.googleapis.com/') ||
+        url.startsWith('https://pub-'); // Generic R2 public URLs sometimes
 
     if (!allowed) {
+        console.error('Blocked blocked URL:', url);
         return NextResponse.json({ error: 'URL not allowed' }, { status: 403 });
     }
 

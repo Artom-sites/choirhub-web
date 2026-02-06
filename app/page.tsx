@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SendNotificationModal from "@/components/SendNotificationModal";
-import { collection as firestoreCollection, addDoc, getDocs, where, query, doc, updateDoc, arrayUnion, onSnapshot } from "firebase/firestore";
+import { collection as firestoreCollection, addDoc, getDocs, getDoc, where, query, doc, updateDoc, arrayUnion, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useFcmToken } from "@/hooks/useFcmToken";
 
@@ -513,14 +513,16 @@ function HomePageContent() {
     if (!user || !joinCode || joinCode.length !== 6) return;
     setManagerLoading(true);
     try {
-      const qMember = query(firestoreCollection(db, "choirs"), where("memberCode", "==", joinCode.toUpperCase()));
-      const qRegent = query(firestoreCollection(db, "choirs"), where("regentCode", "==", joinCode.toUpperCase()));
+      const codeUpper = joinCode.toUpperCase();
+      const qMember = query(firestoreCollection(db, "choirs"), where("memberCode", "==", codeUpper));
+      const qRegent = query(firestoreCollection(db, "choirs"), where("regentCode", "==", codeUpper));
 
       const [snapMember, snapRegent] = await Promise.all([getDocs(qMember), getDocs(qRegent)]);
 
       let foundChoirId = "";
       let role: 'member' | 'regent' = 'member';
       let foundChoirName = "";
+      let permissions: Permission[] | undefined = undefined;
 
       if (!snapRegent.empty) {
         foundChoirId = snapRegent.docs[0].id;
@@ -531,39 +533,96 @@ function HomePageContent() {
         role = 'member';
         foundChoirName = snapMember.docs[0].data().name;
       } else {
-        setManagerError("Код не знайдено");
-        setManagerLoading(false);
-        return;
+        // Check adminCodes in all choirs
+        const allChoirsSnap = await getDocs(firestoreCollection(db, "choirs"));
+        for (const choirDoc of allChoirsSnap.docs) {
+          const choirData = choirDoc.data();
+          const adminCodes = choirData.adminCodes || [];
+          const matchingCode = adminCodes.find((ac: any) => ac.code === codeUpper);
+          if (matchingCode) {
+            foundChoirId = choirDoc.id;
+            foundChoirName = choirData.name;
+            role = 'member';
+            permissions = matchingCode.permissions;
+            break;
+          }
+        }
+
+        if (!foundChoirId) {
+          setManagerError("Код не знайдено");
+          setManagerLoading(false);
+          return;
+        }
       }
 
-      if (userData?.memberships?.some(m => m.choirId === foundChoirId)) {
-        setManagerError("Ви вже є учасником цього хору");
-        setManagerLoading(false);
-        return;
-      }
+      const isAlreadyMember = userData?.memberships?.some(m => m.choirId === foundChoirId);
 
-      const choirRef = doc(db, "choirs", foundChoirId);
-      await updateDoc(choirRef, {
-        members: arrayUnion({
+      // If already a member but entering an admin code with new permissions, update permissions
+      if (isAlreadyMember) {
+        if (permissions && permissions.length > 0) {
+          // Update user permissions
+          const userRef = doc(db, "users", user.uid);
+          const existingPermissions = userData?.permissions || [];
+          const newPermissions = [...new Set([...existingPermissions, ...permissions])];
+          await updateDoc(userRef, { permissions: newPermissions });
+
+          // Also update in choir.members
+          const choirRef = doc(db, "choirs", foundChoirId);
+          const choirSnap = await getDoc(choirRef);
+          if (choirSnap.exists()) {
+            const choirData = choirSnap.data();
+            const updatedMembers = choirData.members?.map((m: any) => {
+              if (m.id === user.uid) {
+                const memberPermissions = m.permissions || [];
+                return { ...m, permissions: [...new Set([...memberPermissions, ...permissions])] };
+              }
+              return m;
+            }) || [];
+            await updateDoc(choirRef, { members: updatedMembers });
+          }
+
+          await refreshProfile();
+          window.location.reload();
+        } else {
+          setManagerError("Ви вже є учасником цього хору");
+          setManagerLoading(false);
+          return;
+        }
+      } else {
+        // New member - add them
+        const memberData: any = {
           id: user.uid,
           name: userData?.name || "Користувач",
           role: role
-        })
-      });
+        };
+        if (permissions && permissions.length > 0) {
+          memberData.permissions = permissions;
+        }
 
-      await createUser(user.uid, {
-        choirId: foundChoirId,
-        choirName: foundChoirName,
-        role: role,
-        memberships: arrayUnion({
+        const choirRef = doc(db, "choirs", foundChoirId);
+        await updateDoc(choirRef, {
+          members: arrayUnion(memberData)
+        });
+
+        const userDataToSave: any = {
           choirId: foundChoirId,
           choirName: foundChoirName,
-          role: role
-        }) as any
-      });
+          role: role,
+          memberships: arrayUnion({
+            choirId: foundChoirId,
+            choirName: foundChoirName,
+            role: role
+          }) as any
+        };
+        if (permissions && permissions.length > 0) {
+          userDataToSave.permissions = permissions;
+        }
 
-      await refreshProfile();
-      window.location.reload();
+        await createUser(user.uid, userDataToSave);
+
+        await refreshProfile();
+        window.location.reload();
+      }
     } catch (e) {
       console.error(e);
       setManagerError("Помилка приєднання");
@@ -778,6 +837,8 @@ function HomePageContent() {
           service={selectedService}
           onBack={() => handleSelectService(null)}
           canEdit={canEdit}
+          canEditCredits={canEditCredits}
+          canEditAttendance={canEditAttendance}
         />
       </main>
     );

@@ -6,6 +6,7 @@ import {
     onAuthStateChanged,
     signInWithRedirect,
     getRedirectResult,
+    signInWithPopup, // Added
     GoogleAuthProvider,
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
@@ -39,10 +40,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Handle Redirect Result
-        getRedirectResult(auth).catch((error) => {
-            console.error("Redirect auth error:", error);
-        });
+        // Handle Redirect Result explicitly
+        const handleRedirect = async () => {
+            try {
+                const result = await getRedirectResult(auth);
+                if (result?.user) {
+                    console.log("Redirect login successful:", result.user.email);
+                    // onAuthStateChanged will pick this up, but we can verify here
+                }
+            } catch (error) {
+                console.error("Redirect auth error:", error);
+            }
+        };
+        handleRedirect();
 
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             setUser(firebaseUser);
@@ -50,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (firebaseUser) {
                 await loadUserProfile(firebaseUser.uid);
             } else {
+
                 setUserData(null);
             }
 
@@ -70,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const provider = new GoogleAuthProvider();
         provider.setCustomParameters({ prompt: 'select_account' });
         try {
-            await signInWithRedirect(auth, provider);
+            await signInWithPopup(auth, provider); // Changed to Popup
         } catch (error) {
             console.error("Error signing in with Google:", error);
             throw error;

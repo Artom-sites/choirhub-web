@@ -194,10 +194,16 @@ function SetupPageContent() {
 
         try {
             const codeUpper = inviteCode.toUpperCase();
+            console.log("=== JOIN CODE DEBUG ===");
+            console.log("Searching for code:", codeUpper);
+
             const qMember = query(firestoreCollection(db, "choirs"), where("memberCode", "==", codeUpper));
             const qRegent = query(firestoreCollection(db, "choirs"), where("regentCode", "==", codeUpper));
 
             const [snapMember, snapRegent] = await Promise.all([getDocs(qMember), getDocs(qRegent)]);
+
+            console.log("snapRegent empty?", snapRegent.empty);
+            console.log("snapMember empty?", snapMember.empty);
 
             let foundChoirId = "";
             let role: 'member' | 'regent' = 'member';
@@ -205,19 +211,24 @@ function SetupPageContent() {
             let permissions: string[] | undefined = undefined;
 
             if (!snapRegent.empty) {
+                console.log("Found as REGENT code");
                 foundChoirId = snapRegent.docs[0].id;
                 role = 'regent';
                 foundChoirName = snapRegent.docs[0].data().name;
             } else if (!snapMember.empty) {
+                console.log("Found as MEMBER code");
                 foundChoirId = snapMember.docs[0].id;
                 role = 'member';
                 foundChoirName = snapMember.docs[0].data().name;
             } else {
+                console.log("Checking adminCodes...");
                 // Check all choirs for adminCodes
                 const allChoirsSnap = await getDocs(firestoreCollection(db, "choirs"));
                 for (const choirDoc of allChoirsSnap.docs) {
                     const choirData = choirDoc.data();
                     const adminCodes = choirData.adminCodes || [];
+                    console.log("Checking choir:", choirData.name, "adminCodes:", JSON.stringify(adminCodes));
+                    console.log("Looking for code:", codeUpper);
                     const matchingCode = adminCodes.find((ac: any) => ac.code === codeUpper);
                     if (matchingCode) {
                         foundChoirId = choirDoc.id;

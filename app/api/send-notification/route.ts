@@ -54,35 +54,28 @@ export async function POST(req: NextRequest) {
         }
 
         // 3. Fetch Recipients
-        // Get all users who are members of this choir AND have notificationsEnabled: true
-        // Ideally, we should query users collection where `memberships` contains choirId.
-        // But typical NoSQL structure might make this hard if memberships is array of objects.
-        // If we can't query easily, we can query users by array-contains? No, object array.
-
-        // Alternative: Get Choir document -> members array -> IDs.
-        // Then fetch users by IDs (batches of 10-30).
+        console.log(`[Notification] Fetching members for choir: ${choirId}`);
         const choirDoc = await db.collection("choirs").doc(choirId).get();
         const choirData = choirDoc.data();
-        if (!choirData) return NextResponse.json({ error: "Choir not found" }, { status: 404 });
+        if (!choirData) {
+            console.error("[Notification] Choir not found");
+            return NextResponse.json({ error: "Choir not found" }, { status: 404 });
+        }
 
         const memberIds = (choirData.members || []).map((m: any) => m.id);
+        console.log(`[Notification] Found ${memberIds.length} members in choir.`);
 
-        // Fetch users in batches (max 10 for 'in' query usually, but logic allows 30 for lookup)
-        // Actually we can just fetch all users and filter?? No, too expensive.
-        // Best: Iterate IDs and fetch docs.
+        // Fetch user docs
+        const userRefs = memberIds.map((id: string) => db.collection("users").doc(id));
+        const userDocs = await db.getAll(...userRefs);
 
         const tokens: string[] = [];
 
-        // Chunk IDs to avoid limits (max 10 items in 'in' operator, but getAll accepts array of Refs)
-        // Firestore 'getAll' or fetch in parallel.
-
-        const userRefs = memberIds.map((id: string) => db.collection("users").doc(id));
-
-        // Fetch all user docs
-        const userDocs = await db.getAll(...userRefs);
-
         userDocs.forEach(doc => {
             const u = doc.data();
+            // Log for debugging (remove in prod if sensitive)
+            // console.log(`[Notification] Checking user ${doc.id}: enabled=${u?.notificationsEnabled}, tokens=${u?.fcmTokens?.length}`);
+
             if (u && u.notificationsEnabled && u.fcmTokens && Array.isArray(u.fcmTokens)) {
                 tokens.push(...u.fcmTokens);
             }
@@ -90,9 +83,11 @@ export async function POST(req: NextRequest) {
 
         // Filter duplicates
         const uniqueTokens = Array.from(new Set(tokens));
+        console.log(`[Notification] Total unique tokens found: ${uniqueTokens.length}`);
 
         if (uniqueTokens.length === 0) {
-            return NextResponse.json({ success: true, message: "No devices to send to" });
+            console.warn("[Notification] No valid tokens found. Aborting send.");
+            return NextResponse.json({ success: true, message: "No devices to send to (0 tokens)" });
         }
 
         // 4. Send Multicast Message
@@ -104,7 +99,9 @@ export async function POST(req: NextRequest) {
             tokens: uniqueTokens,
         };
 
+        console.log(`[Notification] Sending to ${uniqueTokens.length} devices...`);
         const response = await getMessaging(adminApp).sendEachForMulticast(message);
+        console.log(`[Notification] Sent! Success: ${response.successCount}, Failed: ${response.failureCount}`);
 
         // 5. Save Notification to Firestore (for history/unread status)
         await db.collection(`choirs/${choirId}/notifications`).add({
@@ -113,20 +110,18 @@ export async function POST(req: NextRequest) {
             choirId,
             senderId: uid,
             senderName: userData?.name || "Regent",
-            createdAt: new Date().toISOString(), // Use string for client compatibility
-            readBy: [uid] // Sender implicitly reads it
+            createdAt: new Date().toISOString(),
+            readBy: [uid]
         });
 
-        // Optional: Cleanup invalid tokens from response
         if (response.failureCount > 0) {
             const failedTokens: string[] = [];
             response.responses.forEach((resp, idx) => {
                 if (!resp.success) {
                     failedTokens.push(uniqueTokens[idx]);
+                    console.error(`[Notification] Failure for token ${uniqueTokens[idx].substring(0, 10)}...:`, resp.error);
                 }
             });
-            // We could delete these tokens from users, but let's keep it simple for now.
-            console.log("Failed tokens:", failedTokens);
         }
 
         return NextResponse.json({
@@ -136,7 +131,7 @@ export async function POST(req: NextRequest) {
         });
 
     } catch (error: any) {
-        console.error("Send notification error:", error);
+        console.error("[Notification] Critical error:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

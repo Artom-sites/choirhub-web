@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { getSong, updateSong, uploadSongPdf, deleteSong, getChoir } from "@/lib/db";
+import { getPdf } from "@/lib/offlineDb";
 import { SimpleSong } from "@/types";
 import PDFViewer from "@/components/PDFViewer";
 import EditSongModal from "@/components/EditSongModal";
@@ -92,6 +93,14 @@ export default function SongPage() {
 
             setLoading(true);
             const fetched = await getSong(userData.choirId, songId);
+
+            // Try to load PDF from offline cache
+            const cachedPdf = await getPdf(songId);
+            if (cachedPdf && fetched) {
+                fetched.pdfData = cachedPdf;
+                fetched.hasPdf = true;
+            }
+
             setSong(fetched);
             // Auto-open PDF if available AND valid PDF (not Telegram link)
             if (fetched?.hasPdf && (fetched.pdfUrl || fetched.pdfData)) {

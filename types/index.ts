@@ -121,6 +121,8 @@ export interface GlobalSong {
     subcategory?: ChoirSubcategory | string;  // For choir: mixed/female/etc, for orchestra: custom
     theme?: string;         // E.g. "Різдво", "Пасха", "Весілля"
     keywords: string[];     // Lowercase for search: ["отче", "наш", "кедров"]
+    partsCount?: number;    // From index
+    pdfUrl?: string;        // From index
     parts: SongPart[];      // At least one part (main PDF)
     sourceUrl?: string;     // Original URL from mscmusic.org
     sourceId?: string;      // External ID (e.g., MSC idx)

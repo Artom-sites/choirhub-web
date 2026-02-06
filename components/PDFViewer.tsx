@@ -101,20 +101,22 @@ export default function PDFViewer({ url, title, onClose, onAddAction, isAnnotati
                     // 2. Live & Cache
                     if (active) setPdfSource(url); // Use URL immediately
 
-                    // Background fetch to cache
-                    fetch(url)
-                        .then(res => {
-                            if (!res.ok) throw new Error("Fetch failed");
-                            return res.blob();
-                        })
-                        .then(blob => {
-                            savePdfToCache(url, blob);
-                            if (active) {
-                                setIsCached(true);
-                                setShowIndicator(true);
-                            }
-                        })
-                        .catch(err => console.error("Background cache failed:", err));
+                    // Background fetch to cache (Only if NOT data URI)
+                    if (!url.startsWith('data:')) {
+                        fetch(url)
+                            .then(res => {
+                                if (!res.ok) throw new Error("Fetch failed");
+                                return res.blob();
+                            })
+                            .then(blob => {
+                                savePdfToCache(url, blob);
+                                if (active) {
+                                    setIsCached(true);
+                                    setShowIndicator(true);
+                                }
+                            })
+                            .catch(err => console.error("Background cache failed:", err));
+                    }
                 }
             } catch (err) {
                 console.error("PDF Load Error:", err);

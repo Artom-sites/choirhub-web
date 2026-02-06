@@ -29,6 +29,8 @@ export function usePinchZoom({
 
     const initialDistance = useRef<number | null>(null);
     const initialScale = useRef<number>(1);
+    const initialMidpoint = useRef<{ x: number, y: number } | null>(null);
+    const initialTranslate = useRef<{ x: number, y: number }>({ x: 0, y: 0 });
 
     // Panning refs
     const lastPan = useRef<{ x: number, y: number } | null>(null);
@@ -40,6 +42,13 @@ export function usePinchZoom({
         return Math.sqrt(dx * dx + dy * dy);
     };
 
+    const getMidpoint = (touches: TouchList): { x: number, y: number } => {
+        return {
+            x: (touches[0].clientX + touches[1].clientX) / 2,
+            y: (touches[0].clientY + touches[1].clientY) / 2
+        };
+    };
+
     const handleTouchStart = useCallback((e: React.TouchEvent) => {
         if (!enabled) return;
 
@@ -49,32 +58,49 @@ export function usePinchZoom({
             const touches = e.touches as unknown as TouchList;
             initialDistance.current = getDistance(touches);
             initialScale.current = state.scale;
+            initialMidpoint.current = getMidpoint(touches);
+            initialTranslate.current = { x: state.translateX, y: state.translateY };
         } else if (e.touches.length === 1 && state.scale > 1) {
             // Start panning
             lastPan.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         }
-    }, [enabled, state.scale]);
+    }, [enabled, state.scale, state.translateX, state.translateY]);
 
     const handleTouchMove = useCallback((e: React.TouchEvent) => {
         if (!enabled) return;
 
-        if (e.touches.length === 2 && initialDistance.current) {
+        if (e.touches.length === 2 && initialDistance.current && initialMidpoint.current) {
             e.preventDefault();
             e.stopPropagation();
 
             const touches = e.touches as unknown as TouchList;
             const currentDistance = getDistance(touches);
+            const currentMidpoint = getMidpoint(touches);
 
             // Calculate new scale
             let newScale = initialScale.current * (currentDistance / initialDistance.current);
             newScale = Math.min(maxScale, Math.max(minScale, newScale));
 
+            // Calculate translation to keep zoom centered on pinch point
+            // The formula: new_translate = midpoint - (midpoint - initial_translate) * (new_scale / initial_scale)
+            const scaleRatio = newScale / initialScale.current;
+
+            // How much the midpoint moved during the gesture
+            const midpointDeltaX = currentMidpoint.x - initialMidpoint.current.x;
+            const midpointDeltaY = currentMidpoint.y - initialMidpoint.current.y;
+
+            // Adjust translation to zoom around pinch center
+            const newTranslateX = initialTranslate.current.x + midpointDeltaX -
+                (initialMidpoint.current.x - initialTranslate.current.x) * (scaleRatio - 1);
+            const newTranslateY = initialTranslate.current.y + midpointDeltaY -
+                (initialMidpoint.current.y - initialTranslate.current.y) * (scaleRatio - 1);
+
             if (Math.abs(newScale - state.scale) > 0.01) {
-                setState(prev => ({
-                    ...prev,
+                setState({
                     scale: newScale,
-                    // Center the zoom slightly better or keep current pan
-                }));
+                    translateX: newTranslateX,
+                    translateY: newTranslateY
+                });
                 onScaleChange?.(newScale);
             }
         } else if (e.touches.length === 1 && state.scale > 1 && lastPan.current) {
@@ -98,6 +124,7 @@ export function usePinchZoom({
     const handleTouchEnd = useCallback((e: React.TouchEvent) => {
         if (e.touches.length < 2) {
             initialDistance.current = null;
+            initialMidpoint.current = null;
         }
         if (e.touches.length === 0) {
             lastPan.current = null;
@@ -124,13 +151,13 @@ export function usePinchZoom({
             translateX: newScale <= 1 ? 0 : prev.translateX,
             translateY: newScale <= 1 ? 0 : prev.translateY
         }));
-    }, [minScale]);
+    }, [minScale, state.scale]);
 
     return {
         scale: state.scale,
         translateX: state.translateX,
         translateY: state.translateY,
-        isPinching: false, // Simplified
+        isPinching: false,
         handlers: {
             onTouchStart: handleTouchStart,
             onTouchMove: handleTouchMove,
@@ -141,7 +168,7 @@ export function usePinchZoom({
         zoomOut,
         style: {
             transform: `translate(${state.translateX}px, ${state.translateY}px) scale(${state.scale})`,
-            transformOrigin: '0 0', // Important: zoom from top-left, handle positioning via translate
+            transformOrigin: '0 0',
             transition: state.scale === 1 ? 'transform 0.3s ease' : 'none'
         }
     };
