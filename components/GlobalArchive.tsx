@@ -535,124 +535,126 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
 
                 {!isModerationMode ? (
                     <>
-                        <div className="flex gap-2 mb-4">
-                            <div className="relative flex-1 group">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary group-focus-within:text-text-primary transition-colors" />
-                                <input
-                                    type="text"
-                                    placeholder="Пошук пісні..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-12 pr-10 py-3 bg-surface rounded-2xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
-                                />
-                                {searchQuery && (
-                                    <button
-                                        onClick={() => setSearchQuery("")}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-secondary hover:text-text-primary hover:bg-surface-highlight rounded-full transition-all"
-                                    >
-                                        <X className="w-4 h-4" />
-                                    </button>
-                                )}
-                            </div>
-                            <button
-                                onClick={() => setShowFilters(!showFilters)}
-                                className={`px-4 rounded-2xl flex items-center gap-2 transition-all ${showFilters || activeFiltersCount > 0
-                                    ? "bg-primary text-background"
-                                    : "bg-surface text-text-secondary hover:text-text-primary"
-                                    }`}
-                            >
-                                <Filter className="w-5 h-5" />
-                                {activeFiltersCount > 0 && <span className="bg-black/20 px-1.5 rounded-full text-xs">{activeFiltersCount}</span>}
-                            </button>
-                        </div>
-
-                        {/* Filters Panel */}
-                        <AnimatePresence>
-                            {showFilters && (
-                                <motion.div
-                                    initial={{ height: 0, opacity: 0 }}
-                                    animate={{ height: "auto", opacity: 1 }}
-                                    exit={{ height: 0, opacity: 0 }}
-                                    className="overflow-hidden mt-2"
+                        <div className="sticky top-[64px] z-10 bg-background/95 backdrop-blur-lg pb-2 border-b border-border">
+                            <div className="flex gap-2">
+                                <div className="relative flex-1 group">
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary group-focus-within:text-text-primary transition-colors" />
+                                    <input
+                                        type="text"
+                                        placeholder="Пошук пісні..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="w-full pl-12 pr-10 py-3 bg-surface rounded-2xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
+                                    />
+                                    {searchQuery && (
+                                        <button
+                                            onClick={() => setSearchQuery("")}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-secondary hover:text-text-primary hover:bg-surface-highlight rounded-full transition-all"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={() => setShowFilters(!showFilters)}
+                                    className={`px-4 rounded-2xl flex items-center gap-2 transition-all ${showFilters || activeFiltersCount > 0
+                                        ? "bg-primary text-background"
+                                        : "bg-surface text-text-secondary hover:text-text-primary"
+                                        }`}
                                 >
-                                    <div className="bg-surface rounded-2xl p-4 mb-4 space-y-4 border border-border">
-                                        {/* Language */}
-                                        <div>
-                                            <p className="text-xs text-text-secondary uppercase font-bold tracking-wider mb-2">Мова</p>
-                                            <div className="flex bg-black/20 rounded-xl p-1 w-fit">
-                                                <button onClick={() => setSelectedLanguage('all')} className={`px-3 py-1.5 rounded-lg text-sm transition-all ${selectedLanguage === 'all' ? 'bg-primary/20 text-text-primary' : 'text-text-secondary'}`}>Всі</button>
-                                                <button onClick={() => setSelectedLanguage('cyrillic')} className={`px-3 py-1.5 rounded-lg text-sm transition-all ${selectedLanguage === 'cyrillic' ? 'bg-primary/20 text-text-primary' : 'text-text-secondary'}`}>АБВ</button>
-                                                <button onClick={() => setSelectedLanguage('latin')} className={`px-3 py-1.5 rounded-lg text-sm transition-all ${selectedLanguage === 'latin' ? 'bg-primary/20 text-text-primary' : 'text-text-secondary'}`}>ABC</button>
-                                            </div>
-                                        </div>
+                                    <Filter className="w-5 h-5" />
+                                    {activeFiltersCount > 0 && <span className="bg-black/20 px-1.5 rounded-full text-xs">{activeFiltersCount}</span>}
+                                </button>
+                            </div>
 
-                                        {/* Categories */}
-                                        <div className="border-b border-border pb-4">
-                                            <p className="text-xs text-text-secondary uppercase font-bold tracking-wider mb-2">Категорія</p>
-                                            <div className="flex flex-wrap gap-2">
-                                                {CATEGORIES.map(cat => (
-                                                    <button
-                                                        key={cat.id}
-                                                        onClick={() => {
-                                                            setSelectedCategory(cat.id);
-                                                            setSelectedSubCategory(null);
-                                                        }}
-                                                        className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-all border ${selectedCategory === cat.id
-                                                            ? "bg-primary text-background border-primary font-semibold"
-                                                            : "bg-transparent text-text-secondary border-border hover:border-border/50"
-                                                            }`}
-                                                    >
-                                                        <cat.icon className="w-4 h-4" />
-                                                        {cat.label}
-                                                    </button>
-                                                ))}
+                            {/* Filters Panel */}
+                            <AnimatePresence>
+                                {showFilters && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: "auto", opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        className="overflow-hidden mt-2"
+                                    >
+                                        <div className="bg-surface rounded-2xl p-4 mb-4 space-y-4 border border-border">
+                                            {/* Language */}
+                                            <div>
+                                                <p className="text-xs text-text-secondary uppercase font-bold tracking-wider mb-2">Мова</p>
+                                                <div className="flex bg-black/20 rounded-xl p-1 w-fit">
+                                                    <button onClick={() => setSelectedLanguage('all')} className={`px-3 py-1.5 rounded-lg text-sm transition-all ${selectedLanguage === 'all' ? 'bg-primary/20 text-text-primary' : 'text-text-secondary'}`}>Всі</button>
+                                                    <button onClick={() => setSelectedLanguage('cyrillic')} className={`px-3 py-1.5 rounded-lg text-sm transition-all ${selectedLanguage === 'cyrillic' ? 'bg-primary/20 text-text-primary' : 'text-text-secondary'}`}>АБВ</button>
+                                                    <button onClick={() => setSelectedLanguage('latin')} className={`px-3 py-1.5 rounded-lg text-sm transition-all ${selectedLanguage === 'latin' ? 'bg-primary/20 text-text-primary' : 'text-text-secondary'}`}>ABC</button>
+                                                </div>
                                             </div>
-                                        </div>
 
-                                        {/* Subcategories */}
-                                        {selectedCategory !== "all" && selectedCategory !== "new" && SUBCATEGORIES[selectedCategory] && (
-                                            <div className="space-y-2">
-                                                <p className="text-xs text-text-secondary uppercase font-bold tracking-wider">Склад</p>
+                                            {/* Categories */}
+                                            <div className="border-b border-border pb-4">
+                                                <p className="text-xs text-text-secondary uppercase font-bold tracking-wider mb-2">Категорія</p>
                                                 <div className="flex flex-wrap gap-2">
-                                                    <button
-                                                        onClick={() => setSelectedSubCategory(null)}
-                                                        className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${!selectedSubCategory
-                                                            ? "bg-primary text-background border-primary"
-                                                            : "bg-transparent text-text-secondary border-border hover:border-border/50"
-                                                            }`}
-                                                    >
-                                                        Всі
-                                                    </button>
-                                                    {SUBCATEGORIES[selectedCategory].map(sub => (
+                                                    {CATEGORIES.map(cat => (
                                                         <button
-                                                            key={sub.id}
-                                                            onClick={() => setSelectedSubCategory(selectedSubCategory === sub.id ? null : sub.id)}
-                                                            className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${selectedSubCategory === sub.id
-                                                                ? "bg-primary text-background border-primary"
+                                                            key={cat.id}
+                                                            onClick={() => {
+                                                                setSelectedCategory(cat.id);
+                                                                setSelectedSubCategory(null);
+                                                            }}
+                                                            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-all border ${selectedCategory === cat.id
+                                                                ? "bg-primary text-background border-primary font-semibold"
                                                                 : "bg-transparent text-text-secondary border-border hover:border-border/50"
                                                                 }`}
                                                         >
-                                                            {sub.label}
+                                                            <cat.icon className="w-4 h-4" />
+                                                            {cat.label}
                                                         </button>
                                                     ))}
                                                 </div>
                                             </div>
-                                        )}
 
-                                        {/* Themes */}
-                                        <div className="space-y-2">
-                                            <p className="text-xs text-text-secondary uppercase font-bold tracking-wider">Тематика</p>
-                                            <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-                                                <button onClick={() => setSelectedTheme(null)} className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs border ${!selectedTheme ? "bg-primary text-background border-primary" : "bg-transparent text-text-secondary border-border"}`}>Всі теми</button>
-                                                {OFFICIAL_THEMES.map(theme => (
-                                                    <button key={theme} onClick={() => setSelectedTheme(selectedTheme === theme ? null : theme)} className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs border ${selectedTheme === theme ? "bg-primary text-background border-primary" : "bg-transparent text-text-secondary border-border"}`}>{theme}</button>
-                                                ))}
+                                            {/* Subcategories */}
+                                            {selectedCategory !== "all" && selectedCategory !== "new" && SUBCATEGORIES[selectedCategory] && (
+                                                <div className="space-y-2">
+                                                    <p className="text-xs text-text-secondary uppercase font-bold tracking-wider">Склад</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        <button
+                                                            onClick={() => setSelectedSubCategory(null)}
+                                                            className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${!selectedSubCategory
+                                                                ? "bg-primary text-background border-primary"
+                                                                : "bg-transparent text-text-secondary border-border hover:border-border/50"
+                                                                }`}
+                                                        >
+                                                            Всі
+                                                        </button>
+                                                        {SUBCATEGORIES[selectedCategory].map(sub => (
+                                                            <button
+                                                                key={sub.id}
+                                                                onClick={() => setSelectedSubCategory(selectedSubCategory === sub.id ? null : sub.id)}
+                                                                className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${selectedSubCategory === sub.id
+                                                                    ? "bg-primary text-background border-primary"
+                                                                    : "bg-transparent text-text-secondary border-border hover:border-border/50"
+                                                                    }`}
+                                                            >
+                                                                {sub.label}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Themes */}
+                                            <div className="space-y-2">
+                                                <p className="text-xs text-text-secondary uppercase font-bold tracking-wider">Тематика</p>
+                                                <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+                                                    <button onClick={() => setSelectedTheme(null)} className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs border ${!selectedTheme ? "bg-primary text-background border-primary" : "bg-transparent text-text-secondary border-border"}`}>Всі теми</button>
+                                                    {OFFICIAL_THEMES.map(theme => (
+                                                        <button key={theme} onClick={() => setSelectedTheme(selectedTheme === theme ? null : theme)} className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs border ${selectedTheme === theme ? "bg-primary text-background border-primary" : "bg-transparent text-text-secondary border-border"}`}>{theme}</button>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
                     </>
                 ) : (
                     <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-xl mb-4">
