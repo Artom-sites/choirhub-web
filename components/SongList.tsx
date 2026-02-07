@@ -397,7 +397,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                                 initial={{ height: 0, opacity: 0 }}
                                 animate={{ height: "auto", opacity: 1 }}
                                 exit={{ height: 0, opacity: 0 }}
-                                className="overflow-hidden"
+                                className="overflow-hidden mt-3"
                             >
                                 <div className="bg-surface rounded-2xl p-4 space-y-4 border border-border/50 shadow-sm">
 
