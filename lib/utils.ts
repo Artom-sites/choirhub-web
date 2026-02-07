@@ -150,5 +150,10 @@ const finalizeCleanup = (str: string): string => {
         return "Загальна";
     }
 
+    // Custom mappings for generic names
+    const lower = s.toLowerCase();
+    if (lower === 'партія 1' || lower === 'part 1') return 'Партитура';
+    if (lower === 'партія 2' || lower === 'part 2') return 'Хор';
+
     return s.charAt(0).toUpperCase() + s.slice(1);
 };
