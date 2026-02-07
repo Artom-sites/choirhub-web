@@ -151,17 +151,28 @@ const finalizeCleanup = (str: string): string => {
     }
 
     // Custom mappings for generic names
-    // Custom mappings for generic names
     const lower = s.toLowerCase();
 
     // Check for "Party 1" / "Part 1" / "Partia 1" (handles mixed Latin/Cyrillic chars: a, p, o, e, etc.)
     // p - 0440 (cyr) 0070 (lat)
     // a - 0430 (cyr) 0061 (lat)
 
-    // Simple robust check: includes "1" and starts with "p" or "п" and length < 12
+    // Strict robust check: starts with "p" or "п" and IS EXACTLY digit 1 or 2 (surrounded by word boundaries ideally, or just length check)
     if (s.length < 15 && /\d/.test(s)) {
-        if (lower.includes('1') && (lower.startsWith('p') || lower.startsWith('п'))) return 'Партитура';
-        if (lower.includes('2') && (lower.startsWith('p') || lower.startsWith('п'))) return 'Хор';
+        const numMatch = s.match(/(\d+)/);
+        if (numMatch) {
+            const num = parseInt(numMatch[1], 10);
+            // ONLY map if number is exactly 1 or 2. 12, 13 etc will be skipped and returned as is.
+            if (num === 1 && (lower.startsWith('p') || lower.startsWith('п'))) return 'Партитура';
+            if (num === 2 && (lower.startsWith('p') || lower.startsWith('п'))) return 'Хор';
+        }
+    }
+
+    // New Step 8: Suffix Removal (if title matches end of string)
+    // "Треугольник А праздник..." -> "Треугольник"
+    if (s.toLowerCase().endsWith(songTitle.toLowerCase())) {
+        const withoutTitle = s.substring(0, s.length - songTitle.length).trim();
+        if (withoutTitle.length > 0) return finalizeCleanup(withoutTitle);
     }
 
     return s.charAt(0).toUpperCase() + s.slice(1);
