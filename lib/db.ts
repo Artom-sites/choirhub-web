@@ -174,6 +174,20 @@ export async function syncSongs(choirId: string, lastSyncTimestamp: number): Pro
 }
 
 export async function getSong(choirId: string, songId: string): Promise<SimpleSong | null> {
+    // If offline, try to find song in cached songs list
+    if (isOffline()) {
+        const cachedSongs = getCachedSongs(choirId);
+        if (cachedSongs) {
+            const song = cachedSongs.find(s => s.id === songId);
+            if (song) {
+                console.log('[DB] Serving song from offline cache:', songId);
+                return song;
+            }
+        }
+        console.warn('[DB] Offline but song not in cache:', songId);
+        return null;
+    }
+
     try {
         const docRef = doc(db, `choirs/${choirId}/songs`, songId);
         const snapshot = await getDoc(docRef);
@@ -188,6 +202,15 @@ export async function getSong(choirId: string, songId: string): Promise<SimpleSo
         return null;
     } catch (error) {
         console.error("Error fetching song:", error);
+        // Try cache as fallback
+        const cachedSongs = getCachedSongs(choirId);
+        if (cachedSongs) {
+            const song = cachedSongs.find(s => s.id === songId);
+            if (song) {
+                console.log('[DB] Firestore failed, serving song from cache:', songId);
+                return song;
+            }
+        }
         return null;
     }
 }
