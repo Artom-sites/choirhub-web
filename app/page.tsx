@@ -1512,7 +1512,7 @@ function HomePageContent() {
 
             {/* Filters */}
             <div className="flex overflow-x-auto gap-2 scrollbar-hide -mx-4 px-4 pb-1 mb-6">
-              {['Всі', 'Soprano', 'Alto', 'Tenor', 'Bass', 'Real Users'].map(filter => {
+              {['Всі', 'Soprano', 'Alto', 'Tenor', 'Bass', ...(canEdit ? ['Real Users'] : [])].map(filter => {
                 return (
                   <button
                     key={filter}
@@ -1562,7 +1562,7 @@ function HomePageContent() {
                               )}
                             </div>
                             <div className="text-text-secondary text-xs">
-                              {appUser.email}
+                              {canEdit && appUser.email}
                               {appUser.voice && <span className="ml-2 text-primary">{appUser.voice}</span>}
                             </div>
                           </div>
