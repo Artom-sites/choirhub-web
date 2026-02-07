@@ -288,14 +288,18 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
         let results = songs;
 
         if (selectedCategory === 'new') {
+            // Filter songs created in the last 30 days
+            const thirtyDaysAgo = Date.now() / 1000 - (30 * 24 * 60 * 60);
+            results = results.filter(s => {
+                const createdAt = (s.createdAt as any)?.seconds || 0;
+                return createdAt >= thirtyDaysAgo;
+            });
             // Sort by createdAt desc (newest first)
-            // Filter out song without createdAt if essential, or just push to bottom
             results = [...results].sort((a, b) => {
                 const tA = (a.createdAt as any)?.seconds || 0;
                 const tB = (b.createdAt as any)?.seconds || 0;
                 return tB - tA;
             });
-            // Maybe limit to top 100? No, let user scroll
         } else if (selectedCategory !== 'all') {
             // Pagination handles initial load, but local filters still apply to LOADED songs
             // Ideally we should query by category on server, but for now we filter locally
@@ -481,7 +485,7 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
     return (
         <div className="flex flex-col h-full">
             {/* Stats Header Card - Matching Repertoire Style */}
-            <div className="bg-surface rounded-2xl p-5 card-shadow">
+            <div className="bg-surface rounded-2xl p-5 card-shadow mb-4">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 glass-frost-circle rounded-full flex items-center justify-center text-zinc-700">
