@@ -187,10 +187,10 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
     };
 
     // Load ALL data from R2 Static Index (Zero Firestore Reads!)
-    const loadFromR2 = async (): Promise<boolean> => {
+    const loadFromR2 = async (): Promise<GlobalSong[] | null> => {
         try {
             const publicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
-            if (!publicUrl) return false;
+            if (!publicUrl) return null;
             const indexUrl = `${publicUrl}/global_songs_index.json`;
             const res = await fetch(indexUrl + '?t=' + Date.now());
             if (!res.ok) throw new Error("Index not found");
@@ -203,10 +203,10 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
             setupFuse(sortedSongs);
             saveToCache(sortedSongs);
             console.log(`✅ Loaded ${sortedSongs.length} songs from R2 (0 Firestore reads)`);
-            return true;
+            return sortedSongs;
         } catch (e) {
             console.warn("Failed to load from R2:", e);
-            return false;
+            return null;
         }
     };
 
@@ -233,8 +233,13 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
     };
 
     // Effect: Initial Load - Cache -> R2 -> Firestore
+    const processedRef = useRef(false);
+
     useEffect(() => {
         const init = async () => {
+            if (processedRef.current) return;
+            processedRef.current = true;
+
             setLoading(true);
 
             // 1. Try cache first (instant offline support)
@@ -247,21 +252,81 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                 setHasMore(false);
                 setLoading(false);
                 console.log(`📦 Loaded ${sortedCached.length} songs from cache`);
+
                 // Refresh from R2 in background
-                loadFromR2();
+                loadFromR2().then((r2Data) => {
+                    if (r2Data) {
+                        loadDelta(r2Data);
+                    }
+                }).catch(console.error);
                 return;
             }
 
             // 2. Try R2
-            const r2Success = await loadFromR2();
-            if (!r2Success) {
+            const r2Data = await loadFromR2();
+            if (r2Data) {
+                await loadDelta(r2Data);
+            } else {
                 // 3. Fallback to Firestore
                 await loadFromFirestore();
             }
             setLoading(false);
         };
+
         init();
     }, []);
+
+    // 4. Delta Sync (Fetch only new updates from Firestore)
+    const loadDelta = async (baseSongs: GlobalSong[]) => {
+        if (baseSongs.length === 0) return;
+
+        try {
+            // Find max updated time
+            let maxTime = 0;
+            if (baseSongs.length > 0) {
+                console.log("🔍 Sample updatedAt:", baseSongs[0].updatedAt, "Type:", typeof baseSongs[0].updatedAt);
+            }
+            baseSongs.forEach(s => {
+                const t = s.updatedAt ? new Date(s.updatedAt).getTime() : 0;
+                if (t > maxTime) maxTime = t;
+            });
+
+            if (maxTime === 0) {
+                console.warn("⚠️ Delta Sync Skipped: No valid updatedAt found in base songs.");
+                return;
+            }
+
+            const lastUpdate = new Date(maxTime);
+            console.log(`🔄 Delta Sync: Checking for updates since ${lastUpdate.toISOString()}...`);
+
+            const q = query(
+                collection(db, "global_songs"),
+                where("updatedAt", ">", lastUpdate)
+            );
+
+            const snapshot = await getDocs(q);
+            if (snapshot.empty) {
+                console.log("✅ Delta Sync: No new updates found.");
+            } else {
+                console.log(`🚀 Found ${snapshot.size} new updates! Merging...`);
+                const newSongs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GlobalSong));
+
+                // Merge
+                const currentMap = new Map(baseSongs.map(s => [s.id, s]));
+                newSongs.forEach(s => currentMap.set(s.id, s));
+
+                const merged = Array.from(currentMap.values());
+                const sorted = processSongs(merged);
+
+                setSongs(sorted);
+                setTotalSongsCount(sorted.length);
+                setupFuse(sorted);
+                saveToCache(sorted);
+            }
+        } catch (e) {
+            console.error("Delta sync failed", e);
+        }
+    };
 
     // Effect: Debounced Search - purely local with Fuse.js
     useEffect(() => {
@@ -1072,9 +1137,11 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                         });
                         if (!res.ok) throw new Error("API Error");
                         setToastMessage("Індекс оновлено! Перезавантажте сторінку.");
+                        setTimeout(() => setToastMessage(null), 5000);
                         loadFromR2();
                     } catch (e) {
                         setToastMessage("Помилка оновлення індексу");
+                        setTimeout(() => setToastMessage(null), 5000);
                     } finally {
                         setRebuildIndexModal({ isOpen: false, loading: false });
                     }

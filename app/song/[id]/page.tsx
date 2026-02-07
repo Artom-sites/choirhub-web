@@ -329,7 +329,7 @@ export default function SongPage() {
                                         const nameToCheck = part.name || "";
                                         const shouldUseFilename = !nameToCheck || isGenericPartName(nameToCheck);
                                         const sourceString = shouldUseFilename ? getFileNameFromUrl(part.pdfUrl || "") : nameToCheck;
-                                        return extractInstrument(sourceString || `Партія ${index + 1}`, song.title);
+                                        return extractInstrument(sourceString || `Part ${index + 1}`, song.title);
                                     })()}
                                 </button>
                             ))}

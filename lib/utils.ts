@@ -14,6 +14,124 @@ export const extractInstrument = (partName: string, songTitle: string): string =
     // 2. Remove leading ordering numbers (e.g. "00 ", "01 - ", "1.")
     name = name.replace(/^\d+[\s.\-_]*/, '');
 
+    // --- NEW LOGIC: Whitelist & Generic Mapping ---
+
+    const lowerName = name.toLowerCase();
+
+    // Map of known instruments/terms to their clean Display Name
+    const knownInstruments: Record<string, string> = {
+        // Generic / Score
+        'партитура': 'Партитура',
+        'partitur': 'Партитура',
+        'full score': 'Партитура',
+        'score': 'Партитура',
+        'general': 'Партитура',
+        'загальна': 'Партитура',
+        'total': 'Партитура',
+        'клавір': 'Клавір',
+        'clavier': 'Клавір',
+        'piano': 'Фортепіано',
+        'фортепіано': 'Фортепіано',
+        'фортепиано': 'Фортепіано',
+
+        // Choir
+        'хор': 'Хор',
+        'choir': 'Хор',
+        'chorus': 'Хор',
+        'soprano': 'Сопрано',
+        'сопрано': 'Сопрано',
+        'alto': 'Альт',
+        'альт': 'Альт',
+        'tenor': 'Тенор',
+        'тенор': 'Тенор',
+        'bass': 'Бас',
+        'бас': 'Бас',
+        'baritone': 'Баритон',
+        'баритон': 'Баритон',
+
+        // Strings
+        'violin': 'Скрипка',
+        'скрипка': 'Скрипка',
+        'viola': 'Альт', // Context might matter, usually Alto/Viola share name in UA
+        'cello': 'Віолончель',
+        'violoncello': 'Віолончель',
+        'віолончель': 'Віолончель',
+        'виолончель': 'Віолончель',
+        'double bass': 'Контрабас',
+        'contrabass': 'Контрабас',
+        'контрабас': 'Контрабас',
+
+        // Winds
+        'flute': 'Флейта',
+        'флейта': 'Флейта',
+        'oboe': 'Гобой',
+        'гобой': 'Гобой',
+        'clarinet': 'Кларнет',
+        'кларнет': 'Кларнет',
+        'bassoon': 'Фагот',
+        'фагот': 'Фагот',
+
+        // Brass
+        'horn': 'Валторна',
+        'валторна': 'Валторна',
+        'trumpet': 'Труба',
+        'труба': 'Труба',
+        'trombone': 'Тромбон',
+        'тромбон': 'Тромбон',
+        'tuba': 'Туба',
+        'туба': 'Туба',
+
+        // Other
+        'guitar': 'Гітара',
+        'гітара': 'Гітара',
+        'гитара': 'Гітара',
+        'organ': 'Орган',
+        'орган': 'Орган',
+        'drums': 'Ударні',
+        'percussion': 'Ударні',
+        'ударні': 'Ударні',
+        'ударные': 'Ударні',
+        'triangle': 'Трикутник',
+        'треугольник': 'Трикутник',
+    };
+
+    // Check for exact keys first (for "General", "Загальна")
+    if (["general", "загальна", "full score", "score"].includes(lowerName)) {
+        return "Партитура";
+    }
+
+    // Check if the name CONTAINS any of the known instruments
+    // We sort keys by length descending to match "Bassoon" before "Bass"
+    const sortedKeys = Object.keys(knownInstruments).sort((a, b) => b.length - a.length);
+
+    for (const key of sortedKeys) {
+        if (lowerName.includes(key)) {
+            // Found a known instrument!
+            // Try to capture the instrument AND any following number (1, 2, I, II)
+            // Regex: key + optional space/dash + optional number/roman
+
+            // Escape key for regex just in case
+            const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+            // Look for: Key + (optional: space/dash/dot + number OR roman numeral)
+            // We look for numbers 1-99 or Roman I-VIII, at the end of word or string
+            const regex = new RegExp(`${escapedKey}[\\s\\-._]*([0-9]+|[IVX]+)?(?:$|[^a-zа-я])`, 'i');
+            const match = name.match(regex);
+
+            if (match) {
+                const number = match[1] ? ` ${match[1].toUpperCase()}` : '';
+                // Special case: "Violin I" -> "Скрипка 1" or keep Roman? 
+                // Let's keep what was in source but usually standardizing to Arabic is better?
+                // For now, keep as is but space separated.
+
+                return knownInstruments[key] + number;
+            }
+
+            // If regex failed (e.g. key="alt", name="altos"), we do NOT return here.
+            // We continue searching or fall through to standard cleanup.
+        }
+    }
+
     // 3. Normalization Helper
     const normalizeString = (str: string) => {
         return str.toLowerCase()
@@ -31,21 +149,24 @@ export const extractInstrument = (partName: string, songTitle: string): string =
             .trim();
     };
 
+    // Helper to strip musical keys like " — C-dur", " - B minor"
+    // Doing this early helps with title matching
+    name = name.replace(/[\s\-_–—]+([A-H][hs]?)[\s\-_]*(dur|moll|major|minor)[\s\-_]*$/i, '');
+
+    // Also strip just key if it looks like " in F", " в F"
+    name = name.replace(/[\s]+(in|в|in the)[\s]+[A-H][hs]?[\s]*$/i, '');
+
     const normName = normalizeString(name);
     const normTitle = normalizeString(songTitle);
 
     // 4. Exact or fuzzy match for "Whole Score"
-    if (normName === normTitle) return "Загальна";
-    if (normTitle.includes(normName) && normName.length > 4) return "Загальна";
+    if (normName === normTitle) return "Партитура";
+    if (normTitle.includes(normName) && normName.length > 4) return "Партитура";
 
     // 5. Intelligent Separation Check
-    // We check if the name contains the title, or if the title is on one side of a separator.
-
-    // We try to split by standard separators
     const separators = [' - ', ' – ', ' — ', '-']; // priority order
     let parts: string[] = [];
 
-    // Try to split by the first valid separator found
     for (const sep of separators) {
         if (name.includes(sep)) {
             parts = name.split(sep).map(p => p.trim()).filter(p => p.length > 0);
@@ -54,21 +175,18 @@ export const extractInstrument = (partName: string, songTitle: string): string =
     }
 
     if (parts.length > 1) {
-        // Find which part matches the title best
         let bestMatchIndex = -1;
 
         for (let i = 0; i < parts.length; i++) {
             const pNorm = normalizeString(parts[i]);
             // Check if this part IS the title or START of title
-            if (normTitle.includes(pNorm) || pNorm.includes(normTitle) || normTitle.startsWith(pNorm.substring(0, 10)) || pNorm.startsWith(normTitle.substring(0, 10))) {
+            if (normTitle.includes(pNorm) || pNorm.includes(normTitle)) {
                 bestMatchIndex = i;
                 break;
             }
-
-            // Check word overlap - strict check to avoid false positives with common words
+            // Word overlap check
             const pWords = pNorm.split(' ');
             const tWords = normTitle.split(' ');
-            // If the first word matches the title's first word, it's a strong indicator
             if (pWords.length > 0 && tWords.length > 0 && pWords[0] === tWords[0] && pWords[0].length > 3) {
                 bestMatchIndex = i;
                 break;
@@ -76,19 +194,34 @@ export const extractInstrument = (partName: string, songTitle: string): string =
         }
 
         if (bestMatchIndex !== -1) {
-            // The title is at parts[bestMatchIndex].
-            // The instrument is the OTHER part(s).
             const instrumentParts = parts.filter((_, idx) => idx !== bestMatchIndex);
             if (instrumentParts.length > 0) {
                 const candidate = instrumentParts.join(' ').trim();
                 if (candidate.length > 1) return finalizeCleanup(candidate);
             }
-            return "Загальна";
+            return "Партитура";
         }
     }
 
-    // 6. Fallback: Word Removal (Standard Left-to-Right removal)
-    // If no explicit separator matched, assumes "Title Instrument"
+    // 6. Word Removal strategies
+
+    // A. Remove Title from START
+    if (normName.startsWith(normTitle)) {
+        // Try to cut by length of title (heuristic) - risky if chars differ
+        // Better: regex replace based on title words
+        const possible = name.substring(songTitle.length).trim();
+        // But normalized might match while raw doesn't.
+        // Let's rely on word removal loop
+    }
+
+    // B. Heuristic: Remove Title string (case insensitive) directly
+    const titleRegex = new RegExp(songTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    if (titleRegex.test(name)) {
+        const candidate = name.replace(titleRegex, '').trim();
+        if (candidate.length > 1) return finalizeCleanup(candidate);
+    }
+
+    // C. Word-by-word removal from START
     const nameWords = normName.split(/\s+/);
     const titleWords = normTitle.split(/\s+/);
 
@@ -97,10 +230,7 @@ export const extractInstrument = (partName: string, songTitle: string): string =
         if (nameWords[i] === titleWords[i]) matchCount++;
         else break;
     }
-
     if (matchCount > 0) {
-        // Starts with title -> remove it
-        // We need to cut the original string based on words roughly
         const originalWords = name.split(/[\s\-–—]+/);
         if (originalWords.length > matchCount) {
             const tail = originalWords.slice(matchCount).join(' ');
@@ -108,31 +238,37 @@ export const extractInstrument = (partName: string, songTitle: string): string =
         }
     }
 
+    // D. Word-by-word removal from END
+    // "Triangle Song Title"
+    // Reverse check
+    let matchEndCount = 0;
+    const nameRev = [...nameWords].reverse();
+    const titleRev = [...titleWords].reverse();
+    for (let i = 0; i < Math.min(nameRev.length, titleRev.length); i++) {
+        if (nameRev[i] === titleRev[i]) matchEndCount++;
+        else break;
+    }
+    if (matchEndCount > 0) {
+        const originalWords = name.split(/\s+/); // simpler split
+        if (originalWords.length > matchEndCount) {
+            const head = originalWords.slice(0, originalWords.length - matchEndCount).join(' ');
+            if (head.length > 0) return finalizeCleanup(head);
+        }
+    }
+
     // 7. Final attempt: parens
-    // Check if the content INSIDE parens is the title?
     const parenMatch = name.match(/\(([^)]+)\)$/);
     if (parenMatch) {
         const inside = parenMatch[1].trim();
         const insideNorm = normalizeString(inside);
-        // If inside matches title, return valid OUTER part
         if (normTitle.includes(insideNorm) || insideNorm.includes(normTitle)) {
-            // Return everything BEFORE the parenthesis
-            // "Viola (Христос)" -> "Viola"
             return finalizeCleanup(name.replace(/\(.*\)$/, ''));
         }
         return finalizeCleanup(inside);
     }
 
-    // If we're here, we failed to extract.
     // If result is basically the title, return General.
-    if (normalizeString(name) === normTitle) return "Загальна";
-
-    // New Step 8: Suffix Removal (if title matches end of string)
-    // "Треугольник А праздник..." -> "Треугольник"
-    if (name.toLowerCase().endsWith(songTitle.toLowerCase())) {
-        const withoutTitle = name.substring(0, name.length - songTitle.length).trim();
-        if (withoutTitle.length > 0) return finalizeCleanup(withoutTitle);
-    }
+    if (normalizeString(name) === normTitle) return "Партитура";
 
     return finalizeCleanup(name);
 };
@@ -149,7 +285,7 @@ const finalizeCleanup = (str: string): string => {
         .replace(/\s*\([^)]*$/, '')
         .trim();
 
-    if (!s) return "Загальна";
+    if (!s) return "Партитура";
 
     // Filter out common keys/tonalities if that's the only thing left
     // e.g. "C-dur", "d-moll", "F dur"

@@ -35,6 +35,7 @@ import SendNotificationModal from "@/components/SendNotificationModal";
 import { collection as firestoreCollection, addDoc, getDocs, getDoc, where, query, doc, updateDoc, arrayUnion, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useFcmToken } from "@/hooks/useFcmToken";
+import { useServiceWorker } from "@/hooks/useServiceWorker";
 
 
 function HomePageContent() {
@@ -45,6 +46,9 @@ function HomePageContent() {
 
   // Global FCM Token Sync
   useFcmToken();
+
+  // Register Service Worker for offline support
+  useServiceWorker();
 
 
 
