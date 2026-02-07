@@ -725,6 +725,7 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                     <th className="text-left py-3 pl-0 pr-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Назва</th>
                                     <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Категорія</th>
                                     <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Тематика</th>
+                                    <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Партії</th>
                                     {onAddSong && (
                                         <th className="text-right py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-16"></th>
                                     )}
@@ -779,6 +780,11 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                                     <span className="text-sm text-text-secondary/50">—</span>
                                                 )}
                                             </td>
+                                            <td className="py-3 px-4">
+                                                <span className="text-sm text-text-secondary">
+                                                    {(song.partsCount || song.parts?.length || 0) > 0 ? `${song.partsCount || song.parts?.length}` : '—'}
+                                                </span>
+                                            </td>
                                             {onAddSong && (
                                                 <td className="py-3 px-4 text-right">
                                                     <button
@@ -786,7 +792,7 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                                             e.stopPropagation();
                                                             handleAddSongWrapper(song);
                                                         }}
-                                                        className="p-2 rounded-xl text-text-secondary hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
+                                                        className="p-2 rounded-xl text-text-secondary hover:text-primary transition-colors"
                                                     >
                                                         <Plus className="w-5 h-5" />
                                                     </button>
