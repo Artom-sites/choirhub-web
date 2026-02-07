@@ -177,3 +177,21 @@ const finalizeCleanup = (str: string): string => {
 
     return s.charAt(0).toUpperCase() + s.slice(1);
 };
+
+/**
+ * Helper to extract filename from a URL (e.g. Firebase Storage URL)
+ */
+export const getFileNameFromUrl = (url: string): string => {
+    if (!url) return "";
+    try {
+        const decoded = decodeURIComponent(url);
+        // Remove query parameters
+        const cleanUrl = decoded.split('?')[0];
+        // Get last part after slash
+        const parts = cleanUrl.split('/');
+        return parts[parts.length - 1];
+    } catch (e) {
+        console.error("Error decoding URL:", e);
+        return "";
+    }
+};
