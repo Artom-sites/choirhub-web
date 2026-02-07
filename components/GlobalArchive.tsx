@@ -573,7 +573,7 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                     initial={{ height: 0, opacity: 0 }}
                                     animate={{ height: "auto", opacity: 1 }}
                                     exit={{ height: 0, opacity: 0 }}
-                                    className="overflow-hidden"
+                                    className="overflow-hidden mt-2"
                                 >
                                     <div className="bg-surface rounded-2xl p-4 mb-4 space-y-4 border border-border">
                                         {/* Language */}
@@ -718,89 +718,171 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                     </div>
                 ) : (
                     <>
-                        <AnimatePresence mode="popLayout">
-                            {visibleSongs.map((song, index) => (
-                                <motion.div
-                                    key={song.id || song.sourceId}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -10 }}
-                                    transition={{ delay: Math.min(index * 0.02, 0.5) }}
-                                    className="flex items-center gap-3 py-3 border-b border-border/30 cursor-pointer active:bg-surface-highlight transition-colors group"
-                                    onClick={async () => {
-                                        setPreviewSong(song);
-                                        setPreviewPartIndex(0);
-
-                                        // Lazy load full details if index data is incomplete
-                                        if (song.id && (
-                                            (!song.parts && song.partsCount && song.partsCount > 0) ||
-                                            (song.parts && song.parts.length < (song.partsCount || 0))
-                                        )) {
-                                            setIsPreviewLoading(true);
-                                            try {
-                                                const full = await getGlobalSong(song.id);
-                                                if (full) {
-                                                    setPreviewSong(full);
+                        {/* Desktop: Table View */}
+                        <table className="w-full hidden md:table">
+                            <thead>
+                                <tr className="border-b border-border">
+                                    <th className="text-left py-3 pl-0 pr-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Назва</th>
+                                    <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Категорія</th>
+                                    <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Тематика</th>
+                                    {onAddSong && (
+                                        <th className="text-right py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-16"></th>
+                                    )}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <AnimatePresence>
+                                    {visibleSongs.map((song) => (
+                                        <tr
+                                            key={song.id || song.sourceId}
+                                            onClick={async () => {
+                                                setPreviewSong(song);
+                                                setPreviewPartIndex(0);
+                                                if (song.id && (
+                                                    (!song.parts && song.partsCount && song.partsCount > 0) ||
+                                                    (song.parts && song.parts.length < (song.partsCount || 0))
+                                                )) {
+                                                    setIsPreviewLoading(true);
+                                                    try {
+                                                        const full = await getGlobalSong(song.id);
+                                                        if (full) setPreviewSong(full);
+                                                    } catch (e) {
+                                                        console.error("Failed to fetch full song", e);
+                                                    } finally {
+                                                        setIsPreviewLoading(false);
+                                                    }
                                                 }
-                                            } catch (e) {
-                                                console.error("Failed to fetch full song for preview", e);
-                                            } finally {
-                                                setIsPreviewLoading(false);
+                                            }}
+                                            className="border-b border-border/50 hover:bg-surface-highlight cursor-pointer transition-colors group"
+                                        >
+                                            <td className="py-3 pl-0 pr-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-text-primary">
+                                                        {(song.pdfUrl || (song.partsCount && song.partsCount > 0) || (song.parts && song.parts.length > 0)) ? (
+                                                            <Eye className="w-4 h-4 text-background" />
+                                                        ) : (
+                                                            <Music className="w-4 h-4 text-background" />
+                                                        )}
+                                                    </div>
+                                                    <p className="font-semibold text-text-primary truncate">{song.title}</p>
+                                                </div>
+                                            </td>
+                                            <td className="py-3 px-4">
+                                                <span className="text-sm text-text-secondary">
+                                                    {song.subcategory ? getSubcategoryLabel(song.category, song.subcategory) : song.category}
+                                                </span>
+                                            </td>
+                                            <td className="py-3 px-4">
+                                                {song.theme ? (
+                                                    <span className="text-sm text-text-secondary">{song.theme}</span>
+                                                ) : (
+                                                    <span className="text-sm text-text-secondary/50">—</span>
+                                                )}
+                                            </td>
+                                            {onAddSong && (
+                                                <td className="py-3 px-4 text-right">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleAddSongWrapper(song);
+                                                        }}
+                                                        className="p-2 rounded-xl text-text-secondary hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
+                                                    >
+                                                        <Plus className="w-5 h-5" />
+                                                    </button>
+                                                </td>
+                                            )}
+                                        </tr>
+                                    ))}
+                                </AnimatePresence>
+                            </tbody>
+                        </table>
+
+                        {/* Mobile: List View */}
+                        <div className="md:hidden">
+                            <AnimatePresence mode="popLayout">
+                                {visibleSongs.map((song, index) => (
+                                    <motion.div
+                                        key={song.id || song.sourceId}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -10 }}
+                                        transition={{ delay: Math.min(index * 0.02, 0.5) }}
+                                        className="flex items-center gap-3 py-3 border-b border-border/30 cursor-pointer active:bg-surface-highlight transition-colors group"
+                                        onClick={async () => {
+                                            setPreviewSong(song);
+                                            setPreviewPartIndex(0);
+
+                                            // Lazy load full details if index data is incomplete
+                                            if (song.id && (
+                                                (!song.parts && song.partsCount && song.partsCount > 0) ||
+                                                (song.parts && song.parts.length < (song.partsCount || 0))
+                                            )) {
+                                                setIsPreviewLoading(true);
+                                                try {
+                                                    const full = await getGlobalSong(song.id);
+                                                    if (full) {
+                                                        setPreviewSong(full);
+                                                    }
+                                                } catch (e) {
+                                                    console.error("Failed to fetch full song for preview", e);
+                                                } finally {
+                                                    setIsPreviewLoading(false);
+                                                }
                                             }
-                                        }
-                                    }}
-                                >
-                                    <div className="w-10 h-10 rounded-xl bg-text-primary flex items-center justify-center flex-shrink-0">
-                                        {(song.pdfUrl || (song.partsCount && song.partsCount > 0) || (song.parts && song.parts.length > 0)) ? (
-                                            <Eye className="w-5 h-5 text-background" />
-                                        ) : (
-                                            <Music className="w-5 h-5 text-background" />
-                                        )}
-                                    </div>
-
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="font-semibold text-text-primary truncate">{song.title}</h3>
-                                        <div className="flex flex-wrap gap-1.5 items-center mt-0.5">
-                                            {song.subcategory && (
-                                                <span className="text-[10px] text-text-secondary">
-                                                    {getSubcategoryLabel(song.category, song.subcategory)}
-                                                </span>
-                                            )}
-                                            {song.subcategory && song.theme && <span className="text-[10px] text-text-secondary">•</span>}
-                                            {song.theme && (
-                                                <span className="text-[10px] text-text-secondary">
-                                                    {song.theme}
-                                                </span>
-                                            )}
-                                            {((song.partsCount && song.partsCount > 1) || (song.parts && song.parts.length > 1)) && (
-                                                <>
-                                                    <span className="text-[10px] text-text-secondary">•</span>
-                                                    <span className="text-[10px] text-text-secondary">
-                                                        {song.partsCount || song.parts.length} партій
-                                                    </span>
-                                                </>
-
+                                        }}
+                                    >
+                                        <div className="w-10 h-10 rounded-xl bg-text-primary flex items-center justify-center flex-shrink-0">
+                                            {(song.pdfUrl || (song.partsCount && song.partsCount > 0) || (song.parts && song.parts.length > 0)) ? (
+                                                <Eye className="w-5 h-5 text-background" />
+                                            ) : (
+                                                <Music className="w-5 h-5 text-background" />
                                             )}
                                         </div>
-                                    </div>
 
-                                    <div className="flex items-center gap-2">
-                                        {onAddSong && (
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleAddSongWrapper(song);
-                                                }}
-                                                className="p-2 rounded-xl text-text-secondary hover:text-primary transition-colors"
-                                            >
-                                                <Plus className="w-5 h-5" />
-                                            </button>
-                                        )}
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </AnimatePresence>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-semibold text-text-primary truncate">{song.title}</h3>
+                                            <div className="flex flex-wrap gap-1.5 items-center mt-0.5">
+                                                {song.subcategory && (
+                                                    <span className="text-[10px] text-text-secondary">
+                                                        {getSubcategoryLabel(song.category, song.subcategory)}
+                                                    </span>
+                                                )}
+                                                {song.subcategory && song.theme && <span className="text-[10px] text-text-secondary">•</span>}
+                                                {song.theme && (
+                                                    <span className="text-[10px] text-text-secondary">
+                                                        {song.theme}
+                                                    </span>
+                                                )}
+                                                {((song.partsCount && song.partsCount > 1) || (song.parts && song.parts.length > 1)) && (
+                                                    <>
+                                                        <span className="text-[10px] text-text-secondary">•</span>
+                                                        <span className="text-[10px] text-text-secondary">
+                                                            {song.partsCount || song.parts.length} партій
+                                                        </span>
+                                                    </>
 
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-2">
+                                            {onAddSong && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleAddSongWrapper(song);
+                                                    }}
+                                                    className="p-2 rounded-xl text-text-secondary hover:text-primary transition-colors"
+                                                >
+                                                    <Plus className="w-5 h-5" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </AnimatePresence>
+                        </div>
 
                         {/* Infinite Scroll Trigger */}
                         {filteredSongs.length > displayedCount && (
