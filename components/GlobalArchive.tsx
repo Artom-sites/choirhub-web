@@ -533,7 +533,7 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
 
             {!isModerationMode ? (
                 <>
-                    <div className="sticky top-[64px] z-10 -mx-4 px-4 pt-3 pb-3 bg-background/95 backdrop-blur-lg">
+                    <div className="sticky top-[64px] z-10 -mx-4 px-4 pt-3 pb-3 mt-2 bg-background/95 backdrop-blur-lg border-b border-border">
                         <div className="flex gap-2">
                             <div className="relative flex-1 group">
                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary group-focus-within:text-text-primary transition-colors" />
