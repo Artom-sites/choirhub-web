@@ -36,6 +36,7 @@ import { collection as firestoreCollection, addDoc, getDocs, getDoc, where, quer
 import { db } from "@/lib/firebase";
 import { useFcmToken } from "@/hooks/useFcmToken";
 import { useServiceWorker } from "@/hooks/useServiceWorker";
+import { useBackgroundCache } from "@/hooks/useBackgroundCache";
 
 
 function HomePageContent() {
@@ -49,6 +50,9 @@ function HomePageContent() {
 
   // Register Service Worker for offline support
   useServiceWorker();
+
+  // Background cache upcoming service PDFs on app start
+  useBackgroundCache();
 
 
 
