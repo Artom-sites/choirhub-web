@@ -480,7 +480,7 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
     return (
         <div className="flex flex-col h-full">
             <div className="sticky top-[64px] z-10 bg-background/95 backdrop-blur-lg pb-2 border-b border-border -mx-4 px-4">
-                <div className="flex items-center justify-between pt-4 mb-4">
+                <div className="flex items-center justify-between">
                     <h2 className="text-xl font-bold text-text-primary">Архів МХО</h2>
                     <div className="flex items-center gap-3">
                         {isModerator && (
