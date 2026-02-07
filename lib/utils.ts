@@ -127,6 +127,13 @@ export const extractInstrument = (partName: string, songTitle: string): string =
     // If result is basically the title, return General.
     if (normalizeString(name) === normTitle) return "Загальна";
 
+    // New Step 8: Suffix Removal (if title matches end of string)
+    // "Треугольник А праздник..." -> "Треугольник"
+    if (name.toLowerCase().endsWith(songTitle.toLowerCase())) {
+        const withoutTitle = name.substring(0, name.length - songTitle.length).trim();
+        if (withoutTitle.length > 0) return finalizeCleanup(withoutTitle);
+    }
+
     return finalizeCleanup(name);
 };
 
@@ -166,13 +173,6 @@ const finalizeCleanup = (str: string): string => {
             if (num === 1 && (lower.startsWith('p') || lower.startsWith('п'))) return 'Партитура';
             if (num === 2 && (lower.startsWith('p') || lower.startsWith('п'))) return 'Хор';
         }
-    }
-
-    // New Step 8: Suffix Removal (if title matches end of string)
-    // "Треугольник А праздник..." -> "Треугольник"
-    if (s.toLowerCase().endsWith(songTitle.toLowerCase())) {
-        const withoutTitle = s.substring(0, s.length - songTitle.length).trim();
-        if (withoutTitle.length > 0) return finalizeCleanup(withoutTitle);
     }
 
     return s.charAt(0).toUpperCase() + s.slice(1);
