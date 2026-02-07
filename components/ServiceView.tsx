@@ -8,6 +8,7 @@ import { ChevronLeft, Eye, X, Plus, Users, UserX, Check, Calendar, Music, UserCh
 import { useRouter } from "next/navigation";
 import SwipeableCard from "./SwipeableCard";
 import ConfirmationModal from "./ConfirmationModal";
+import OfflinePdfModal from "./OfflinePdfModal";
 import { useOfflineCache } from "@/hooks/useOfflineCache";
 
 interface ServiceViewProps {
@@ -30,6 +31,9 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
     const [search, setSearch] = useState("");
     const [votingLoading, setVotingLoading] = useState(false);
     const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
+
+    // Offline PDF modal
+    const [offlineModalSong, setOfflineModalSong] = useState<SimpleSong | null>(null);
 
     // Choir members for attendance
     const [choirMembers, setChoirMembers] = useState<ChoirMember[]>([]);
@@ -268,6 +272,16 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
     };
 
     const handleViewPdf = (songId: string) => {
+        // Check if offline - if so, open modal instead of navigating
+        if (!navigator.onLine) {
+            const song = availableSongs.find(s => s.id === songId);
+            if (song) {
+                console.log('[ServiceView] Offline - opening PDF modal for:', song.title);
+                setOfflineModalSong(song);
+                return;
+            }
+        }
+        // Online - navigate to song page as usual
         router.push(`/song/${songId}`);
     };
 
@@ -1009,6 +1023,13 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                     isDestructive={true}
                 />
             )}
+
+            {/* Offline PDF Modal */}
+            <OfflinePdfModal
+                isOpen={!!offlineModalSong}
+                onClose={() => setOfflineModalSong(null)}
+                song={offlineModalSong}
+            />
         </div>
     );
 }
