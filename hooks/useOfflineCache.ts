@@ -73,9 +73,11 @@ export function useOfflineCache() {
         const songsToCache = songs.filter(s => !cachedStatus[s.id]);
 
         if (songsToCache.length === 0) {
-            console.log('All songs already cached');
+            console.log('[OfflineCache] All songs already cached');
             return true;
         }
+
+        console.log(`[OfflineCache] Need to cache ${songsToCache.length} songs:`, songsToCache.map(s => s.title));
 
         // Setup abort controller for cancellation
         abortControllerRef.current = new AbortController();

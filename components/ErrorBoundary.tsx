@@ -26,6 +26,16 @@ export default class ErrorBoundary extends React.Component<Props, State> {
         console.error('[ErrorBoundary] Caught error:', error, errorInfo);
     }
 
+    handleRefresh = () => {
+        // Force hard reload
+        window.location.href = '/';
+    };
+
+    handleGoToServices = () => {
+        // Navigate to home with services tab
+        window.location.href = '/#services';
+    };
+
     render() {
         if (this.state.hasError) {
             return (
@@ -45,22 +55,22 @@ export default class ErrorBoundary extends React.Component<Props, State> {
 
                     <div className="flex flex-col gap-3 w-full max-w-xs">
                         {/* Primary: Go to cached services */}
-                        <a
-                            href="/?tab=services"
-                            className="flex items-center justify-center gap-2 px-6 py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 active:scale-95 transition-all no-underline"
+                        <button
+                            onClick={this.handleGoToServices}
+                            className="flex items-center justify-center gap-2 px-6 py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 active:scale-95 transition-all"
                         >
                             <CalendarDays className="w-5 h-5" />
                             Перейти до служіння
-                        </a>
+                        </button>
 
                         {/* Secondary: Try again */}
-                        <a
-                            href="/"
-                            className="flex items-center justify-center gap-2 px-6 py-3 bg-white/10 text-white font-medium rounded-xl hover:bg-white/20 active:scale-95 transition-all border border-white/10 no-underline"
+                        <button
+                            onClick={this.handleRefresh}
+                            className="flex items-center justify-center gap-2 px-6 py-3 bg-white/10 text-white font-medium rounded-xl hover:bg-white/20 active:scale-95 transition-all border border-white/10"
                         >
                             <RefreshCw className="w-5 h-5" />
                             Спробувати знову
-                        </a>
+                        </button>
                     </div>
 
                     <p className="text-xs text-[#71717a] mt-8">

@@ -99,7 +99,10 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
 
         // Check cache status for UI
         const songIds = currentService.songs.map(s => s.songId);
-        checkCacheStatus(songIds).then(setLocalCacheStatus);
+        checkCacheStatus(songIds).then(status => {
+            console.log('[ServiceView] Cache status:', status);
+            setLocalCacheStatus(status);
+        });
 
         // Cache all songs in this service for offline access
         const songsToCache = currentService.songs.map(s => {
@@ -116,10 +119,17 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
         }).filter(Boolean) as any[];
 
         if (songsToCache.length > 0) {
-            cacheServiceSongs(currentService.id, songsToCache).then(() => {
+            console.log(`[ServiceView] Starting to cache ${songsToCache.length} songs for service: ${currentService.title}`);
+            cacheServiceSongs(currentService.id, songsToCache).then((success) => {
+                console.log(`[ServiceView] Caching completed, success: ${success}`);
                 // Update status after caching
-                checkCacheStatus(songIds).then(setLocalCacheStatus);
+                checkCacheStatus(songIds).then(status => {
+                    console.log('[ServiceView] Updated cache status after caching:', status);
+                    setLocalCacheStatus(status);
+                });
             });
+        } else {
+            console.log('[ServiceView] No songs with PDFs to cache');
         }
     }, [currentService, availableSongs, cacheServiceSongs, checkCacheStatus]);
 
