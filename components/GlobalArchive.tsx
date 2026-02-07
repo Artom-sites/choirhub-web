@@ -668,7 +668,7 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
             </div>
 
             {/* List */}
-            <div className="flex-1 overflow-y-auto space-y-2 pt-4">
+            <div className="flex-1 overflow-y-auto">
                 {loading || moderationLoading ? (
                     <ArchiveLoader />
                 ) : isModerationMode ? (
