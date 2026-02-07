@@ -322,7 +322,8 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                 className={subTab === 'repertoire' ? 'block' : 'hidden'}
             >
                 {/* Stats Card - iOS Style */}
-                <div className="bg-surface rounded-2xl p-5 card-shadow">
+                {/* Stats Header - Minimalist */}
+                <div className="pb-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 glass-frost-circle rounded-full flex items-center justify-center text-zinc-700">

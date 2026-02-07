@@ -722,11 +722,11 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                             {visibleSongs.map((song, index) => (
                                 <motion.div
                                     key={song.id || song.sourceId}
-                                    initial={{ opacity: 0, y: 20 }}
+                                    initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -20 }}
+                                    exit={{ opacity: 0, y: -10 }}
                                     transition={{ delay: Math.min(index * 0.02, 0.5) }}
-                                    className="bg-surface rounded-2xl p-4 flex items-center gap-4 border border-border hover:border-border/50 transition-colors cursor-pointer group active:scale-[0.99]"
+                                    className="flex items-center gap-3 py-3 border-b border-border/30 cursor-pointer active:bg-surface-highlight transition-colors group"
                                     onClick={async () => {
                                         setPreviewSong(song);
                                         setPreviewPartIndex(0);
@@ -750,31 +750,36 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                         }
                                     }}
                                 >
-                                    <div className="w-12 h-12 rounded-xl bg-text-primary flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                                    <div className="w-10 h-10 rounded-xl bg-text-primary flex items-center justify-center flex-shrink-0">
                                         {(song.pdfUrl || (song.partsCount && song.partsCount > 0) || (song.parts && song.parts.length > 0)) ? (
-                                            <Eye className="w-6 h-6 text-background" />
+                                            <Eye className="w-5 h-5 text-background" />
                                         ) : (
-                                            <Music className="w-6 h-6 text-background" />
+                                            <Music className="w-5 h-5 text-background" />
                                         )}
                                     </div>
 
                                     <div className="flex-1 min-w-0">
                                         <h3 className="font-semibold text-text-primary truncate">{song.title}</h3>
-                                        <div className="flex flex-wrap gap-1.5 items-center mt-1">
+                                        <div className="flex flex-wrap gap-1.5 items-center mt-0.5">
                                             {song.subcategory && (
-                                                <span className="text-[10px] bg-surface-highlight text-text-secondary px-1.5 py-0.5 rounded">
+                                                <span className="text-[10px] text-text-secondary">
                                                     {getSubcategoryLabel(song.category, song.subcategory)}
                                                 </span>
                                             )}
+                                            {song.subcategory && song.theme && <span className="text-[10px] text-text-secondary">•</span>}
                                             {song.theme && (
-                                                <span className="text-[10px] bg-surface-highlight text-text-secondary px-1.5 py-0.5 rounded border border-border">
+                                                <span className="text-[10px] text-text-secondary">
                                                     {song.theme}
                                                 </span>
                                             )}
                                             {((song.partsCount && song.partsCount > 1) || (song.parts && song.parts.length > 1)) && (
-                                                <span className="text-[10px] bg-surface-highlight text-text-secondary px-1.5 py-0.5 rounded">
-                                                    {song.partsCount || song.parts.length} партій
-                                                </span>
+                                                <>
+                                                    <span className="text-[10px] text-text-secondary">•</span>
+                                                    <span className="text-[10px] text-text-secondary">
+                                                        {song.partsCount || song.parts.length} партій
+                                                    </span>
+                                                </>
+
                                             )}
                                         </div>
                                     </div>
@@ -786,9 +791,9 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                                     e.stopPropagation();
                                                     handleAddSongWrapper(song);
                                                 }}
-                                                className="p-2 rounded-xl bg-surface-highlight hover:bg-surface-highlight/80 transition-colors"
+                                                className="p-2 rounded-xl text-text-secondary hover:text-primary transition-colors"
                                             >
-                                                <Plus className="w-5 h-5 text-text-primary" />
+                                                <Plus className="w-5 h-5" />
                                             </button>
                                         )}
                                     </div>
