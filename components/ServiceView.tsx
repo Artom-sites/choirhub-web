@@ -93,7 +93,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
     const { cacheServiceSongs, progress: cacheProgress, checkCacheStatus } = useOfflineCache();
     const [localCacheStatus, setLocalCacheStatus] = useState<Record<string, boolean>>({});
 
-    // Auto-cache effect
+    // Auto-cache effect: Cache PDFs when viewing service (any service, not just upcoming)
     useEffect(() => {
         if (!currentService || availableSongs.length === 0) return;
 
@@ -101,27 +101,25 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
         const songIds = currentService.songs.map(s => s.songId);
         checkCacheStatus(songIds).then(setLocalCacheStatus);
 
-        // Auto-cache if upcoming service
-        if (isUpcoming(currentService.date, currentService.time)) {
-            const songsToCache = currentService.songs.map(s => {
-                const fullSong = availableSongs.find(as => as.id === s.songId);
-                if (fullSong && (fullSong.pdfUrl || (fullSong.parts && fullSong.parts.length > 0))) {
-                    return {
-                        id: fullSong.id,
-                        title: fullSong.title,
-                        pdfUrl: fullSong.pdfUrl,
-                        parts: fullSong.parts
-                    };
-                }
-                return null;
-            }).filter(Boolean) as any[];
-
-            if (songsToCache.length > 0) {
-                cacheServiceSongs(currentService.id, songsToCache).then(() => {
-                    // Update status after caching
-                    checkCacheStatus(songIds).then(setLocalCacheStatus);
-                });
+        // Cache all songs in this service for offline access
+        const songsToCache = currentService.songs.map(s => {
+            const fullSong = availableSongs.find(as => as.id === s.songId);
+            if (fullSong && (fullSong.pdfUrl || (fullSong.parts && fullSong.parts.length > 0))) {
+                return {
+                    id: fullSong.id,
+                    title: fullSong.title,
+                    pdfUrl: fullSong.pdfUrl,
+                    parts: fullSong.parts
+                };
             }
+            return null;
+        }).filter(Boolean) as any[];
+
+        if (songsToCache.length > 0) {
+            cacheServiceSongs(currentService.id, songsToCache).then(() => {
+                // Update status after caching
+                checkCacheStatus(songIds).then(setLocalCacheStatus);
+            });
         }
     }, [currentService, availableSongs, cacheServiceSongs, checkCacheStatus]);
 
