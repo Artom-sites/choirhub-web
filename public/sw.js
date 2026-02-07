@@ -1,7 +1,7 @@
-// MyChoir Service Worker v2
+// MyChoir Service Worker v3
 // Provides offline support by caching app shell and static resources
 
-const CACHE_NAME = 'mychoir-v2';
+const CACHE_NAME = 'mychoir-v3';
 const OFFLINE_URL = '/offline';
 
 // Files to cache on install (app shell)
@@ -13,6 +13,16 @@ const PRECACHE_URLS = [
     '/icon-192.png',
     '/icon-512.png',
 ];
+
+// Safe cache put - won't throw when offline
+async function safeCachePut(cache, request, response) {
+    try {
+        await cache.put(request, response);
+    } catch (err) {
+        // Silently fail - this happens when offline or quota exceeded
+        console.log('[SW] Cache put skipped:', err.message);
+    }
+}
 
 // Install event - precache essential files
 self.addEventListener('install', (event) => {
@@ -72,6 +82,14 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
+    // Skip cross-origin requests that might cause CORS issues
+    if (request.url.includes('firestore.googleapis.com') ||
+        request.url.includes('identitytoolkit.googleapis.com') ||
+        request.url.includes('google.com/images/cleardot.gif') ||
+        request.url.includes('googleapis.com/v1alpha')) {
+        return;
+    }
+
     // For navigation requests (HTML pages)
     if (request.mode === 'navigate') {
         event.respondWith(
@@ -80,7 +98,7 @@ self.addEventListener('fetch', (event) => {
                     const response = await fetch(request);
                     if (response && response.ok) {
                         const cache = await caches.open(CACHE_NAME);
-                        cache.put(request, response.clone());
+                        await safeCachePut(cache, request, response.clone());
                     }
                     return response;
                 } catch (error) {
@@ -104,18 +122,18 @@ self.addEventListener('fetch', (event) => {
             (async () => {
                 const cached = await caches.match(request);
 
-                // Start fetch in background
+                // Start fetch in background (fire and forget)
                 const fetchPromise = fetch(request).then(async (response) => {
                     if (response && response.status === 200) {
                         const cache = await caches.open(CACHE_NAME);
-                        cache.put(request, response.clone());
+                        await safeCachePut(cache, request, response.clone());
                     }
                     return response;
                 }).catch(() => null);
 
                 // Return cached immediately if available
                 if (cached) {
-                    // Revalidate in background
+                    // Revalidate in background (don't await)
                     fetchPromise;
                     return cached;
                 }
@@ -142,7 +160,7 @@ self.addEventListener('fetch', (event) => {
                     const response = await fetch(request);
                     if (response && response.status === 200) {
                         const cache = await caches.open(CACHE_NAME);
-                        cache.put(request, response.clone());
+                        await safeCachePut(cache, request, response.clone());
                     }
                     return response;
                 } catch (error) {
@@ -164,7 +182,7 @@ self.addEventListener('fetch', (event) => {
                 const response = await fetch(request);
                 if (response && response.status === 200) {
                     const cache = await caches.open(CACHE_NAME);
-                    cache.put(request, response.clone());
+                    await safeCachePut(cache, request, response.clone());
                 }
                 return response;
             } catch (error) {
