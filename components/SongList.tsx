@@ -446,7 +446,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                                                 {uniqueConductors.map(c => (
                                                     <button
                                                         key={c}
-                                                        onClick={() => setSelectedConductor(c)}
+                                                        onClick={() => setSelectedConductor(c || "")}
                                                         className={`px-3 py-1.5 rounded-lg text-sm transition-all border ${selectedConductor === c
                                                             ? "bg-primary text-background border-primary"
                                                             : "bg-surface-highlight text-text-secondary border-transparent hover:border-border"
