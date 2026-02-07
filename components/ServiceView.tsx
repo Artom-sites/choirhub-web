@@ -131,6 +131,21 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
         } else {
             console.log('[ServiceView] No songs with PDFs to cache');
         }
+
+        // Prefetch the song page route to cache JS chunks
+        // Just prefetching one song is enough - all songs share the same chunks
+        if (currentService.songs.length > 0) {
+            const firstSongId = currentService.songs[0].songId;
+            const prefetchUrl = `/song/${firstSongId}`;
+            console.log('[ServiceView] Prefetching song page chunks:', prefetchUrl);
+
+            // Use link prefetch to cache the page and its chunks
+            const link = document.createElement('link');
+            link.rel = 'prefetch';
+            link.href = prefetchUrl;
+            link.as = 'document';
+            document.head.appendChild(link);
+        }
     }, [currentService, availableSongs, cacheServiceSongs, checkCacheStatus]);
 
     const handleVote = async (status: 'present' | 'absent') => {
