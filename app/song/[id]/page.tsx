@@ -335,7 +335,6 @@ export default function SongPage() {
                 {/* PDF Content */}
                 <div className="flex-1 overflow-hidden relative">
                     <PDFViewer
-                        key={`${song.id}-${currentPartIndex}`} // Force re-render on part change
                         url={currentPdfUrl && currentPdfUrl.includes('mscmusic.org')
                             ? `/api/pdf-proxy?url=${encodeURIComponent(currentPdfUrl)}`
                             : currentPdfUrl
