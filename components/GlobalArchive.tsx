@@ -120,6 +120,7 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
     const [approveModal, setApproveModal] = useState<{ isOpen: boolean; song: PendingSong | null; loading: boolean }>({ isOpen: false, song: null, loading: false });
     const [rejectModal, setRejectModal] = useState<{ isOpen: boolean; song: PendingSong | null; loading: boolean }>({ isOpen: false, song: null, loading: false });
     const [alertModal, setAlertModal] = useState<{ isOpen: boolean; title: string; message: string; variant: 'success' | 'error' | 'warning' | 'info' }>({ isOpen: false, title: '', message: '', variant: 'info' });
+    const [rebuildIndexModal, setRebuildIndexModal] = useState<{ isOpen: boolean; loading: boolean }>({ isOpen: false, loading: false });
 
     // Check if user is Admin/Moderator (Exclusive to artemdula0@gmail.com)
     const isModerator = userData?.email === "artemdula0@gmail.com";
@@ -515,24 +516,7 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                         )}
                         {isModerator && (
                             <button
-                                onClick={async () => {
-                                    // Rebuild Index
-                                    if (!confirm("Оновити пошуковий індекс? Це може зайняти час.")) return;
-                                    try {
-                                        setToastMessage("Оновлення індексу...");
-                                        const res = await fetch('/api/search-index', {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ action: 'rebuild' })
-                                        });
-                                        if (!res.ok) throw new Error("API Error");
-                                        setToastMessage("Індекс оновлено! Перезавантажте сторінку.");
-                                        // Reload index locally
-                                        loadFromR2();
-                                    } catch (e) {
-                                        setToastMessage("Помилка оновлення індексу");
-                                    }
-                                }}
+                                onClick={() => setRebuildIndexModal({ isOpen: true, loading: false })}
                                 className="p-2 rounded-full hover:bg-surface-highlight text-text-secondary hover:text-text-primary transition-colors"
                                 title="Оновити індекс пошуку (Rebuild)"
                             >
@@ -1068,6 +1052,34 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                 title={alertModal.title}
                 message={alertModal.message}
                 variant={alertModal.variant}
+            />
+
+            <ConfirmModal
+                isOpen={rebuildIndexModal.isOpen}
+                onClose={() => setRebuildIndexModal({ isOpen: false, loading: false })}
+                onConfirm={async () => {
+                    setRebuildIndexModal({ isOpen: true, loading: true });
+                    try {
+                        setToastMessage("Оновлення індексу...");
+                        const res = await fetch('/api/search-index', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'rebuild' })
+                        });
+                        if (!res.ok) throw new Error("API Error");
+                        setToastMessage("Індекс оновлено! Перезавантажте сторінку.");
+                        loadFromR2();
+                    } catch (e) {
+                        setToastMessage("Помилка оновлення індексу");
+                    } finally {
+                        setRebuildIndexModal({ isOpen: false, loading: false });
+                    }
+                }}
+                title="Оновити пошуковий індекс?"
+                message="Це може зайняти деякий час. Після оновлення потрібно буде перезавантажити сторінку."
+                confirmText="Оновити"
+                variant="warning"
+                loading={rebuildIndexModal.loading}
             />
 
             {
