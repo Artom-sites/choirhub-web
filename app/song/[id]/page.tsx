@@ -9,7 +9,7 @@ import { SimpleSong } from "@/types";
 import PDFViewer from "@/components/PDFViewer";
 import EditSongModal from "@/components/EditSongModal";
 import { ArrowLeft, FileText, Upload, Loader2, Check, AlertCircle, Trash2, ExternalLink, Pencil, User, Download, X, Search } from "lucide-react";
-import { extractInstrument, getFileNameFromUrl } from "@/lib/utils";
+import { extractInstrument, getFileNameFromUrl, isGenericPartName } from "@/lib/utils";
 
 import ConfirmationModal from "@/components/ConfirmationModal";
 import Toast from "@/components/Toast";
@@ -325,7 +325,12 @@ export default function SongPage() {
                                         : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                                         }`}
                                 >
-                                    {extractInstrument(part.name || getFileNameFromUrl(part.pdfUrl || "") || `Партія ${index + 1}`, song.title)}
+                                    {(() => {
+                                        const nameToCheck = part.name || "";
+                                        const shouldUseFilename = !nameToCheck || isGenericPartName(nameToCheck);
+                                        const sourceString = shouldUseFilename ? getFileNameFromUrl(part.pdfUrl || "") : nameToCheck;
+                                        return extractInstrument(sourceString || `Партія ${index + 1}`, song.title);
+                                    })()}
                                 </button>
                             ))}
                         </div>

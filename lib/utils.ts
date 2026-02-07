@@ -195,3 +195,13 @@ export const getFileNameFromUrl = (url: string): string => {
         return "";
     }
 };
+
+/**
+ * Checks if a name is a generic part name like "Part 1", "Partia 2", "Партія 3"
+ */
+export const isGenericPartName = (name: string): boolean => {
+    if (!name) return false;
+    const lower = name.toLowerCase().trim();
+    // Matches: "part 1", "partia 1", "партія 1", "p 1", "p1", "part-1"
+    return /^(part|partia|партія|p)[\s.\-_]*\d+$/i.test(lower);
+};
