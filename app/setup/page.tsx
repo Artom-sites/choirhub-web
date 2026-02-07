@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2, Music2, Check, ExternalLink, User, Mail, Eye, EyeOff } from "lucide-react";
+import { Loader2, Music2, Check, ExternalLink, User, Mail, Eye, EyeOff, UserX, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { createUser, getChoir, updateChoirMembers } from "@/lib/db";
 import { Choir, UserData } from "@/types";
@@ -21,13 +21,14 @@ import { db } from "@/lib/firebase";
 
 function SetupPageContent() {
     const router = useRouter();
-    const { user, userData, loading: authLoading, signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, refreshProfile } = useAuth();
+    const { user, userData, loading: authLoading, signInWithGoogle, signInWithEmail, signUpWithEmail, signInAsGuest, resetPassword, refreshProfile } = useAuth();
 
     const searchParams = useSearchParams();
     const urlCode = searchParams.get('code');
 
     // UI State
     const [view, setView] = useState<'welcome' | 'join' | 'create' | 'email_auth' | 'reset_password'>('welcome');
+    const [showGuestWarning, setShowGuestWarning] = useState(false);
 
     // Form State
     const [choirName, setChoirName] = useState("");
@@ -63,6 +64,15 @@ function SetupPageContent() {
     const handleGoogleLogin = async () => {
         try {
             await signInWithGoogle();
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const handleGuestLogin = async () => {
+        try {
+            setShowGuestWarning(false);
+            await signInAsGuest();
         } catch (err) {
             console.error(err);
         }
@@ -324,6 +334,20 @@ function SetupPageContent() {
                             Посилання на хор знайдено! Увійдіть, щоб продовжити.
                         </p>
                     )}
+
+                    <div className="relative flex items-center gap-4 mt-6">
+                        <div className="flex-1 h-px bg-white/10"></div>
+                        <span className="text-xs text-white/40">або</span>
+                        <div className="flex-1 h-px bg-white/10"></div>
+                    </div>
+
+                    <button
+                        onClick={() => setShowGuestWarning(true)}
+                        className="w-full py-3 text-white/60 text-sm font-medium hover:text-white transition-colors flex items-center justify-center gap-2"
+                    >
+                        <UserX className="w-4 h-4" />
+                        Увійти як гість
+                    </button>
                 </div>
 
                 <p className="text-xs text-text-secondary mt-6 max-w-xs">
@@ -334,6 +358,45 @@ function SetupPageContent() {
                     <a href="/terms" className="hover:text-white transition-colors">Умови використання</a>
                     <a href="/privacy" className="hover:text-white transition-colors">Політика конфіденційності</a>
                 </div>
+
+                {/* Guest Warning Modal */}
+                {showGuestWarning && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
+                        <div className="bg-[#18181b] border border-white/10 rounded-2xl p-6 max-w-sm w-full">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                                    <AlertTriangle className="w-5 h-5 text-yellow-500" />
+                                </div>
+                                <h3 className="text-white font-bold text-lg">Гостьовий вхід</h3>
+                            </div>
+
+                            <div className="space-y-3 text-sm text-white/70 mb-6">
+                                <p>⚠️ <strong className="text-white">Дані не зберігаються</strong> між сесіями</p>
+                                <p>⚠️ <strong className="text-white">Немає синхронізації</strong> між пристроями</p>
+                                <p>⚠️ При виході з акаунту <strong className="text-white">все буде втрачено</strong></p>
+                            </div>
+
+                            <p className="text-xs text-white/50 mb-6">
+                                Рекомендуємо увійти через Google або email для повного досвіду
+                            </p>
+
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowGuestWarning(false)}
+                                    className="flex-1 py-3 bg-white/10 text-white font-medium rounded-xl hover:bg-white/20 transition-colors"
+                                >
+                                    Скасувати
+                                </button>
+                                <button
+                                    onClick={handleGuestLogin}
+                                    className="flex-1 py-3 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors"
+                                >
+                                    Продовжити
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         );
     }

@@ -6,7 +6,8 @@ import {
     onAuthStateChanged,
     signInWithRedirect,
     getRedirectResult,
-    signInWithPopup, // Added
+    signInWithPopup,
+    signInAnonymously,
     GoogleAuthProvider,
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
@@ -26,9 +27,11 @@ interface AuthContextType {
     signInWithGoogle: () => Promise<void>;
     signInWithEmail: (email: string, password: string) => Promise<void>;
     signUpWithEmail: (email: string, password: string, name: string) => Promise<void>;
+    signInAsGuest: () => Promise<void>;
     resetPassword: (email: string) => Promise<void>;
     signOut: () => Promise<void>;
     refreshProfile: () => Promise<void>;
+    isGuest: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -111,6 +114,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    const signInAsGuest = async () => {
+        try {
+            await signInAnonymously(auth);
+            console.log("Signed in as guest");
+        } catch (error) {
+            console.error("Error signing in as guest:", error);
+            throw error;
+        }
+    };
+
     const signOut = async () => {
         try {
             await firebaseSignOut(auth);
@@ -137,11 +150,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             signInWithGoogle,
             signInWithEmail,
             signUpWithEmail,
+            signInAsGuest,
             resetPassword,
             signOut,
             refreshProfile: async () => {
                 if (user) await loadUserProfile(user.uid);
-            }
+            },
+            isGuest: user?.isAnonymous ?? false
         }}>
             {children}
         </AuthContext.Provider>
