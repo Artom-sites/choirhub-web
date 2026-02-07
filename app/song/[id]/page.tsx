@@ -344,6 +344,7 @@ export default function SongPage() {
                             ? `/api/pdf-proxy?url=${encodeURIComponent(currentPdfUrl)}`
                             : currentPdfUrl
                         }
+                        songId={songId}
                         title={song.title}
                         onClose={() => router.back()}
                         isAnnotating={isAnnotating}

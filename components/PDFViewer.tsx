@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import { getPdfFromCache, savePdfToCache } from "../lib/cache";
+import { getPdf as getOfflinePdf } from "../lib/offlineDb";
 import AnnotationToolbar, { ToolType, EraserSize } from "./AnnotationToolbar";
 import AnnotationCanvas from "./AnnotationCanvas";
 import { usePinchZoom } from "../hooks/usePinchZoom";
@@ -32,6 +33,7 @@ const Page = dynamic(
 
 interface PDFViewerProps {
     url: string;
+    songId?: string;  // For IndexedDB offline cache lookup
     title?: string;
     onClose?: () => void;
     onAddAction?: () => void;
@@ -40,7 +42,7 @@ interface PDFViewerProps {
     onAnnotatingChange?: (value: boolean) => void;
 }
 
-export default function PDFViewer({ url, title, onClose, onAddAction, isAnnotating: externalIsAnnotating, onAnnotatingChange }: PDFViewerProps) {
+export default function PDFViewer({ url, songId, title, onClose, onAddAction, isAnnotating: externalIsAnnotating, onAnnotatingChange }: PDFViewerProps) {
     const [numPages, setNumPages] = useState<number>(0);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -82,45 +84,75 @@ export default function PDFViewer({ url, title, onClose, onAddAction, isAnnotati
         let active = true;
 
         const loadPdf = async () => {
-            if (!url) return;
+            if (!url && !songId) return;
             setIsLoading(true);
+            setError(null);
 
             try {
-                // 1. Try Cache
-                const cachedBlob = await getPdfFromCache(url);
+                // 1. First check IndexedDB offline cache (by songId)
+                if (songId) {
+                    const offlinePdf = await getOfflinePdf(songId);
+                    if (offlinePdf && active) {
+                        console.log('[PDFViewer] Loaded from IndexedDB offline cache');
+                        setPdfSource(offlinePdf); // This is a data URI
+                        setIsCached(true);
+                        setShowIndicator(true);
+                        return;
+                    }
+                }
 
-                if (cachedBlob) {
-                    if (active) {
+                // 2. Check URL-based cache (cache.ts)
+                if (url && !url.startsWith('data:')) {
+                    const cachedBlob = await getPdfFromCache(url);
+                    if (cachedBlob && active) {
                         const objectUrl = URL.createObjectURL(cachedBlob);
                         setPdfSource(objectUrl);
                         setIsCached(true);
                         setShowIndicator(true);
-                        console.log("Loaded from offline cache");
-                    }
-                } else {
-                    // 2. Live & Cache
-                    if (active) setPdfSource(url); // Use URL immediately
-
-                    // Background fetch to cache (Only if NOT data URI)
-                    if (!url.startsWith('data:')) {
-                        fetch(url)
-                            .then(res => {
-                                if (!res.ok) throw new Error("Fetch failed");
-                                return res.blob();
-                            })
-                            .then(blob => {
-                                savePdfToCache(url, blob);
-                                if (active) {
-                                    setIsCached(true);
-                                    setShowIndicator(true);
-                                }
-                            })
-                            .catch(err => console.error("Background cache failed:", err));
+                        console.log('[PDFViewer] Loaded from URL cache');
+                        return;
                     }
                 }
+
+                // 3. If URL is data URI, use directly
+                if (url && url.startsWith('data:')) {
+                    if (active) {
+                        setPdfSource(url);
+                        setIsCached(true);
+                        console.log('[PDFViewer] Using data URI directly');
+                    }
+                    return;
+                }
+
+                // 4. Try network fetch
+                if (url && active) {
+                    if (!navigator.onLine) {
+                        setError('Немає інтернету і файл не збережено офлайн');
+                        return;
+                    }
+
+                    setPdfSource(url); // Use URL immediately
+
+                    // Background fetch to cache
+                    fetch(url)
+                        .then(res => {
+                            if (!res.ok) throw new Error('Fetch failed');
+                            return res.blob();
+                        })
+                        .then(blob => {
+                            savePdfToCache(url, blob);
+                            if (active) {
+                                setIsCached(true);
+                                setShowIndicator(true);
+                            }
+                        })
+                        .catch(err => console.error('[PDFViewer] Background cache failed:', err));
+                } else if (!url) {
+                    setError('Немає URL для завантаження PDF');
+                }
             } catch (err) {
-                console.error("PDF Load Error:", err);
-                if (active) setError("Помилка завантаження");
+                console.error('[PDFViewer] PDF Load Error:', err);
+                if (active) setError('Помилка завантаження');
             }
         };
 
@@ -129,7 +161,7 @@ export default function PDFViewer({ url, title, onClose, onAddAction, isAnnotati
         return () => {
             active = false;
         };
-    }, [url]);
+    }, [url, songId]);
 
     // Auto-hide indicator
     useEffect(() => {
