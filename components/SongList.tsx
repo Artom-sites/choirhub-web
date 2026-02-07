@@ -479,7 +479,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                             <table className="w-full hidden md:table">
                                 <thead>
                                     <tr className="border-b border-border">
-                                        <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Назва</th>
+                                        <th className="text-left py-3 pl-0 pr-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Назва</th>
                                         <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Категорія</th>
                                         <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Диригент</th>
                                         {effectiveCanAdd && (
@@ -495,7 +495,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                                                 onClick={() => handleSongClick(song)}
                                                 className="border-b border-border/50 hover:bg-surface-highlight cursor-pointer transition-colors group"
                                             >
-                                                <td className="py-3 px-4">
+                                                <td className="py-3 pl-0 pr-4">
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-text-primary">
                                                             {song.hasPdf ? (
