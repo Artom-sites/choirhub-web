@@ -52,11 +52,20 @@ const serviceConverter = {
 // ============ SONGS ============
 
 
-
+// Helper to remove undefined fields (Firestore doesn't like them)
+function removeUndefined(obj: any) {
+    const newObj: any = {};
+    Object.keys(obj).forEach(key => {
+        if (obj[key] !== undefined) {
+            newObj[key] = obj[key];
+        }
+    });
+    return newObj;
+}
 export async function addSong(choirId: string, song: Omit<SimpleSong, "id">): Promise<string> {
     try {
         const docRef = await addDoc(collection(db, `choirs/${choirId}/songs`), {
-            ...song,
+            ...removeUndefined(song),
             addedAt: serverTimestamp(),
             updatedAt: serverTimestamp()
         });
@@ -163,7 +172,7 @@ export async function updateSong(choirId: string, songId: string, updates: Parti
     try {
         const docRef = doc(db, `choirs/${choirId}/songs`, songId);
         await updateDoc(docRef, {
-            ...updates,
+            ...removeUndefined(updates),
             updatedAt: serverTimestamp()
         });
     } catch (error) {
