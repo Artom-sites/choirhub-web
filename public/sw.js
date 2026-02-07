@@ -78,7 +78,7 @@ self.addEventListener('fetch', (event) => {
             (async () => {
                 try {
                     const response = await fetch(request);
-                    if (response && response.status === 200) {
+                    if (response && response.ok) {
                         const cache = await caches.open(CACHE_NAME);
                         cache.put(request, response.clone());
                     }
