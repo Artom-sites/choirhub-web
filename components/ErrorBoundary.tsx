@@ -1,8 +1,7 @@
 "use client";
 
 import React from "react";
-import { useRouter } from "next/navigation";
-import { Music2, WifiOff, RefreshCw, CalendarDays, AlertTriangle } from "lucide-react";
+import { Music2, RefreshCw, CalendarDays, AlertTriangle, Trash2 } from "lucide-react";
 
 interface Props {
     children: React.ReactNode;
@@ -11,15 +10,16 @@ interface Props {
 interface State {
     hasError: boolean;
     error?: Error;
+    isClearing: boolean;
 }
 
 export default class ErrorBoundary extends React.Component<Props, State> {
     constructor(props: Props) {
         super(props);
-        this.state = { hasError: false };
+        this.state = { hasError: false, isClearing: false };
     }
 
-    static getDerivedStateFromError(error: Error): State {
+    static getDerivedStateFromError(error: Error): Partial<State> {
         return { hasError: true, error };
     }
 
@@ -27,15 +27,10 @@ export default class ErrorBoundary extends React.Component<Props, State> {
         console.error('[ErrorBoundary] Caught error:', error, errorInfo);
     }
 
-    handleRefresh = () => {
-        window.location.reload();
-    };
+    handleClearCache = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        this.setState({ isClearing: true });
 
-    handleGoToService = () => {
-        window.location.href = "/?tab=services";
-    };
-
-    handleClearCacheAndReload = async () => {
         try {
             // Clear all caches
             if ('caches' in window) {
@@ -47,13 +42,23 @@ export default class ErrorBoundary extends React.Component<Props, State> {
                 const registrations = await navigator.serviceWorker.getRegistrations();
                 await Promise.all(registrations.map(reg => reg.unregister()));
             }
-            // Clear localStorage error state
-            localStorage.removeItem('app_error_count');
+            // Clear localStorage
+            try {
+                localStorage.clear();
+            } catch (e) { }
+            // Clear IndexedDB
+            try {
+                const dbs = await indexedDB.databases();
+                for (const db of dbs) {
+                    if (db.name) indexedDB.deleteDatabase(db.name);
+                }
+            } catch (e) { }
         } catch (e) {
             console.error('Failed to clear cache:', e);
         }
-        // Force reload
-        window.location.href = "/";
+
+        // Force reload from server
+        window.location.href = "/?cache_bust=" + Date.now();
     };
 
     render() {
@@ -74,29 +79,40 @@ export default class ErrorBoundary extends React.Component<Props, State> {
                     </p>
 
                     <div className="flex flex-col gap-3 w-full max-w-xs">
-                        <button
-                            onClick={this.handleRefresh}
-                            className="flex items-center justify-center gap-2 px-6 py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 active:scale-95 transition-all"
+                        {/* Use <a> links instead of buttons for reliability */}
+                        <a
+                            href="/"
+                            className="flex items-center justify-center gap-2 px-6 py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 active:scale-95 transition-all no-underline"
                         >
                             <RefreshCw className="w-5 h-5" />
                             Оновити сторінку
-                        </button>
+                        </a>
 
                         <button
-                            onClick={this.handleClearCacheAndReload}
-                            className="flex items-center justify-center gap-2 px-6 py-3 bg-orange-500/20 text-orange-400 font-medium rounded-xl hover:bg-orange-500/30 active:scale-95 transition-all border border-orange-500/30"
+                            onClick={this.handleClearCache}
+                            disabled={this.state.isClearing}
+                            className="flex items-center justify-center gap-2 px-6 py-3 bg-orange-500/20 text-orange-400 font-medium rounded-xl hover:bg-orange-500/30 active:scale-95 transition-all border border-orange-500/30 disabled:opacity-50"
                         >
-                            <AlertTriangle className="w-5 h-5" />
-                            Очистити кеш і перезавантажити
+                            {this.state.isClearing ? (
+                                <>
+                                    <RefreshCw className="w-5 h-5 animate-spin" />
+                                    Очищуємо...
+                                </>
+                            ) : (
+                                <>
+                                    <Trash2 className="w-5 h-5" />
+                                    Очистити кеш і перезавантажити
+                                </>
+                            )}
                         </button>
 
-                        <button
-                            onClick={this.handleGoToService}
-                            className="flex items-center justify-center gap-2 px-6 py-3 bg-white/10 text-white font-medium rounded-xl hover:bg-white/20 active:scale-95 transition-all border border-white/10"
+                        <a
+                            href="/?tab=services"
+                            className="flex items-center justify-center gap-2 px-6 py-3 bg-white/10 text-white font-medium rounded-xl hover:bg-white/20 active:scale-95 transition-all border border-white/10 no-underline"
                         >
                             <CalendarDays className="w-5 h-5" />
                             Перейти до служіння
-                        </button>
+                        </a>
                     </div>
 
                     <p className="text-xs text-[#71717a] mt-8">
