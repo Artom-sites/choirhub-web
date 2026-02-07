@@ -22,6 +22,7 @@ import {
     GlobalSong, LocalSong, SongMeta, SongCategory, SongSource,
     PendingSong, SongSubmissionStatus
 } from "@/types";
+import { getCachedSongs, setCachedSongs, getCachedServices, setCachedServices, isOffline } from "./offlineDataCache";
 
 // Converters to handle Timestamp <-> Date/String conversions
 const songConverter = {
@@ -92,17 +93,40 @@ export async function deleteSong(choirId: string, songId: string): Promise<void>
 
 export async function getSongs(choirId: string): Promise<SimpleSong[]> {
     if (!choirId) return [];
+
+    // If offline, return cached data immediately
+    if (isOffline()) {
+        const cached = getCachedSongs(choirId);
+        if (cached) {
+            console.log('[DB] Serving songs from offline cache');
+            return cached;
+        }
+        console.warn('[DB] Offline but no cached songs');
+        return [];
+    }
+
     try {
         const q = query(
             collection(db, `choirs/${choirId}/songs`),
             orderBy("title")
         );
         const snapshot = await getDocs(q);
-        return snapshot.docs
+        const songs = snapshot.docs
             .map(doc => ({ id: doc.id, ...doc.data() } as SimpleSong))
             .filter(song => !song.deletedAt);
+
+        // Cache for offline use
+        setCachedSongs(choirId, songs);
+
+        return songs;
     } catch (error) {
         console.error("Error fetching songs:", error);
+        // Try cache as fallback
+        const cached = getCachedSongs(choirId);
+        if (cached) {
+            console.log('[DB] Firestore failed, serving songs from cache');
+            return cached;
+        }
         return [];
     }
 }
@@ -205,6 +229,18 @@ export async function uploadSongPdf(choirId: string, songId: string, file: File 
 
 export async function getServices(choirId: string): Promise<Service[]> {
     if (!choirId) return [];
+
+    // If offline, return cached data immediately
+    if (isOffline()) {
+        const cached = getCachedServices(choirId);
+        if (cached) {
+            console.log('[DB] Serving services from offline cache');
+            return cached;
+        }
+        console.warn('[DB] Offline but no cached services');
+        return [];
+    }
+
     try {
         const q = query(
             collection(db, `choirs/${choirId}/services`)
@@ -224,9 +260,20 @@ export async function getServices(choirId: string): Promise<Service[]> {
         const past = services.filter(s => new Date(s.date) < today)
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-        return [...upcoming, ...past];
+        const sorted = [...upcoming, ...past];
+
+        // Cache for offline use
+        setCachedServices(choirId, sorted);
+
+        return sorted;
     } catch (error) {
         console.error("Error fetching services:", error);
+        // Try cache as fallback
+        const cached = getCachedServices(choirId);
+        if (cached) {
+            console.log('[DB] Firestore failed, serving services from cache');
+            return cached;
+        }
         return [];
     }
 }
