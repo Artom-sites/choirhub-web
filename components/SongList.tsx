@@ -260,7 +260,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
     }
 
     return (
-        <div className="max-w-5xl mx-auto px-4 pt-6 space-y-5 pb-32">
+        <div className="max-w-5xl mx-auto px-4 pt-5 space-y-5 pb-32">
             {/* Sub-Tab Switcher */}
             <div className="flex bg-surface rounded-xl p-1 card-shadow">
                 <button
