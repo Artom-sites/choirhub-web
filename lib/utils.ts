@@ -151,9 +151,18 @@ const finalizeCleanup = (str: string): string => {
     }
 
     // Custom mappings for generic names
+    // Custom mappings for generic names
     const lower = s.toLowerCase();
-    if (lower === 'партія 1' || lower === 'part 1') return 'Партитура';
-    if (lower === 'партія 2' || lower === 'part 2') return 'Хор';
+
+    // Check for "Party 1" / "Part 1" / "Partia 1" (handles mixed Latin/Cyrillic chars: a, p, o, e, etc.)
+    // p - 0440 (cyr) 0070 (lat)
+    // a - 0430 (cyr) 0061 (lat)
+
+    // Simple robust check: includes "1" and starts with "p" or "п" and length < 12
+    if (s.length < 15 && /\d/.test(s)) {
+        if (lower.includes('1') && (lower.startsWith('p') || lower.startsWith('п'))) return 'Партитура';
+        if (lower.includes('2') && (lower.startsWith('p') || lower.startsWith('п'))) return 'Хор';
+    }
 
     return s.charAt(0).toUpperCase() + s.slice(1);
 };
