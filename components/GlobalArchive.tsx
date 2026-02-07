@@ -485,7 +485,7 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
     return (
         <div className="flex flex-col h-full">
             {/* Stats Header Card - Matching Repertoire Style */}
-            <div className="bg-surface rounded-2xl p-5 card-shadow mb-4">
+            <div className="bg-surface rounded-2xl p-5 card-shadow">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 glass-frost-circle rounded-full flex items-center justify-center text-zinc-700">
