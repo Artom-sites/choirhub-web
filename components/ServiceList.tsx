@@ -56,20 +56,29 @@ export default function ServiceList({ onSelectService, canEdit, services }: Serv
         return serviceDate >= today;
     };
 
+    const [creating, setCreating] = useState(false);
+
     const handleCreate = async () => {
-        if (!userData?.choirId) return;
+        if (!userData?.choirId || creating) return;
 
-        await addService(userData.choirId, {
-            title: newTitle,
-            date: newDate,
-            time: newTime || undefined,
-            songs: []
-        });
+        setCreating(true);
+        try {
+            await addService(userData.choirId, {
+                title: newTitle,
+                date: newDate,
+                time: newTime || undefined,
+                songs: []
+            });
 
-        setShowCreateModal(false);
-        setNewTitle("Співанка");
-        setNewDate(new Date().toISOString().split('T')[0]);
-        setNewTime("10:00");
+            setShowCreateModal(false);
+            setNewTitle("Співанка");
+            setNewDate(new Date().toISOString().split('T')[0]);
+            setNewTime("10:00");
+        } catch (error) {
+            console.error("Failed to create service:", error);
+        } finally {
+            setCreating(false);
+        }
     };
 
     const initiateDelete = (e: React.MouseEvent, id: string) => {
@@ -316,9 +325,15 @@ export default function ServiceList({ onSelectService, canEdit, services }: Serv
 
                             <button
                                 onClick={handleCreate}
-                                className="w-full py-4 bg-primary text-background font-bold rounded-xl mt-4 hover:opacity-90 transition-colors"
+                                disabled={creating}
+                                className="w-full py-4 bg-primary text-background font-bold rounded-xl mt-4 hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
-                                Створити
+                                {creating ? (
+                                    <>
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        Створення...
+                                    </>
+                                ) : 'Створити'}
                             </button>
                         </div>
                     </div>

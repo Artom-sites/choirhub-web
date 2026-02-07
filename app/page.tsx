@@ -556,25 +556,46 @@ function HomePageContent() {
       }
 
       const isAlreadyMember = userData?.memberships?.some(m => m.choirId === foundChoirId);
+      const currentMembership = userData?.memberships?.find(m => m.choirId === foundChoirId);
 
-      // If already a member but entering an admin code with new permissions, update permissions
+      // If already a member, check if we should upgrade role or add permissions
       if (isAlreadyMember) {
-        if (permissions && permissions.length > 0) {
-          // Update user permissions
+        // Check if this is a role upgrade (member -> regent)
+        const isRoleUpgrade = role === 'regent' && currentMembership?.role !== 'regent' && currentMembership?.role !== 'head';
+
+        if (isRoleUpgrade || (permissions && permissions.length > 0)) {
           const userRef = doc(db, "users", user.uid);
-          const existingPermissions = userData?.permissions || [];
-          const newPermissions = [...new Set([...existingPermissions, ...permissions])];
-          await updateDoc(userRef, { permissions: newPermissions });
+          const choirRef = doc(db, "choirs", foundChoirId);
+
+          // Build update for user document
+          const userUpdate: any = {};
+          if (isRoleUpgrade) {
+            userUpdate.role = 'regent';
+            // Update membership in the memberships array
+            const updatedMemberships = userData?.memberships?.map(m =>
+              m.choirId === foundChoirId ? { ...m, role: 'regent' } : m
+            ) || [];
+            userUpdate.memberships = updatedMemberships;
+          }
+          if (permissions && permissions.length > 0) {
+            const existingPermissions = userData?.permissions || [];
+            userUpdate.permissions = [...new Set([...existingPermissions, ...permissions])];
+          }
+          await updateDoc(userRef, userUpdate);
 
           // Also update in choir.members
-          const choirRef = doc(db, "choirs", foundChoirId);
           const choirSnap = await getDoc(choirRef);
           if (choirSnap.exists()) {
             const choirData = choirSnap.data();
             const updatedMembers = choirData.members?.map((m: any) => {
               if (m.id === user.uid) {
-                const memberPermissions = m.permissions || [];
-                return { ...m, permissions: [...new Set([...memberPermissions, ...permissions])] };
+                const updates: any = {};
+                if (isRoleUpgrade) updates.role = 'regent';
+                if (permissions && permissions.length > 0) {
+                  const memberPermissions = m.permissions || [];
+                  updates.permissions = [...new Set([...memberPermissions, ...permissions])];
+                }
+                return { ...m, ...updates };
               }
               return m;
             }) || [];
@@ -1448,6 +1469,7 @@ function HomePageContent() {
             regents={choir?.regents || []}
             knownConductors={choir?.knownConductors || []}
             knownCategories={choir?.knownCategories || []}
+            knownPianists={choir?.knownPianists || []}
           />
         </div>
 

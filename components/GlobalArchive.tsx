@@ -726,11 +726,33 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -20 }}
                                     transition={{ delay: Math.min(index * 0.02, 0.5) }}
-                                    className="bg-surface rounded-2xl p-4 flex items-center gap-4 border border-border hover:border-border/50 transition-colors"
+                                    className="bg-surface rounded-2xl p-4 flex items-center gap-4 border border-border hover:border-border/50 transition-colors cursor-pointer group active:scale-[0.99]"
+                                    onClick={async () => {
+                                        setPreviewSong(song);
+                                        setPreviewPartIndex(0);
+
+                                        // Lazy load full details if index data is incomplete
+                                        if (song.id && (
+                                            (!song.parts && song.partsCount && song.partsCount > 0) ||
+                                            (song.parts && song.parts.length < (song.partsCount || 0))
+                                        )) {
+                                            setIsPreviewLoading(true);
+                                            try {
+                                                const full = await getGlobalSong(song.id);
+                                                if (full) {
+                                                    setPreviewSong(full);
+                                                }
+                                            } catch (e) {
+                                                console.error("Failed to fetch full song for preview", e);
+                                            } finally {
+                                                setIsPreviewLoading(false);
+                                            }
+                                        }
+                                    }}
                                 >
-                                    <div className="w-12 h-12 rounded-xl bg-text-primary flex items-center justify-center flex-shrink-0">
+                                    <div className="w-12 h-12 rounded-xl bg-text-primary flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
                                         {(song.pdfUrl || (song.partsCount && song.partsCount > 0) || (song.parts && song.parts.length > 0)) ? (
-                                            <FileText className="w-6 h-6 text-background" />
+                                            <Eye className="w-6 h-6 text-background" />
                                         ) : (
                                             <Music className="w-6 h-6 text-background" />
                                         )}
@@ -758,42 +780,12 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                     </div>
 
                                     <div className="flex items-center gap-2">
-                                        {(song.pdfUrl || (song.partsCount && song.partsCount > 0) || (song.parts && song.parts.length > 0)) && (
-                                            <button
-                                                onClick={async () => {
-                                                    setPreviewSong(song);
-                                                    setPreviewPartIndex(0);
-
-                                                    // Lazy load full details if index data is incomplete
-                                                    if (song.id && (
-                                                        (!song.parts && song.partsCount && song.partsCount > 0) ||
-                                                        (song.parts && song.parts.length < (song.partsCount || 0))
-                                                    )) {
-                                                        setIsPreviewLoading(true);
-                                                        try {
-                                                            const full = await getGlobalSong(song.id);
-                                                            if (full) {
-                                                                setPreviewSong(full);
-                                                            }
-                                                        } catch (e) {
-                                                            console.error("Failed to fetch full song for preview", e);
-                                                        } finally {
-                                                            setIsPreviewLoading(false);
-                                                        }
-                                                    }
-                                                }}
-                                                className="p-2 rounded-xl bg-surface-highlight hover:bg-surface-highlight/80 transition-colors"
-                                            >
-                                                {isPreviewLoading && previewSong?.id === song.id ? (
-                                                    <Loader2 className="w-5 h-5 text-text-primary animate-spin" />
-                                                ) : (
-                                                    <Eye className="w-5 h-5 text-text-primary" />
-                                                )}
-                                            </button>
-                                        )}
                                         {onAddSong && (
                                             <button
-                                                onClick={() => handleAddSongWrapper(song)}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleAddSongWrapper(song);
+                                                }}
                                                 className="p-2 rounded-xl bg-surface-highlight hover:bg-surface-highlight/80 transition-colors"
                                             >
                                                 <Plus className="w-5 h-5 text-text-primary" />
@@ -805,7 +797,12 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                         </AnimatePresence>
 
 
-                        {/* Load More no longer needed - all songs load from R2 */}
+                        {/* Infinite Scroll Trigger */}
+                        {filteredSongs.length > displayedCount && (
+                            <div ref={loaderRef} className="py-8 flex justify-center">
+                                <Loader2 className="w-6 h-6 animate-spin text-text-secondary" />
+                            </div>
+                        )}
                     </>
                 )}
             </div>

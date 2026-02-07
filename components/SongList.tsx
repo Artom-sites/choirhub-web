@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Search, FileText, Music2, ChevronRight, Filter, Plus, Eye, User, Loader2, Trash2, Pencil, MoreVertical, Library, X } from "lucide-react";
 import { SimpleSong } from "@/types";
@@ -8,7 +8,7 @@ import { CATEGORIES, Category } from "@/lib/themes";
 import { motion, AnimatePresence } from "framer-motion";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { getSongs, addSong, uploadSongPdf, deleteSong, addKnownConductor, updateSong, softDeleteLocalSong } from "@/lib/db";
+import { getSongs, addSong, uploadSongPdf, deleteSong, addKnownConductor, updateSong, softDeleteLocalSong, syncSongs } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
 import AddSongModal from "./AddSongModal";
 import EditSongModal from "./EditSongModal";
@@ -24,17 +24,17 @@ interface SongListProps {
     regents: string[];
     knownConductors: string[];
     knownCategories: string[];
+    knownPianists: string[];
     onRefresh?: () => void;
 }
 
-export default function SongList({ canAddSongs, regents, knownConductors, knownCategories, onRefresh }: SongListProps) {
+export default function SongList({ canAddSongs, regents, knownConductors, knownCategories, knownPianists, onRefresh }: SongListProps) {
     const router = useRouter();
     const { userData } = useAuth();
 
-
-
     const [songs, setSongsState] = useState<SimpleSong[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isSyncing, setIsSyncing] = useState(false);
     const [search, setSearch] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<Category | "All">("All");
     // Modals
@@ -54,32 +54,76 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
     const [viewingSong, setViewingSong] = useState<SimpleSong | null>(null);
 
 
-    useEffect(() => {
+    const fetchSongs = useCallback(async () => {
         if (!userData?.choirId) return;
 
-        setLoading(true);
-        const q = query(
-            collection(db, `choirs/${userData.choirId}/songs`),
-            orderBy("title")
-        );
+        const CACHE_KEY = `choir_songs_v2_${userData.choirId}`;
+        const SYNC_KEY = `choir_sync_v2_${userData.choirId}`;
 
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            console.log(`Fetched ${snapshot.docs.length} songs (Source: ${snapshot.metadata.fromCache ? 'Cache' : 'Server'})`);
+        // 1. First Load Check: Load from LocalStorage if state is empty
+        if (songs.length === 0 && loading) {
+            try {
+                const cached = localStorage.getItem(CACHE_KEY);
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    setSongsState(parsed);
+                    setLoading(false);
+                }
+            } catch (e) {
+                console.error("Cache load parsing error", e);
+            }
+        }
 
-            const fetchedSongs: SimpleSong[] = snapshot.docs
-                .map(doc => ({ id: doc.id, ...doc.data() } as SimpleSong))
-                .filter(song => !song.deletedAt)
-                .sort((a, b) => a.title.localeCompare(b.title, 'uk')); // Ensure client-side sorting
+        // 2. Smart Sync (Background)
+        setIsSyncing(true);
+        try {
+            const lastSync = localStorage.getItem(SYNC_KEY);
+            const lastSyncTime = lastSync ? parseInt(lastSync) : 0;
 
-            setSongsState(fetchedSongs);
+            // Fetch differences
+            const { songs: updatedSongs, deletedIds } = await syncSongs(userData.choirId, lastSyncTime);
+
+            if (updatedSongs.length > 0 || deletedIds.length > 0) {
+                setSongsState(prev => {
+                    const currentMap = new Map(prev.map(s => [s.id, s]));
+
+                    // Remove deleted
+                    deletedIds.forEach(id => currentMap.delete(id));
+
+                    // Add/Update modified
+                    updatedSongs.forEach(s => currentMap.set(s.id, s));
+
+                    const merged = Array.from(currentMap.values())
+                        .sort((a, b) => a.title.localeCompare(b.title, 'uk'));
+
+                    // Update Cache
+                    localStorage.setItem(CACHE_KEY, JSON.stringify(merged));
+                    return merged;
+                });
+                console.log(`Smart Sync: +${updatedSongs.length}, -${deletedIds.length}`);
+            } else {
+                console.log("Smart Sync: No changes");
+            }
+
+            // Update Sync Time
+            localStorage.setItem(SYNC_KEY, Date.now().toString());
+
+        } catch (error) {
+            console.error("Smart Sync failed:", error);
+        } finally {
             setLoading(false);
-        }, (error) => {
-            console.error("Error subscribing to songs:", error);
-            setLoading(false);
-        });
+            setIsSyncing(false);
+        }
+    }, [userData?.choirId]); // Don't depend on songs/loading (handled via closure/refs if needed, but here simple usage)
 
-        return () => unsubscribe();
-    }, [userData?.choirId]);
+    useEffect(() => {
+        fetchSongs();
+
+        // Refresh on focus
+        const onFocus = () => fetchSongs();
+        window.addEventListener('focus', onFocus);
+        return () => window.removeEventListener('focus', onFocus);
+    }, [fetchSongs]);
 
     // Close menu on click outside
 
@@ -154,8 +198,8 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
             }
         }
 
-        // 3. Refresh list - No manual refresh needed with onSnapshot
-        // But we wait briefly to let onSnapshot catch the new addition (local write is instant usually)
+        // 3. Refresh list
+        await fetchSongs();
         if (onRefresh) onRefresh();
 
         // Just close modal, the listener handles the UI
@@ -174,6 +218,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
             // Optimistic update - Not strictly needed as listener will update, but good for immediate feedback
             // setSongsState(prev => prev.map(s => s.id === editingSong.id ? { ...s, ...updates } : s));
             setEditingSong(null);
+            await fetchSongs();
             if (onRefresh) onRefresh();
         } catch (e) {
             console.error("Failed to update song:", e);
@@ -194,6 +239,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
             // setSongsState(prev => prev.filter(s => s.id !== deletingSongId));
             await softDeleteLocalSong(userData.choirId, deletingSongId, userData.id || "unknown");
             setToast({ message: "Пісню видалено", type: "success" });
+            await fetchSongs();
             if (onRefresh) onRefresh();
         } catch (e) {
             console.error("Failed to delete song", e);
@@ -259,7 +305,8 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                                 hasPdf: !!pdfUrl,
                                 parts: globalSong.parts, // Save all parts
                             });
-                            // Refresh songs list - listener handles
+                            // Refresh songs list
+                            await fetchSongs();
                             if (onRefresh) onRefresh();
                         } catch (e) {
                             console.error(e);
@@ -283,7 +330,12 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                             </div>
                             <div>
                                 <p className="text-text-secondary text-xs uppercase tracking-wider font-semibold">Репертуар</p>
-                                <p className="text-2xl font-bold text-text-primary tracking-tight">{songs.length} пісень</p>
+                                <div className="flex items-center gap-2">
+                                    <p className="text-2xl font-bold text-text-primary tracking-tight">{songs.length} пісень</p>
+                                    {isSyncing && (
+                                        <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                                    )}
+                                </div>
                             </div>
                         </div>
                         {canAddSongs && (
@@ -298,7 +350,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                     </div>
                 </div>
                 {/* Search & Filter - iOS Style */}
-                <div className="sticky top-[64px] z-20 -mx-4 px-4 pt-3 pb-4 mt-4 bg-background/95 backdrop-blur-xl border-b border-border">
+                <div className="sticky top-[64px] z-20 -mx-4 px-4 pt-3 pb-3 mt-2 bg-background/95 backdrop-blur-xl border-b border-border">
                     <div className="space-y-4">
                         {/* Search Bar */}
                         <div className="relative flex-1 group">
@@ -347,82 +399,127 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                     </div>
                 </div>
 
-                {/* List */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
+                {/* List View */}
+                <div>
                     {filteredSongs.length === 0 ? (
-                        <div className="col-span-full text-center py-24 opacity-40">
+                        <div className="text-center py-24 opacity-40">
                             <div className="w-16 h-16 bg-surface rounded-full flex items-center justify-center mx-auto mb-4 card-shadow">
                                 <Music2 className="w-8 h-8 text-text-secondary" />
                             </div>
                             <p className="text-text-secondary">Пісень не знайдено</p>
                         </div>
                     ) : (
-                        <AnimatePresence>
-                            {filteredSongs.map((song, index) => (
-                                <SwipeableCard
-                                    key={song.id}
-                                    onDelete={() => initiateDelete(null, song.id)}
-                                    disabled={!effectiveCanAdd}
-                                    className="h-full rounded-2xl"
-                                >
-                                    <div
-                                        onClick={() => handleSongClick(song)}
-                                        role="button"
-                                        tabIndex={0}
-                                        className="w-full bg-surface card-shadow hover:bg-surface rounded-2xl p-4 transition-all text-left group relative active:scale-[0.99] h-full flex flex-col cursor-pointer"
-                                    >
-                                        <div className="flex items-start gap-4 relative z-10 h-full">
-                                            <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-text-primary">
-                                                {song.hasPdf ? (
-                                                    <Eye className="w-6 h-6 text-background" />
-                                                ) : (
-                                                    <FileText className="w-6 h-6 text-background" />
-                                                )}
-                                            </div>
-
-                                            <div className="flex-1 min-w-0 py-0.5 flex flex-col h-full justify-between">
-                                                <h3 className="font-semibold text-lg text-text-primary truncate mb-1.5 group-hover:text-text-primary transition-colors">
-                                                    {song.title}
-                                                </h3>
-
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className="text-xs font-medium text-text-secondary bg-background px-2 py-1 rounded-lg">
-                                                        {song.category}
-                                                    </span>
-
-                                                    {song.conductor && (
-                                                        <div className="flex items-center gap-1.5 text-xs text-text-secondary bg-background px-2 py-1 rounded-lg">
-                                                            <User className="w-3 h-3" />
+                        <>
+                            {/* Desktop: Table View */}
+                            <table className="w-full hidden md:table">
+                                <thead>
+                                    <tr className="border-b border-border">
+                                        <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Назва</th>
+                                        <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Категорія</th>
+                                        <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Диригент</th>
+                                        {effectiveCanAdd && (
+                                            <th className="text-right py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-16"></th>
+                                        )}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <AnimatePresence>
+                                        {filteredSongs.map((song) => (
+                                            <tr
+                                                key={song.id}
+                                                onClick={() => handleSongClick(song)}
+                                                className="border-b border-border/50 hover:bg-surface-highlight cursor-pointer transition-colors group"
+                                            >
+                                                <td className="py-3 px-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-text-primary">
+                                                            {song.hasPdf ? (
+                                                                <Eye className="w-4 h-4 text-background" />
+                                                            ) : (
+                                                                <FileText className="w-4 h-4 text-background" />
+                                                            )}
+                                                        </div>
+                                                        <p className="font-semibold text-text-primary truncate">{song.title}</p>
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-4">
+                                                    <span className="text-sm text-text-secondary">{song.category}</span>
+                                                </td>
+                                                <td className="py-3 px-4">
+                                                    {song.conductor ? (
+                                                        <div className="flex items-center gap-1.5 text-sm text-primary font-medium">
+                                                            <User className="w-3.5 h-3.5" />
                                                             <span>{song.conductor}</span>
                                                         </div>
+                                                    ) : (
+                                                        <span className="text-sm text-text-secondary/50">—</span>
                                                     )}
-                                                </div>
-                                            </div>
-
-
-                                            <div className="flex items-center gap-1 mt-3.5 relative">
+                                                </td>
                                                 {effectiveCanAdd && (
-                                                    <div className="flex items-center gap-1 z-20" onClick={(e) => e.stopPropagation()}>
+                                                    <td className="py-3 px-4 text-right">
                                                         <button
                                                             onClick={(e) => {
                                                                 e.preventDefault();
                                                                 e.stopPropagation();
                                                                 handleEditClick(e, song);
                                                             }}
-                                                            className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-highlight transition-colors"
+                                                            className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface transition-colors"
                                                             title="Редагувати"
                                                         >
-                                                            <Pencil className="w-5 h-5" />
+                                                            <Pencil className="w-4 h-4" />
                                                         </button>
-                                                        {/* Delete is now via Swipe */}
-                                                    </div>
+                                                    </td>
+                                                )}
+                                            </tr>
+                                        ))}
+                                    </AnimatePresence>
+                                </tbody>
+                            </table>
+
+                            {/* Mobile: Simple List View */}
+                            <div className="md:hidden space-y-0">
+                                <AnimatePresence>
+                                    {filteredSongs.map((song) => (
+                                        <div
+                                            key={song.id}
+                                            onClick={() => handleSongClick(song)}
+                                            className="flex items-center gap-3 py-3 border-b border-border/30 cursor-pointer active:bg-surface-highlight transition-colors"
+                                        >
+                                            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-text-primary">
+                                                {song.hasPdf ? (
+                                                    <Eye className="w-5 h-5 text-background" />
+                                                ) : (
+                                                    <FileText className="w-5 h-5 text-background" />
                                                 )}
                                             </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-semibold text-text-primary truncate">{song.title}</p>
+                                                <div className="flex items-center gap-1.5 mt-0.5">
+                                                    {song.conductor && (
+                                                        <span className="text-xs text-primary font-medium flex items-center gap-1"><User className="w-3 h-3" />{song.conductor}</span>
+                                                    )}
+                                                    {song.conductor && <span className="text-xs text-text-secondary">•</span>}
+                                                    <span className="text-xs text-text-secondary">{song.category}</span>
+                                                </div>
+                                            </div>
+                                            {effectiveCanAdd && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        handleEditClick(e, song);
+                                                    }}
+                                                    className="p-2 rounded-lg text-text-secondary"
+                                                    title="Редагувати"
+                                                >
+                                                    <Pencil className="w-4 h-4" />
+                                                </button>
+                                            )}
                                         </div>
-                                    </div>
-                                </SwipeableCard>
-                            ))}
-                        </AnimatePresence>
+                                    ))}
+                                </AnimatePresence>
+                            </div>
+                        </>
                     )}
                 </div>
 
@@ -446,6 +543,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                         regents={regents}
                         knownConductors={knownConductors}
                         knownCategories={knownCategories}
+                        knownPianists={knownPianists}
                     />
                 )}
 
@@ -460,6 +558,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                         regents={regents}
                         knownConductors={knownConductors}
                         knownCategories={knownCategories}
+                        knownPianists={knownPianists}
                     />
                 )}
 
@@ -471,10 +570,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                             onClose={() => setShowTrashBin(false)}
                             initialFilter="song"
                             onRestore={() => {
-                                // No manual fetch logic needed with onSnapshot
-                                // if (userData?.choirId) {
-                                //     getSongs(userData.choirId).then(setSongsState);
-                                // }
+                                fetchSongs();
                             }}
                         />
                     </>

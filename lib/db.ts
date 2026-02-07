@@ -51,6 +51,36 @@ const serviceConverter = {
 
 // ============ SONGS ============
 
+
+
+export async function addSong(choirId: string, song: Omit<SimpleSong, "id">): Promise<string> {
+    try {
+        const docRef = await addDoc(collection(db, `choirs/${choirId}/songs`), {
+            ...song,
+            addedAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+        });
+        return docRef.id;
+    } catch (error) {
+        console.error("Error adding song:", error);
+        throw error;
+    }
+}
+
+export async function deleteSong(choirId: string, songId: string): Promise<void> {
+    try {
+        // Soft delete
+        const docRef = doc(db, `choirs/${choirId}/songs`, songId);
+        await updateDoc(docRef, {
+            deletedAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+        });
+    } catch (error) {
+        console.error("Error deleting song:", error);
+        throw error;
+    }
+}
+
 export async function getSongs(choirId: string): Promise<SimpleSong[]> {
     if (!choirId) return [];
     try {
@@ -68,25 +98,45 @@ export async function getSongs(choirId: string): Promise<SimpleSong[]> {
     }
 }
 
-export async function addSong(choirId: string, song: Omit<SimpleSong, "id">): Promise<string> {
+// Fetch only songs updated after a certain timestamp
+// Fetch only songs updated after a certain timestamp
+export async function syncSongs(choirId: string, lastSyncTimestamp: number): Promise<{ songs: SimpleSong[], deletedIds: string[] }> {
+    if (!choirId) return { songs: [], deletedIds: [] };
     try {
-        const docRef = await addDoc(collection(db, `choirs/${choirId}/songs`), {
-            ...song,
-            addedAt: serverTimestamp()
-        });
-        return docRef.id;
-    } catch (error) {
-        console.error("Error adding song:", error);
-        throw error;
-    }
-}
+        let q;
 
-export async function deleteSong(choirId: string, songId: string): Promise<void> {
-    try {
-        await deleteDoc(doc(db, `choirs/${choirId}/songs`, songId));
+        if (lastSyncTimestamp === 0) {
+            // Initial Sync: Fetch ALL songs (including those without updatedAt)
+            q = query(
+                collection(db, `choirs/${choirId}/songs`)
+            );
+        } else {
+            // Delta Sync: Fetch only changed songs
+            const syncTime = Timestamp.fromMillis(lastSyncTimestamp);
+            q = query(
+                collection(db, `choirs/${choirId}/songs`),
+                where("updatedAt", ">", syncTime)
+            );
+        }
+
+        const snapshot = await getDocs(q);
+        const changes = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                addedAt: data.addedAt?.toDate?.()?.toISOString() || data.addedAt,
+                updatedAt: data.updatedAt?.toDate?.()?.toISOString() || data.updatedAt,
+            } as unknown as SimpleSong;
+        });
+
+        const songs = changes.filter(s => !s.deletedAt);
+        const deletedIds = changes.filter(s => s.deletedAt).map(s => s.id);
+
+        return { songs, deletedIds };
     } catch (error) {
-        console.error("Error deleting song:", error);
-        throw error;
+        console.error("Error syncing songs:", error);
+        return { songs: [], deletedIds: [] };
     }
 }
 
@@ -112,7 +162,10 @@ export async function getSong(choirId: string, songId: string): Promise<SimpleSo
 export async function updateSong(choirId: string, songId: string, updates: Partial<SimpleSong>): Promise<void> {
     try {
         const docRef = doc(db, `choirs/${choirId}/songs`, songId);
-        await updateDoc(docRef, updates);
+        await updateDoc(docRef, {
+            ...updates,
+            updatedAt: serverTimestamp()
+        });
     } catch (error) {
         console.error("Error updating song:", error);
         throw error;
@@ -404,6 +457,18 @@ export async function addKnownPianist(choirId: string, name: string): Promise<vo
         });
     } catch (error) {
         console.error("Error adding known pianist:", error);
+        throw error;
+    }
+}
+
+export async function removeKnownPianist(choirId: string, name: string): Promise<void> {
+    try {
+        const docRef = doc(db, "choirs", choirId);
+        await updateDoc(docRef, {
+            knownPianists: arrayRemove(name)
+        });
+    } catch (error) {
+        console.error("Error removing known pianist:", error);
         throw error;
     }
 }
@@ -956,7 +1021,8 @@ export async function softDeleteLocalSong(choirId: string, songId: string, userI
     try {
         const docRef = doc(db, `choirs/${choirId}/songs`, songId); // Corrected collection
         await updateDoc(docRef, {
-            deletedAt: new Date().toISOString(),
+            deletedAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
             deletedBy: userId
         });
     } catch (error) {
@@ -970,7 +1036,8 @@ export async function restoreLocalSong(choirId: string, songId: string): Promise
         const docRef = doc(db, `choirs/${choirId}/songs`, songId); // Corrected collection
         await updateDoc(docRef, {
             deletedAt: deleteField(),
-            deletedBy: deleteField()
+            deletedBy: deleteField(),
+            updatedAt: serverTimestamp()
         });
     } catch (error) {
         console.error("Error restoring local song:", error);

@@ -81,6 +81,7 @@ export interface SimpleSong {
     title: string;
     category: string;
     conductor?: string;
+    pianist?: string;
     hasPdf?: boolean;
     addedBy?: string;
     addedAt?: string;

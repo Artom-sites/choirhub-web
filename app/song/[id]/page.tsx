@@ -45,7 +45,8 @@ export default function SongPage() {
         regents: string[];
         knownConductors: string[];
         knownCategories: string[];
-    }>({ regents: [], knownConductors: [], knownCategories: [] });
+        knownPianists: string[];
+    }>({ regents: [], knownConductors: [], knownCategories: [], knownPianists: [] });
 
     // Archive Modal State
     const [showArchiveModal, setShowArchiveModal] = useState(false);
@@ -117,7 +118,8 @@ export default function SongPage() {
                     setChoirData({
                         regents: choir.regents || [],
                         knownConductors: choir.knownConductors || [],
-                        knownCategories: choir.knownCategories || []
+                        knownCategories: choir.knownCategories || [],
+                        knownPianists: choir.knownPianists || []
                     });
                 }
             }
@@ -588,6 +590,7 @@ export default function SongPage() {
                     regents={choirData.regents}
                     knownConductors={choirData.knownConductors}
                     knownCategories={choirData.knownCategories}
+                    knownPianists={choirData.knownPianists}
                 />
             )}
 

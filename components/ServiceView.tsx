@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Service, ServiceSong, SimpleSong, Choir, ChoirMember } from "@/types";
 import { getSongs, addSongToService, removeSongFromService, getChoir, updateService, setServiceAttendance, addKnownConductor, addKnownPianist } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
-import { ChevronLeft, Eye, X, Plus, Users, UserX, Check, Calendar, Music, UserCheck, AlertCircle, Trash2, User as UserIcon, CloudDownload, CheckCircle, Loader } from "lucide-react";
+import { ChevronLeft, Eye, X, Plus, Users, UserX, Check, Calendar, Music, UserCheck, AlertCircle, Trash2, User as UserIcon, CloudDownload, CheckCircle, Loader, ChevronDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import SwipeableCard from "./SwipeableCard";
 import ConfirmationModal from "./ConfirmationModal";
@@ -68,6 +68,26 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
     const [editingSongIndex, setEditingSongIndex] = useState<number | null>(null);
     const [tempConductor, setTempConductor] = useState("");
     const [tempPianist, setTempPianist] = useState("");
+
+    // Credits modal dropdown state
+    const [isConductorDropdownOpen, setIsConductorDropdownOpen] = useState(false);
+    const [isPianistDropdownOpen, setIsPianistDropdownOpen] = useState(false);
+    const conductorDropdownRef = useRef<HTMLDivElement>(null);
+    const pianistDropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdowns on outside click
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (conductorDropdownRef.current && !conductorDropdownRef.current.contains(e.target as Node)) {
+                setIsConductorDropdownOpen(false);
+            }
+            if (pianistDropdownRef.current && !pianistDropdownRef.current.contains(e.target as Node)) {
+                setIsPianistDropdownOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     // Offline Caching
     const { cacheServiceSongs, progress: cacheProgress, checkCacheStatus } = useOfflineCache();
@@ -172,10 +192,15 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
 
         // Find full song objects
         const songsToAdd = availableSongs.filter(s => selectedSongsToService.includes(s.id));
-        const newServiceSongs: ServiceSong[] = songsToAdd.map(s => ({
-            songId: s.id,
-            songTitle: s.title
-        }));
+        const newServiceSongs: ServiceSong[] = songsToAdd.map(s => {
+            const songData: ServiceSong = {
+                songId: s.id,
+                songTitle: s.title,
+            };
+            if (s.conductor) songData.performedBy = s.conductor;
+            if (s.pianist) songData.pianist = s.pianist;
+            return songData;
+        });
 
         const updatedSongs = [...currentService.songs, ...newServiceSongs];
         setCurrentService({ ...currentService, songs: updatedSongs });
@@ -234,11 +259,22 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
         if (editingSongIndex === null || !userData?.choirId) return;
 
         const updatedSongs = [...currentService.songs];
-        updatedSongs[editingSongIndex] = {
-            ...updatedSongs[editingSongIndex],
-            performedBy: tempConductor || undefined,
-            pianist: tempPianist || undefined,
-        };
+        const currentSong = updatedSongs[editingSongIndex];
+        const updatedSong: ServiceSong = { ...currentSong };
+
+        if (tempConductor) {
+            updatedSong.performedBy = tempConductor;
+        } else {
+            delete updatedSong.performedBy;
+        }
+
+        if (tempPianist) {
+            updatedSong.pianist = tempPianist;
+        } else {
+            delete updatedSong.pianist;
+        }
+
+        updatedSongs[editingSongIndex] = updatedSong;
 
         setCurrentService({ ...currentService, songs: updatedSongs });
         setEditingSongIndex(null);
@@ -254,6 +290,20 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
         if (tempPianist && !knownPianists.includes(tempPianist)) {
             await addKnownPianist(userData.choirId, tempPianist);
             setKnownPianists(prev => [...prev, tempPianist]);
+        }
+
+        // Also update the song in repertoire with the new pianist (only if song doesn't already have a pianist)
+        if (tempPianist && currentSong.songId) {
+            try {
+                // Find the song in availableSongs to check if it already has a pianist
+                const originalSong = availableSongs.find(s => s.id === currentSong.songId);
+                if (originalSong && !originalSong.pianist) {
+                    const { updateSong } = await import("@/lib/db");
+                    await updateSong(userData.choirId, currentSong.songId, { pianist: tempPianist });
+                }
+            } catch (e) {
+                console.error("Failed to update song pianist in repertoire:", e);
+            }
         }
     };
 
@@ -411,10 +461,6 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                                         </span>
                                                     )}
                                                 </div>
-                                                {/* Hint to edit */}
-                                                {(canEdit || canEditCredits) && !song.performedBy && !song.pianist && (
-                                                    <p className="text-xs text-text-secondary/50 mt-1">Натисни, щоб вказати хто диригував</p>
-                                                )}
                                             </div>
 
                                             {(canEdit || canEditCredits) && (
@@ -836,34 +882,81 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                 </button>
                             </div>
 
+                            {/* Conductor Dropdown */}
                             <div>
                                 <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Диригент</label>
-                                <input
-                                    type="text"
-                                    list="conductor-list"
-                                    value={tempConductor}
-                                    onChange={(e) => setTempConductor(e.target.value)}
-                                    placeholder="Введіть або оберіть ім'я"
-                                    className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl text-text-primary focus:outline-none focus:border-border/50"
-                                />
-                                <datalist id="conductor-list">
-                                    {knownConductors.map(name => <option key={name} value={name} />)}
-                                </datalist>
+                                <div className="relative" ref={conductorDropdownRef}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsConductorDropdownOpen(!isConductorDropdownOpen)}
+                                        className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl flex items-center justify-between hover:bg-surface transition-all"
+                                    >
+                                        <span className={`text-sm font-medium ${tempConductor ? 'text-text-primary' : 'text-text-secondary'}`}>
+                                            {tempConductor || "Оберіть диригента..."}
+                                        </span>
+                                        <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${isConductorDropdownOpen ? 'rotate-180' : ''}`} />
+                                    </button>
+
+                                    {isConductorDropdownOpen && (
+                                        <div className="absolute top-full left-0 right-0 mt-2 bg-surface border border-border rounded-xl shadow-2xl max-h-48 overflow-y-auto z-20 animate-in fade-in zoom-in-95 duration-100">
+                                            {knownConductors.map(name => (
+                                                <div
+                                                    key={name}
+                                                    onClick={() => {
+                                                        setTempConductor(name);
+                                                        setIsConductorDropdownOpen(false);
+                                                    }}
+                                                    className={`w-full px-4 py-3 flex items-center justify-between hover:bg-surface-highlight cursor-pointer transition-colors ${tempConductor === name ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:text-text-primary'}`}
+                                                >
+                                                    <span className="text-sm font-medium">{name}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
+                            {/* Pianist Dropdown */}
                             <div>
                                 <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Піаніст</label>
-                                <input
-                                    type="text"
-                                    list="pianist-list"
-                                    value={tempPianist}
-                                    onChange={(e) => setTempPianist(e.target.value)}
-                                    placeholder="Введіть або оберіть ім'я"
-                                    className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl text-text-primary focus:outline-none focus:border-border/50"
-                                />
-                                <datalist id="pianist-list">
-                                    {knownPianists.map(name => <option key={name} value={name} />)}
-                                </datalist>
+                                <div className="relative" ref={pianistDropdownRef}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsPianistDropdownOpen(!isPianistDropdownOpen)}
+                                        className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl flex items-center justify-between hover:bg-surface transition-all"
+                                    >
+                                        <span className={`text-sm font-medium ${tempPianist ? 'text-text-primary' : 'text-text-secondary'}`}>
+                                            {tempPianist || "Оберіть піаніста (опціонально)..."}
+                                        </span>
+                                        <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${isPianistDropdownOpen ? 'rotate-180' : ''}`} />
+                                    </button>
+
+                                    {isPianistDropdownOpen && (
+                                        <div className="absolute top-full left-0 right-0 mt-2 bg-surface border border-border rounded-xl shadow-2xl max-h-48 overflow-y-auto z-20 animate-in fade-in zoom-in-95 duration-100">
+                                            <div
+                                                onClick={() => {
+                                                    setTempPianist("");
+                                                    setIsPianistDropdownOpen(false);
+                                                }}
+                                                className={`w-full px-4 py-3 flex items-center justify-between hover:bg-surface-highlight cursor-pointer transition-colors ${!tempPianist ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:text-text-primary'}`}
+                                            >
+                                                <span className="text-sm font-medium italic">Без піаніста</span>
+                                            </div>
+                                            {knownPianists.map(name => (
+                                                <div
+                                                    key={name}
+                                                    onClick={() => {
+                                                        setTempPianist(name);
+                                                        setIsPianistDropdownOpen(false);
+                                                    }}
+                                                    className={`w-full px-4 py-3 flex items-center justify-between hover:bg-surface-highlight cursor-pointer transition-colors ${tempPianist === name ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:text-text-primary'}`}
+                                                >
+                                                    <span className="text-sm font-medium">{name}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             <button
