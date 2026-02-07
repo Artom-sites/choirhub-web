@@ -36,7 +36,9 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
     const [loading, setLoading] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
     const [search, setSearch] = useState("");
+    const [showFilters, setShowFilters] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<Category | "All">("All");
+    const [selectedConductor, setSelectedConductor] = useState<string | "All">("All");
     // Modals
     const [showAddModal, setShowAddModal] = useState(false);
     const [showAddOptions, setShowAddOptions] = useState(false);
@@ -131,8 +133,11 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
     const filteredSongs = songs.filter(song => {
         const matchesSearch = song.title.toLowerCase().includes(search.toLowerCase());
         const matchesCategory = selectedCategory === "All" || song.category === selectedCategory;
-        return matchesSearch && matchesCategory;
+        const matchesConductor = selectedConductor === "All" || song.conductor === selectedConductor;
+        return matchesSearch && matchesCategory && matchesConductor;
     });
+
+    const uniqueConductors = Array.from(new Set(songs.map(s => s.conductor).filter(Boolean))).sort();
 
     const songsWithPdf = songs.filter(s => s.hasPdf).length;
 
@@ -322,8 +327,8 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                 className={subTab === 'repertoire' ? 'block' : 'hidden'}
             >
                 {/* Stats Card - iOS Style */}
-                {/* Stats Header - Minimalist */}
-                <div className="pb-4">
+                {/* Stats Header - Reverted to Card Style */}
+                <div className="bg-surface rounded-2xl p-5 card-shadow">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 glass-frost-circle rounded-full flex items-center justify-center text-zinc-700">
@@ -352,7 +357,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                 </div>
                 {/* Search & Filter - iOS Style */}
                 <div className="sticky top-[64px] z-20 -mx-4 px-4 pt-3 pb-3 mt-2 bg-background/95 backdrop-blur-xl border-b border-border">
-                    <div className="space-y-4">
+                    <div className="flex gap-2">
                         {/* Search Bar */}
                         <div className="relative flex-1 group">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
@@ -373,232 +378,300 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                             )}
                         </div>
 
-                        {/* Filter Chips */}
-                        <div className="flex overflow-x-auto gap-2 scrollbar-hide -mx-4 px-4 pb-1">
-                            <button
-                                onClick={() => setSelectedCategory("All")}
-                                className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedCategory === "All"
-                                    ? "bg-primary text-background shadow-md"
-                                    : "bg-surface text-text-secondary shadow-sm border border-border"
-                                    }`}
-                            >
-                                Всі
-                            </button>
-                            {Array.from(new Set([...CATEGORIES, ...(knownCategories || [])])).map(cat => (
-                                <button
-                                    key={cat}
-                                    onClick={() => setSelectedCategory(cat)}
-                                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedCategory === cat
-                                        ? "bg-primary text-background shadow-md"
-                                        : "bg-surface text-text-secondary shadow-sm border border-border"
-                                        }`}
-                                >
-                                    {cat}
-                                </button>
-                            ))}
-                        </div>
+                        {/* Filter Toggle Button */}
+                        <button
+                            onClick={() => setShowFilters(!showFilters)}
+                            className={`flex items-center justify-center w-12 rounded-xl transition-all border ${showFilters
+                                ? "bg-primary text-background border-primary shadow-md"
+                                : "bg-surface text-text-secondary border-transparent hover:bg-surface-highlight"
+                                }`}
+                        >
+                            <Filter className="w-5 h-5" />
+                        </button>
                     </div>
-                </div>
 
-                {/* List View */}
-                <div>
-                    {filteredSongs.length === 0 ? (
-                        <div className="text-center py-24 opacity-40">
-                            <div className="w-16 h-16 bg-surface rounded-full flex items-center justify-center mx-auto mb-4 card-shadow">
-                                <Music2 className="w-8 h-8 text-text-secondary" />
-                            </div>
-                            <p className="text-text-secondary">Пісень не знайдено</p>
-                        </div>
-                    ) : (
-                        <>
-                            {/* Desktop: Table View */}
-                            <table className="w-full hidden md:table">
-                                <thead>
-                                    <tr className="border-b border-border">
-                                        <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Назва</th>
-                                        <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Категорія</th>
-                                        <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Диригент</th>
-                                        {effectiveCanAdd && (
-                                            <th className="text-right py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-16"></th>
-                                        )}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <AnimatePresence>
-                                        {filteredSongs.map((song) => (
-                                            <tr
-                                                key={song.id}
-                                                onClick={() => handleSongClick(song)}
-                                                className="border-b border-border/50 hover:bg-surface-highlight cursor-pointer transition-colors group"
+                    {/* Filter Panel */}
+                    <AnimatePresence>
+                        {showFilters && (
+                            <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="overflow-hidden"
+                            >
+                                <div className="bg-surface rounded-2xl p-4 space-y-4 border border-border/50 shadow-sm">
+
+                                    {/* Categories */}
+                                    <div>
+                                        <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Тематика</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            <button
+                                                onClick={() => setSelectedCategory("All")}
+                                                className={`px-3 py-1.5 rounded-lg text-sm transition-all border ${selectedCategory === "All"
+                                                    ? "bg-primary text-background border-primary"
+                                                    : "bg-surface-highlight text-text-secondary border-transparent hover:border-border"
+                                                    }`}
                                             >
-                                                <td className="py-3 px-4">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-text-primary">
-                                                            {song.hasPdf ? (
-                                                                <Eye className="w-4 h-4 text-background" />
-                                                            ) : (
-                                                                <FileText className="w-4 h-4 text-background" />
-                                                            )}
-                                                        </div>
-                                                        <p className="font-semibold text-text-primary truncate">{song.title}</p>
-                                                    </div>
-                                                </td>
-                                                <td className="py-3 px-4">
-                                                    <span className="text-sm text-text-secondary">{song.category}</span>
-                                                </td>
-                                                <td className="py-3 px-4">
-                                                    {song.conductor ? (
-                                                        <div className="flex items-center gap-1.5 text-sm text-primary font-medium">
-                                                            <User className="w-3.5 h-3.5" />
-                                                            <span>{song.conductor}</span>
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-sm text-text-secondary/50">—</span>
-                                                    )}
-                                                </td>
-                                                {effectiveCanAdd && (
-                                                    <td className="py-3 px-4 text-right">
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.preventDefault();
-                                                                e.stopPropagation();
-                                                                handleEditClick(e, song);
-                                                            }}
-                                                            className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface transition-colors"
-                                                            title="Редагувати"
-                                                        >
-                                                            <Pencil className="w-4 h-4" />
-                                                        </button>
-                                                    </td>
-                                                )}
-                                            </tr>
-                                        ))}
-                                    </AnimatePresence>
-                                </tbody>
-                            </table>
-
-                            {/* Mobile: Simple List View */}
-                            <div className="md:hidden space-y-0">
-                                <AnimatePresence>
-                                    {filteredSongs.map((song) => (
-                                        <div
-                                            key={song.id}
-                                            onClick={() => handleSongClick(song)}
-                                            className="flex items-center gap-3 py-3 border-b border-border/30 cursor-pointer active:bg-surface-highlight transition-colors"
-                                        >
-                                            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-text-primary">
-                                                {song.hasPdf ? (
-                                                    <Eye className="w-5 h-5 text-background" />
-                                                ) : (
-                                                    <FileText className="w-5 h-5 text-background" />
-                                                )}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="font-semibold text-text-primary truncate">{song.title}</p>
-                                                <div className="flex items-center gap-1.5 mt-0.5">
-                                                    {song.conductor && (
-                                                        <span className="text-xs text-primary font-medium flex items-center gap-1"><User className="w-3 h-3" />{song.conductor}</span>
-                                                    )}
-                                                    {song.conductor && <span className="text-xs text-text-secondary">•</span>}
-                                                    <span className="text-xs text-text-secondary">{song.category}</span>
-                                                </div>
-                                            </div>
-                                            {effectiveCanAdd && (
+                                                Всі
+                                            </button>
+                                            {Array.from(new Set([...CATEGORIES, ...(knownCategories || [])])).map(cat => (
                                                 <button
-                                                    onClick={(e) => {
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                        handleEditClick(e, song);
-                                                    }}
-                                                    className="p-2 rounded-lg text-text-secondary"
-                                                    title="Редагувати"
+                                                    key={cat}
+                                                    onClick={() => setSelectedCategory(cat)}
+                                                    className={`px-3 py-1.5 rounded-lg text-sm transition-all border ${selectedCategory === cat
+                                                        ? "bg-primary text-background border-primary"
+                                                        : "bg-surface-highlight text-text-secondary border-transparent hover:border-border"
+                                                        }`}
                                                 >
-                                                    <Pencil className="w-4 h-4" />
+                                                    {cat}
                                                 </button>
-                                            )}
+                                            ))}
                                         </div>
-                                    ))}
-                                </AnimatePresence>
-                            </div>
-                        </>
-                    )}
+                                    </div>
+
+                                    {/* Conductors */}
+                                    {uniqueConductors.length > 0 && (
+                                        <div>
+                                            <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Регент</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                <button
+                                                    onClick={() => setSelectedConductor("All")}
+                                                    className={`px-3 py-1.5 rounded-lg text-sm transition-all border ${selectedConductor === "All"
+                                                        ? "bg-primary text-background border-primary"
+                                                        : "bg-surface-highlight text-text-secondary border-transparent hover:border-border"
+                                                        }`}
+                                                >
+                                                    Всі
+                                                </button>
+                                                {uniqueConductors.map(c => (
+                                                    <button
+                                                        key={c}
+                                                        onClick={() => setSelectedConductor(c)}
+                                                        className={`px-3 py-1.5 rounded-lg text-sm transition-all border ${selectedConductor === c
+                                                            ? "bg-primary text-background border-primary"
+                                                            : "bg-surface-highlight text-text-secondary border-transparent hover:border-border"
+                                                            }`}
+                                                    >
+                                                        {c}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
+        </div>
 
-                {/* Floating Add Button */}
-                {effectiveCanAdd && (
-                    <button
-                        onClick={() => setShowAddModal(true)}
-                        className="fixed bottom-24 right-6 z-40 w-14 h-14 bg-primary text-background rounded-full shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all"
-                        title="Додати пісню"
-                    >
-                        <Plus className="w-7 h-7" />
-                    </button>
-                )}
+                {/* List View */ }
+    <div>
+        {filteredSongs.length === 0 ? (
+            <div className="text-center py-24 opacity-40">
+                <div className="w-16 h-16 bg-surface rounded-full flex items-center justify-center mx-auto mb-4 card-shadow">
+                    <Music2 className="w-8 h-8 text-text-secondary" />
+                </div>
+                <p className="text-text-secondary">Пісень не знайдено</p>
+            </div>
+        ) : (
+            <>
+                {/* Desktop: Table View */}
+                <table className="w-full hidden md:table">
+                    <thead>
+                        <tr className="border-b border-border">
+                            <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Назва</th>
+                            <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Категорія</th>
+                            <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Диригент</th>
+                            {effectiveCanAdd && (
+                                <th className="text-right py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-16"></th>
+                            )}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <AnimatePresence>
+                            {filteredSongs.map((song) => (
+                                <tr
+                                    key={song.id}
+                                    onClick={() => handleSongClick(song)}
+                                    className="border-b border-border/50 hover:bg-surface-highlight cursor-pointer transition-colors group"
+                                >
+                                    <td className="py-3 px-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-text-primary">
+                                                {song.hasPdf ? (
+                                                    <Eye className="w-4 h-4 text-background" />
+                                                ) : (
+                                                    <FileText className="w-4 h-4 text-background" />
+                                                )}
+                                            </div>
+                                            <p className="font-semibold text-text-primary truncate">{song.title}</p>
+                                        </div>
+                                    </td>
+                                    <td className="py-3 px-4">
+                                        <span className="text-sm text-text-secondary">{song.category}</span>
+                                    </td>
+                                    <td className="py-3 px-4">
+                                        {song.conductor ? (
+                                            <div className="flex items-center gap-1.5 text-sm text-primary font-medium">
+                                                <User className="w-3.5 h-3.5" />
+                                                <span>{song.conductor}</span>
+                                            </div>
+                                        ) : (
+                                            <span className="text-sm text-text-secondary/50">—</span>
+                                        )}
+                                    </td>
+                                    {effectiveCanAdd && (
+                                        <td className="py-3 px-4 text-right">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    handleEditClick(e, song);
+                                                }}
+                                                className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface transition-colors"
+                                                title="Редагувати"
+                                            >
+                                                <Pencil className="w-4 h-4" />
+                                            </button>
+                                        </td>
+                                    )}
+                                </tr>
+                            ))}
+                        </AnimatePresence>
+                    </tbody>
+                </table>
 
-                {/* Add Song Modal */}
-                {showAddModal && (
-                    <AddSongModal
-                        isOpen={showAddModal}
-                        onClose={() => setShowAddModal(false)}
-                        onAdd={handleAddSong}
-                        regents={regents}
-                        knownConductors={knownConductors}
-                        knownCategories={knownCategories}
-                        knownPianists={knownPianists}
-                    />
-                )}
+                {/* Mobile: Simple List View */}
+                <div className="md:hidden space-y-0">
+                    <AnimatePresence>
+                        {filteredSongs.map((song) => (
+                            <div
+                                key={song.id}
+                                onClick={() => handleSongClick(song)}
+                                className="flex items-center gap-3 py-3 border-b border-border/30 cursor-pointer active:bg-surface-highlight transition-colors"
+                            >
+                                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-text-primary">
+                                    {song.hasPdf ? (
+                                        <Eye className="w-5 h-5 text-background" />
+                                    ) : (
+                                        <FileText className="w-5 h-5 text-background" />
+                                    )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-semibold text-text-primary truncate">{song.title}</p>
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                        {song.conductor && (
+                                            <span className="text-xs text-primary font-medium flex items-center gap-1"><User className="w-3 h-3" />{song.conductor}</span>
+                                        )}
+                                        {song.conductor && <span className="text-xs text-text-secondary">•</span>}
+                                        <span className="text-xs text-text-secondary">{song.category}</span>
+                                    </div>
+                                </div>
+                                {effectiveCanAdd && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            handleEditClick(e, song);
+                                        }}
+                                        className="p-2 rounded-lg text-text-secondary"
+                                        title="Редагувати"
+                                    >
+                                        <Pencil className="w-4 h-4" />
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+                    </AnimatePresence>
+                </div>
+            </>
+        )}
+    </div>
 
-                {/* Edit Song Modal */}
-                {editingSong && (
-                    <EditSongModal
-                        key={editingSong.id}
-                        isOpen={!!editingSong}
-                        onClose={() => setEditingSong(null)}
-                        onSave={handleEditSave}
-                        initialData={editingSong}
-                        regents={regents}
-                        knownConductors={knownConductors}
-                        knownCategories={knownCategories}
-                        knownPianists={knownPianists}
-                    />
-                )}
+    {/* Floating Add Button */ }
+    {
+        effectiveCanAdd && (
+            <button
+                onClick={() => setShowAddModal(true)}
+                className="fixed bottom-24 right-6 z-40 w-14 h-14 bg-primary text-background rounded-full shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all"
+                title="Додати пісню"
+            >
+                <Plus className="w-7 h-7" />
+            </button>
+        )
+    }
 
-                {/* Trash Bin Modal */}
-                {showTrashBin && (
-                    <>
-                        <TrashBin
-                            choirId={userData?.choirId || ""}
-                            onClose={() => setShowTrashBin(false)}
-                            initialFilter="song"
-                            onRestore={() => {
-                                fetchSongs();
-                            }}
-                        />
-                    </>
-                )}
+    {/* Add Song Modal */ }
+    {
+        showAddModal && (
+            <AddSongModal
+                isOpen={showAddModal}
+                onClose={() => setShowAddModal(false)}
+                onAdd={handleAddSong}
+                regents={regents}
+                knownConductors={knownConductors}
+                knownCategories={knownCategories}
+                knownPianists={knownPianists}
+            />
+        )
+    }
 
-                {/* Confirmation Modal */}
-                <ConfirmationModal
-                    isOpen={!!deletingSongId}
-                    onClose={() => setDeletingSongId(null)}
-                    onConfirm={confirmDelete}
-                    title="Видалити пісню?"
-                    message="Цю пісню буде видалено з репертуару назавжди."
-                    confirmLabel="Видалити"
-                    isDestructive
+    {/* Edit Song Modal */ }
+    {
+        editingSong && (
+            <EditSongModal
+                key={editingSong.id}
+                isOpen={!!editingSong}
+                onClose={() => setEditingSong(null)}
+                onSave={handleEditSave}
+                initialData={editingSong}
+                regents={regents}
+                knownConductors={knownConductors}
+                knownCategories={knownCategories}
+                knownPianists={knownPianists}
+            />
+        )
+    }
+
+    {/* Trash Bin Modal */ }
+    {
+        showTrashBin && (
+            <>
+                <TrashBin
+                    choirId={userData?.choirId || ""}
+                    onClose={() => setShowTrashBin(false)}
+                    initialFilter="song"
+                    onRestore={() => {
+                        fetchSongs();
+                    }}
                 />
-            </motion.div>
+            </>
+        )
+    }
+
+    {/* Confirmation Modal */ }
+    <ConfirmationModal
+        isOpen={!!deletingSongId}
+        onClose={() => setDeletingSongId(null)}
+        onConfirm={confirmDelete}
+        title="Видалити пісню?"
+        message="Цю пісню буде видалено з репертуару назавжди."
+        confirmLabel="Видалити"
+        isDestructive
+    />
+            </motion.div >
 
 
-            {
-                toast && (
-                    <Toast
-                        message={toast.message}
-                        type={toast.type}
-                        onClose={() => setToast(null)}
-                    />
-                )
-            }
+    {
+        toast && (
+            <Toast
+                message={toast.message}
+                type={toast.type}
+                onClose={() => setToast(null)}
+            />
+        )
+}
         </div >
     );
 }
