@@ -1,10 +1,18 @@
 "use client";
 
-import { Music2, WifiOff, RefreshCw } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Music2, WifiOff, RefreshCw, CalendarDays } from "lucide-react";
 
 export default function OfflinePage() {
+    const router = useRouter();
+
     const handleRefresh = () => {
         window.location.reload();
+    };
+
+    const handleGoToService = () => {
+        // Navigate to home with service tab - cached pages will load
+        router.push("/?tab=services");
     };
 
     return (
@@ -19,19 +27,29 @@ export default function OfflinePage() {
             </div>
 
             <p className="text-[#a1a1aa] mb-8 max-w-sm">
-                Схоже, ви офлайн. Перевірте інтернет-з&apos;єднання та спробуйте ще раз.
+                Схоже, ви офлайн. Але кешовані служіння та PDF досі доступні!
             </p>
 
-            <button
-                onClick={handleRefresh}
-                className="flex items-center gap-2 px-6 py-3 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors"
-            >
-                <RefreshCw className="w-5 h-5" />
-                Спробувати знову
-            </button>
+            <div className="flex flex-col gap-3 w-full max-w-xs">
+                <button
+                    onClick={handleGoToService}
+                    className="flex items-center justify-center gap-2 px-6 py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 active:scale-95 transition-all"
+                >
+                    <CalendarDays className="w-5 h-5" />
+                    Перейти до служіння
+                </button>
+
+                <button
+                    onClick={handleRefresh}
+                    className="flex items-center justify-center gap-2 px-6 py-3 bg-white/10 text-white font-medium rounded-xl hover:bg-white/20 active:scale-95 transition-all border border-white/10"
+                >
+                    <RefreshCw className="w-5 h-5" />
+                    Спробувати знову
+                </button>
+            </div>
 
             <p className="text-xs text-[#71717a] mt-8">
-                Раніше завантажені PDF доступні в кеші
+                Раніше відвідані сторінки та PDF доступні в кеші
             </p>
         </div>
     );
