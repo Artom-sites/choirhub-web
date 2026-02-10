@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
+import { Capacitor, CapacitorHttp } from "@capacitor/core";
 import {
     X,
     Loader2,
@@ -10,7 +11,7 @@ import {
     Download,
     Plus,
     WifiOff,
-    Check,
+
 
     FileSignature
 } from "lucide-react";
@@ -52,7 +53,7 @@ export default function PDFViewer({ url, songId, title, onClose, onAddAction, is
     const containerRef = useRef<HTMLDivElement>(null);
     const [isCached, setIsCached] = useState(false);
     const [pdfSource, setPdfSource] = useState<string | null>(null);
-    const [showIndicator, setShowIndicator] = useState(false);
+
 
     // Annotation State (use external if provided)
     const [internalIsAnnotating, setInternalIsAnnotating] = useState(false);
@@ -96,7 +97,7 @@ export default function PDFViewer({ url, songId, title, onClose, onAddAction, is
                         console.log('[PDFViewer] Loaded from IndexedDB offline cache');
                         setPdfSource(offlinePdf); // This is a data URI
                         setIsCached(true);
-                        setShowIndicator(true);
+
                         return;
                     }
                 }
@@ -108,7 +109,7 @@ export default function PDFViewer({ url, songId, title, onClose, onAddAction, is
                         const objectUrl = URL.createObjectURL(cachedBlob);
                         setPdfSource(objectUrl);
                         setIsCached(true);
-                        setShowIndicator(true);
+
                         console.log('[PDFViewer] Loaded from URL cache');
                         return;
                     }
@@ -131,6 +132,47 @@ export default function PDFViewer({ url, songId, title, onClose, onAddAction, is
                         return;
                     }
 
+                    // Native: Use CapacitorHttp to bypass CORS
+                    if (Capacitor.isNativePlatform()) {
+                        try {
+                            const safeUrl = new URL(url).toString();
+                            const response = await CapacitorHttp.get({
+                                url: safeUrl,
+                                responseType: 'blob'
+                            });
+
+                            if (response.status === 200 && active) {
+                                // CapacitorHttp returns base64 data for blob responseType
+                                const dataUri = `data:application/pdf;base64,${response.data}`;
+                                setPdfSource(dataUri);
+
+                                // Save to cache (convert base64 to blob)
+                                try {
+                                    const byteCharacters = atob(response.data);
+                                    const byteNumbers = new Array(byteCharacters.length);
+                                    for (let i = 0; i < byteCharacters.length; i++) {
+                                        byteNumbers[i] = byteCharacters.charCodeAt(i);
+                                    }
+                                    const byteArray = new Uint8Array(byteNumbers);
+                                    const blob = new Blob([byteArray], { type: 'application/pdf' });
+                                    savePdfToCache(url, blob);
+                                    setIsCached(true);
+
+                                } catch (e) {
+                                    console.error('[PDFViewer] Cache save failed:', e);
+                                }
+                            } else {
+                                throw new Error(`Status ${response.status}`);
+                            }
+                        } catch (err) {
+                            console.error('[PDFViewer] Native fetch failed:', err);
+                            // Fallback to standard flow just in case, or show error
+                            if (active) setError('Не вдалося завантажити PDF (Native)');
+                        }
+                        return;
+                    }
+
+                    // Web: Standard fetch
                     setPdfSource(url); // Use URL immediately
 
                     // Background fetch to cache
@@ -143,7 +185,7 @@ export default function PDFViewer({ url, songId, title, onClose, onAddAction, is
                             savePdfToCache(url, blob);
                             if (active) {
                                 setIsCached(true);
-                                setShowIndicator(true);
+
                             }
                         })
                         .catch(err => console.error('[PDFViewer] Background cache failed:', err));
@@ -163,13 +205,7 @@ export default function PDFViewer({ url, songId, title, onClose, onAddAction, is
         };
     }, [url, songId]);
 
-    // Auto-hide indicator
-    useEffect(() => {
-        if (showIndicator) {
-            const timer = setTimeout(() => setShowIndicator(false), 3000);
-            return () => clearTimeout(timer);
-        }
-    }, [showIndicator]);
+
 
     useEffect(() => {
         const setupWorker = async () => {
@@ -258,13 +294,7 @@ export default function PDFViewer({ url, songId, title, onClose, onAddAction, is
         <div className="flex flex-col h-full bg-white relative">
 
 
-            {/* Offline Indicator */}
-            <div className={`absolute top-4 left-1/2 -translate-x-1/2 z-40 transition-all duration-500 pointer-events-none ${showIndicator ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
-                <div className="bg-green-500/90 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1.5 backdrop-blur-md">
-                    <Check className="w-3 h-3" />
-                    Збережено офлайн
-                </div>
-            </div>
+
 
             {/* Content (Scrollable with pinch-zoom support) */}
             <div

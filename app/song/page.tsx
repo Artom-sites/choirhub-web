@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { Capacitor } from "@capacitor/core";
+import { StatusBar, Style } from '@capacitor/status-bar';
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { getSong, updateSong, uploadSongPdf, deleteSong, getChoir } from "@/lib/db";
 import { getPdf } from "@/lib/offlineDb";
@@ -13,18 +15,16 @@ import { extractInstrument, getFileNameFromUrl, isGenericPartName } from "@/lib/
 
 import ConfirmationModal from "@/components/ConfirmationModal";
 import Toast from "@/components/Toast";
-import ArchiveLoader from "@/components/ArchiveLoader";
+import Preloader from "@/components/Preloader";
 import GlobalArchive from "@/components/GlobalArchive";
 import { GlobalSong } from "@/types";
+import { useStatusBar } from "@/hooks/useStatusBar";
 
-// Helper to extract instrument name for tabs
-// extractInstrument moved to @/lib/utils
-
-export default function SongPage() {
-    const params = useParams();
+function SongContent() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const songId = searchParams.get('id');
     const { userData } = useAuth();
-    const songId = params.id as string;
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [song, setSong] = useState<SimpleSong | null>(null);
@@ -53,6 +53,35 @@ export default function SongPage() {
 
     // Annotation State
     const [isAnnotating, setIsAnnotating] = useState(false);
+
+    // Status Bar control for PDF viewer (white background needs dark icons)
+    useEffect(() => {
+        if (!Capacitor.isNativePlatform()) return;
+
+        const setStatusBarStyle = async () => {
+            try {
+                if (showViewer) {
+                    // PDF viewer has white background - need dark icons
+                    await StatusBar.setStyle({ style: Style.Light });
+                    await StatusBar.setBackgroundColor({ color: '#FFFFFF' });
+                } else {
+                    // Restore to theme-based style
+                    const theme = document.documentElement.getAttribute('data-theme');
+                    if (theme === 'dark') {
+                        await StatusBar.setStyle({ style: Style.Dark });
+                        await StatusBar.setBackgroundColor({ color: '#09090b' });
+                    } else {
+                        await StatusBar.setStyle({ style: Style.Light });
+                        await StatusBar.setBackgroundColor({ color: '#F1F5F9' });
+                    }
+                }
+            } catch (e) {
+                console.error('[StatusBar] Error:', e);
+            }
+        };
+
+        setStatusBarStyle();
+    }, [showViewer]);
 
     const handleLinkArchive = async (globalSong: GlobalSong) => {
         if (!song || !userData?.choirId) return;
@@ -135,7 +164,7 @@ export default function SongPage() {
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file || !userData?.choirId || !song) return;
+        if (!file || !userData?.choirId || !song || !songId) return;
 
         // Validate file
         if (file.type !== "application/pdf") {
@@ -245,7 +274,7 @@ export default function SongPage() {
     };
 
     if (loading) {
-        return <ArchiveLoader />;
+        return <Preloader />;
     }
 
     if (!song) {
@@ -275,7 +304,7 @@ export default function SongPage() {
         return (
             <div className="h-screen bg-white flex flex-col">
                 {/* PDF Header */}
-                <div className="bg-white border-b border-gray-200 shadow-sm z-10">
+                <div className="bg-white border-b border-gray-200 shadow-sm z-10 pt-[env(safe-area-inset-top)]">
                     <div className="px-4 py-3 flex items-center justify-between">
                         <button
                             onClick={() => router.back()}
@@ -340,11 +369,11 @@ export default function SongPage() {
                 {/* PDF Content */}
                 <div className="flex-1 overflow-hidden relative">
                     <PDFViewer
-                        url={currentPdfUrl && currentPdfUrl.includes('mscmusic.org')
-                            ? `/api/pdf-proxy?url=${encodeURIComponent(currentPdfUrl)}`
-                            : currentPdfUrl
-                        }
-                        songId={songId}
+                        url={(() => {
+                            // Always use direct URL for static export compatibility
+                            return currentPdfUrl;
+                        })()}
+                        songId={songId as string}
                         title={song.title}
                         onClose={() => router.back()}
                         isAnnotating={isAnnotating}
@@ -360,7 +389,7 @@ export default function SongPage() {
     return (
         <div className="min-h-screen bg-background text-text-primary">
             {/* Header */}
-            <header className="bg-surface/50 backdrop-blur-xl border-b border-border px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
+            <header className="bg-surface/50 backdrop-blur-xl border-b border-border px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] flex items-center gap-3 sticky top-0 z-10">
                 <button
                     onClick={() => router.back()}
                     className="p-2 hover:bg-surface-highlight rounded-xl transition-colors"
@@ -634,5 +663,13 @@ export default function SongPage() {
                 </div>
             )}
         </div>
+    );
+}
+
+export default function SongPage() {
+    return (
+        <Suspense fallback={<Preloader />}>
+            <SongContent />
+        </Suspense>
     );
 }

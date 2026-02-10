@@ -58,6 +58,7 @@ export const viewport = {
   maximumScale: 1, // Fix input zoom on iOS
   userScalable: false, // Prevent zooming for app-like feel
   themeColor: "#000000",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

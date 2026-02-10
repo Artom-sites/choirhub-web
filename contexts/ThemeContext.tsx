@@ -1,6 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { StatusBar, Style } from '@capacitor/status-bar';
+import { Capacitor } from '@capacitor/core';
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -26,7 +28,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         localStorage.setItem('theme', theme);
 
-        const applyTheme = () => {
+        const applyTheme = async () => {
             const root = document.documentElement;
             let targetTheme: 'light' | 'dark' = 'dark';
 
@@ -39,12 +41,28 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
             setResolvedTheme(targetTheme);
             root.setAttribute('data-theme', targetTheme);
+
+            // Update Capacitor Status Bar
+            if (Capacitor.isNativePlatform()) {
+                try {
+                    if (targetTheme === 'dark') {
+                        await StatusBar.setStyle({ style: Style.Dark });
+                        await StatusBar.setBackgroundColor({ color: '#09090b' }); // Dark background
+                    } else {
+                        await StatusBar.setStyle({ style: Style.Light }); // Light style = Dark text
+                        await StatusBar.setBackgroundColor({ color: '#F1F5F9' }); // Light background
+                    }
+                } catch (e) {
+                    console.error("Status Bar Error:", e);
+                }
+            }
         };
 
         applyTheme();
 
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
         const handler = () => {
+            // Re-evaluate if system theme changes and we are in 'system' mode
             if (theme === 'system') applyTheme();
         };
 

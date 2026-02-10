@@ -24,25 +24,42 @@ export default function SwipeableCard({ children, onDelete, disabled = false, cl
         if (disabled) return;
         startX.current = e.touches[0].clientX;
         currentX.current = translateX;
-        isDragging.current = true;
+        // Don't set isDragging true yet, wait for move
     };
 
     const handleTouchMove = (e: React.TouchEvent) => {
-        if (!isDragging.current || disabled) return;
+        if (disabled) return;
 
         const diff = e.touches[0].clientX - startX.current;
-        let newX = currentX.current + diff;
 
-        // Limit swipe: only left, max to DELETE_AREA_WIDTH
+        // If we haven't started dragging yet
+        if (!isDragging.current) {
+            // Check if horizontal swipe is intended (threshold)
+            if (Math.abs(diff) > 10) {
+                isDragging.current = true;
+            } else {
+                // If moving less than 10px, treat as potential scroll or click, do nothing yet
+                return;
+            }
+        }
+
+        let newX = currentX.current + diff;
+        // Limit swipe logic
         newX = Math.min(0, Math.max(-DELETE_AREA_WIDTH, newX));
         setTranslateX(newX);
     };
 
     const handleTouchEnd = () => {
-        if (!isDragging.current || disabled) return;
+        if (disabled) return;
+
+        if (!isDragging.current) {
+            // It was a tap or vertical scroll, didn't trigger swipe
+            // Reset just in case, but don't prevent click
+            return;
+        }
+
         isDragging.current = false;
 
-        // Snap to revealed or hidden
         if (Math.abs(translateX) > THRESHOLD / 2) {
             setTranslateX(-DELETE_AREA_WIDTH);
             setIsRevealed(true);

@@ -14,8 +14,11 @@ import {
     updateProfile,
     sendPasswordResetEmail,
     signOut as firebaseSignOut,
-    User as FirebaseUser
+    User as FirebaseUser,
+    signInWithCredential
 } from "firebase/auth";
+import { Capacitor } from "@capacitor/core";
+import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { app } from "@/lib/firebase";
 import { getUserProfile, createUser, getChoir } from "@/lib/db";
 import { UserData } from "@/types";
@@ -81,10 +84,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     const signInWithGoogle = async () => {
-        const provider = new GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: 'select_account' });
         try {
-            await signInWithPopup(auth, provider); // Changed to Popup
+            if (Capacitor.getPlatform() === 'web') {
+                const provider = new GoogleAuthProvider();
+                provider.setCustomParameters({ prompt: 'select_account' });
+                await signInWithPopup(auth, provider);
+            } else {
+                const result = await FirebaseAuthentication.signInWithGoogle();
+                const credential = GoogleAuthProvider.credential(result.credential?.idToken);
+                await signInWithCredential(auth, credential);
+            }
         } catch (error) {
             console.error("Error signing in with Google:", error);
             throw error;

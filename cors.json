@@ -1,24 +1,11 @@
 [
     {
         "origin": [
-            "https://mychoir.vercel.app",
-            "http://localhost:3000",
-            "http://localhost:3001"
+            "*"
         ],
         "method": [
-            "GET",
-            "POST",
-            "PUT",
-            "DELETE",
-            "HEAD"
+            "GET"
         ],
-        "maxAgeSeconds": 3600,
-        "responseHeader": [
-            "Content-Type",
-            "Authorization",
-            "Content-Length",
-            "User-Agent",
-            "x-goog-resumable"
-        ]
+        "maxAgeSeconds": 3600
     }
 ]

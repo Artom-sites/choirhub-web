@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2, Music2, Check, ExternalLink, User, Mail, Eye, EyeOff, UserX, AlertTriangle } from "lucide-react";
+import { Music2, Check, ExternalLink, User, Mail, Eye, EyeOff, UserX, AlertTriangle, ArrowLeft, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { createUser, getChoir, updateChoirMembers } from "@/lib/db";
 import { Choir, UserData } from "@/types";
@@ -18,10 +19,11 @@ import {
     where
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import Preloader from "@/components/Preloader";
 
 function SetupPageContent() {
     const router = useRouter();
-    const { user, userData, loading: authLoading, signInWithGoogle, signInWithEmail, signUpWithEmail, signInAsGuest, resetPassword, refreshProfile } = useAuth();
+    const { user, userData, loading: authLoading, signInWithGoogle, signInWithEmail, signUpWithEmail, signInAsGuest, resetPassword, refreshProfile, isGuest, signOut } = useAuth();
 
     const searchParams = useSearchParams();
     const urlCode = searchParams.get('code');
@@ -61,11 +63,26 @@ function SetupPageContent() {
         }
     }, [urlCode, userData]);
 
+    // Fix: Reset view to welcome if user authenticates while in email_auth/reset views
+    useEffect(() => {
+        if (user && !userData?.choirId && (view === 'email_auth' || view === 'reset_password')) {
+            setView('welcome');
+        }
+    }, [user, userData, view]);
+
+    // Fix: Reset view to welcome if user authenticates while in email_auth/reset views
+    useEffect(() => {
+        if (user && !userData?.choirId && (view === 'email_auth' || view === 'reset_password')) {
+            setView('welcome');
+        }
+    }, [user, userData, view]);
+
     const handleGoogleLogin = async () => {
         try {
             await signInWithGoogle();
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
+            alert("Google Login Error: " + (err.message || JSON.stringify(err)));
         }
     };
 
@@ -73,8 +90,9 @@ function SetupPageContent() {
         try {
             setShowGuestWarning(false);
             await signInAsGuest();
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
+            alert("Guest Login Error: " + (err.message || JSON.stringify(err)));
         }
     };
 
@@ -141,6 +159,7 @@ function SetupPageContent() {
 
     const handleCreateChoir = async () => {
         if (!user) return;
+
         if (!choirName.trim()) {
             setError("Введіть назву хору");
             return;
@@ -184,8 +203,9 @@ function SetupPageContent() {
 
             await refreshProfile();
             router.push("/");
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
+            alert("Помилка створення: " + (err.message || JSON.stringify(err)));
             setError("Помилка створення. Спробуйте ще раз.");
         } finally {
             setFormLoading(false);
@@ -194,6 +214,7 @@ function SetupPageContent() {
 
     const handleJoinChoir = async () => {
         if (!user) return;
+
         if (inviteCode.length !== 6) {
             setError("Код має бути 6 символів");
             return;
@@ -291,17 +312,19 @@ function SetupPageContent() {
 
             await refreshProfile();
             router.push("/");
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
+            alert("Помилка приєднання: " + (err.message || JSON.stringify(err)));
             setError("Помилка приєднання");
         } finally {
             setFormLoading(false);
         }
     };
 
-    if (authLoading) return <div className="h-screen flex items-center justify-center bg-black text-white"><Loader2 className="animate-spin" /></div>;
+    // Prevent flash of content if user is already in a choir or profile is still loading
+    if (authLoading || (user && !userData) || (user && userData?.choirId)) return <Preloader />;
 
-    if (!user && view !== 'email_auth') {
+    if (!user && view !== 'email_auth' && view !== 'reset_password') {
         return (
             <div className="min-h-screen bg-[#09090b] flex flex-col items-center justify-center p-6 text-center">
                 <div className="w-24 h-24 bg-[#18181b] rounded-3xl flex items-center justify-center mb-8 border border-white/10 shadow-2xl">
@@ -350,13 +373,11 @@ function SetupPageContent() {
                     </button>
                 </div>
 
-                <p className="text-xs text-text-secondary mt-6 max-w-xs">
-                    Синхронізація працює в обох випадках
-                </p>
+
 
                 <div className="mt-8 flex gap-6 text-xs text-text-secondary">
-                    <a href="/terms" className="hover:text-white transition-colors">Умови використання</a>
-                    <a href="/privacy" className="hover:text-white transition-colors">Політика конфіденційності</a>
+                    <Link href="/terms" className="hover:text-white transition-colors">Умови використання</Link>
+                    <Link href="/privacy" className="hover:text-white transition-colors">Політика конфіденційності</Link>
                 </div>
 
                 {/* Guest Warning Modal */}
@@ -405,7 +426,10 @@ function SetupPageContent() {
         return (
             <div className="min-h-screen bg-[#09090b] flex items-center justify-center p-6">
                 <div className="w-full max-w-md bg-surface border border-white/5 rounded-3xl p-8">
-                    <button onClick={() => setView('welcome')} className="text-text-secondary text-sm mb-6">← Назад</button>
+                    <button onClick={() => setView('welcome')} className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors mb-6 text-sm font-medium">
+                        <ArrowLeft className="w-5 h-5" />
+                        Назад
+                    </button>
                     <h2 className="text-2xl font-bold text-white mb-2">{isRegistering ? "Реєстрація" : "Вхід"}</h2>
                     <p className="text-text-secondary text-sm mb-6">Введіть дані для входу</p>
 
@@ -444,7 +468,19 @@ function SetupPageContent() {
                                     <Eye className="w-5 h-5" />
                                 )}
                             </button>
+
                         </div>
+
+                        {error && (
+                            <div className="flex justify-end mt-1 mb-2">
+                                <button
+                                    onClick={() => { setView('reset_password'); setError(''); setResetSent(false); }}
+                                    className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                                >
+                                    Забули пароль?
+                                </button>
+                            </div>
+                        )}
                         {error && <p className="text-red-400 text-sm bg-red-400/10 p-3 rounded-lg">{error}</p>}
 
                         <button
@@ -452,28 +488,22 @@ function SetupPageContent() {
                             disabled={formLoading}
                             className="w-full py-4 bg-text-primary text-background rounded-2xl font-bold mt-4 hover:opacity-90 transition-all flex justify-center shadow-lg"
                         >
-                            {formLoading ? <Loader2 className="animate-spin" /> : (isRegistering ? "Зареєструватися" : "Увійти")}
+                            {formLoading ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : (isRegistering ? "Зареєструватися" : "Увійти")}
                         </button>
 
-                        <div className="text-center mt-4">
+                        <div className="flex flex-col items-center gap-4 mt-8">
                             <button
                                 onClick={() => setIsRegistering(!isRegistering)}
-                                className="text-text-secondary text-sm underline hover:text-white"
+                                className="text-sm font-medium text-white hover:text-gray-300 transition-colors"
                             >
-                                {isRegistering ? "Вже є акаунт? Увійти" : "Немає акаунту? Реєстрація"}
+                                {isRegistering ? "Увійти" : "Реєстрація"}
                             </button>
-                            {!isRegistering && (
-                                <button
-                                    onClick={() => { setView('reset_password'); setError(''); setResetSent(false); }}
-                                    className="text-text-secondary text-sm underline hover:text-white block mt-2"
-                                >
-                                    Забули пароль?
-                                </button>
-                            )}
+
                         </div>
                     </div>
                 </div>
-            </div>
+            </div >
+
         );
     }
 
@@ -481,7 +511,10 @@ function SetupPageContent() {
         return (
             <div className="min-h-screen bg-[#09090b] flex items-center justify-center p-6">
                 <div className="w-full max-w-md bg-surface border border-white/5 rounded-3xl p-8">
-                    <button onClick={() => setView('email_auth')} className="text-text-secondary text-sm mb-6">← Назад</button>
+                    <button onClick={() => setView('email_auth')} className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors mb-6 text-sm font-medium">
+                        <ArrowLeft className="w-5 h-5" />
+                        Назад
+                    </button>
                     <h2 className="text-2xl font-bold text-white mb-2">Відновлення паролю</h2>
                     <p className="text-text-secondary text-sm mb-6">Введіть email для отримання посилання</p>
 
@@ -515,7 +548,7 @@ function SetupPageContent() {
                                 disabled={formLoading}
                                 className="w-full py-4 bg-white text-black rounded-xl font-bold hover:bg-gray-200 transition-colors flex justify-center"
                             >
-                                {formLoading ? <Loader2 className="animate-spin" /> : "Надіслати лист"}
+                                {formLoading ? <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" /> : "Надіслати лист"}
                             </button>
                         </div>
                     )}
@@ -526,60 +559,72 @@ function SetupPageContent() {
 
     // Authenticated but no profile configured
     return (
-        <div className="min-h-screen bg-[#09090b] p-6 flex items-center justify-center">
-            <div className="w-full max-w-md bg-surface border border-white/5 rounded-3xl p-8">
+        <div className="min-h-screen bg-background p-6 flex items-center justify-center transition-colors duration-300">
+            <div className="w-full max-w-md bg-surface border border-border rounded-3xl p-8 shadow-xl">
                 {view === 'welcome' && (
                     <div className="text-center space-y-4">
-                        <div className="w-16 h-16 bg-white/5 rounded-full mx-auto flex items-center justify-center mb-4 text-2xl font-bold text-white">
-                            {user?.displayName ? user.displayName[0] : <User />}
+                        <div className="w-16 h-16 bg-surface-highlight rounded-full mx-auto flex items-center justify-center mb-4 text-2xl font-bold text-text-primary shadow-sm border border-border">
+                            {user?.displayName ? user.displayName[0] : <User className="w-8 h-8 text-text-secondary" />}
                         </div>
-                        <h2 className="text-2xl font-bold text-white">Привіт, {user?.displayName || "Гість"}!</h2>
+                        <h2 className="text-2xl font-bold text-text-primary">Привіт, {user?.displayName || "Гість"}!</h2>
                         <p className="text-text-secondary">
                             {urlCode ? "Приєднайтеся до хору за запрошенням" : "У вас ще немає хору. Що зробимо?"}
                         </p>
 
                         <div className="grid gap-3 pt-4">
-                            {!urlCode && (
+                            {!urlCode && !isGuest && (
                                 <button
-                                    onClick={() => setView('create')}
-                                    className="py-4 bg-white text-black rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                                    onClick={() => { setView('create'); setError(""); }}
+                                    className="py-4 bg-primary text-background rounded-xl font-bold hover:opacity-90 transition-all shadow-md"
                                 >
                                     Створити новий хор
                                 </button>
                             )}
                             <button
-                                onClick={() => setView('join')}
-                                className={`py-4 rounded-xl font-medium transition-colors ${urlCode
-                                    ? 'bg-white text-black font-bold hover:bg-gray-200'
-                                    : 'bg-white/5 text-white hover:bg-white/10 border border-white/5'
+                                onClick={() => { setView('join'); setError(""); }}
+                                className={`py-4 rounded-xl font-medium transition-colors border ${urlCode
+                                    ? 'bg-primary text-background font-bold hover:opacity-90 shadow-md border-transparent'
+                                    : 'bg-surface hover:bg-surface-highlight text-text-primary border-border'
                                     }`}
                             >
                                 Приєднатися {urlCode ? '' : 'за кодом'}
                             </button>
                         </div>
+
+                        <button
+                            onClick={() => signOut()}
+                            className="mt-6 text-sm text-text-secondary hover:text-red-400 transition-colors flex items-center gap-2 mx-auto py-2 px-4 rounded-lg hover:bg-white/5"
+                        >
+                            <LogOut className="w-4 h-4" />
+                            Вийти з акаунту
+                        </button>
                     </div>
                 )}
 
                 {view === 'create' && (
                     <div>
-                        <button onClick={() => setView('welcome')} className="text-text-secondary text-sm mb-6">← Назад</button>
-                        <h2 className="text-2xl font-bold text-white mb-6">Створення хору</h2>
+                        <button onClick={() => { setView('welcome'); setError(""); }} className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors mb-6 text-sm font-medium">
+                            <ArrowLeft className="w-5 h-5" />
+                            Назад
+                        </button>
+                        <h2 className="text-2xl font-bold text-text-primary mb-6">Створення хору</h2>
                         <div className="space-y-4">
                             <div>
                                 <label className="text-xs text-text-secondary uppercase font-bold tracking-wider mb-2 block">Назва хору</label>
                                 <input
                                     value={choirName}
                                     onChange={(e) => setChoirName(e.target.value)}
-                                    className="w-full px-4 py-3 bg-black/20 rounded-xl border border-white/10 text-white focus:outline-none focus:border-white/30"
+                                    className="w-full px-4 py-3 bg-surface-highlight rounded-xl border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-secondary/50"
                                     placeholder="Наприклад: Молодіжний Хор"
                                 />
                             </div>
+                            {error && <p className="text-red-500 text-sm bg-red-500/10 p-3 rounded-lg border border-red-500/20">{error}</p>}
                             <button
                                 onClick={handleCreateChoir}
                                 disabled={formLoading}
-                                className="w-full py-4 bg-white text-black rounded-xl font-bold mt-4 hover:bg-gray-200 transition-colors flex justify-center"
+                                className="w-full py-4 bg-primary text-background rounded-xl font-bold mt-4 hover:opacity-90 transition-all flex justify-center shadow-lg disabled:opacity-50"
                             >
-                                {formLoading ? <Loader2 className="animate-spin" /> : "Створити"}
+                                {formLoading ? <div className="w-5 h-5 border-2 border-background/20 border-t-background rounded-full animate-spin" /> : "Створити"}
                             </button>
                         </div>
                     </div>
@@ -587,8 +632,11 @@ function SetupPageContent() {
 
                 {view === 'join' && (
                     <div>
-                        <button onClick={() => setView('welcome')} className="text-text-secondary text-sm mb-6">← Назад</button>
-                        <h2 className="text-2xl font-bold text-white mb-6">Введіть код</h2>
+                        <button onClick={() => { setView('welcome'); setError(""); }} className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors mb-6 text-sm font-medium">
+                            <ArrowLeft className="w-5 h-5" />
+                            Назад
+                        </button>
+                        <h2 className="text-2xl font-bold text-text-primary mb-6">Введіть код</h2>
                         <div className="space-y-4">
                             <div>
                                 <label className="text-xs text-text-secondary uppercase font-bold tracking-wider mb-2 block">Код запрошення</label>
@@ -596,17 +644,17 @@ function SetupPageContent() {
                                     value={inviteCode}
                                     onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                                     maxLength={6}
-                                    className="w-full px-4 py-3 bg-black/20 rounded-xl border border-white/10 text-white focus:outline-none focus:border-white/30 text-center text-xl font-mono tracking-widest uppercase"
+                                    className="w-full px-4 py-3 bg-surface-highlight rounded-xl border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-center text-xl font-mono tracking-widest uppercase placeholder:text-text-secondary/30"
                                     placeholder="XXXXXX"
                                 />
                             </div>
-                            {error && <p className="text-red-400 text-sm bg-red-400/10 p-3 rounded-lg">{error}</p>}
+                            {error && <p className="text-red-500 text-sm bg-red-500/10 p-3 rounded-lg border border-red-500/20">{error}</p>}
                             <button
                                 onClick={handleJoinChoir}
                                 disabled={formLoading}
-                                className="w-full py-4 bg-white text-black rounded-xl font-bold mt-4 hover:bg-gray-200 transition-colors flex justify-center"
+                                className="w-full py-4 bg-primary text-background rounded-xl font-bold mt-4 hover:opacity-90 transition-all flex justify-center shadow-lg disabled:opacity-50"
                             >
-                                {formLoading ? <Loader2 className="animate-spin" /> : "Приєднатися"}
+                                {formLoading ? <div className="w-5 h-5 border-2 border-background/20 border-t-background rounded-full animate-spin" /> : "Приєднатися"}
                             </button>
                         </div>
                     </div>
@@ -618,11 +666,7 @@ function SetupPageContent() {
 
 export default function SetupPage() {
     return (
-        <Suspense fallback={
-            <div className="h-screen flex items-center justify-center bg-black text-white">
-                <Loader2 className="animate-spin" />
-            </div>
-        }>
+        <Suspense fallback={<Preloader />}>
             <SetupPageContent />
         </Suspense>
     );

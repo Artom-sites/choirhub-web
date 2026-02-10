@@ -36,16 +36,25 @@ export function useOfflineCache() {
      * Fetch PDF and convert to Base64
      */
     const fetchPdfAsBase64 = async (url: string, signal?: AbortSignal): Promise<string> => {
-        // Use proxy to avoid CORS issues
-        const proxyUrl = `/api/pdf-proxy?url=${encodeURIComponent(url)}`;
-        const response = await fetch(proxyUrl, { signal });
+        // Direct fetch only (Proxy is removed for static export compatibility)
+        // CORS must be handled by the source server (R2/Firebase)
 
-        if (!response.ok) {
-            throw new Error(`Failed to fetch PDF: ${response.status}`);
+        // Fallback to direct fetch
+        try {
+            const response = await fetch(url, { signal });
+            if (!response.ok) {
+                throw new Error(`Failed to fetch PDF: ${response.status}`);
+            }
+            const blob = await response.blob();
+            return await blobToBase64(blob);
+        } catch (error) {
+            console.error('[OfflineCache] Direct fetch failed:', error);
+            throw error;
         }
+    };
 
-        const blob = await response.blob();
-
+    // Helper to convert blob to base64
+    const blobToBase64 = (blob: Blob): Promise<string> => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onloadend = () => {

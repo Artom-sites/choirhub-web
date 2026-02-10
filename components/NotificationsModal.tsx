@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Bell, BellOff, Loader2, X, Settings } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
 import { useAuth } from "@/contexts/AuthContext";
 import { getChoirNotifications, markNotificationAsRead } from "@/lib/db";
 import { ChoirNotification } from "@/types";
@@ -99,7 +100,7 @@ export default function NotificationsModal({ isOpen, onClose }: NotificationsMod
                                 )}
                             </div>
 
-                            {!isSupported && (
+                            {!isSupported && !Capacitor.isNativePlatform() && (
                                 <p className="text-xs text-red-400 mt-2">
                                     Ваш браузер не підтримує пуш-сповіщення
                                 </p>

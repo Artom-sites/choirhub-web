@@ -1,36 +1,33 @@
 "use client";
 
 import { ArrowLeft } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 export default function TermsPage() {
-    const router = useRouter();
-
     const handleBack = () => {
         if (window.history.length > 1) {
-            router.back();
+            window.history.back();
         } else {
-            router.push('/');
+            window.location.href = '/';
         }
     };
 
     return (
-        <div className="min-h-screen bg-[#09090b] text-text-secondary p-6 md:p-12 font-sans">
+        <div className="min-h-screen bg-background text-text-secondary px-6 pb-6 md:px-12 md:pb-12 font-sans pt-[env(safe-area-inset-top)]">
             <div className="max-w-3xl mx-auto space-y-8">
-                <header className="border-b border-white/10 pb-6">
+                <header className="border-b border-border pb-6 pt-6">
                     <button
                         onClick={handleBack}
-                        className="flex items-center gap-2 text-text-secondary hover:text-white transition-colors mb-4"
+                        className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors mb-4"
                     >
                         <ArrowLeft className="w-5 h-5" />
                         <span>Назад</span>
                     </button>
-                    <h1 className="text-3xl font-bold text-white mb-2">Умови використання</h1>
+                    <h1 className="text-3xl font-bold text-text-primary mb-2">Умови використання</h1>
                     <p className="text-sm">Останнє оновлення: 3 лютого 2026</p>
                 </header>
 
                 <section className="space-y-3">
-                    <h2 className="text-xl font-semibold text-white">1. Загальні положення</h2>
+                    <h2 className="text-xl font-semibold text-text-primary">1. Загальні положення</h2>
                     <p>
                         Ці Умови використання (далі — &quot;Умови&quot;) регулюють доступ до мобільного додатку та веб-сайту &quot;MyChoir&quot; (далі — &quot;Додаток&quot;).
                         Завантажуючи, встановлюючи або використовуючи Додаток, ви (далі — &quot;Користувач&quot;) погоджуєтесь із цими Умовами.
@@ -41,7 +38,7 @@ export default function TermsPage() {
                 </section>
 
                 <section className="space-y-3">
-                    <h2 className="text-xl font-semibold text-white">2. Ліцензія на використання</h2>
+                    <h2 className="text-xl font-semibold text-text-primary">2. Ліцензія на використання</h2>
                     <p>
                         Ми надаємо вам обмежену, невиключну, особисту ліцензію на використання Додатку виключно
                         для особистих та некомерційних цілей, пов&apos;язаних з організацією хорового служіння.
@@ -55,7 +52,7 @@ export default function TermsPage() {
                 </section>
 
                 <section className="space-y-3">
-                    <h2 className="text-xl font-semibold text-white">3. Обліковий запис</h2>
+                    <h2 className="text-xl font-semibold text-text-primary">3. Обліковий запис</h2>
                     <p>
                         Для використання більшості функцій Додатку вам необхідно створити обліковий запис.
                         Ви несете відповідальність за збереження конфіденційності ваших обікових даних
@@ -67,7 +64,7 @@ export default function TermsPage() {
                 </section>
 
                 <section className="space-y-3">
-                    <h2 className="text-xl font-semibold text-white">4. Користувацький контент</h2>
+                    <h2 className="text-xl font-semibold text-text-primary">4. Користувацький контент</h2>
                     <p>
                         Додаток дозволяє завантажувати тексти, ноти, аудіофайли та інші матеріали (далі — &quot;Контент&quot;).
                     </p>
@@ -86,7 +83,7 @@ export default function TermsPage() {
                 </section>
 
                 <section className="space-y-3">
-                    <h2 className="text-xl font-semibold text-white">5. Відмова від гарантій</h2>
+                    <h2 className="text-xl font-semibold text-text-primary">5. Відмова від гарантій</h2>
                     <p>
                         Додаток надається на умовах &quot;як є&quot; (as is). Ми не гарантуємо, що робота Додатку буде
                         безперебійною або безпомилковою. Ми не несемо відповідальності за втрату даних,
@@ -95,7 +92,7 @@ export default function TermsPage() {
                 </section>
 
                 <section className="space-y-3">
-                    <h2 className="text-xl font-semibold text-white">6. Обмеження відповідальності</h2>
+                    <h2 className="text-xl font-semibold text-text-primary">6. Обмеження відповідальності</h2>
                     <p>
                         У максимальному ступені, дозволеному законом, розробники Додатку не несуть відповідальності
                         за будь-які прямі, непрямі, випадкові або побічні збитки, що виникли внаслідок
@@ -104,7 +101,7 @@ export default function TermsPage() {
                 </section>
 
                 <section className="space-y-3">
-                    <h2 className="text-xl font-semibold text-white">7. Зміни до Умов</h2>
+                    <h2 className="text-xl font-semibold text-text-primary">7. Зміни до Умов</h2>
                     <p>
                         Ми можемо оновлювати ці Умови в будь-який час. Продовження використання Додатку
                         після внесення змін означає вашу згоду з новими Умовами.
@@ -112,17 +109,17 @@ export default function TermsPage() {
                 </section>
 
                 <section className="space-y-3">
-                    <h2 className="text-xl font-semibold text-white">8. Контакти</h2>
+                    <h2 className="text-xl font-semibold text-text-primary">8. Контакти</h2>
                     <p>
                         Для зв&apos;язку з нами щодо цих Умов або роботи Додатку:
                     </p>
                     <ul className="list-none space-y-1 mt-2">
                         <li><strong>Email:</strong> artom.devv@gmail.com</li>
-                        <li><strong>Telegram:</strong> <a href="https://t.me/artom_dev" className="text-blue-400 hover:underline">@artom_dev</a></li>
+                        <li><strong>Telegram:</strong> <a href="https://t.me/artom_dev" className="text-primary hover:underline">@artom_dev</a></li>
                     </ul>
                 </section>
 
-                <footer className="border-t border-white/10 pt-6 mt-8">
+                <footer className="border-t border-border pt-6 mt-8">
                     <p className="text-sm text-center">
                         © 2026 MyChoir. Всі права захищені.
                     </p>

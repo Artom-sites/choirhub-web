@@ -5,9 +5,11 @@ import { Service, ServiceSong, SimpleSong, Choir, ChoirMember } from "@/types";
 import { getSongs, addSongToService, removeSongFromService, getChoir, updateService, setServiceAttendance, addKnownConductor, addKnownPianist } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
 import { ChevronLeft, Eye, X, Plus, Users, UserX, Check, Calendar, Music, UserCheck, AlertCircle, Trash2, User as UserIcon, CloudDownload, CheckCircle, Loader, ChevronDown } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
+import { StatusBar, Style } from '@capacitor/status-bar';
 import { useRouter } from "next/navigation";
 import SwipeableCard from "./SwipeableCard";
-import ConfirmationModal from "./ConfirmationModal";
+
 import OfflinePdfModal from "./OfflinePdfModal";
 import { useOfflineCache } from "@/hooks/useOfflineCache";
 
@@ -30,7 +32,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
     const [showAttendance, setShowAttendance] = useState(false);
     const [search, setSearch] = useState("");
     const [votingLoading, setVotingLoading] = useState(false);
-    const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
+
 
     // Offline PDF modal
     const [offlineModalSong, setOfflineModalSong] = useState<SimpleSong | null>(null);
@@ -98,6 +100,29 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
     const [localCacheStatus, setLocalCacheStatus] = useState<Record<string, boolean>>({});
 
     // Auto-cache effect: Cache PDFs when viewing service (any service, not just upcoming)
+
+    // Attendance Modal Status Bar Control
+    useEffect(() => {
+        if (showAttendance) {
+            // Modal is dark -> set Status Bar to Dark (Light Text)
+            if (Capacitor.isNativePlatform()) {
+                StatusBar.setStyle({ style: Style.Dark });
+                StatusBar.setBackgroundColor({ color: '#09090b' }); // Match modal bg
+            }
+        } else {
+            // Revert to default theme behavior
+            const theme = document.documentElement.getAttribute('data-theme');
+            if (Capacitor.isNativePlatform()) {
+                if (theme === 'dark') {
+                    StatusBar.setStyle({ style: Style.Dark });
+                    StatusBar.setBackgroundColor({ color: '#09090b' });
+                } else {
+                    StatusBar.setStyle({ style: Style.Light });
+                    StatusBar.setBackgroundColor({ color: '#FFFFFF' });
+                }
+            }
+        }
+    }, [showAttendance]);
     useEffect(() => {
         if (!currentService || availableSongs.length === 0) return;
 
@@ -140,7 +165,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
         // Just prefetching one song is enough - all songs share the same chunks
         if (currentService.songs.length > 0) {
             const firstSongId = currentService.songs[0].songId;
-            const prefetchUrl = `/song/${firstSongId}`;
+            const prefetchUrl = `/song?id=${firstSongId}`;
             console.log('[ServiceView] Prefetching song page chunks:', prefetchUrl);
 
             // Use link prefetch to cache the page and its chunks
@@ -282,7 +307,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
             }
         }
         // Online - navigate to song page as usual
-        router.push(`/song/${songId}`);
+        router.push(`/song?id=${songId}`);
     };
 
     const openEditCredits = (index: number) => {
@@ -402,7 +427,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
     return (
         <div className="pb-32 bg-background min-h-screen">
             {/* Header */}
-            <div className="sticky top-0 z-20 bg-surface border-b border-border px-4 pt-12 pb-4 flex items-center gap-4">
+            <div className="sticky top-0 z-20 bg-surface border-b border-border px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-4 flex items-center gap-4">
                 <button
                     onClick={onBack}
                     className="p-2 -ml-2 text-text-secondary hover:text-text-primary rounded-full hover:bg-surface-highlight transition-colors"
@@ -469,7 +494,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                 return (
                                     <SwipeableCard
                                         key={`${song.songId}-${index}`}
-                                        onDelete={() => setPendingDeleteIndex(index)}
+                                        onDelete={() => setSongToDeleteIndex(index)}
                                         disabled={!canEdit}
                                         className="rounded-2xl"
                                     >
@@ -631,398 +656,391 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
 
             {/* Modals remain mostly simple, just style updates */}
             {/* Add Song Sheet - Full Screen Multiselect */}
-            {showAddSong && (
-                <div className="fixed inset-0 z-[60] bg-background flex flex-col animate-in slide-in-from-bottom duration-300">
-                    <div className="p-4 pt-safe border-b border-border flex justify-between items-center bg-surface/50 backdrop-blur-xl sticky top-0 z-10">
-                        <div className="flex items-center gap-3">
-                            <button onClick={() => setShowAddSong(false)} className="p-2 -ml-2 hover:bg-surface-highlight rounded-full transition-colors text-text-primary">
-                                <ChevronLeft className="w-6 h-6" />
-                            </button>
-                            <div>
-                                <h3 className="text-xl font-bold text-text-primary">Додати пісні</h3>
-                                <p className="text-xs text-text-secondary">Оберіть пісні зі списку</p>
-                            </div>
-                        </div>
-                        <div className="w-10" /> {/* Spacer for balance */}
-                    </div>
-
-                    <div className="p-4 bg-background sticky top-[73px] z-10 border-b border-border">
-                        <input
-                            type="text"
-                            placeholder="Пошук пісні..."
-                            className="w-full px-5 py-4 bg-surface rounded-2xl text-text-primary border border-border focus:outline-none focus:border-border/50 text-lg placeholder:text-text-secondary/50"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto p-4 space-y-2 pb-32">
-                        {filteredSongs.map(song => {
-                            const isSelected = selectedSongsToService.includes(song.id);
-                            const alreadyInService = currentService.songs.some(s => s.songId === song.id);
-
-                            return (
-                                <button
-                                    key={song.id}
-                                    onClick={() => !alreadyInService && toggleSongSelection(song.id)}
-                                    disabled={alreadyInService}
-                                    className={`w-full text-left p-4 rounded-2xl border flex justify-between items-center group transition-all ${alreadyInService
-                                        ? 'bg-surface/50 border-border opacity-50 cursor-not-allowed'
-                                        : isSelected
-                                            ? 'bg-blue-500/10 border-blue-500/50'
-                                            : 'bg-surface border-border hover:bg-surface-highlight'
-                                        }`}
-                                >
-                                    <div className="flex-1 min-w-0 pr-4">
-                                        <div className={`font-medium text-lg leading-tight ${alreadyInService ? 'text-text-secondary' : isSelected ? 'text-blue-400' : 'text-text-primary'}`}>{song.title}</div>
-                                        {alreadyInService ? (
-                                            <div className="text-xs text-green-500 mt-1 flex items-center gap-1">
-                                                <Check className="w-3 h-3" />
-                                                Уже додано
-                                            </div>
-                                        ) : song.conductor && (
-                                            <div className="flex items-center gap-1.5 mt-1">
-                                                <UserIcon className="w-3 h-3 text-text-secondary" />
-                                                <span className="text-xs text-text-secondary">{song.conductor}</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                    {!alreadyInService && (
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${isSelected
-                                            ? 'bg-blue-500 text-white'
-                                            : 'bg-surface-highlight text-text-secondary group-hover:bg-surface-highlight/80'
-                                            }`}>
-                                            {isSelected ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-                                        </div>
-                                    )}
+            {
+                showAddSong && (
+                    <div className="fixed inset-0 z-[60] bg-background flex flex-col animate-in slide-in-from-bottom duration-300">
+                        <div className="p-4 pt-safe border-b border-border flex justify-between items-center bg-surface/50 backdrop-blur-xl sticky top-0 z-10">
+                            <div className="flex items-center gap-3">
+                                <button onClick={() => setShowAddSong(false)} className="p-2 -ml-2 hover:bg-surface-highlight rounded-full transition-colors text-text-primary">
+                                    <ChevronLeft className="w-6 h-6" />
                                 </button>
-                            );
-                        })}
-                    </div>
-
-                    {/* Bottom Action Bar */}
-                    <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/90 backdrop-blur-xl border-t border-border pb-safe-offset">
-                        <button
-                            onClick={handleBatchAddSongs}
-                            disabled={selectedSongsToService.length === 0}
-                            className="w-full py-4 bg-primary text-background rounded-2xl font-bold text-lg hover:opacity-90 transition-colors shadow-lg disabled:opacity-50 disabled:bg-surface-highlight disabled:text-text-secondary flex items-center justify-center gap-2"
-                        >
-                            Додати
-                            {selectedSongsToService.length > 0 && (
-                                <span className="bg-black text-white text-xs px-2 py-0.5 rounded-full min-w-[20px]">
-                                    {selectedSongsToService.length}
-                                </span>
-                            )}
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* Attendance Sheet - Enhanced List View */}
-            {showAttendance && (
-                <div className="fixed inset-0 z-50 bg-background flex flex-col animate-in slide-in-from-bottom duration-300">
-                    <div className="flex-1 overflow-hidden flex flex-col">
-                        <div className="p-4 border-b border-border flex justify-between items-center bg-surface sticky top-0 z-10">
-                            <div>
-                                <h3 className="text-xl font-bold text-text-primary">Учасники</h3>
-                                <div className="flex items-center gap-2 text-xs text-text-secondary">
-                                    <span>Всього: {choirMembers.length}</span>
-                                    <span>•</span>
-                                    <span>Буде: {confirmedMembers.length}</span>
+                                <div>
+                                    <h3 className="text-xl font-bold text-text-primary">Додати пісні</h3>
+                                    <p className="text-xs text-text-secondary">Оберіть пісні зі списку</p>
                                 </div>
                             </div>
-                            <button onClick={() => setShowAttendance(false)} className="p-2 bg-surface-highlight rounded-full hover:bg-surface-highlight/80">
-                                <X className="w-6 h-6 text-text-primary" />
-                            </button>
+                            <div className="w-10" /> {/* Spacer for balance */}
                         </div>
 
-                        {/* Filters */}
-                        <div className="px-4 py-3 border-b border-border bg-background/50 backdrop-blur-sm flex gap-2 overflow-x-auto scrollbar-hide">
-                            {['Всі', 'Soprano', 'Alto', 'Tenor', 'Bass'].map(filter => {
-                                const isActive =
-                                    (search === filter) ||
-                                    (filter === 'Всі' && search === '') ||
-                                    (filter === 'Real Users' && search === 'real');
+                        <div className="p-4 bg-background sticky top-[73px] z-10 border-b border-border">
+                            <input
+                                type="text"
+                                placeholder="Пошук пісні..."
+                                className="w-full px-5 py-4 bg-surface rounded-2xl text-text-primary border border-border focus:outline-none focus:border-border/50 text-lg placeholder:text-text-secondary/50"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-4 space-y-2 pb-32">
+                            {filteredSongs.map(song => {
+                                const isSelected = selectedSongsToService.includes(song.id);
+                                const alreadyInService = currentService.songs.some(s => s.songId === song.id);
 
                                 return (
                                     <button
-                                        key={filter}
-                                        onClick={() => setSearch(filter === 'Всі' ? '' : filter)}
-                                        className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${isActive
-                                            ? 'bg-primary text-background font-bold'
-                                            : 'bg-surface-highlight text-text-secondary hover:text-text-primary'
+                                        key={song.id}
+                                        onClick={() => !alreadyInService && toggleSongSelection(song.id)}
+                                        disabled={alreadyInService}
+                                        className={`w-full text-left p-4 rounded-2xl border flex justify-between items-center group transition-all ${alreadyInService
+                                            ? 'bg-surface/50 border-border opacity-50 cursor-not-allowed'
+                                            : isSelected
+                                                ? 'bg-blue-500/10 border-blue-500/50'
+                                                : 'bg-surface border-border hover:bg-surface-highlight'
                                             }`}
                                     >
-                                        {filter}
+                                        <div className="flex-1 min-w-0 pr-4">
+                                            <div className={`font-medium text-lg leading-tight ${alreadyInService ? 'text-text-secondary' : isSelected ? 'text-blue-400' : 'text-text-primary'}`}>{song.title}</div>
+                                            {alreadyInService ? (
+                                                <div className="text-xs text-green-500 mt-1 flex items-center gap-1">
+                                                    <Check className="w-3 h-3" />
+                                                    Уже додано
+                                                </div>
+                                            ) : song.conductor && (
+                                                <div className="flex items-center gap-1.5 mt-1">
+                                                    <UserIcon className="w-3 h-3 text-text-secondary" />
+                                                    <span className="text-xs text-text-secondary">{song.conductor}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        {!alreadyInService && (
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${isSelected
+                                                ? 'bg-blue-500 text-white'
+                                                : 'bg-surface-highlight text-text-secondary group-hover:bg-surface-highlight/80'
+                                                }`}>
+                                                {isSelected ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                                            </div>
+                                        )}
                                     </button>
                                 );
                             })}
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-background/50 pb-32">
-                            {(() => {
-                                // Group members by Voice Part (or "Other")
-                                const filteredMembers = choirMembers.filter(m => {
-                                    if (!search) return true;
-                                    if (search === 'real') return m.hasAccount;
-                                    if (['Soprano', 'Alto', 'Tenor', 'Bass'].includes(search)) return m.voice === search;
-                                    return true;
-                                });
-
-                                // Sort alphabetically only
-                                const sortedMembers = [...filteredMembers].sort((a, b) =>
-                                    a.name.localeCompare(b.name)
-                                );
-
-                                return sortedMembers.map(member => {
-                                    const isAbsent = absentMembers.includes(member.id);
-                                    const isConfirmed = confirmedMembers.includes(member.id);
-                                    const canMarkAttendance = canEdit || canEditAttendance;
-
-                                    return (
-                                        <div
-                                            key={member.id}
-                                            className={`w-full p-3 rounded-2xl border flex justify-between items-center gap-3 transition-all ${isAbsent
-                                                ? 'bg-red-500/5 border-red-500/20'
-                                                : isConfirmed
-                                                    ? 'bg-green-500/5 border-green-500/20'
-                                                    : 'bg-surface/50 border-border'
-                                                }`}
-                                        >
-                                            {/* Member Info */}
-                                            <div className="flex items-center gap-3 min-w-0 flex-1">
-                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${isAbsent ? 'bg-red-500/10 text-red-400'
-                                                    : isConfirmed ? 'bg-green-500/10 text-green-500'
-                                                        : 'bg-surface-highlight text-text-secondary'
-                                                    }`}>
-                                                    {member.name?.[0]?.toUpperCase()}
-                                                </div>
-
-                                                <div className="min-w-0">
-                                                    <span className={`font-medium truncate block ${isAbsent ? 'text-red-400 line-through' : 'text-text-primary'}`}>
-                                                        {member.name}
-                                                    </span>
-                                                    <span className="text-xs text-text-secondary">
-                                                        {member.voice || 'Без партії'}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            {/* Two Buttons: Present / Absent */}
-                                            {canMarkAttendance ? (
-                                                <div className="flex items-center gap-2 shrink-0">
-                                                    {/* Present Button */}
-                                                    <button
-                                                        onClick={() => setMemberAttendance(member.id, isConfirmed ? 'unknown' : 'present')}
-                                                        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isConfirmed
-                                                            ? 'bg-green-500 text-white shadow-md'
-                                                            : 'bg-surface-highlight text-text-secondary hover:bg-green-500/20 hover:text-green-500'
-                                                            }`}
-                                                    >
-                                                        <Check className="w-5 h-5" strokeWidth={isConfirmed ? 3 : 2} />
-                                                    </button>
-
-                                                    {/* Absent Button */}
-                                                    <button
-                                                        onClick={() => setMemberAttendance(member.id, isAbsent ? 'unknown' : 'absent')}
-                                                        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isAbsent
-                                                            ? 'bg-red-500 text-white shadow-md'
-                                                            : 'bg-surface-highlight text-text-secondary hover:bg-red-500/20 hover:text-red-500'
-                                                            }`}
-                                                    >
-                                                        <X className="w-5 h-5" strokeWidth={isAbsent ? 3 : 2} />
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                /* Read-only status */
-                                                <div className="shrink-0">
-                                                    {isAbsent ? (
-                                                        <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center">
-                                                            <X className="w-5 h-5 text-red-500" />
-                                                        </div>
-                                                    ) : isConfirmed ? (
-                                                        <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
-                                                            <Check className="w-5 h-5 text-green-500" />
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-xs text-text-secondary bg-surface-highlight px-2 py-1 rounded-lg">Очікуємо</span>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                });
-                            })()}
-                        </div>
-
-                        {(canEdit || canEditAttendance) && (
-                            <div className="p-4 bg-surface border-t border-border safe-area-bottom">
-                                <button
-                                    onClick={handleSaveAttendance}
-                                    className="w-full py-3 bg-primary text-background rounded-xl font-bold hover:opacity-90 transition-colors shadow-lg"
-                                >
-                                    Зберегти
-                                </button>
-                                <button
-                                    onClick={markRestAsPresent}
-                                    className="w-full mt-2 py-3 text-blue-400 font-medium text-sm hover:bg-blue-500/10 rounded-xl transition-colors"
-                                >
-                                    Відмітити решту як "Буде"
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
-            {/* Confirmation Modal for Song Deletion */}
-            {songToDeleteIndex !== null && (
-                <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-                    <div className="bg-surface border border-border w-full max-w-xs p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
-                        <div className="flex flex-col items-center text-center gap-4">
-                            <div className="w-14 h-14 bg-red-500/10 rounded-full flex items-center justify-center">
-                                <Trash2 className="w-6 h-6 text-red-500" />
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-bold text-text-primary">Видалити пісню?</h3>
-                                <p className="text-text-secondary text-sm mt-1">
-                                    "{currentService.songs[songToDeleteIndex]?.songTitle}" буде прибрано з цієї програми.
-                                </p>
-                            </div>
-                            <div className="flex gap-3 w-full mt-2">
-                                <button
-                                    onClick={() => setSongToDeleteIndex(null)}
-                                    className="flex-1 py-3 border border-border rounded-xl text-text-primary hover:bg-surface-highlight transition-colors font-medium text-sm"
-                                >
-                                    Скасувати
-                                </button>
-                                <button
-                                    onClick={confirmRemoveSong}
-                                    className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors text-sm"
-                                >
-                                    Видалити
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Credits Editing Modal */}
-            {editingSongIndex !== null && (
-                <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-                    <div className="bg-surface border border-border w-full max-w-sm p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
-                        <div className="space-y-5">
-                            <div className="flex justify-between items-center">
-                                <h3 className="text-lg font-bold text-text-primary">Хто виконував?</h3>
-                                <button onClick={() => setEditingSongIndex(null)} className="p-1 hover:bg-surface-highlight rounded-full">
-                                    <X className="w-5 h-5 text-text-secondary" />
-                                </button>
-                            </div>
-
-                            {/* Conductor Dropdown */}
-                            <div>
-                                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Диригент</label>
-                                <div className="relative" ref={conductorDropdownRef}>
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsConductorDropdownOpen(!isConductorDropdownOpen)}
-                                        className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl flex items-center justify-between hover:bg-surface transition-all"
-                                    >
-                                        <span className={`text-sm font-medium ${tempConductor ? 'text-text-primary' : 'text-text-secondary'}`}>
-                                            {tempConductor || "Оберіть диригента..."}
-                                        </span>
-                                        <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${isConductorDropdownOpen ? 'rotate-180' : ''}`} />
-                                    </button>
-
-                                    {isConductorDropdownOpen && (
-                                        <div className="absolute top-full left-0 right-0 mt-2 bg-surface border border-border rounded-xl shadow-2xl max-h-48 overflow-y-auto z-20 animate-in fade-in zoom-in-95 duration-100">
-                                            {knownConductors.map(name => (
-                                                <div
-                                                    key={name}
-                                                    onClick={() => {
-                                                        setTempConductor(name);
-                                                        setIsConductorDropdownOpen(false);
-                                                    }}
-                                                    className={`w-full px-4 py-3 flex items-center justify-between hover:bg-surface-highlight cursor-pointer transition-colors ${tempConductor === name ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:text-text-primary'}`}
-                                                >
-                                                    <span className="text-sm font-medium">{name}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Pianist Dropdown */}
-                            <div>
-                                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Піаніст</label>
-                                <div className="relative" ref={pianistDropdownRef}>
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsPianistDropdownOpen(!isPianistDropdownOpen)}
-                                        className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl flex items-center justify-between hover:bg-surface transition-all"
-                                    >
-                                        <span className={`text-sm font-medium ${tempPianist ? 'text-text-primary' : 'text-text-secondary'}`}>
-                                            {tempPianist || "Оберіть піаніста (опціонально)..."}
-                                        </span>
-                                        <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${isPianistDropdownOpen ? 'rotate-180' : ''}`} />
-                                    </button>
-
-                                    {isPianistDropdownOpen && (
-                                        <div className="absolute top-full left-0 right-0 mt-2 bg-surface border border-border rounded-xl shadow-2xl max-h-48 overflow-y-auto z-20 animate-in fade-in zoom-in-95 duration-100">
-                                            <div
-                                                onClick={() => {
-                                                    setTempPianist("");
-                                                    setIsPianistDropdownOpen(false);
-                                                }}
-                                                className={`w-full px-4 py-3 flex items-center justify-between hover:bg-surface-highlight cursor-pointer transition-colors ${!tempPianist ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:text-text-primary'}`}
-                                            >
-                                                <span className="text-sm font-medium italic">Без піаніста</span>
-                                            </div>
-                                            {knownPianists.map(name => (
-                                                <div
-                                                    key={name}
-                                                    onClick={() => {
-                                                        setTempPianist(name);
-                                                        setIsPianistDropdownOpen(false);
-                                                    }}
-                                                    className={`w-full px-4 py-3 flex items-center justify-between hover:bg-surface-highlight cursor-pointer transition-colors ${tempPianist === name ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:text-text-primary'}`}
-                                                >
-                                                    <span className="text-sm font-medium">{name}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
+                        {/* Bottom Action Bar */}
+                        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/90 backdrop-blur-xl border-t border-border pb-safe-offset">
                             <button
-                                onClick={handleSaveCredits}
-                                className="w-full py-4 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-colors"
+                                onClick={handleBatchAddSongs}
+                                disabled={selectedSongsToService.length === 0}
+                                className="w-full py-4 bg-primary text-background rounded-2xl font-bold text-lg hover:opacity-90 transition-colors shadow-lg disabled:opacity-50 disabled:bg-surface-highlight disabled:text-text-secondary flex items-center justify-center gap-2"
                             >
-                                Зберегти
+                                Додати
+                                {selectedSongsToService.length > 0 && (
+                                    <span className="bg-black text-white text-xs px-2 py-0.5 rounded-full min-w-[20px]">
+                                        {selectedSongsToService.length}
+                                    </span>
+                                )}
                             </button>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
-            {/* Song Delete Confirmation Modal */}
-            {pendingDeleteIndex !== null && (
-                <ConfirmationModal
-                    isOpen={true}
-                    onClose={() => setPendingDeleteIndex(null)}
-                    onConfirm={() => {
-                        handleRemoveSong(pendingDeleteIndex);
-                        setPendingDeleteIndex(null);
-                    }}
-                    title="Видалити пісню?"
-                    message={`Видалити "${currentService.songs[pendingDeleteIndex]?.songTitle}" з програми?`}
-                    confirmLabel="Видалити"
-                    cancelLabel="Скасувати"
-                    isDestructive={true}
-                />
-            )}
+            {/* Attendance Sheet - Enhanced List View */}
+            {
+                showAttendance && (
+                    <div className="fixed inset-0 z-50 bg-background flex flex-col animate-in slide-in-from-bottom duration-300">
+                        <div className="flex-1 overflow-hidden flex flex-col">
+                            <div className="p-4 border-b border-border flex justify-between items-center bg-surface sticky top-0 z-10 pt-[calc(1rem+env(safe-area-inset-top))]">
+                                <div>
+                                    <h3 className="text-xl font-bold text-text-primary">Учасники</h3>
+                                    <div className="flex items-center gap-2 text-xs text-text-secondary">
+                                        <span>Всього: {choirMembers.length}</span>
+                                        <span>•</span>
+                                        <span>Буде: {confirmedMembers.length}</span>
+                                    </div>
+                                </div>
+                                <button onClick={() => setShowAttendance(false)} className="p-2 bg-surface-highlight rounded-full hover:bg-surface-highlight/80">
+                                    <X className="w-6 h-6 text-text-primary" />
+                                </button>
+                            </div>
+
+                            {/* Filters */}
+                            <div className="px-4 py-3 border-b border-border bg-background/50 backdrop-blur-sm flex gap-2 overflow-x-auto scrollbar-hide">
+                                {['Всі', 'Soprano', 'Alto', 'Tenor', 'Bass'].map(filter => {
+                                    const isActive =
+                                        (search === filter) ||
+                                        (filter === 'Всі' && search === '') ||
+                                        (filter === 'Real Users' && search === 'real');
+
+                                    return (
+                                        <button
+                                            key={filter}
+                                            onClick={() => setSearch(filter === 'Всі' ? '' : filter)}
+                                            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${isActive
+                                                ? 'bg-primary text-background font-bold'
+                                                : 'bg-surface-highlight text-text-secondary hover:text-text-primary'
+                                                }`}
+                                        >
+                                            {filter}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-background/50 pb-32">
+                                {(() => {
+                                    // Group members by Voice Part (or "Other")
+                                    const filteredMembers = choirMembers.filter(m => {
+                                        if (!search) return true;
+                                        if (search === 'real') return m.hasAccount;
+                                        if (['Soprano', 'Alto', 'Tenor', 'Bass'].includes(search)) return m.voice === search;
+                                        return true;
+                                    });
+
+                                    // Sort alphabetically only
+                                    const sortedMembers = [...filteredMembers].sort((a, b) =>
+                                        a.name.localeCompare(b.name)
+                                    );
+
+                                    return sortedMembers.map(member => {
+                                        const isAbsent = absentMembers.includes(member.id);
+                                        const isConfirmed = confirmedMembers.includes(member.id);
+                                        const canMarkAttendance = canEdit || canEditAttendance;
+
+                                        return (
+                                            <div
+                                                key={member.id}
+                                                className={`w-full p-3 rounded-2xl border flex justify-between items-center gap-3 transition-all ${isAbsent
+                                                    ? 'bg-red-500/5 border-red-500/20'
+                                                    : isConfirmed
+                                                        ? 'bg-green-500/5 border-green-500/20'
+                                                        : 'bg-surface/50 border-border'
+                                                    }`}
+                                            >
+                                                {/* Member Info */}
+                                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${isAbsent ? 'bg-red-500/10 text-red-400'
+                                                        : isConfirmed ? 'bg-green-500/10 text-green-500'
+                                                            : 'bg-surface-highlight text-text-secondary'
+                                                        }`}>
+                                                        {member.name?.[0]?.toUpperCase()}
+                                                    </div>
+
+                                                    <div className="min-w-0">
+                                                        <span className={`font-medium truncate block ${isAbsent ? 'text-red-400 line-through' : 'text-text-primary'}`}>
+                                                            {member.name}
+                                                        </span>
+                                                        <span className="text-xs text-text-secondary">
+                                                            {member.voice || 'Без партії'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Two Buttons: Present / Absent */}
+                                                {canMarkAttendance ? (
+                                                    <div className="flex items-center gap-2 shrink-0">
+                                                        {/* Present Button */}
+                                                        <button
+                                                            onClick={() => setMemberAttendance(member.id, isConfirmed ? 'unknown' : 'present')}
+                                                            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isConfirmed
+                                                                ? 'bg-green-500 text-white shadow-md'
+                                                                : 'bg-surface-highlight text-text-secondary hover:bg-green-500/20 hover:text-green-500'
+                                                                }`}
+                                                        >
+                                                            <Check className="w-5 h-5" strokeWidth={isConfirmed ? 3 : 2} />
+                                                        </button>
+
+                                                        {/* Absent Button */}
+                                                        <button
+                                                            onClick={() => setMemberAttendance(member.id, isAbsent ? 'unknown' : 'absent')}
+                                                            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isAbsent
+                                                                ? 'bg-red-500 text-white shadow-md'
+                                                                : 'bg-surface-highlight text-text-secondary hover:bg-red-500/20 hover:text-red-500'
+                                                                }`}
+                                                        >
+                                                            <X className="w-5 h-5" strokeWidth={isAbsent ? 3 : 2} />
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    /* Read-only status */
+                                                    <div className="shrink-0">
+                                                        {isAbsent ? (
+                                                            <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center">
+                                                                <X className="w-5 h-5 text-red-500" />
+                                                            </div>
+                                                        ) : isConfirmed ? (
+                                                            <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
+                                                                <Check className="w-5 h-5 text-green-500" />
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-xs text-text-secondary bg-surface-highlight px-2 py-1 rounded-lg">Очікуємо</span>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    });
+                                })()}
+                            </div>
+
+                            {(canEdit || canEditAttendance) && (
+                                <div className="p-4 bg-surface border-t border-border safe-area-bottom">
+                                    <button
+                                        onClick={handleSaveAttendance}
+                                        className="w-full py-3 bg-primary text-background rounded-xl font-bold hover:opacity-90 transition-colors shadow-lg"
+                                    >
+                                        Зберегти
+                                    </button>
+                                    <button
+                                        onClick={markRestAsPresent}
+                                        className="w-full mt-2 py-3 text-blue-400 font-medium text-sm hover:bg-blue-500/10 rounded-xl transition-colors"
+                                    >
+                                        Відмітити решту як "Буде"
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )
+            }
+            {/* Confirmation Modal for Song Deletion */}
+            {
+                songToDeleteIndex !== null && (
+                    <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+                        <div className="bg-surface border border-border w-full max-w-xs p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
+                            <div className="flex flex-col items-center text-center gap-4">
+                                <div className="w-14 h-14 bg-red-500/10 rounded-full flex items-center justify-center">
+                                    <Trash2 className="w-6 h-6 text-red-500" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-text-primary">Видалити пісню?</h3>
+                                    <p className="text-text-secondary text-sm mt-1">
+                                        "{currentService.songs[songToDeleteIndex]?.songTitle}" буде прибрано з цієї програми.
+                                    </p>
+                                </div>
+                                <div className="flex gap-3 w-full mt-2">
+                                    <button
+                                        onClick={() => setSongToDeleteIndex(null)}
+                                        className="flex-1 py-3 border border-border rounded-xl text-text-primary hover:bg-surface-highlight transition-colors font-medium text-sm"
+                                    >
+                                        Скасувати
+                                    </button>
+                                    <button
+                                        onClick={confirmRemoveSong}
+                                        className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors text-sm"
+                                    >
+                                        Видалити
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* Credits Editing Modal */}
+            {
+                editingSongIndex !== null && (
+                    <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+                        <div className="bg-surface border border-border w-full max-w-sm p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
+                            <div className="space-y-5">
+                                <div className="flex justify-between items-center">
+                                    <h3 className="text-lg font-bold text-text-primary">Хто виконував?</h3>
+                                    <button onClick={() => setEditingSongIndex(null)} className="p-1 hover:bg-surface-highlight rounded-full">
+                                        <X className="w-5 h-5 text-text-secondary" />
+                                    </button>
+                                </div>
+
+                                {/* Conductor Dropdown */}
+                                <div>
+                                    <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Диригент</label>
+                                    <div className="relative" ref={conductorDropdownRef}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsConductorDropdownOpen(!isConductorDropdownOpen)}
+                                            className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl flex items-center justify-between hover:bg-surface transition-all"
+                                        >
+                                            <span className={`text-sm font-medium ${tempConductor ? 'text-text-primary' : 'text-text-secondary'}`}>
+                                                {tempConductor || "Оберіть диригента..."}
+                                            </span>
+                                            <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${isConductorDropdownOpen ? 'rotate-180' : ''}`} />
+                                        </button>
+
+                                        {isConductorDropdownOpen && (
+                                            <div className="absolute top-full left-0 right-0 mt-2 bg-surface border border-border rounded-xl shadow-2xl max-h-48 overflow-y-auto z-20 animate-in fade-in zoom-in-95 duration-100">
+                                                {knownConductors.map(name => (
+                                                    <div
+                                                        key={name}
+                                                        onClick={() => {
+                                                            setTempConductor(name);
+                                                            setIsConductorDropdownOpen(false);
+                                                        }}
+                                                        className={`w-full px-4 py-3 flex items-center justify-between hover:bg-surface-highlight cursor-pointer transition-colors ${tempConductor === name ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:text-text-primary'}`}
+                                                    >
+                                                        <span className="text-sm font-medium">{name}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Pianist Dropdown */}
+                                <div>
+                                    <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Піаніст</label>
+                                    <div className="relative" ref={pianistDropdownRef}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsPianistDropdownOpen(!isPianistDropdownOpen)}
+                                            className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl flex items-center justify-between hover:bg-surface transition-all"
+                                        >
+                                            <span className={`text-sm font-medium ${tempPianist ? 'text-text-primary' : 'text-text-secondary'}`}>
+                                                {tempPianist || "Оберіть піаніста (опціонально)..."}
+                                            </span>
+                                            <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${isPianistDropdownOpen ? 'rotate-180' : ''}`} />
+                                        </button>
+
+                                        {isPianistDropdownOpen && (
+                                            <div className="absolute top-full left-0 right-0 mt-2 bg-surface border border-border rounded-xl shadow-2xl max-h-48 overflow-y-auto z-20 animate-in fade-in zoom-in-95 duration-100">
+                                                <div
+                                                    onClick={() => {
+                                                        setTempPianist("");
+                                                        setIsPianistDropdownOpen(false);
+                                                    }}
+                                                    className={`w-full px-4 py-3 flex items-center justify-between hover:bg-surface-highlight cursor-pointer transition-colors ${!tempPianist ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:text-text-primary'}`}
+                                                >
+                                                    <span className="text-sm font-medium italic">Без піаніста</span>
+                                                </div>
+                                                {knownPianists.map(name => (
+                                                    <div
+                                                        key={name}
+                                                        onClick={() => {
+                                                            setTempPianist(name);
+                                                            setIsPianistDropdownOpen(false);
+                                                        }}
+                                                        className={`w-full px-4 py-3 flex items-center justify-between hover:bg-surface-highlight cursor-pointer transition-colors ${tempPianist === name ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:text-text-primary'}`}
+                                                    >
+                                                        <span className="text-sm font-medium">{name}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={handleSaveCredits}
+                                    className="w-full py-4 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-colors"
+                                >
+                                    Зберегти
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+
 
             {/* Offline PDF Modal */}
             <OfflinePdfModal
@@ -1030,6 +1048,6 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                 onClose={() => setOfflineModalSong(null)}
                 song={offlineModalSong}
             />
-        </div>
+        </div >
     );
 }

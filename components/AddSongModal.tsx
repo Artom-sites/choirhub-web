@@ -233,9 +233,9 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
     return (
         <>
             <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center z-[60] animate-in fade-in duration-200">
-                <div className="bg-surface w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-md sm:rounded-3xl shadow-2xl overflow-auto border-x-0 sm:border border-border animate-in slide-in-from-bottom duration-300 flex flex-col sm:block">
+                <div className="bg-surface w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-md sm:rounded-3xl shadow-2xl overflow-hidden border-x-0 sm:border border-border animate-in slide-in-from-bottom duration-300 flex flex-col">
                     {/* Header */}
-                    <div className="flex items-center justify-between p-6 border-b border-border sticky top-0 bg-surface z-10">
+                    <div className="flex items-center justify-between p-6 pt-[calc(1.5rem+env(safe-area-inset-top))] border-b border-border bg-surface z-10 shrink-0">
                         <h2 className="text-xl font-bold text-text-primary">Нова пісня</h2>
                         <button
                             onClick={handleClose}
@@ -245,131 +245,221 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                         </button>
                     </div>
 
-                    {/* Form */}
-                    <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                        {/* Title */}
-                        <div>
-                            <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                                Назва пісні *
-                            </label>
-                            <input
-                                type="text"
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                placeholder="Введіть назву..."
-                                className="w-full px-4 py-3.5 bg-surface-highlight border border-border rounded-xl focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-text-primary placeholder:text-text-secondary/40 transition-all font-medium"
-                                autoFocus
-                            />
-                        </div>
+                    {/* Form Container - Scrollable */}
+                    <div className="flex-1 overflow-y-auto">
+                        <form onSubmit={handleSubmit} className="p-6 space-y-6 pb-safe-offset">
+                            {/* Title */}
+                            <div>
+                                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                                    Назва пісні *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    placeholder="Введіть назву..."
+                                    className="w-full px-4 py-3.5 bg-surface-highlight border border-border rounded-xl focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-text-primary placeholder:text-text-secondary/40 transition-all font-medium"
+                                    autoFocus
+                                />
+                            </div>
 
-                        {/* Category (Theme) */}
-                        <div>
-                            <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                                Категорія (Тематика)
-                            </label>
-                            {
-                                !showCustomCategory ? (
-                                    <div className="relative" ref={categoryDropdownRef}>
-                                        <button
-                                            type="button"
-                                            onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
-                                            className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl flex items-center justify-between hover:bg-surface transition-all group"
-                                        >
-                                            <div className="flex items-center gap-2">
-                                                <span className={`text-sm font-medium ${category ? 'text-text-primary' : 'text-text-secondary'}`}>
-                                                    {category || "Оберіть категорію..."}
-                                                </span>
-                                            </div>
-                                            <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${isCategoryDropdownOpen ? 'rotate-180' : ''}`} />
-                                        </button>
+                            {/* Category (Theme) */}
+                            <div>
+                                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                                    Категорія (Тематика)
+                                </label>
+                                {
+                                    !showCustomCategory ? (
+                                        <div className="relative" ref={categoryDropdownRef}>
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                                                className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl flex items-center justify-between hover:bg-surface transition-all group"
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`text-sm font-medium ${category ? 'text-text-primary' : 'text-text-secondary'}`}>
+                                                        {category || "Оберіть категорію..."}
+                                                    </span>
+                                                </div>
+                                                <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${isCategoryDropdownOpen ? 'rotate-180' : ''}`} />
+                                            </button>
 
-                                        {isCategoryDropdownOpen && (
-                                            <div className="absolute top-full left-0 right-0 mt-2 bg-surface border border-border rounded-xl shadow-2xl max-h-60 overflow-y-auto z-20 animate-in fade-in zoom-in-95 duration-100">
-                                                {allCategories.map(cat => (
+                                            {isCategoryDropdownOpen && (
+                                                <div className="absolute top-full left-0 right-0 mt-2 bg-surface border border-border rounded-xl shadow-2xl max-h-60 overflow-y-auto z-20 animate-in fade-in zoom-in-95 duration-100">
+                                                    {allCategories.map(cat => (
+                                                        <div
+                                                            key={cat}
+                                                            onClick={() => {
+                                                                setCategory(cat);
+                                                                setIsCategoryDropdownOpen(false);
+                                                            }}
+                                                            className={`w-full px-4 py-3 flex items-center justify-between hover:bg-surface-highlight cursor-pointer transition-colors ${category === cat ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:text-text-primary'}`}
+                                                        >
+                                                            <span className="text-sm font-medium">{cat}</span>
+                                                        </div>
+                                                    ))}
                                                     <div
-                                                        key={cat}
                                                         onClick={() => {
-                                                            setCategory(cat);
+                                                            setShowCustomCategory(true);
                                                             setIsCategoryDropdownOpen(false);
                                                         }}
-                                                        className={`w-full px-4 py-3 flex items-center justify-between hover:bg-surface-highlight cursor-pointer transition-colors ${category === cat ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:text-text-primary'}`}
+                                                        className="w-full px-4 py-3 flex items-center gap-2 hover:bg-surface-highlight cursor-pointer text-primary border-t border-border"
                                                     >
-                                                        <span className="text-sm font-medium">{cat}</span>
+                                                        <Plus className="w-4 h-4" />
+                                                        <span className="text-sm font-medium">Своя категорія...</span>
                                                     </div>
-                                                ))}
-                                                <div
-                                                    onClick={() => {
-                                                        setShowCustomCategory(true);
-                                                        setIsCategoryDropdownOpen(false);
-                                                    }}
-                                                    className="w-full px-4 py-3 flex items-center gap-2 hover:bg-surface-highlight cursor-pointer text-primary border-t border-border"
-                                                >
-                                                    <Plus className="w-4 h-4" />
-                                                    <span className="text-sm font-medium">Своя категорія...</span>
                                                 </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="space-y-2">
-                                        <input
-                                            type="text"
-                                            value={customCategory}
-                                            onChange={(e) => setCustomCategory(e.target.value)}
-                                            placeholder="Назва категорії"
-                                            className="w-full px-4 py-3.5 bg-surface-highlight border border-border rounded-xl focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-text-primary placeholder:text-text-secondary/40 transition-all font-medium"
-                                            autoFocus
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowCustomCategory(false)}
-                                            className="text-xs text-blue-400 hover:text-blue-300 font-medium pl-1"
-                                        >
-                                            Назад до списку
-                                        </button>
-                                    </div>
-                                )
-                            }
-                        </div >
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            <input
+                                                type="text"
+                                                value={customCategory}
+                                                onChange={(e) => setCustomCategory(e.target.value)}
+                                                placeholder="Назва категорії"
+                                                className="w-full px-4 py-3.5 bg-surface-highlight border border-border rounded-xl focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-text-primary placeholder:text-text-secondary/40 transition-all font-medium"
+                                                autoFocus
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowCustomCategory(false)}
+                                                className="text-xs text-blue-400 hover:text-blue-300 font-medium pl-1"
+                                            >
+                                                Назад до списку
+                                            </button>
+                                        </div>
+                                    )
+                                }
+                            </div >
 
-                        {/* Conductor */}
-                        <div>
-                            <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                                Диригент *
-                            </label>
-                            {
-                                !showCustomInput ? (
-                                    <div className="relative" ref={dropdownRef}>
+                            {/* Conductor */}
+                            <div>
+                                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                                    Диригент *
+                                </label>
+                                {
+                                    !showCustomInput ? (
+                                        <div className="relative" ref={dropdownRef}>
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsConductorDropdownOpen(!isConductorDropdownOpen)}
+                                                className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl flex items-center justify-between hover:bg-surface transition-all group"
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <User className="w-4 h-4 text-text-secondary group-hover:text-primary transition-colors" />
+                                                    <span className={`text-sm font-medium ${conductor ? 'text-text-primary' : 'text-text-secondary'}`}>
+                                                        {conductor || "Оберіть диригента..."}
+                                                    </span>
+                                                </div>
+                                                <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${isConductorDropdownOpen ? 'rotate-180' : ''}`} />
+                                            </button>
+
+                                            {isConductorDropdownOpen && (
+                                                <div className="absolute top-full left-0 right-0 mt-2 bg-surface border border-border rounded-xl shadow-2xl max-h-60 overflow-y-auto z-20 animate-in fade-in zoom-in-95 duration-100">
+                                                    {allConductors.map(c => (
+                                                        <div
+                                                            key={c}
+                                                            onClick={() => {
+                                                                setConductor(c);
+                                                                setIsConductorDropdownOpen(false);
+                                                            }}
+                                                            className={`w-full px-4 py-3 flex items-center justify-between hover:bg-surface-highlight cursor-pointer transition-colors ${conductor === c ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:text-text-primary'}`}
+                                                        >
+                                                            <span className="text-sm font-medium">{c}</span>
+                                                            {canManageList && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => handleConductorDeleteClick(c, e)}
+                                                                    className="p-1.5 hover:bg-red-500/20 text-text-secondary hover:text-red-400 rounded-lg transition-colors z-30"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                    <div
+                                                        onClick={() => {
+                                                            setShowCustomInput(true);
+                                                            setIsConductorDropdownOpen(false);
+                                                        }}
+                                                        className="w-full px-4 py-3 flex items-center gap-2 hover:bg-surface-highlight cursor-pointer text-primary border-t border-border"
+                                                    >
+                                                        <Plus className="w-4 h-4" />
+                                                        <span className="text-sm font-medium">Інший...</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            <input
+                                                type="text"
+                                                value={customConductor}
+                                                onChange={(e) => setCustomConductor(e.target.value)}
+                                                placeholder="Ім'я диригента"
+                                                className="w-full px-4 py-3.5 bg-surface-highlight border border-border rounded-xl focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-text-primary placeholder:text-text-secondary/40 transition-all font-medium"
+                                                autoFocus
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowCustomInput(false)}
+                                                className="text-xs text-blue-400 hover:text-blue-300 font-medium pl-1"
+                                            >
+                                                Назад до списку
+                                            </button>
+                                        </div>
+                                    )
+                                }
+                            </div>
+
+                            {/* Pianist */}
+                            <div>
+                                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                                    Піаніст
+                                </label>
+
+                                {!showCustomPianist ? (
+                                    <div className="relative" ref={pianistDropdownRef}>
                                         <button
                                             type="button"
-                                            onClick={() => setIsConductorDropdownOpen(!isConductorDropdownOpen)}
+                                            onClick={() => setIsPianistDropdownOpen(!isPianistDropdownOpen)}
                                             className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl flex items-center justify-between hover:bg-surface transition-all group"
                                         >
                                             <div className="flex items-center gap-2">
                                                 <User className="w-4 h-4 text-text-secondary group-hover:text-primary transition-colors" />
-                                                <span className={`text-sm font-medium ${conductor ? 'text-text-primary' : 'text-text-secondary'}`}>
-                                                    {conductor || "Оберіть диригента..."}
+                                                <span className={`text-sm font-medium ${pianist ? 'text-text-primary' : 'text-text-secondary'}`}>
+                                                    {pianist || "Оберіть піаніста (опціонально)..."}
                                                 </span>
                                             </div>
-                                            <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${isConductorDropdownOpen ? 'rotate-180' : ''}`} />
+                                            <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${isPianistDropdownOpen ? 'rotate-180' : ''}`} />
                                         </button>
 
-                                        {isConductorDropdownOpen && (
+                                        {isPianistDropdownOpen && (
                                             <div className="absolute top-full left-0 right-0 mt-2 bg-surface border border-border rounded-xl shadow-2xl max-h-60 overflow-y-auto z-20 animate-in fade-in zoom-in-95 duration-100">
-                                                {allConductors.map(c => (
+                                                <div
+                                                    onClick={() => {
+                                                        setPianist("");
+                                                        setIsPianistDropdownOpen(false);
+                                                    }}
+                                                    className={`w-full px-4 py-3 flex items-center justify-between hover:bg-surface-highlight cursor-pointer transition-colors ${!pianist ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:text-text-primary'}`}
+                                                >
+                                                    <span className="text-sm font-medium italic">Без піаніста</span>
+                                                </div>
+                                                {(knownPianists || []).map(p => (
                                                     <div
-                                                        key={c}
+                                                        key={p}
                                                         onClick={() => {
-                                                            setConductor(c);
-                                                            setIsConductorDropdownOpen(false);
+                                                            setPianist(p);
+                                                            setIsPianistDropdownOpen(false);
                                                         }}
-                                                        className={`w-full px-4 py-3 flex items-center justify-between hover:bg-surface-highlight cursor-pointer transition-colors ${conductor === c ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:text-text-primary'}`}
+                                                        className={`w-full px-4 py-3 flex items-center justify-between hover:bg-surface-highlight cursor-pointer transition-colors ${pianist === p ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:text-text-primary'}`}
                                                     >
-                                                        <span className="text-sm font-medium">{c}</span>
+                                                        <span className="text-sm font-medium">{p}</span>
                                                         {canManageList && (
                                                             <button
                                                                 type="button"
-                                                                onClick={(e) => handleConductorDeleteClick(c, e)}
+                                                                onClick={(e) => handlePianistDeleteClick(p, e)}
                                                                 className="p-1.5 hover:bg-red-500/20 text-text-secondary hover:text-red-400 rounded-lg transition-colors z-30"
                                                             >
                                                                 <Trash2 className="w-3.5 h-3.5" />
@@ -379,13 +469,13 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                                                 ))}
                                                 <div
                                                     onClick={() => {
-                                                        setShowCustomInput(true);
-                                                        setIsConductorDropdownOpen(false);
+                                                        setShowCustomPianist(true);
+                                                        setIsPianistDropdownOpen(false);
                                                     }}
                                                     className="w-full px-4 py-3 flex items-center gap-2 hover:bg-surface-highlight cursor-pointer text-primary border-t border-border"
                                                 >
                                                     <Plus className="w-4 h-4" />
-                                                    <span className="text-sm font-medium">Інший...</span>
+                                                    <span className="text-sm font-medium">Інший піаніст...</span>
                                                 </div>
                                             </div>
                                         )}
@@ -394,191 +484,103 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                                     <div className="space-y-2">
                                         <input
                                             type="text"
-                                            value={customConductor}
-                                            onChange={(e) => setCustomConductor(e.target.value)}
-                                            placeholder="Ім'я диригента"
+                                            value={customPianist}
+                                            onChange={(e) => setCustomPianist(e.target.value)}
+                                            placeholder="Ім'я піаніста"
                                             className="w-full px-4 py-3.5 bg-surface-highlight border border-border rounded-xl focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-text-primary placeholder:text-text-secondary/40 transition-all font-medium"
                                             autoFocus
                                         />
                                         <button
                                             type="button"
-                                            onClick={() => setShowCustomInput(false)}
-                                            className="text-xs text-blue-400 hover:text-blue-300 font-medium pl-1"
+                                            onClick={() => setShowCustomPianist(false)}
+                                            className="text-xs text-primary hover:text-primary/80 font-medium pl-1"
                                         >
                                             Назад до списку
                                         </button>
                                     </div>
-                                )
-                            }
-                        </div>
+                                )}
+                            </div>
 
-                        {/* Pianist */}
-                        <div>
-                            <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                                Піаніст
-                            </label>
-
-                            {!showCustomPianist ? (
-                                <div className="relative" ref={pianistDropdownRef}>
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsPianistDropdownOpen(!isPianistDropdownOpen)}
-                                        className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl flex items-center justify-between hover:bg-surface transition-all group"
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <User className="w-4 h-4 text-text-secondary group-hover:text-primary transition-colors" />
-                                            <span className={`text-sm font-medium ${pianist ? 'text-text-primary' : 'text-text-secondary'}`}>
-                                                {pianist || "Оберіть піаніста (опціонально)..."}
-                                            </span>
-                                        </div>
-                                        <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${isPianistDropdownOpen ? 'rotate-180' : ''}`} />
-                                    </button>
-
-                                    {isPianistDropdownOpen && (
-                                        <div className="absolute top-full left-0 right-0 mt-2 bg-surface border border-border rounded-xl shadow-2xl max-h-60 overflow-y-auto z-20 animate-in fade-in zoom-in-95 duration-100">
-                                            <div
-                                                onClick={() => {
-                                                    setPianist("");
-                                                    setIsPianistDropdownOpen(false);
-                                                }}
-                                                className={`w-full px-4 py-3 flex items-center justify-between hover:bg-surface-highlight cursor-pointer transition-colors ${!pianist ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:text-text-primary'}`}
-                                            >
-                                                <span className="text-sm font-medium italic">Без піаніста</span>
-                                            </div>
-                                            {(knownPianists || []).map(p => (
-                                                <div
-                                                    key={p}
-                                                    onClick={() => {
-                                                        setPianist(p);
-                                                        setIsPianistDropdownOpen(false);
-                                                    }}
-                                                    className={`w-full px-4 py-3 flex items-center justify-between hover:bg-surface-highlight cursor-pointer transition-colors ${pianist === p ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:text-text-primary'}`}
-                                                >
-                                                    <span className="text-sm font-medium">{p}</span>
-                                                    {canManageList && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={(e) => handlePianistDeleteClick(p, e)}
-                                                            className="p-1.5 hover:bg-red-500/20 text-text-secondary hover:text-red-400 rounded-lg transition-colors z-30"
-                                                        >
-                                                            <Trash2 className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            ))}
-                                            <div
-                                                onClick={() => {
-                                                    setShowCustomPianist(true);
-                                                    setIsPianistDropdownOpen(false);
-                                                }}
-                                                className="w-full px-4 py-3 flex items-center gap-2 hover:bg-surface-highlight cursor-pointer text-primary border-t border-border"
-                                            >
-                                                <Plus className="w-4 h-4" />
-                                                <span className="text-sm font-medium">Інший піаніст...</span>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            ) : (
-                                <div className="space-y-2">
+                            {/* PDF File */}
+                            <div>
+                                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                                    PDF Файл (опціонально)
+                                </label>
+                                <div className="relative group">
                                     <input
-                                        type="text"
-                                        value={customPianist}
-                                        onChange={(e) => setCustomPianist(e.target.value)}
-                                        placeholder="Ім'я піаніста"
-                                        className="w-full px-4 py-3.5 bg-surface-highlight border border-border rounded-xl focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-text-primary placeholder:text-text-secondary/40 transition-all font-medium"
-                                        autoFocus
+                                        type="file"
+                                        accept=".pdf"
+                                        onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                                     />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowCustomPianist(false)}
-                                        className="text-xs text-primary hover:text-primary/80 font-medium pl-1"
-                                    >
-                                        Назад до списку
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* PDF File */}
-                        <div>
-                            <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                                PDF Файл (опціонально)
-                            </label>
-                            <div className="relative group">
-                                <input
-                                    type="file"
-                                    accept=".pdf"
-                                    onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                />
-                                <div className={`w-full px-4 py-3.5 bg-surface-highlight border-2 border-dashed rounded-xl flex items-center justify-center gap-3 transition-all group-hover:border-primary/50 group-hover:bg-surface ${pdfFile ? 'border-primary/30 bg-primary/5' : 'border-border'}`}>
-                                    {pdfFile ? (
-                                        <>
-                                            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
-                                                <Check className="w-4 h-4" />
-                                            </div>
-                                            <div className="text-left flex-1 min-w-0">
-                                                <p className="text-sm font-medium text-text-primary truncate">
-                                                    {pdfFile.name}
-                                                </p>
-                                                <p className="text-xs text-text-secondary">
-                                                    {(pdfFile.size / 1024 / 1024).toFixed(2)} MB
-                                                </p>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                onClick={(e) => {
-                                                    e.preventDefault(); // Prevent opening file dialog
-                                                    setPdfFile(null);
-                                                }}
-                                                className="p-2 hover:bg-red-500/10 text-text-secondary hover:text-red-500 rounded-lg transition-colors z-20"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <div className="w-8 h-8 rounded-full bg-surface flex items-center justify-center text-text-secondary group-hover:text-primary group-hover:scale-110 transition-all">
-                                                <Upload className="w-4 h-4" />
-                                            </div>
-                                            <span className="text-sm font-medium text-text-secondary group-hover:text-text-primary transition-colors">
-                                                Натисніть щоб завантажити PDF
-                                            </span>
-                                        </>
-                                    )}
+                                    <div className={`w-full px-4 py-3.5 bg-surface-highlight border-2 border-dashed rounded-xl flex items-center justify-center gap-3 transition-all group-hover:border-primary/50 group-hover:bg-surface ${pdfFile ? 'border-primary/30 bg-primary/5' : 'border-border'}`}>
+                                        {pdfFile ? (
+                                            <>
+                                                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                                                    <Check className="w-4 h-4" />
+                                                </div>
+                                                <div className="text-left flex-1 min-w-0">
+                                                    <p className="text-sm font-medium text-text-primary truncate">
+                                                        {pdfFile.name}
+                                                    </p>
+                                                    <p className="text-xs text-text-secondary">
+                                                        {(pdfFile.size / 1024 / 1024).toFixed(2)} MB
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.preventDefault(); // Prevent opening file dialog
+                                                        setPdfFile(null);
+                                                    }}
+                                                    className="p-2 hover:bg-red-500/10 text-text-secondary hover:text-red-500 rounded-lg transition-colors z-20"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="w-8 h-8 rounded-full bg-surface flex items-center justify-center text-text-secondary group-hover:text-primary group-hover:scale-110 transition-all">
+                                                    <Upload className="w-4 h-4" />
+                                                </div>
+                                                <span className="text-sm font-medium text-text-secondary group-hover:text-text-primary transition-colors">
+                                                    Натисніть щоб завантажити PDF
+                                                </span>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
 
-                        {
-                            error && (
-                                <div className="bg-red-500/10 text-red-400 p-4 rounded-xl text-sm border border-red-500/20 flex items-center gap-2">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
-                                    {error}
-                                </div>
-                            )
-                        }
+                            {
+                                error && (
+                                    <div className="bg-red-500/10 text-red-400 p-4 rounded-xl text-sm border border-red-500/20 flex items-center gap-2">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+                                        {error}
+                                    </div>
+                                )
+                            }
 
-                        <button
-                            type="submit"
-                            disabled={loading || !title.trim()}
-                            className="w-full py-4 bg-primary hover:opacity-90 text-background font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-base transition-all shadow-lg active:scale-[0.98] mt-6"
-                        >
-                            {loading ? (
-                                <>
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                    Додавання...
-                                </>
-                            ) : (
-                                <>
-                                    <Plus className="w-5 h-5" />
-                                    Додати пісню
-                                </>
-                            )}
-                        </button>
-                    </form >
+                            <button
+                                type="submit"
+                                disabled={loading || !title.trim()}
+                                className="w-full py-4 bg-primary hover:opacity-90 text-background font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-base transition-all shadow-lg active:scale-[0.98] mt-6"
+                            >
+                                {loading ? (
+                                    <>
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        Додавання...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Plus className="w-5 h-5" />
+                                        Додати пісню
+                                    </>
+                                )}
+                            </button>
+                        </form >
+                    </div >
                 </div >
             </div >
 

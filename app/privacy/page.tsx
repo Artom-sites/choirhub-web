@@ -1,37 +1,33 @@
 "use client";
 
 import { ArrowLeft } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 export default function PrivacyPage() {
-    const router = useRouter();
-
     const handleBack = () => {
-        // Try to go back in history, if no history - go to main page
         if (window.history.length > 1) {
-            router.back();
+            window.history.back();
         } else {
-            router.push('/');
+            window.location.href = '/';
         }
     };
 
     return (
-        <div className="min-h-screen bg-[#09090b] text-text-secondary p-6 md:p-12 font-sans">
+        <div className="min-h-screen bg-background text-text-secondary px-6 pb-6 md:px-12 md:pb-12 font-sans pt-[env(safe-area-inset-top)]">
             <div className="max-w-3xl mx-auto space-y-8">
-                <header className="border-b border-white/10 pb-6">
+                <header className="border-b border-border pb-6 pt-6">
                     <button
                         onClick={handleBack}
-                        className="flex items-center gap-2 text-text-secondary hover:text-white transition-colors mb-4"
+                        className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors mb-4"
                     >
                         <ArrowLeft className="w-5 h-5" />
                         <span>Назад</span>
                     </button>
-                    <h1 className="text-3xl font-bold text-white mb-2">Політика конфіденційності</h1>
+                    <h1 className="text-3xl font-bold text-text-primary mb-2">Політика конфіденційності</h1>
                     <p className="text-sm">Останнє оновлення: 3 лютого 2026</p>
                 </header>
 
                 <section className="space-y-3">
-                    <h2 className="text-xl font-semibold text-white">1. Вступ</h2>
+                    <h2 className="text-xl font-semibold text-text-primary">1. Вступ</h2>
                     <p>
                         Ця політика конфіденційності пояснює, як додаток &quot;MyChoir&quot; (далі — &quot;Додаток&quot;, &quot;ми&quot;, &quot;нас&quot;)
                         збирає, використовує, зберігає та захищає вашу персональну інформацію.
@@ -40,7 +36,7 @@ export default function PrivacyPage() {
                 </section>
 
                 <section className="space-y-3">
-                    <h2 className="text-xl font-semibold text-white">2. Які дані ми збираємо</h2>
+                    <h2 className="text-xl font-semibold text-text-primary">2. Які дані ми збираємо</h2>
                     <p>Ми збираємо наступні категорії персональних даних:</p>
                     <ul className="list-disc pl-5 space-y-2">
                         <li>
@@ -63,7 +59,7 @@ export default function PrivacyPage() {
                 </section>
 
                 <section className="space-y-3">
-                    <h2 className="text-xl font-semibold text-white">3. Як ми використовуємо дані</h2>
+                    <h2 className="text-xl font-semibold text-text-primary">3. Як ми використовуємо дані</h2>
                     <p>Ми використовуємо ваші дані виключно для забезпечення функціонування Додатку:</p>
                     <ul className="list-disc pl-5 space-y-2">
                         <li>Для авторизації та ідентифікації користувача.</li>
@@ -75,7 +71,7 @@ export default function PrivacyPage() {
                 </section>
 
                 <section className="space-y-3">
-                    <h2 className="text-xl font-semibold text-white">4. Зберігання та захист даних</h2>
+                    <h2 className="text-xl font-semibold text-text-primary">4. Зберігання та захист даних</h2>
                     <p>
                         Ваші дані зберігаються на захищених серверах Google Firebase (Firestore Database)
                         та Cloudflare R2 (для файлів PDF та аудіо). Ми використовуємо:
@@ -93,7 +89,7 @@ export default function PrivacyPage() {
                 </section>
 
                 <section className="space-y-3">
-                    <h2 className="text-xl font-semibold text-white">5. Передача даних третім сторонам</h2>
+                    <h2 className="text-xl font-semibold text-text-primary">5. Передача даних третім сторонам</h2>
                     <p>Ми <strong>не продаємо</strong> та <strong>не передаємо</strong> ваші персональні дані третім сторонам для маркетингових цілей.</p>
                     <p className="mt-2">Ваші дані можуть бути доступні наступним сервіс-провайдерам:</p>
                     <ul className="list-disc pl-5 space-y-2">
@@ -107,7 +103,7 @@ export default function PrivacyPage() {
                 </section>
 
                 <section className="space-y-3">
-                    <h2 className="text-xl font-semibold text-white">6. Cookies та аналітика</h2>
+                    <h2 className="text-xl font-semibold text-text-primary">6. Cookies та аналітика</h2>
                     <p>
                         Додаток використовує мінімальну кількість cookies для підтримки сесії авторизації.
                         Ми <strong>не використовуємо</strong> рекламні cookies або трекери.
@@ -119,7 +115,7 @@ export default function PrivacyPage() {
                 </section>
 
                 <section className="space-y-3">
-                    <h2 className="text-xl font-semibold text-white">7. Ваші права (GDPR)</h2>
+                    <h2 className="text-xl font-semibold text-text-primary">7. Ваші права (GDPR)</h2>
                     <p>Відповідно до Загального регламенту захисту даних (GDPR), ви маєте право:</p>
                     <ul className="list-disc pl-5 space-y-2">
                         <li><strong>Доступ:</strong> Запитати копію всіх ваших персональних даних.</li>
@@ -132,7 +128,7 @@ export default function PrivacyPage() {
                 </section>
 
                 <section className="space-y-3">
-                    <h2 className="text-xl font-semibold text-white">8. Видалення даних</h2>
+                    <h2 className="text-xl font-semibold text-text-primary">8. Видалення даних</h2>
                     <p>
                         Ви маєте право повністю видалити свій акаунт та всі пов&apos;язані дані в будь-який момент.
                         Для цього скористайтесь кнопкою <strong>&quot;Видалити акаунт&quot;</strong> в меню
@@ -150,7 +146,7 @@ export default function PrivacyPage() {
                 </section>
 
                 <section className="space-y-3">
-                    <h2 className="text-xl font-semibold text-white">9. Дані неповнолітніх</h2>
+                    <h2 className="text-xl font-semibold text-text-primary">9. Дані неповнолітніх</h2>
                     <p>
                         Наш Додаток не призначений для дітей віком до 13 років.
                         Ми свідомо не збираємо персональні дані від осіб цього віку.
@@ -160,7 +156,7 @@ export default function PrivacyPage() {
                 </section>
 
                 <section className="space-y-3">
-                    <h2 className="text-xl font-semibold text-white">10. Зміни до політики</h2>
+                    <h2 className="text-xl font-semibold text-text-primary">10. Зміни до політики</h2>
                     <p>
                         Ми можемо оновлювати цю політику конфіденційності час від часу.
                         Про суттєві зміни ми повідомимо через Додаток або електронною поштою.
@@ -172,22 +168,22 @@ export default function PrivacyPage() {
                 </section>
 
                 <section className="space-y-3">
-                    <h2 className="text-xl font-semibold text-white">11. Контакти</h2>
+                    <h2 className="text-xl font-semibold text-text-primary">11. Контакти</h2>
                     <p>
                         Якщо у вас є питання щодо цієї політики конфіденційності або ви бажаєте
                         скористатись своїми правами, зв&apos;яжіться з нами:
                     </p>
                     <ul className="list-none space-y-1 mt-2">
                         <li><strong>Email:</strong> artom.devv@gmail.com</li>
-                        <li><strong>Telegram:</strong> <a href="https://t.me/artom_dev" className="text-blue-400 hover:underline">@artom_dev</a></li>
-                        <li><strong>Сайт:</strong> <a href="https://artom.dev" className="text-blue-400 hover:underline">artom.dev</a></li>
+                        <li><strong>Telegram:</strong> <a href="https://t.me/artom_dev" className="text-primary hover:underline">@artom_dev</a></li>
+                        <li><strong>Сайт:</strong> <a href="https://artom.dev" className="text-primary hover:underline">artom.dev</a></li>
                     </ul>
                     <p className="mt-4 text-sm">
                         Ми зобов&apos;язуємось відповісти на ваш запит протягом 30 днів.
                     </p>
                 </section>
 
-                <footer className="border-t border-white/10 pt-6 mt-8">
+                <footer className="border-t border-border pt-6 mt-8">
                     <p className="text-sm text-center">
                         © 2026 MyChoir. Всі права захищені.
                     </p>

@@ -7,10 +7,12 @@ import { motion } from "framer-motion";
  * Design: Three thin rings that smoothly expand from center and fade out.
  * Metaphor: Sound spreading from source (like singing), vibration, resonance.
  * Clean, minimalist, no distracting elements.
+ * 
+ * @param inline - If true, renders as an inline/section loader (no full-screen bg).
  */
-export default function Preloader() {
+export default function Preloader({ inline = false }: { inline?: boolean }) {
     return (
-        <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className={inline ? "flex items-center justify-center py-20" : "flex items-center justify-center min-h-screen bg-background"}>
             <div className="relative w-32 h-32 flex items-center justify-center">
                 {/* Three concentric ripple rings */}
                 {[0, 1, 2].map((i) => (
@@ -38,3 +40,4 @@ export default function Preloader() {
         </div>
     );
 }
+

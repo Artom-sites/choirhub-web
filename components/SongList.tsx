@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Search, FileText, Music2, ChevronRight, Filter, Plus, Eye, User, Loader2, Trash2, Pencil, MoreVertical, Library, X } from "lucide-react";
 import { SimpleSong } from "@/types";
 import { CATEGORIES, Category } from "@/lib/themes";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getSongs, addSong, uploadSongPdf, deleteSong, addKnownConductor, updateSong, softDeleteLocalSong, syncSongs } from "@/lib/db";
@@ -150,9 +150,9 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
             // However, since we don't have getPdf sync anymore...
             // We might need to fetch the full song details including PDF if it's large.
             // For this MVP, let's assume we simply open the song page for now.
-            router.push(`/song/${song.id}`);
+            router.push(`/song?id=${song.id}`);
         } else if (effectiveCanAdd) {
-            router.push(`/song/${song.id}`);
+            router.push(`/song?id=${song.id}`);
         } else {
             // Nothing for member to do if no PDF
         }
@@ -262,24 +262,39 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
     return (
         <div className="max-w-5xl mx-auto px-4 pt-4 space-y-5 pb-32">
             {/* Sub-Tab Switcher */}
-            <div className="flex bg-surface rounded-xl p-1 card-shadow">
+            {/* Sub-Tab Switcher */}
+            <div className="flex bg-surface rounded-xl p-1 card-shadow relative isolate">
                 <button
                     onClick={() => setSubTab('repertoire')}
-                    className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${subTab === 'repertoire'
-                        ? 'bg-primary text-background'
+                    className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2 relative z-10 ${subTab === 'repertoire'
+                        ? 'text-background'
                         : 'text-text-secondary hover:text-text-primary'
                         }`}
                 >
+                    {subTab === 'repertoire' && (
+                        <motion.div
+                            layoutId="subtab-pill"
+                            className="absolute inset-0 bg-primary rounded-xl -z-10"
+                            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                        />
+                    )}
                     <Music2 className="w-4 h-4" />
                     Репертуар
                 </button>
                 <button
                     onClick={() => setSubTab('catalog')}
-                    className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${subTab === 'catalog'
-                        ? 'bg-primary text-background'
+                    className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2 relative z-10 ${subTab === 'catalog'
+                        ? 'text-background'
                         : 'text-text-secondary hover:text-text-primary'
                         }`}
                 >
+                    {subTab === 'catalog' && (
+                        <motion.div
+                            layoutId="subtab-pill"
+                            className="absolute inset-0 bg-primary rounded-xl -z-10"
+                            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                        />
+                    )}
                     <Library className="w-4 h-4" />
                     Архів МХО
                 </button>
@@ -287,12 +302,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
 
 
             {/* Catalog View */}
-            <motion.div
-                initial={false}
-                animate={subTab === 'catalog' ? { opacity: 1, y: 0, display: "block" } : { opacity: 0, y: 10, display: "none", transition: { duration: 0.2 } }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
-                className={subTab === 'catalog' ? 'block h-full' : 'hidden'}
-            >
+            <div className={subTab === 'catalog' ? 'block h-full' : 'hidden'}>
                 <GlobalArchive
                     onAddSong={async (globalSong) => {
                         // Add song from global archive to choir repertoire
@@ -318,12 +328,9 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                         }
                     }}
                 />
-            </motion.div>
+            </div>
 
-            <motion.div
-                initial={false}
-                animate={subTab === 'repertoire' ? { opacity: 1, y: 0, display: "block" } : { opacity: 0, y: 10, display: "none", transition: { duration: 0.2 } }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
+            <div
                 className={subTab === 'repertoire' ? 'block' : 'hidden'}
             >
                 {/* Stats Card - iOS Style */}
@@ -356,7 +363,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                     </div>
                 </div>
                 {/* Search & Filter - iOS Style */}
-                <div className="sticky top-[64px] z-20 -mx-4 px-4 pt-3 pb-3 mt-2 bg-background/95 backdrop-blur-xl border-b border-border">
+                <div className="sticky z-20 -mx-4 px-4 pt-3 pb-3 mt-2 bg-background/95 backdrop-blur-xl border-b border-border" style={{ top: 'calc(env(safe-area-inset-top) + 64px)' }}>
                     <div className="flex gap-2">
                         {/* Search Bar */}
                         <div className="relative flex-1 group">
@@ -488,12 +495,16 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <AnimatePresence>
-                                        {filteredSongs.map((song) => (
-                                            <tr
+                                    <AnimatePresence mode="popLayout">
+                                        {filteredSongs.map((song, index) => (
+                                            <motion.tr
                                                 key={song.id}
                                                 onClick={() => handleSongClick(song)}
                                                 className="border-b border-border/50 hover:bg-surface-highlight cursor-pointer transition-colors group"
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0 }}
+                                                transition={{ duration: 0.2, delay: Math.min(index * 0.03, 0.5) }}
                                             >
                                                 <td className="py-3 pl-0 pr-4">
                                                     <div className="flex items-center gap-3">
@@ -535,7 +546,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                                                         </button>
                                                     </td>
                                                 )}
-                                            </tr>
+                                            </motion.tr>
                                         ))}
                                     </AnimatePresence>
                                 </tbody>
@@ -543,49 +554,56 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
 
                             {/* Mobile: Simple List View */}
                             <div className="md:hidden space-y-0">
-                                <AnimatePresence>
-                                    {filteredSongs.map((song) => (
-                                        <SwipeableCard
+                                <AnimatePresence mode="popLayout">
+                                    {filteredSongs.map((song, index) => (
+                                        <motion.div
                                             key={song.id}
-                                            onDelete={() => setDeletingSongId(song.id)}
-                                            disabled={!effectiveCanAdd}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, scale: 0.95 }}
+                                            transition={{ duration: 0.3, delay: Math.min(index * 0.05, 0.5) }}
                                         >
-                                            <div
-                                                onClick={() => handleSongClick(song)}
-                                                className="flex items-center gap-3 py-3 border-b border-border/30 cursor-pointer active:bg-surface-highlight transition-colors bg-background"
+                                            <SwipeableCard
+                                                onDelete={() => setDeletingSongId(song.id)}
+                                                disabled={!effectiveCanAdd}
                                             >
-                                                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-text-primary">
-                                                    {song.hasPdf ? (
-                                                        <Eye className="w-5 h-5 text-background" />
-                                                    ) : (
-                                                        <FileText className="w-5 h-5 text-background" />
+                                                <div
+                                                    onClick={() => handleSongClick(song)}
+                                                    className="flex items-center gap-3 py-3 border-b border-border/30 cursor-pointer active:bg-surface-highlight transition-colors bg-background"
+                                                >
+                                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-text-primary">
+                                                        {song.hasPdf ? (
+                                                            <Eye className="w-5 h-5 text-background" />
+                                                        ) : (
+                                                            <FileText className="w-5 h-5 text-background" />
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-semibold text-text-primary truncate">{song.title}</p>
+                                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                                            {song.conductor && (
+                                                                <span className="text-xs text-primary font-medium flex items-center gap-1"><User className="w-3 h-3" />{song.conductor}</span>
+                                                            )}
+                                                            {song.conductor && <span className="text-xs text-text-secondary">•</span>}
+                                                            <span className="text-xs text-text-secondary">{song.category}</span>
+                                                        </div>
+                                                    </div>
+                                                    {effectiveCanAdd && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                handleEditClick(e, song);
+                                                            }}
+                                                            className="p-2 rounded-lg text-text-secondary"
+                                                            title="Редагувати"
+                                                        >
+                                                            <Pencil className="w-4 h-4" />
+                                                        </button>
                                                     )}
                                                 </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-semibold text-text-primary truncate">{song.title}</p>
-                                                    <div className="flex items-center gap-1.5 mt-0.5">
-                                                        {song.conductor && (
-                                                            <span className="text-xs text-primary font-medium flex items-center gap-1"><User className="w-3 h-3" />{song.conductor}</span>
-                                                        )}
-                                                        {song.conductor && <span className="text-xs text-text-secondary">•</span>}
-                                                        <span className="text-xs text-text-secondary">{song.category}</span>
-                                                    </div>
-                                                </div>
-                                                {effectiveCanAdd && (
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            e.stopPropagation();
-                                                            handleEditClick(e, song);
-                                                        }}
-                                                        className="p-2 rounded-lg text-text-secondary"
-                                                        title="Редагувати"
-                                                    >
-                                                        <Pencil className="w-4 h-4" />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </SwipeableCard>
+                                            </SwipeableCard>
+                                        </motion.div>
                                     ))}
                                 </AnimatePresence>
                             </div>
@@ -664,7 +682,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                     confirmLabel="Видалити"
                     isDestructive
                 />
-            </motion.div >
+            </div>
 
 
             {

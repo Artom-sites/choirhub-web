@@ -42,3 +42,8 @@ next-env.d.ts
 
 # Firebase service account keys (sensitive!)
 *-firebase-adminsdk-*.json
+
+# Capacitor native projects (APK-specific)
+/android/
+/ios/
+capacitor.config.ts

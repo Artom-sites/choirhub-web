@@ -54,14 +54,73 @@ function HomePageContent() {
   // Background cache upcoming service PDFs on app start
   useBackgroundCache();
 
+  // ------------------------------------------------------------------
+  //  STATE DEFINITIONS
+  // ------------------------------------------------------------------
 
+  // App Readiness
+  const [isAppReady, setIsAppReady] = useState(false);
 
+  // Data
   const [choir, setChoir] = useState<Choir | null>(null);
   const [services, setServices] = useState<Service[]>([]);
-  const [pageLoading, setPageLoading] = useState(true);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [registeredUsers, setRegisteredUsers] = useState<any[]>([]);
+  const [loadingRegisteredUsers, setLoadingRegisteredUsers] = useState(false);
 
+  // UI States & Modals
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [showStats, setShowStats] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
+  const [showChoirManager, setShowChoirManager] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showEditMemberModal, setShowEditMemberModal] = useState(false);
+  const [editingMember, setEditingMember] = useState<ChoirMember | null>(null);
+  const [mergingMember, setMergingMember] = useState<ChoirMember | null>(null);
+  const [viewingMemberStats, setViewingMemberStats] = useState<ChoirMember | null>(null);
+  const [showAdminCodeModal, setShowAdminCodeModal] = useState(false);
+  const [showEditName, setShowEditName] = useState(false);
+  const [showChoirSettings, setShowChoirSettings] = useState(false);
+  const [showLegalModal, setShowLegalModal] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showSendNotificationModal, setShowSendNotificationModal] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
+
+  // Manager/Admin States
+  const [managerMode, setManagerMode] = useState<'list' | 'create' | 'join'>('list');
+  const [newChoirName, setNewChoirName] = useState("");
+  const [joinCode, setJoinCode] = useState("");
+  const [managerLoading, setManagerLoading] = useState(false);
+  const [managerError, setManagerError] = useState("");
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [deletingAdminCode, setDeletingAdminCode] = useState<string | null>(null);
+  const [newAdminLabel, setNewAdminLabel] = useState("");
+  const [selectedPermissions, setSelectedPermissions] = useState<Permission[]>([]);
+  const [creatingAdminCode, setCreatingAdminCode] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [savingName, setSavingName] = useState(false);
+  const [editChoirName, setEditChoirName] = useState("");
+  const [savingChoirSettings, setSavingChoirSettings] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<any>(null);
+
+  const iconInputRef = useRef<HTMLInputElement>(null);
+
+  const AVAILABLE_PERMISSIONS: { key: Permission; label: string }[] = [
+    { key: 'add_songs', label: 'Додавати пісні' },
+    { key: 'edit_attendance', label: 'Відмічати відсутніх' },
+    { key: 'edit_credits', label: 'Записувати диригента/піаніста' },
+    { key: 'view_stats', label: 'Бачити статистику' },
+    { key: 'manage_services', label: 'Створювати/видаляти служіння' },
+    { key: 'notify_members', label: 'Надсилати сповіщення' },
+  ];
+
+  // ------------------------------------------------------------------
+  //  EFFECTS & NAVIGATION
+  // ------------------------------------------------------------------
+
+  // Notifications Check
   useEffect(() => {
     if (userData?.choirId) {
       getChoirNotifications(userData.choirId).then(notifs => {
@@ -71,31 +130,62 @@ function HomePageContent() {
         }
       });
     }
-  }, [userData?.choirId, userData?.id, showNotificationModal]); // Re-check when modal closes
+  }, [userData?.choirId, userData?.id, showNotificationModal]);
 
-  // Navigation
+  // Tab Navigation
   const activeTabRaw = searchParams.get('tab');
   const activeTab = (activeTabRaw === 'songs' || activeTabRaw === 'members') ? activeTabRaw : 'home';
 
+  // Restore tab from localStorage when returning from another page (e.g. /privacy, /terms)
+  useEffect(() => {
+    if (!activeTabRaw) {
+      const stored = localStorage.getItem('activeTab');
+      if (stored === 'songs' || stored === 'members') {
+        const newParams = new URLSearchParams(searchParams.toString());
+        newParams.set('tab', stored);
+        router.replace(`/?${newParams.toString()}`, { scroll: false });
+      }
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const setActiveTab = (tab: 'home' | 'songs' | 'members') => {
+    localStorage.setItem('activeTab', tab);
     const newParams = new URLSearchParams(searchParams.toString());
-    if (tab === 'home') newParams.delete('tab');
-    else newParams.set('tab', tab);
+    if (tab === 'home') {
+      newParams.delete('tab');
+      localStorage.setItem('activeTab', 'home');
+    } else {
+      newParams.set('tab', tab);
+    }
     router.replace(`/?${newParams.toString()}`, { scroll: false });
   };
 
   const [memberFilter, setMemberFilter] = useState('');
 
-  // Helper to render member card
-  const renderMemberCard = (member: ChoirMember) => {
+  // Handle Android back gesture
+  useEffect(() => {
+    if (showAccount) {
+      window.history.pushState({ modal: 'account' }, '');
+      const handlePopState = () => setShowAccount(false);
+      window.addEventListener('popstate', handlePopState);
+      return () => window.removeEventListener('popstate', handlePopState);
+    }
+  }, [showAccount]);
+
+  // Member Card Renderer
+  const renderMemberCard = (member: ChoirMember, index: number = 0) => {
     const absences = getAbsenceCount(member.id);
     return (
-      <div
+      <motion.div
+        layout
         key={member.id}
+        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ duration: 0.2, delay: Math.min(index * 0.05, 0.4) }}
         className="p-4 bg-surface card-shadow rounded-2xl flex items-center justify-between group hover:bg-surface-highlight transition-colors"
       >
         <div className="flex items-center gap-3">
-          {/* Avatar - clickable for everyone to view stats */}
           <button
             onClick={() => setViewingMemberStats(member)}
             className="w-10 h-10 rounded-full bg-surface-highlight flex items-center justify-center text-text-primary font-bold text-sm relative hover:ring-2 hover:ring-primary/50 transition-all active:scale-95"
@@ -158,263 +248,106 @@ function HomePageContent() {
             </button>
           )}
         </div>
-      </div>
+      </motion.div>
     );
   };
 
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
-
-  // Stats
-  const [showStats, setShowStats] = useState(false);
-
-  // Overlays
-  const [showAccount, setShowAccount] = useState(false);
-  const [showChoirManager, setShowChoirManager] = useState(false);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-
-  // Member Management
-  const [editingMember, setEditingMember] = useState<ChoirMember | null>(null);
-  const [showEditMemberModal, setShowEditMemberModal] = useState(false);
-  const [mergingMember, setMergingMember] = useState<ChoirMember | null>(null); // New merge state
-  const [viewingMemberStats, setViewingMemberStats] = useState<ChoirMember | null>(null); // Member stats view
-
-  const [copiedCode, setCopiedCode] = useState<string | null>(null);
-  const [deletingAdminCode, setDeletingAdminCode] = useState<string | null>(null);
-
-
-  // Choir Manager State
-  const [managerMode, setManagerMode] = useState<'list' | 'create' | 'join'>('list');
-  const [newChoirName, setNewChoirName] = useState("");
-  const [joinCode, setJoinCode] = useState("");
-  const [managerLoading, setManagerLoading] = useState(false);
-  const [managerError, setManagerError] = useState("");
-
-  const iconInputRef = useRef<HTMLInputElement>(null);
-
-  // Admin Code Creation
-  const [showAdminCodeModal, setShowAdminCodeModal] = useState(false);
-  const [newAdminLabel, setNewAdminLabel] = useState("");
-  const [selectedPermissions, setSelectedPermissions] = useState<Permission[]>([]);
-  const [creatingAdminCode, setCreatingAdminCode] = useState(false);
-
-  // Edit Name Modal
-  const [showEditName, setShowEditName] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [savingName, setSavingName] = useState(false);
-
-  // Choir Settings Modal
-  const [showChoirSettings, setShowChoirSettings] = useState(false);
-  const [editChoirName, setEditChoirName] = useState("");
-  const [savingChoirSettings, setSavingChoirSettings] = useState(false);
-
-  // Delete Account Modal
-  const [showLegalModal, setShowLegalModal] = useState(false);
-  const [showSupportModal, setShowSupportModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-
-  // Send Notification Modal
-  const [showSendNotificationModal, setShowSendNotificationModal] = useState(false);
-
-  // Help Modal
-  const [showHelpModal, setShowHelpModal] = useState(false);
-
-  // Registered App Users
-  const [registeredUsers, setRegisteredUsers] = useState<any[]>([]);
-  const [loadingRegisteredUsers, setLoadingRegisteredUsers] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<any>(null);
-
-  const AVAILABLE_PERMISSIONS: { key: Permission; label: string }[] = [
-    { key: 'add_songs', label: 'Додавати пісні' },
-    { key: 'edit_attendance', label: 'Відмічати відсутніх' },
-    { key: 'edit_credits', label: 'Записувати диригента/піаніста' },
-    { key: 'view_stats', label: 'Бачити статистику' },
-    { key: 'manage_services', label: 'Створювати/видаляти служіння' },
-    { key: 'notify_members', label: 'Надсилати сповіщення' },
-  ];
-
-  // Handle Android back gesture for modals
+  // ------------------------------------------------------------------
+  //  CORE APP INITIALIZATION
+  // ------------------------------------------------------------------
   useEffect(() => {
-    if (showAccount) {
-      // Push a fake history state when modal opens
-      window.history.pushState({ modal: 'account' }, '');
-
-      const handlePopState = () => {
-        // Close modal when back gesture is used
-        setShowAccount(false);
-      };
-
-      window.addEventListener('popstate', handlePopState);
-      return () => window.removeEventListener('popstate', handlePopState);
-    }
-  }, [showAccount]);
-
-  // Fetch Choir Data replaced by real-time listeners below
-  // const fetchChoirData = async () => {... }
-
-  useEffect(() => {
+    // 1. Wait for Auth Context
     if (authLoading) return;
 
+    // 2. Unauthenticated -> Redirect to Setup
     if (!user || !userData?.choirId) {
-      router.push("/setup");
+      router.replace("/setup");
       return;
     }
 
+    // 3. Authenticated -> Load Data
+    const choirId = userData.choirId;
 
+    let servicesLoaded = false;
+    let choirLoaded = false;
 
-    async function init() {
-      if (userData?.choirId) {
-        // Service Listener
-        const qServices = query(firestoreCollection(db, `choirs/${userData.choirId}/services`));
-        const unsubServices = onSnapshot(qServices, (snapshot) => {
-          const fetchedServices = snapshot.docs
-            .map(doc => ({ id: doc.id, ...doc.data() } as Service))
-            .filter(s => !s.deletedAt);
-
-          // Sort for finding next/prev or just consistency? 
-          // ServiceView might need sorted services? 
-          // Logic in db.ts services sort was: upcoming asc, past desc.
-          // We'll mimic or just store raw and let ServiceView sort?
-          // App usually passes `services` to ServiceView.
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          const upcoming = fetchedServices.filter(s => new Date(s.date) >= today)
-            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-          const past = fetchedServices.filter(s => new Date(s.date) < today)
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-          const sortedServices = [...upcoming, ...past];
-          setServices(sortedServices);
-
-          // Check for serviceId param (Android Back Support)
-          const serviceIdParam = searchParams.get('serviceId');
-          if (serviceIdParam) {
-            const foundService = sortedServices.find(s => s.id === serviceIdParam);
-            if (foundService) setSelectedService(foundService);
-          } else {
-            // Only clear if we are not navigating (this might flicker if we navigate back?)
-            // Actually this logic runs on every snapshot.
-            // If URL has no param, selectedService should be null.
-            setSelectedService(null);
-          }
-        });
-
-        // Choir Listener
-        const unsubChoir = onSnapshot(doc(db, "choirs", userData.choirId), (docSnap) => {
-          if (docSnap.exists()) {
-            const fetchedChoir = { id: docSnap.id, ...docSnap.data() } as Choir;
-            setChoir(fetchedChoir);
-
-            // Check for joinCode param (Redirect logic, run once ideally or checking every time is cheap)
-            // ... (Logic moved here or kept?)
-            // The join code logic is "one time" usually on load.
-            // We can leave the join code check separate or here.
-            const joinCodeParam = searchParams.get('joinCode');
-            if (joinCodeParam) {
-              const newParams = new URLSearchParams(searchParams.toString());
-              newParams.delete('joinCode');
-              router.replace(`/?${newParams.toString()}`, { scroll: false });
-
-              const codeUpper = joinCodeParam.toUpperCase();
-              const alreadyInChoir = fetchedChoir && (
-                fetchedChoir.memberCode === codeUpper ||
-                fetchedChoir.regentCode === codeUpper ||
-                fetchedChoir.adminCodes?.some(ac => ac.code === codeUpper)
-              );
-
-              if (!alreadyInChoir) {
-                setShowAccount(false);
-                setShowChoirManager(true);
-                setManagerMode('join');
-                setJoinCode(joinCodeParam);
-              }
-            }
-          }
-        });
-
-        return () => {
-          unsubServices();
-          unsubChoir();
-        };
+    const checkReady = () => {
+      if (servicesLoaded && choirLoaded) {
+        setIsAppReady(true);
       }
-      setPageLoading(false);
-    }
-
-    // We can't return unsubscribe from async init easily inside useEffect without cleanup ref
-    // Better to inline the listeners into useEffect
-
-    let unsubServices: () => void;
-    let unsubChoir: () => void;
-
-    if (userData?.choirId) {
-      const qServices = query(firestoreCollection(db, `choirs/${userData.choirId}/services`));
-      unsubServices = onSnapshot(qServices, (snapshot) => {
-        const fetchedServices = snapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() } as Service))
-          .filter(s => !s.deletedAt);
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const upcoming = fetchedServices.filter(s => new Date(s.date) >= today)
-          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-        const past = fetchedServices.filter(s => new Date(s.date) < today)
-          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-        const sortedServices = [...upcoming, ...past];
-        setServices(sortedServices);
-      });
-
-      unsubChoir = onSnapshot(doc(db, "choirs", userData.choirId), (docSnap) => {
-        if (docSnap.exists()) {
-          const fetchedChoir = { id: docSnap.id, ...docSnap.data() } as Choir;
-          setChoir(fetchedChoir);
-        }
-      });
-    }
-
-    setPageLoading(false);
-
-    // Initial URL check for Join Code (only need once, can rely on userData/params)
-    // We'll move join code logic to a separate effect or keep simple.
-    // The previous logic cleaned up params.
-
-    return () => {
-      if (unsubServices) unsubServices();
-      if (unsubChoir) unsubChoir();
     };
 
-  }, [authLoading, user, userData?.choirId]); // Dep change to specific ID
+    const qServices = query(firestoreCollection(db, `choirs/${choirId}/services`));
+    const unsubServices = onSnapshot(qServices, (snapshot) => {
+      const fetchedServices = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as Service))
+        .filter(s => !s.deletedAt);
 
-  // Separate Effect for URL synchronization with loaded Services
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const upcoming = fetchedServices.filter(s => new Date(s.date) >= today)
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const past = fetchedServices.filter(s => new Date(s.date) < today)
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      const sortedServices = [...upcoming, ...past];
+      setServices(sortedServices);
+
+      servicesLoaded = true;
+      checkReady();
+    });
+
+    const unsubChoir = onSnapshot(doc(db, "choirs", choirId), (docSnap) => {
+      if (docSnap.exists()) {
+        const fetchedChoir = { id: docSnap.id, ...docSnap.data() } as Choir;
+        setChoir(fetchedChoir);
+      }
+      choirLoaded = true;
+      checkReady();
+    });
+
+    return () => {
+      unsubServices();
+      unsubChoir();
+    };
+
+  }, [authLoading, user, userData?.choirId, router]);
+
+  // URL Sync Effect (Service ID, Join Code)
   useEffect(() => {
-    const serviceIdParam = searchParams.get('serviceId');
-    if (serviceIdParam && services.length > 0) {
-      const foundService = services.find(s => s.id === serviceIdParam);
-      if (foundService) setSelectedService(foundService);
-    } else if (!serviceIdParam) {
-      setSelectedService(null);
-    }
-
-    const joinCodeParam = searchParams.get('joinCode');
-    if (joinCodeParam && choir) {
-      const newParams = new URLSearchParams(searchParams.toString());
-      newParams.delete('joinCode');
-      router.replace(`/?${newParams.toString()}`, { scroll: false });
-
-      const codeUpper = joinCodeParam.toUpperCase();
-      const alreadyInChoir = choir && (
-        choir.memberCode === codeUpper ||
-        choir.regentCode === codeUpper ||
-        choir.adminCodes?.some(ac => ac.code === codeUpper)
-      );
-
-      if (!alreadyInChoir) {
-        setShowAccount(false);
-        setShowChoirManager(true);
-        setManagerMode('join');
-        setJoinCode(joinCodeParam);
+    // Only run if app is ready OR we have data (for service ID syncing)
+    if (services.length > 0) {
+      const serviceIdParam = searchParams.get('serviceId');
+      if (serviceIdParam) {
+        const foundService = services.find(s => s.id === serviceIdParam);
+        if (foundService) setSelectedService(foundService);
+      } else {
+        setSelectedService(null);
       }
     }
 
+    if (choir) {
+      const joinCodeParam = searchParams.get('joinCode');
+      if (joinCodeParam) {
+        const newParams = new URLSearchParams(searchParams.toString());
+        newParams.delete('joinCode');
+        router.replace(`/?${newParams.toString()}`, { scroll: false });
+
+        const codeUpper = joinCodeParam.toUpperCase();
+        const alreadyInChoir = (
+          choir.memberCode === codeUpper ||
+          choir.regentCode === codeUpper ||
+          choir.adminCodes?.some(ac => ac.code === codeUpper)
+        );
+
+        if (!alreadyInChoir) {
+          setShowAccount(false);
+          setShowChoirManager(true);
+          setManagerMode('join');
+          setJoinCode(joinCodeParam);
+        }
+      }
+    }
   }, [searchParams, services, choir, router]);
 
   // Load registered users when "App Users" filter is active
@@ -461,7 +394,7 @@ function HomePageContent() {
 
   const handleSwitchChoir = async (membership: UserMembership) => {
     if (!user) return;
-    setPageLoading(true);
+    setIsAppReady(false);
 
     await createUser(user.uid, {
       choirId: membership.choirId,
@@ -843,9 +776,16 @@ function HomePageContent() {
     }
   };
 
-  if (authLoading || pageLoading) {
+  // ------------------------------------------------------------------
+  //  APP READY CHECK
+  // ------------------------------------------------------------------
+  // This is the SINGLE barrier that prevents flash of default state.
+  // We only render the Dashboard if isAppReady is true.
+  // Otherwise, we show the splash screen.
+  if (!isAppReady) {
     return <Preloader />;
   }
+
 
   // Show Statistics
   if (showStats && choir) {
@@ -911,204 +851,236 @@ function HomePageContent() {
       <InstallPrompt />
 
       {/* Logout Confirmation Modal */}
-      {showLogoutConfirm && (
-        <div
-          className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
-          onClick={(e) => { e.stopPropagation(); setShowLogoutConfirm(false); }}
-        >
-          <div
-            className="bg-[#18181b] w-full max-w-xs p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200 border border-white/10"
-            onClick={(e) => e.stopPropagation()}
+      <AnimatePresence>
+        {showLogoutConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={(e) => { e.stopPropagation(); setShowLogoutConfirm(false); }}
           >
-            <div className="flex flex-col items-center text-center gap-4">
-              <div className="w-14 h-14 bg-[#27272a] rounded-full flex items-center justify-center">
-                <LogOut className="w-6 h-6 text-[#a1a1aa]" />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#18181b] w-full max-w-xs p-6 rounded-3xl shadow-2xl border border-white/10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex flex-col items-center text-center gap-4">
+                <div className="w-14 h-14 bg-[#27272a] rounded-full flex items-center justify-center">
+                  <LogOut className="w-6 h-6 text-[#a1a1aa]" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Вийти з акаунту?</h3>
+                  <p className="text-[#a1a1aa] text-sm mt-1">
+                    Для повторного входу знадобиться увійти через Google.
+                  </p>
+                </div>
+                <div className="flex gap-3 w-full mt-2">
+                  <button
+                    onClick={() => setShowLogoutConfirm(false)}
+                    className="flex-1 py-3 border border-white/10 rounded-xl text-white hover:bg-[#27272a] transition-colors font-medium text-sm"
+                  >
+                    Скасувати
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="flex-1 py-3 bg-white text-black rounded-xl font-bold hover:bg-gray-100 transition-colors text-sm"
+                  >
+                    Вийти
+                  </button>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-bold text-white">Вийти з акаунту?</h3>
-                <p className="text-[#a1a1aa] text-sm mt-1">
-                  Для повторного входу знадобиться увійти через Google.
-                </p>
-              </div>
-              <div className="flex gap-3 w-full mt-2">
-                <button
-                  onClick={() => setShowLogoutConfirm(false)}
-                  className="flex-1 py-3 border border-white/10 rounded-xl text-white hover:bg-[#27272a] transition-colors font-medium text-sm"
-                >
-                  Скасувати
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="flex-1 py-3 bg-white text-black rounded-xl font-bold hover:bg-gray-100 transition-colors text-sm"
-                >
-                  Вийти
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Choir Settings Modal */}
-      {showChoirSettings && (
-        <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-surface card-shadow w-full max-w-sm p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-text-primary">Налаштування хору</h3>
-              <button
-                onClick={() => setShowChoirSettings(false)}
-                className="p-2 text-text-secondary hover:text-text-primary hover:bg-surface-highlight rounded-full transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Choir Icon */}
-            <div className="flex flex-col items-center mb-6">
-              <button
-                onClick={() => iconInputRef.current?.click()}
-                className="w-24 h-24 bg-surface-highlight rounded-2xl flex items-center justify-center border border-border overflow-hidden relative group cursor-pointer hover:border-primary/30 transition-colors"
-              >
-                {choir?.icon ? (
-                  <img src={choir.icon} alt="Choir" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-4xl text-text-primary font-bold">{choir?.name?.[0]?.toUpperCase() || "C"}</span>
-                )}
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                  <Camera className="w-6 h-6 text-white" />
-                </div>
-              </button>
-              <p className="text-text-secondary text-xs mt-2">Натисніть, щоб змінити фото</p>
-            </div>
-
-            {/* Choir Name */}
-            <div className="mb-6">
-              <label className="text-text-secondary text-sm mb-2 block">Назва хору</label>
-              <input
-                type="text"
-                value={editChoirName}
-                onChange={(e) => setEditChoirName(e.target.value)}
-                placeholder="Назва хору"
-                className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:border-primary/50"
-              />
-            </div>
-
-            {/* Save Button */}
-            <button
-              onClick={async () => {
-                if (!userData?.choirId || !editChoirName.trim()) return;
-                setSavingChoirSettings(true);
-                try {
-                  await updateChoir(userData.choirId, { name: editChoirName.trim() });
-                  setChoir(prev => prev ? { ...prev, name: editChoirName.trim() } : null);
-                  setShowChoirSettings(false);
-                } catch (err) {
-                  console.error("Failed to update choir:", err);
-                } finally {
-                  setSavingChoirSettings(false);
-                }
-              }}
-              disabled={savingChoirSettings || !editChoirName.trim()}
-              className="w-full py-3 bg-primary text-background rounded-xl font-bold hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+      <AnimatePresence>
+        {showChoirSettings && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-surface card-shadow w-full max-w-sm p-6 rounded-3xl shadow-2xl"
             >
-              {savingChoirSettings && <Loader2 className="w-4 h-4 animate-spin" />}
-              Зберегти
-            </button>
-          </div>
-        </div>
-      )}
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-bold text-text-primary">Налаштування хору</h3>
+                <button
+                  onClick={() => setShowChoirSettings(false)}
+                  className="p-2 text-text-secondary hover:text-text-primary hover:bg-surface-highlight rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Choir Icon */}
+              <div className="flex flex-col items-center mb-6">
+                <button
+                  onClick={() => iconInputRef.current?.click()}
+                  className="w-24 h-24 bg-surface-highlight rounded-2xl flex items-center justify-center border border-border overflow-hidden relative group cursor-pointer hover:border-primary/30 transition-colors"
+                >
+                  {choir?.icon ? (
+                    <img src={choir.icon} alt="Choir" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-4xl text-text-primary font-bold">{choir?.name?.[0]?.toUpperCase() || "C"}</span>
+                  )}
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                    <Camera className="w-6 h-6 text-white" />
+                  </div>
+                </button>
+                <p className="text-text-secondary text-xs mt-2">Натисніть, щоб змінити фото</p>
+              </div>
+
+              {/* Choir Name */}
+              <div className="mb-6">
+                <label className="text-text-secondary text-sm mb-2 block">Назва хору</label>
+                <input
+                  type="text"
+                  value={editChoirName}
+                  onChange={(e) => setEditChoirName(e.target.value)}
+                  placeholder="Назва хору"
+                  className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:border-primary/50"
+                />
+              </div>
+
+              {/* Save Button */}
+              <button
+                onClick={async () => {
+                  if (!userData?.choirId || !editChoirName.trim()) return;
+                  setSavingChoirSettings(true);
+                  try {
+                    await updateChoir(userData.choirId, { name: editChoirName.trim() });
+                    setChoir(prev => prev ? { ...prev, name: editChoirName.trim() } : null);
+                    setShowChoirSettings(false);
+                  } catch (err) {
+                    console.error("Failed to update choir:", err);
+                  } finally {
+                    setSavingChoirSettings(false);
+                  }
+                }}
+                disabled={savingChoirSettings || !editChoirName.trim()}
+                className="w-full py-3 bg-primary text-background rounded-xl font-bold hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {savingChoirSettings && <Loader2 className="w-4 h-4 animate-spin" />}
+                Зберегти
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Choir Manager Modal */}
-      {showChoirManager && (
-        <div className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-surface card-shadow w-full max-w-sm p-6 rounded-3xl shadow-2xl overflow-hidden relative">
-            <button onClick={() => { setShowChoirManager(false); setShowAccount(true); setManagerMode('list'); setManagerError(""); }} className="absolute top-4 right-4 p-2 text-text-secondary hover:text-text-primary">
-              <X className="w-5 h-5" />
-            </button>
+      <AnimatePresence>
+        {showChoirManager && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-surface card-shadow w-full max-w-sm p-6 rounded-3xl shadow-2xl overflow-hidden relative"
+            >
+              <button onClick={() => { setShowChoirManager(false); setShowAccount(true); setManagerMode('list'); setManagerError(""); }} className="absolute top-4 right-4 p-2 text-text-secondary hover:text-text-primary">
+                <X className="w-5 h-5" />
+              </button>
 
-            {managerMode === 'list' && (
-              <div className="space-y-4">
-                <h3 className="text-xl font-bold text-text-primary text-center mb-6">Мої хори</h3>
+              {managerMode === 'list' && (
+                <div className="space-y-4">
+                  <h3 className="text-xl font-bold text-text-primary text-center mb-6">Мої хори</h3>
 
-                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                  <div className="p-4 rounded-2xl bg-success/10 border border-success/30 flex items-center justify-between">
-                    <div>
-                      <p className="text-text-primary font-bold">{userData?.choirName}</p>
-                      <p className="text-xs text-success font-medium tracking-wide">ПОТОЧНИЙ</p>
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    <div className="p-4 rounded-2xl bg-success/10 border border-success/30 flex items-center justify-between">
+                      <div>
+                        <p className="text-text-primary font-bold">{userData?.choirName}</p>
+                        <p className="text-xs text-success font-medium tracking-wide">ПОТОЧНИЙ</p>
+                      </div>
+                      <Check className="w-5 h-5 text-success" />
                     </div>
-                    <Check className="w-5 h-5 text-success" />
+
+                    {userData?.memberships?.filter(m => m.choirId !== userData.choirId).map(m => (
+                      <button
+                        key={m.choirId}
+                        onClick={() => handleSwitchChoir(m)}
+                        className="w-full p-4 rounded-2xl bg-surface-highlight border border-border hover:bg-surface-highlight/80 flex items-center justify-between transition-all"
+                      >
+                        <div className="text-left">
+                          <p className="text-text-primary font-bold">{m.choirName}</p>
+                          <p className="text-xs text-text-secondary uppercase">{m.role === 'head' ? 'Регент' : m.role === 'regent' ? 'Регент' : 'Хорист'}</p>
+                        </div>
+                        <Repeat className="w-4 h-4 text-text-secondary" />
+                      </button>
+                    ))}
                   </div>
 
-                  {userData?.memberships?.filter(m => m.choirId !== userData.choirId).map(m => (
-                    <button
-                      key={m.choirId}
-                      onClick={() => handleSwitchChoir(m)}
-                      className="w-full p-4 rounded-2xl bg-surface-highlight border border-border hover:bg-surface-highlight/80 flex items-center justify-between transition-all"
-                    >
-                      <div className="text-left">
-                        <p className="text-text-primary font-bold">{m.choirName}</p>
-                        <p className="text-xs text-text-secondary uppercase">{m.role === 'head' ? 'Регент' : m.role === 'regent' ? 'Регент' : 'Хорист'}</p>
-                      </div>
-                      <Repeat className="w-4 h-4 text-text-secondary" />
+                  <div className="grid grid-cols-2 gap-3 pt-4">
+                    <button onClick={() => setManagerMode('create')} className="p-3 bg-primary text-background rounded-xl text-sm font-bold hover:opacity-90">
+                      Створити
                     </button>
-                  ))}
+                    <button onClick={() => setManagerMode('join')} className="p-3 bg-surface-highlight text-text-primary rounded-xl text-sm font-bold hover:bg-surface-highlight/80 border border-border">
+                      Приєднатись
+                    </button>
+                  </div>
                 </div>
+              )}
 
-                <div className="grid grid-cols-2 gap-3 pt-4">
-                  <button onClick={() => setManagerMode('create')} className="p-3 bg-primary text-background rounded-xl text-sm font-bold hover:opacity-90">
-                    Створити
-                  </button>
-                  <button onClick={() => setManagerMode('join')} className="p-3 bg-surface-highlight text-text-primary rounded-xl text-sm font-bold hover:bg-surface-highlight/80 border border-border">
-                    Приєднатись
+              {managerMode === 'create' && (
+                <div className="space-y-4">
+                  <button onClick={() => setManagerMode('list')} className="text-xs text-text-secondary hover:text-text-primary mb-2">← Назад</button>
+                  <h3 className="text-xl font-bold text-text-primary">Новий хор</h3>
+                  <input
+                    value={newChoirName}
+                    onChange={e => setNewChoirName(e.target.value)}
+                    placeholder="Назва хору"
+                    className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl placeholder:text-text-secondary"
+                  />
+                  <button
+                    onClick={handleCreateChoir}
+                    disabled={managerLoading}
+                    className="w-full p-3 bg-primary text-background rounded-xl font-bold hover:opacity-90 disabled:opacity-50"
+                  >
+                    {managerLoading ? <Loader2 className="animate-spin mx-auto" /> : "Створити"}
                   </button>
                 </div>
-              </div>
-            )}
+              )}
 
-            {managerMode === 'create' && (
-              <div className="space-y-4">
-                <button onClick={() => setManagerMode('list')} className="text-xs text-text-secondary hover:text-text-primary mb-2">← Назад</button>
-                <h3 className="text-xl font-bold text-text-primary">Новий хор</h3>
-                <input
-                  value={newChoirName}
-                  onChange={e => setNewChoirName(e.target.value)}
-                  placeholder="Назва хору"
-                  className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl placeholder:text-text-secondary"
-                />
-                <button
-                  onClick={handleCreateChoir}
-                  disabled={managerLoading}
-                  className="w-full p-3 bg-primary text-background rounded-xl font-bold hover:opacity-90 disabled:opacity-50"
-                >
-                  {managerLoading ? <Loader2 className="animate-spin mx-auto" /> : "Створити"}
-                </button>
-              </div>
-            )}
-
-            {managerMode === 'join' && (
-              <div className="space-y-4">
-                <button onClick={() => { setManagerMode('list'); setManagerError(""); }} className="text-xs text-text-secondary hover:text-text-primary mb-2">← Назад</button>
-                <h3 className="text-xl font-bold text-text-primary">Приєднатись</h3>
-                <input
-                  value={joinCode}
-                  onChange={e => setJoinCode(e.target.value.toUpperCase())}
-                  placeholder="Код (6 символів)"
-                  maxLength={6}
-                  className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl text-center font-mono uppercase tracking-widest placeholder:text-text-secondary"
-                />
-                {managerError && <p className="text-red-400 text-xs">{managerError}</p>}
-                <button
-                  onClick={handleJoinChoir}
-                  disabled={managerLoading}
-                  className="w-full p-3 bg-primary text-background rounded-xl font-bold hover:opacity-90 disabled:opacity-50"
-                >
-                  {managerLoading ? <Loader2 className="animate-spin mx-auto" /> : "Додатись"}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+              {managerMode === 'join' && (
+                <div className="space-y-4">
+                  <button onClick={() => { setManagerMode('list'); setManagerError(""); }} className="text-xs text-text-secondary hover:text-text-primary mb-2">← Назад</button>
+                  <h3 className="text-xl font-bold text-text-primary">Приєднатись</h3>
+                  <input
+                    value={joinCode}
+                    onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                    placeholder="Код (6 символів)"
+                    maxLength={6}
+                    className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl text-center font-mono uppercase tracking-widest placeholder:text-text-secondary"
+                  />
+                  {managerError && <p className="text-red-400 text-xs">{managerError}</p>}
+                  <button
+                    onClick={handleJoinChoir}
+                    disabled={managerLoading}
+                    className="w-full p-3 bg-primary text-background rounded-xl font-bold hover:opacity-90 disabled:opacity-50"
+                  >
+                    {managerLoading ? <Loader2 className="animate-spin mx-auto" /> : "Додатись"}
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Edit/Add Member Modal */}
       {/* Edit/Add Member Modal */}
@@ -1148,220 +1120,229 @@ function HomePageContent() {
       )}
 
       {/* Account Overlay */}
-      {showAccount && (
-        <div className="fixed inset-0 z-[60] animate-in slide-in-from-right duration-300 flex flex-col" style={{ background: 'var(--background)' }}>
-          <div className="p-4 border-b border-border" style={{ background: 'var(--surface)' }}>
-            <button
-              onClick={() => setShowAccount(false)}
-              className="flex items-center gap-2 text-text-primary font-medium hover:text-text-secondary transition-colors py-1"
-            >
-              <ChevronLeft className="w-5 h-5" />
-              Назад
-            </button>
-          </div>
+      <AnimatePresence>
+        {showAccount && (
+          <motion.div
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="fixed inset-0 z-[60] flex flex-col bg-background"
+            style={{ background: 'var(--background)' }}
+          >
+            <div className="p-4 border-b border-border pt-[calc(1rem+env(safe-area-inset-top))]" style={{ background: 'var(--surface)' }}>
+              <button
+                onClick={() => setShowAccount(false)}
+                className="flex items-center gap-2 text-text-primary font-medium hover:text-text-secondary transition-colors py-1"
+              >
+                <ChevronLeft className="w-5 h-5" />
+                Назад
+              </button>
+            </div>
 
-          <div className="max-w-md mx-auto w-full h-full flex flex-col p-6 overflow-y-auto">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-3xl font-bold text-text-primary tracking-tight">Акаунт</h2>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setShowNotificationModal(true)}
-                  className="p-2 rounded-full hover:bg-surface-highlight transition-colors relative"
-                  title="Сповіщення"
-                >
-                  {unreadNotifications > 0 ? (
-                    <>
+            <div className="max-w-md mx-auto w-full h-full flex flex-col p-6 overflow-y-auto">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-3xl font-bold text-text-primary tracking-tight">Акаунт</h2>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setShowNotificationModal(true)}
+                    className="p-2 rounded-full hover:bg-surface-highlight transition-colors relative"
+                    title="Сповіщення"
+                  >
+                    {unreadNotifications > 0 ? (
+                      <>
+                        <Bell className="w-5 h-5 text-text-secondary" />
+                        <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-green-500 border-2 border-background rounded-full" />
+                      </>
+                    ) : (
                       <Bell className="w-5 h-5 text-text-secondary" />
-                      <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-green-500 border-2 border-background rounded-full" />
-                    </>
-                  ) : (
-                    <Bell className="w-5 h-5 text-text-secondary" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-6 flex-1">
-              {/* Profile Card */}
-              <div className="bg-surface rounded-2xl p-6 flex items-center gap-5 card-shadow">
-                <div className="w-16 h-16 rounded-full bg-accent text-white flex items-center justify-center text-xl font-bold shadow-lg overflow-hidden">
-                  {user?.photoURL ? (
-                    <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" />
-                  ) : (
-                    <span>{userData?.name?.[0]?.toUpperCase() || "U"}</span>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-xl font-bold text-text-primary">{userData?.name}</h3>
-                    <button
-                      onClick={() => { setNewName(userData?.name || ""); setShowEditName(true); }}
-                      className="p-1.5 rounded-full hover:bg-surface-highlight transition-colors text-text-secondary hover:text-text-primary"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <p className="text-sm text-text-secondary">{user?.email}</p>
-                  <p className="text-xs text-text-secondary/50 mt-0.5">{userData?.choirName}</p>
-                  <div className="mt-2">{getRoleBadge(userData?.role || 'member')}</div>
+                    )}
+                  </button>
                 </div>
               </div>
 
-
-
-              {/* Management Block (Choir & Codes) */}
-              <div className="bg-surface rounded-2xl p-4 card-shadow">
-                {/* Change Choir Button */}
-                <button
-                  onClick={() => { setShowAccount(false); setShowChoirManager(true); }}
-                  className="w-full flex items-center justify-between py-2 transition-all group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-accent/10 text-accent flex items-center justify-center">
-                      <Repeat className="w-5 h-5" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-text-primary font-bold text-sm">Змінити хор</p>
-                      <p className="text-xs text-text-secondary group-hover:text-text-primary/80">Додати або перемкнути</p>
-                    </div>
+              <div className="space-y-6 flex-1">
+                {/* Profile Card */}
+                <div className="bg-surface rounded-2xl p-6 flex items-center gap-5 card-shadow">
+                  <div className="w-16 h-16 rounded-full bg-accent text-white flex items-center justify-center text-xl font-bold shadow-lg overflow-hidden">
+                    {user?.photoURL ? (
+                      <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <span>{userData?.name?.[0]?.toUpperCase() || "U"}</span>
+                    )}
                   </div>
-                  <PlusCircle className="w-5 h-5 text-text-secondary group-hover:text-text-primary" />
-                </button>
-
-                {/* Codes for admin */}
-                {(userData?.role === 'head' || userData?.role === 'regent') && choir && (
-                  <div className="pt-4 border-t border-border mt-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-sm text-text-secondary">Коди доступу</h3>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xl font-bold text-text-primary">{userData?.name}</h3>
                       <button
-                        onClick={() => setShowAdminCodeModal(true)}
-                        className="text-xs text-accent hover:underline flex items-center gap-1"
+                        onClick={() => { setNewName(userData?.name || ""); setShowEditName(true); }}
+                        className="p-1.5 rounded-full hover:bg-surface-highlight transition-colors text-text-secondary hover:text-text-primary"
                       >
-                        <PlusCircle className="w-3 h-3" />
-                        Додати
+                        <Pencil className="w-4 h-4" />
                       </button>
                     </div>
+                    <p className="text-sm text-text-secondary">{user?.email}</p>
+                    <p className="text-xs text-text-secondary/50 mt-0.5">{userData?.choirName}</p>
+                    <div className="mt-2">{getRoleBadge(userData?.role || 'member')}</div>
+                  </div>
+                </div>
 
-                    <div className="space-y-3">
-                      <button
-                        onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.memberCode}`)}
-                        className="w-full flex items-center justify-between py-2 group"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="text-text-secondary text-sm">Хористи</span>
-                          <code className="text-lg font-mono font-bold text-text-primary">{choir.memberCode}</code>
-                        </div>
-                        {copiedCode === `https://${window.location.host}/setup?code=${choir.memberCode}`
-                          ? <Check className="w-4 h-4 text-success" />
-                          : <Link2 className="w-4 h-4 text-text-secondary group-hover:text-accent transition-colors" />}
-                      </button>
 
-                      <button
-                        onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.regentCode}`)}
-                        className="w-full flex items-center justify-between py-2 group"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="text-text-secondary text-sm">Регенти</span>
-                          <code className="text-lg font-mono font-bold text-text-primary">{choir.regentCode}</code>
-                        </div>
-                        {copiedCode === `https://${window.location.host}/setup?code=${choir.regentCode}`
-                          ? <Check className="w-4 h-4 text-success" />
-                          : <Link2 className="w-4 h-4 text-text-secondary group-hover:text-accent transition-colors" />}
-                      </button>
 
-                      {/* Admin Codes - inline */}
-                      {choir.adminCodes && choir.adminCodes.length > 0 && choir.adminCodes.map((ac, idx) => (
-                        <SwipeableCard
-                          key={idx}
-                          onDelete={() => setDeletingAdminCode(ac.code)}
-                          disabled={false}
+                {/* Management Block (Choir & Codes) */}
+                <div className="bg-surface rounded-2xl p-4 card-shadow">
+                  {/* Change Choir Button */}
+                  <button
+                    onClick={() => { setShowAccount(false); setShowChoirManager(true); }}
+                    className="w-full flex items-center justify-between py-2 transition-all group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-accent/10 text-accent flex items-center justify-center">
+                        <Repeat className="w-5 h-5" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-text-primary font-bold text-sm">Змінити хор</p>
+                        <p className="text-xs text-text-secondary group-hover:text-text-primary/80">Додати або перемкнути</p>
+                      </div>
+                    </div>
+                    <PlusCircle className="w-5 h-5 text-text-secondary group-hover:text-text-primary" />
+                  </button>
+
+                  {/* Codes for admin */}
+                  {(userData?.role === 'head' || userData?.role === 'regent') && choir && (
+                    <div className="pt-4 border-t border-border mt-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm text-text-secondary">Коди доступу</h3>
+                        <button
+                          onClick={() => setShowAdminCodeModal(true)}
+                          className="text-xs text-accent hover:underline flex items-center gap-1"
                         >
-                          <button
-                            onClick={() => copyCode(`https://${window.location.host}/setup?code=${ac.code}`)}
-                            className="w-full flex items-center justify-between py-2 group"
+                          <PlusCircle className="w-3 h-3" />
+                          Додати
+                        </button>
+                      </div>
+
+                      <div className="space-y-3">
+                        <button
+                          onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.memberCode}`)}
+                          className="w-full flex items-center justify-between py-2 group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-text-secondary text-sm">Хористи</span>
+                            <code className="text-lg font-mono font-bold text-text-primary">{choir.memberCode}</code>
+                          </div>
+                          {copiedCode === `https://${window.location.host}/setup?code=${choir.memberCode}`
+                            ? <Check className="w-4 h-4 text-success" />
+                            : <Link2 className="w-4 h-4 text-text-secondary group-hover:text-accent transition-colors" />}
+                        </button>
+
+                        <button
+                          onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.regentCode}`)}
+                          className="w-full flex items-center justify-between py-2 group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-text-secondary text-sm">Регенти</span>
+                            <code className="text-lg font-mono font-bold text-text-primary">{choir.regentCode}</code>
+                          </div>
+                          {copiedCode === `https://${window.location.host}/setup?code=${choir.regentCode}`
+                            ? <Check className="w-4 h-4 text-success" />
+                            : <Link2 className="w-4 h-4 text-text-secondary group-hover:text-accent transition-colors" />}
+                        </button>
+
+                        {/* Admin Codes - inline */}
+                        {choir.adminCodes && choir.adminCodes.length > 0 && choir.adminCodes.map((ac, idx) => (
+                          <SwipeableCard
+                            key={idx}
+                            onDelete={() => setDeletingAdminCode(ac.code)}
+                            disabled={false}
                           >
-                            <div className="flex items-center gap-3">
-                              <span className="text-text-secondary text-sm">{ac.label || 'Адмін'}</span>
-                              <code className="text-sm font-mono font-bold text-text-primary">{ac.code}</code>
-                            </div>
-                            {copiedCode === `https://${window.location.host}/setup?code=${ac.code}`
-                              ? <Check className="w-4 h-4 text-success" />
-                              : <Link2 className="w-4 h-4 text-text-secondary group-hover:text-accent transition-colors" />}
-                          </button>
-                        </SwipeableCard>
-                      ))}
+                            <button
+                              onClick={() => copyCode(`https://${window.location.host}/setup?code=${ac.code}`)}
+                              className="w-full flex items-center justify-between py-2 group"
+                            >
+                              <div className="flex items-center gap-3">
+                                <span className="text-text-secondary text-sm">{ac.label || 'Адмін'}</span>
+                                <code className="text-sm font-mono font-bold text-text-primary">{ac.code}</code>
+                              </div>
+                              {copiedCode === `https://${window.location.host}/setup?code=${ac.code}`
+                                ? <Check className="w-4 h-4 text-success" />
+                                : <Link2 className="w-4 h-4 text-text-secondary group-hover:text-accent transition-colors" />}
+                            </button>
+                          </SwipeableCard>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
+              </div>
+
+
+
+
+              {/* Про застосунок Section */}
+              <div className="mt-8">
+                <p className="text-sm text-text-secondary mb-4">Про застосунок</p>
+
+                <a
+                  href="mailto:artom.devv@gmail.com?subject=ChoirHub%20Підтримка"
+                  className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
+                >
+                  <Mail className="w-5 h-5 text-text-secondary" />
+                  <span>Служба підтримки</span>
+                </a>
+
+                <button
+                  onClick={() => setShowLegalModal(true)}
+                  className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
+                >
+                  <Shield className="w-5 h-5 text-text-secondary" />
+                  <span>Політика конфіденційності</span>
+                </button>
+
+                <button
+                  onClick={() => setShowHelpModal(true)}
+                  className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
+                >
+                  <FileText className="w-5 h-5 text-text-secondary" />
+                  <span>Умови використання</span>
+                </button>
+
+                <button
+                  onClick={() => setShowLogoutConfirm(true)}
+                  className="w-full py-4 text-left text-lg font-medium text-text-secondary hover:text-text-primary border-t border-border transition-all flex items-center gap-4 group"
+                >
+                  <LogOut className="w-5 h-5" />
+                  <span>Вийти з акаунту</span>
+                </button>
+              </div>
+
+              {/* Підтримати - окремий виділений блок */}
+              <button
+                onClick={() => setShowSupportModal(true)}
+                className="w-full mt-8 py-4 px-5 bg-gradient-to-r from-pink-500/10 to-purple-500/10 border border-pink-400/30 rounded-2xl text-left transition-all hover:from-pink-500/20 hover:to-purple-500/20 flex items-center gap-4 group"
+              >
+                <div className="w-10 h-10 rounded-full bg-pink-500/20 flex items-center justify-center">
+                  <Heart className="w-5 h-5 text-pink-400" />
+                </div>
+                <div>
+                  <span className="text-lg font-medium text-pink-400">Підтримати проєкт</span>
+                  <p className="text-xs text-text-secondary mt-0.5">Допоможіть розвивати застосунок</p>
+                </div>
+              </button>
+
+              {/* Delete Account Button */}
+              <div className="mt-8 pt-4 border-t border-border">
+                <button
+                  onClick={() => setShowDeleteModal(true)}
+                  className="w-full py-3 text-danger hover:bg-danger/10 rounded-xl text-sm transition-all"
+                >
+                  Видалити акаунт
+                </button>
               </div>
             </div>
-
-
-
-
-            {/* Про застосунок Section */}
-            <div className="mt-8">
-              <p className="text-sm text-text-secondary mb-4">Про застосунок</p>
-
-              <a
-                href="mailto:artom.devv@gmail.com?subject=ChoirHub%20Підтримка"
-                className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
-              >
-                <Mail className="w-5 h-5 text-text-secondary" />
-                <span>Служба підтримки</span>
-              </a>
-
-              <button
-                onClick={() => setShowLegalModal(true)}
-                className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
-              >
-                <Shield className="w-5 h-5 text-text-secondary" />
-                <span>Політика конфіденційності</span>
-              </button>
-
-              <button
-                onClick={() => setShowHelpModal(true)}
-                className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
-              >
-                <FileText className="w-5 h-5 text-text-secondary" />
-                <span>Умови використання</span>
-              </button>
-
-              <button
-                onClick={() => setShowLogoutConfirm(true)}
-                className="w-full py-4 text-left text-lg font-medium text-text-secondary hover:text-text-primary border-t border-border transition-all flex items-center gap-4 group"
-              >
-                <LogOut className="w-5 h-5" />
-                <span>Вийти з акаунту</span>
-              </button>
-            </div>
-
-            {/* Підтримати - окремий виділений блок */}
-            <button
-              onClick={() => setShowSupportModal(true)}
-              className="w-full mt-8 py-4 px-5 bg-gradient-to-r from-pink-500/10 to-purple-500/10 border border-pink-400/30 rounded-2xl text-left transition-all hover:from-pink-500/20 hover:to-purple-500/20 flex items-center gap-4 group"
-            >
-              <div className="w-10 h-10 rounded-full bg-pink-500/20 flex items-center justify-center">
-                <Heart className="w-5 h-5 text-pink-400" />
-              </div>
-              <div>
-                <span className="text-lg font-medium text-pink-400">Підтримати проєкт</span>
-                <p className="text-xs text-text-secondary mt-0.5">Допоможіть розвивати застосунок</p>
-              </div>
-            </button>
-
-            {/* Delete Account Button */}
-            <div className="mt-8 pt-4 border-t border-border">
-              <button
-                onClick={() => setShowDeleteModal(true)}
-                className="w-full py-3 text-danger hover:bg-danger/10 rounded-xl text-sm transition-all"
-              >
-                Видалити акаунт
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Delete Account Modal */}
       <DeleteAccountModal
@@ -1382,7 +1363,7 @@ function HomePageContent() {
       />
 
       {/* Header */}
-      <header className="bg-surface/80 backdrop-blur-2xl sticky top-0 z-30 border-b border-border shadow-[0_4px_20px_rgba(0,0,0,0.06)]">
+      <header className="bg-surface/80 backdrop-blur-2xl sticky top-0 z-30 border-b border-border shadow-[0_4px_20px_rgba(0,0,0,0.06)] pt-[env(safe-area-inset-top)] transition-all">
         <div className="max-w-md mx-auto px-4 py-3 flex items-center gap-3">
           {/* Left: Logo + Title */}
           <div className="flex items-center gap-3 shrink-0">
@@ -1416,11 +1397,8 @@ function HomePageContent() {
             </button>
             <div>
               <h1 className="text-lg font-bold text-text-primary leading-tight">
-                {activeTab === 'home' ? 'Служіння' : activeTab === 'songs' ? 'Пісні' : 'Учасники'}
-              </h1>
-              <p className="text-xs text-text-secondary font-medium">
                 {choir?.name || "ChoirHub"}
-              </p>
+              </h1>
             </div>
           </div>
 
@@ -1614,7 +1592,9 @@ function HomePageContent() {
 
                   return (
                     <div className="space-y-2">
-                      {sortedMembers.map(member => renderMemberCard(member))}
+                      <AnimatePresence mode="popLayout">
+                        {sortedMembers.map((member, index) => renderMemberCard(member, index))}
+                      </AnimatePresence>
                     </div>
                   );
                 })()
@@ -1636,146 +1616,184 @@ function HomePageContent() {
 
       {/* Bottom Nav */}
       <nav className="fixed bottom-0 left-0 right-0 bg-surface/90 backdrop-blur-xl px-4 pb-safe pt-2 z-50 border-t border-border">
-        <div className="max-w-md mx-auto flex justify-around items-center h-16">
+        <div className="max-w-md mx-auto flex justify-around items-center h-16 relative">
 
-          <button
-            onClick={() => setActiveTab('home')}
-            className={`flex flex-col items-center gap-1 flex-1 p-2 rounded-xl transition-all active:scale-90 ${activeTab === 'home' ? 'text-primary' : 'text-text-secondary'}`}
-          >
-            <Home className={`w-6 h-6 ${activeTab === 'home' ? 'fill-primary/20' : ''}`} />
-            <span className="text-[10px] font-bold uppercase tracking-wide">Служіння</span>
-          </button>
+          {[
+            { id: 'home', label: 'Служіння', icon: Home },
+            { id: 'songs', label: 'Пісні', icon: Music2 },
+            { id: 'members', label: 'Учасники', icon: Users }
+          ].map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className="relative flex flex-col items-center gap-1 flex-1 p-2 rounded-xl transition-colors z-10"
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="tab-indicator"
+                    className="absolute inset-0 top-1 bottom-1 bg-primary/10 rounded-xl -z-10"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
 
-          <button
-            onClick={() => setActiveTab('songs')}
-            className={`flex flex-col items-center gap-1 flex-1 p-2 rounded-xl transition-all active:scale-90 ${activeTab === 'songs' ? 'text-primary' : 'text-text-secondary'}`}
-          >
-            <Music2 className={`w-6 h-6 ${activeTab === 'songs' ? 'fill-primary/20' : ''}`} />
-            <span className="text-[10px] font-bold uppercase tracking-wide">Пісні</span>
-          </button>
+                <motion.div
+                  animate={{
+                    scale: isActive ? 1.1 : 1,
+                    color: isActive ? 'var(--primary)' : 'var(--text-secondary)'
+                  }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                >
+                  <tab.icon className={`w-6 h-6 ${isActive ? 'fill-primary/20' : ''}`} />
+                </motion.div>
 
-          <button
-            onClick={() => setActiveTab('members')}
-            className={`flex flex-col items-center gap-1 flex-1 p-2 rounded-xl transition-all active:scale-90 ${activeTab === 'members' ? 'text-primary' : 'text-text-secondary'}`}
-          >
-            <Users className={`w-6 h-6 ${activeTab === 'members' ? 'fill-primary/20' : ''}`} />
-            <span className="text-[10px] font-bold uppercase tracking-wide">Учасники</span>
-          </button>
-
+                <motion.span
+                  animate={{
+                    color: isActive ? 'var(--primary)' : 'var(--text-secondary)',
+                    fontWeight: isActive ? 600 : 500
+                  }}
+                  className="text-[10px] uppercase tracking-wide"
+                >
+                  {tab.label}
+                </motion.span>
+              </button>
+            );
+          })}
         </div>
-      </nav >
+      </nav>
       {/* Admin Code Creation Modal */}
-      {
-        showAdminCodeModal && (
-          <div className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <div className="bg-surface card-shadow w-full max-w-sm p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
-              <div className="space-y-5">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-bold text-text-primary">Створити адмін-код</h3>
-                  <button onClick={() => setShowAdminCodeModal(false)} className="p-1 hover:bg-surface-highlight rounded-full">
-                    <X className="w-5 h-5 text-text-secondary" />
+      <AnimatePresence>
+        {
+          showAdminCodeModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="bg-surface card-shadow w-full max-w-sm p-6 rounded-3xl shadow-2xl"
+              >
+                <div className="space-y-5">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-lg font-bold text-text-primary">Створити адмін-код</h3>
+                    <button onClick={() => setShowAdminCodeModal(false)} className="p-1 hover:bg-surface-highlight rounded-full">
+                      <X className="w-5 h-5 text-text-secondary" />
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                      Назва ролі (опціонально)
+                    </label>
+                    <input
+                      type="text"
+                      value={newAdminLabel}
+                      onChange={(e) => setNewAdminLabel(e.target.value)}
+                      placeholder="напр. Секретар"
+                      className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:border-primary/50"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                      Дозволи
+                    </label>
+                    <div className="space-y-2">
+                      {AVAILABLE_PERMISSIONS.map(perm => (
+                        <button
+                          key={perm.key}
+                          onClick={() => togglePermission(perm.key)}
+                          className={`w-full p-3 rounded-xl border text-left text-sm transition-all ${selectedPermissions.includes(perm.key)
+                            ? 'bg-indigo-500/20 border-indigo-500/50 text-text-primary'
+                            : 'bg-surface-highlight border-border text-text-secondary hover:border-primary/30'
+                            }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-5 h-5 rounded border flex items-center justify-center ${selectedPermissions.includes(perm.key) ? 'bg-indigo-500 border-indigo-500' : 'border-border'
+                              }`}>
+                              {selectedPermissions.includes(perm.key) && <Check className="w-3 h-3 text-white" />}
+                            </div>
+                            {perm.label}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={createAdminCode}
+                    disabled={selectedPermissions.length === 0 || creatingAdminCode}
+                    className="w-full py-4 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {creatingAdminCode ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Створити код'}
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )
+        }
+      </AnimatePresence>
+      {/* Edit Name Modal */}
+      <AnimatePresence>
+        {
+          showEditName && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+              onClick={() => setShowEditName(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="bg-surface w-full max-w-sm rounded-3xl border border-border p-6 shadow-2xl"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="flex justify-between items-start mb-6">
+                  <h3 className="text-xl font-bold text-text-primary">Змінити ім'я</h3>
+                  <button
+                    onClick={() => setShowEditName(false)}
+                    className="p-1 text-text-secondary hover:text-text-primary transition-colors"
+                  >
+                    <X className="w-6 h-6" />
                   </button>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                    Назва ролі (опціонально)
-                  </label>
-                  <input
-                    type="text"
-                    value={newAdminLabel}
-                    onChange={(e) => setNewAdminLabel(e.target.value)}
-                    placeholder="напр. Секретар"
-                    className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:border-primary/50"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                    Дозволи
-                  </label>
-                  <div className="space-y-2">
-                    {AVAILABLE_PERMISSIONS.map(perm => (
-                      <button
-                        key={perm.key}
-                        onClick={() => togglePermission(perm.key)}
-                        className={`w-full p-3 rounded-xl border text-left text-sm transition-all ${selectedPermissions.includes(perm.key)
-                          ? 'bg-indigo-500/20 border-indigo-500/50 text-text-primary'
-                          : 'bg-surface-highlight border-border text-text-secondary hover:border-primary/30'
-                          }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-5 h-5 rounded border flex items-center justify-center ${selectedPermissions.includes(perm.key) ? 'bg-indigo-500 border-indigo-500' : 'border-border'
-                            }`}>
-                            {selectedPermissions.includes(perm.key) && <Check className="w-3 h-3 text-white" />}
-                          </div>
-                          {perm.label}
-                        </div>
-                      </button>
-                    ))}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                      Ваше ім'я
+                    </label>
+                    <input
+                      type="text"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      placeholder="Введіть нове ім'я"
+                      className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl focus:outline-none focus:border-primary/50 text-text-primary placeholder:text-text-secondary"
+                      autoFocus
+                    />
                   </div>
+
+                  <button
+                    onClick={handleSaveName}
+                    disabled={savingName || !newName.trim()}
+                    className="w-full py-4 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {savingName ? <Loader2 className="animate-spin" /> : "Зберегти"}
+                  </button>
                 </div>
-
-                <button
-                  onClick={createAdminCode}
-                  disabled={selectedPermissions.length === 0 || creatingAdminCode}
-                  className="w-full py-4 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {creatingAdminCode ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Створити код'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )
-      }
-      {/* Edit Name Modal */}
-      {
-        showEditName && (
-          <div
-            className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
-            onClick={() => setShowEditName(false)}
-          >
-            <div
-              className="bg-surface w-full max-w-sm rounded-3xl border border-border p-6 shadow-2xl animate-in zoom-in-95"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex justify-between items-start mb-6">
-                <h3 className="text-xl font-bold text-text-primary">Змінити ім'я</h3>
-                <button
-                  onClick={() => setShowEditName(false)}
-                  className="p-1 text-text-secondary hover:text-text-primary transition-colors"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                    Ваше ім'я
-                  </label>
-                  <input
-                    type="text"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    placeholder="Введіть нове ім'я"
-                    className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl focus:outline-none focus:border-primary/50 text-text-primary placeholder:text-text-secondary"
-                    autoFocus
-                  />
-                </div>
-
-                <button
-                  onClick={handleSaveName}
-                  disabled={savingName || !newName.trim()}
-                  className="w-full py-4 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {savingName ? <Loader2 className="animate-spin" /> : "Зберегти"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )
-      }
+              </motion.div>
+            </motion.div>
+          )
+        }
+      </AnimatePresence>
 
       {/* Help Modal */}
       <HelpModal

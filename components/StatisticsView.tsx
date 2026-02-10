@@ -92,7 +92,7 @@ export default function StatisticsView({ choir, services, onBack }: StatisticsVi
     return (
         <div className="min-h-screen bg-background text-text-primary">
             {/* ... Header ... */}
-            <div className="sticky top-0 z-30 bg-surface border-b border-border px-4 py-3 flex items-center gap-3">
+            <div className="sticky top-0 z-30 bg-surface border-b border-border px-4 py-3 pt-[calc(0.75rem+env(safe-area-inset-top))] flex items-center gap-3">
                 <button
                     onClick={onBack}
                     className="p-2 hover:bg-surface-highlight rounded-xl transition-colors"
@@ -165,10 +165,10 @@ export default function StatisticsView({ choir, services, onBack }: StatisticsVi
                                     <span className="text-4xl font-bold text-text-primary">{voiceData[activeIndex].value}</span>
                                 </>
                             ) : (
-                                <>
-                                    <span className="text-sm font-medium text-text-secondary mb-1">Всього</span>
-                                    <span className="text-4xl font-bold text-text-primary">{(choir.members || []).length}</span>
-                                </>
+                                <div className="flex flex-col items-center justify-center -mt-1">
+                                    <span className="text-sm font-medium text-text-secondary leading-none mb-1">Всього</span>
+                                    <span className="text-4xl font-bold text-text-primary leading-none">{(choir.members || []).length}</span>
+                                </div>
                             )}
                         </div>
                     </div>
