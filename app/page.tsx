@@ -22,15 +22,13 @@ import ThemeSettings from "@/components/ThemeSettings";
 import LegalModal from "@/components/LegalModal";
 import SupportModal from "@/components/SupportModal";
 import HelpModal from "@/components/HelpModal";
-import PrivacyModal from "@/components/PrivacyModal";
-import TermsModal from "@/components/TermsModal";
 import NotificationsModal from "@/components/NotificationsModal";
 import DeleteAccountModal from "@/components/DeleteAccountModal";
 import ConfirmationModal from "@/components/ConfirmationModal";
 import {
   Music2, Loader2, Copy, Check, HelpCircle, Mail, Shield,
   LogOut, ChevronLeft, ChevronRight, Home, User, Users, Repeat,
-  PlusCircle, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor, Info
+  PlusCircle, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SendNotificationModal from "@/components/SendNotificationModal";
@@ -89,8 +87,6 @@ function HomePageContent() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showSendNotificationModal, setShowSendNotificationModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
-  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
-  const [showTermsModal, setShowTermsModal] = useState(false);
 
   // Manager/Admin States
   const [managerMode, setManagerMode] = useState<'list' | 'create' | 'join'>('list');
@@ -1296,7 +1292,7 @@ function HomePageContent() {
                 </a>
 
                 <button
-                  onClick={() => setShowPrivacyModal(true)}
+                  onClick={() => setShowLegalModal(true)}
                   className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
                 >
                   <Shield className="w-5 h-5 text-text-secondary" />
@@ -1304,27 +1300,11 @@ function HomePageContent() {
                 </button>
 
                 <button
-                  onClick={() => setShowTermsModal(true)}
+                  onClick={() => setShowHelpModal(true)}
                   className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
                 >
                   <FileText className="w-5 h-5 text-text-secondary" />
                   <span>Умови використання</span>
-                </button>
-
-                <button
-                  onClick={() => setShowHelpModal(true)}
-                  className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
-                >
-                  <HelpCircle className="w-5 h-5 text-text-secondary" />
-                  <span>Довідка</span>
-                </button>
-
-                <button
-                  onClick={() => setShowLegalModal(true)}
-                  className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
-                >
-                  <Info className="w-5 h-5 text-text-secondary" />
-                  <span>Про додаток</span>
                 </button>
 
                 <button
@@ -1842,20 +1822,18 @@ function HomePageContent() {
       <LegalModal
         isOpen={showLegalModal}
         onClose={() => setShowLegalModal(false)}
-        onOpenPrivacy={() => setShowPrivacyModal(true)}
-        onOpenTerms={() => setShowTermsModal(true)}
+        onOpenPrivacy={() => {
+          setShowLegalModal(false);
+          router.push('/privacy');
+        }}
+        onOpenTerms={() => {
+          setShowLegalModal(false);
+          router.push('/terms');
+        }}
       />
       <HelpModal
         isOpen={showHelpModal}
         onClose={() => setShowHelpModal(false)}
-      />
-      <PrivacyModal
-        isOpen={showPrivacyModal}
-        onClose={() => setShowPrivacyModal(false)}
-      />
-      <TermsModal
-        isOpen={showTermsModal}
-        onClose={() => setShowTermsModal(false)}
       />
       <SupportModal
         isOpen={showSupportModal}
