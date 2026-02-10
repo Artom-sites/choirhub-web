@@ -1340,29 +1340,9 @@ function HomePageContent() {
                 </button>
               </div>
             </div>
-
-            {/* Modals inside Account overlay for Capacitor WebView compatibility */}
-            <LegalModal
-              isOpen={showLegalModal}
-              onClose={() => setShowLegalModal(false)}
-            />
-            <HelpModal
-              isOpen={showHelpModal}
-              onClose={() => setShowHelpModal(false)}
-            />
-            <SupportModal
-              isOpen={showSupportModal}
-              onClose={() => setShowSupportModal(false)}
-            />
-            <DeleteAccountModal
-              isOpen={showDeleteModal}
-              onClose={() => setShowDeleteModal(false)}
-              onConfirm={handleDeleteAccount}
-            />
           </motion.div>
         )}
       </AnimatePresence>
-
 
 
       {/* Header */}
@@ -1836,6 +1816,25 @@ function HomePageContent() {
       <NotificationsModal
         isOpen={showNotificationModal}
         onClose={() => setShowNotificationModal(false)}
+      />
+
+      {/* Account sub-modals (portaled to document.body) */}
+      <LegalModal
+        isOpen={showLegalModal}
+        onClose={() => setShowLegalModal(false)}
+      />
+      <HelpModal
+        isOpen={showHelpModal}
+        onClose={() => setShowHelpModal(false)}
+      />
+      <SupportModal
+        isOpen={showSupportModal}
+        onClose={() => setShowSupportModal(false)}
+      />
+      <DeleteAccountModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteAccount}
       />
 
 

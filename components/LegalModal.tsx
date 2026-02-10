@@ -2,6 +2,8 @@
 
 import { X, ExternalLink, ShieldAlert, FileText, Music2, Scale, Lock, Copyright } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { createPortal } from "react-dom";
+import { useEffect, useState } from "react";
 
 interface LegalModalProps {
     isOpen: boolean;
@@ -9,10 +11,15 @@ interface LegalModalProps {
 }
 
 export default function LegalModal({ isOpen, onClose }: LegalModalProps) {
-    return (
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => { setMounted(true); }, []);
+
+    if (!mounted) return null;
+
+    return createPortal(
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -180,6 +187,7 @@ export default function LegalModal({ isOpen, onClose }: LegalModalProps) {
                     </motion.div>
                 </div>
             )}
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body
     );
 }

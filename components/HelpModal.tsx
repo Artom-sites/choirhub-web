@@ -2,7 +2,8 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { X, HelpCircle, User, Shield, Music2, Book, FileText, Bell, Palette, Archive, Calendar, Users, MessageSquare, Download, Filter, Trash2, Settings } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 interface HelpModalProps {
     isOpen: boolean;
@@ -13,6 +14,8 @@ type HelpTab = 'general' | 'roles' | 'admin' | 'songs' | 'services' | 'notificat
 
 export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
     const [activeTab, setActiveTab] = useState<HelpTab>('general');
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => { setMounted(true); }, []);
 
     const tabs: { id: HelpTab; label: string; icon: any }[] = [
         { id: 'general', label: 'Загальне', icon: Book },
@@ -24,14 +27,16 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
         { id: 'faq', label: 'FAQ', icon: MessageSquare },
     ];
 
-    return (
+    if (!mounted) return null;
+
+    return createPortal(
         <AnimatePresence>
             {isOpen && (
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+                    className="fixed inset-0 z-[999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
                 >
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
@@ -467,6 +472,7 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                     </motion.div>
                 </motion.div>
             )}
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body
     );
 }
