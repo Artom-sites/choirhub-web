@@ -19,9 +19,7 @@ import InstallPrompt from "@/components/InstallPrompt";
 
 
 import ThemeSettings from "@/components/ThemeSettings";
-import LegalModal from "@/components/LegalModal";
 import SupportModal from "@/components/SupportModal";
-import HelpModal from "@/components/HelpModal";
 import NotificationsModal from "@/components/NotificationsModal";
 import DeleteAccountModal from "@/components/DeleteAccountModal";
 import ConfirmationModal from "@/components/ConfirmationModal";
@@ -82,11 +80,9 @@ function HomePageContent() {
   const [showAdminCodeModal, setShowAdminCodeModal] = useState(false);
   const [showEditName, setShowEditName] = useState(false);
   const [showChoirSettings, setShowChoirSettings] = useState(false);
-  const [showLegalModal, setShowLegalModal] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showSendNotificationModal, setShowSendNotificationModal] = useState(false);
-  const [showHelpModal, setShowHelpModal] = useState(false);
 
   // Manager/Admin States
   const [managerMode, setManagerMode] = useState<'list' | 'create' | 'join'>('list');
@@ -1818,15 +1814,6 @@ function HomePageContent() {
         onClose={() => setShowNotificationModal(false)}
       />
 
-      {/* Account sub-modals (portaled to document.body) */}
-      <LegalModal
-        isOpen={showLegalModal}
-        onClose={() => setShowLegalModal(false)}
-      />
-      <HelpModal
-        isOpen={showHelpModal}
-        onClose={() => setShowHelpModal(false)}
-      />
       <SupportModal
         isOpen={showSupportModal}
         onClose={() => setShowSupportModal(false)}
