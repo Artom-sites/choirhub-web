@@ -1628,35 +1628,12 @@ function HomePageContent() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className="relative flex flex-col items-center gap-1 flex-1 p-2 rounded-xl transition-colors z-10"
+                className={`flex flex-col items-center gap-1 flex-1 p-2 transition-colors ${isActive ? 'text-primary' : 'text-text-secondary'}`}
               >
-                {isActive && (
-                  <motion.div
-                    layoutId="tab-indicator"
-                    className="absolute inset-0 top-1 bottom-1 bg-primary/10 rounded-xl -z-10"
-                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                  />
-                )}
-
-                <motion.div
-                  animate={{
-                    scale: isActive ? 1.1 : 1,
-                    color: isActive ? 'var(--primary)' : 'var(--text-secondary)'
-                  }}
-                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                >
-                  <tab.icon className={`w-6 h-6 ${isActive ? 'fill-primary/20' : ''}`} />
-                </motion.div>
-
-                <motion.span
-                  animate={{
-                    color: isActive ? 'var(--primary)' : 'var(--text-secondary)',
-                    fontWeight: isActive ? 600 : 500
-                  }}
-                  className="text-[10px] uppercase tracking-wide"
-                >
+                <tab.icon className={`w-6 h-6 transition-all duration-200 ${isActive ? 'stroke-[2.5px]' : ''}`} />
+                <span className={`text-[10px] uppercase tracking-wide transition-all duration-200 ${isActive ? 'font-semibold' : 'font-medium'}`}>
                   {tab.label}
-                </motion.span>
+                </span>
               </button>
             );
           })}
