@@ -1292,7 +1292,7 @@ function HomePageContent() {
                 </a>
 
                 <button
-                  onClick={() => setShowLegalModal(true)}
+                  onClick={() => window.location.href = '/privacy'}
                   className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
                 >
                   <Shield className="w-5 h-5 text-text-secondary" />
@@ -1300,7 +1300,7 @@ function HomePageContent() {
                 </button>
 
                 <button
-                  onClick={() => setShowHelpModal(true)}
+                  onClick={() => window.location.href = '/terms'}
                   className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
                 >
                   <FileText className="w-5 h-5 text-text-secondary" />
