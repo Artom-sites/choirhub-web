@@ -2,24 +2,18 @@
 
 import { X, ExternalLink, ShieldAlert, FileText, Music2, Scale, Lock, Copyright } from "lucide-react";
 
-import { useRouter } from "next/navigation";
 import { Browser } from "@capacitor/browser";
 
 interface LegalModalProps {
     isOpen: boolean;
     onClose: () => void;
+    onOpenPrivacy: () => void;
+    onOpenTerms: () => void;
 }
 
-export default function LegalModal({ isOpen, onClose }: LegalModalProps) {
-    const router = useRouter();
-
+export default function LegalModal({ isOpen, onClose, onOpenPrivacy, onOpenTerms }: LegalModalProps) {
     const openExternal = async (url: string) => {
         await Browser.open({ url });
-    };
-
-    const navigateTo = (path: string) => {
-        onClose();
-        router.push(path);
     };
 
     if (!isOpen) return null;
@@ -154,7 +148,7 @@ export default function LegalModal({ isOpen, onClose }: LegalModalProps) {
                                 можна знайти в нашій Політиці конфіденційності.
                             </p>
                             <button
-                                onClick={() => navigateTo('/privacy')}
+                                onClick={onOpenPrivacy}
                                 className="inline-flex items-center gap-2 text-xs font-bold text-rose-400 hover:text-rose-300 transition-colors uppercase tracking-wider"
                             >
                                 Політика конфіденційності
@@ -162,7 +156,7 @@ export default function LegalModal({ isOpen, onClose }: LegalModalProps) {
                             </button>
                             <div className="h-2" />
                             <button
-                                onClick={() => navigateTo('/terms')}
+                                onClick={onOpenTerms}
                                 className="inline-flex items-center gap-2 text-xs font-bold text-primary hover:opacity-80 transition-colors uppercase tracking-wider"
                             >
                                 Умови використання
