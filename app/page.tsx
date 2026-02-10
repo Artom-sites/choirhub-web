@@ -148,6 +148,16 @@ function HomePageContent() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Check for view=account query param (e.g. returning from Privacy/Terms)
+  useEffect(() => {
+    if (searchParams.get('view') === 'account') {
+      setShowAccount(true);
+      // Optional: Clear the param so it doesn't reopen on refresh,
+      // but keeping it might be better for "persistence" behavior.
+      // For now, let's keep it simple.
+    }
+  }, [searchParams]);
+
   const setActiveTab = (tab: 'home' | 'songs' | 'members') => {
     localStorage.setItem('activeTab', tab);
     const newParams = new URLSearchParams(searchParams.toString());
