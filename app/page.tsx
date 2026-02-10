@@ -1340,27 +1340,30 @@ function HomePageContent() {
                 </button>
               </div>
             </div>
+
+            {/* Modals inside Account overlay for Capacitor WebView compatibility */}
+            <LegalModal
+              isOpen={showLegalModal}
+              onClose={() => setShowLegalModal(false)}
+            />
+            <HelpModal
+              isOpen={showHelpModal}
+              onClose={() => setShowHelpModal(false)}
+            />
+            <SupportModal
+              isOpen={showSupportModal}
+              onClose={() => setShowSupportModal(false)}
+            />
+            <DeleteAccountModal
+              isOpen={showDeleteModal}
+              onClose={() => setShowDeleteModal(false)}
+              onConfirm={handleDeleteAccount}
+            />
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Delete Account Modal */}
-      <DeleteAccountModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        onConfirm={handleDeleteAccount}
-      />
 
-      {/* Legal Modal */}
-      <LegalModal
-        isOpen={showLegalModal}
-        onClose={() => setShowLegalModal(false)}
-      />
-
-      <SupportModal
-        isOpen={showSupportModal}
-        onClose={() => setShowSupportModal(false)}
-      />
 
       {/* Header */}
       <header className="bg-surface/80 backdrop-blur-2xl sticky top-0 z-30 border-b border-border shadow-[0_4px_20px_rgba(0,0,0,0.06)] pt-[env(safe-area-inset-top)] transition-all">
@@ -1771,12 +1774,6 @@ function HomePageContent() {
           )
         }
       </AnimatePresence>
-
-      {/* Help Modal */}
-      <HelpModal
-        isOpen={showHelpModal}
-        onClose={() => setShowHelpModal(false)}
-      />
 
       <SendNotificationModal
         isOpen={showSendNotificationModal}
