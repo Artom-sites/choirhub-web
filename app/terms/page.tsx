@@ -1,14 +1,13 @@
 "use client";
 
 import { ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function TermsPage() {
+    const router = useRouter();
+
     const handleBack = () => {
-        if (window.history.length > 1) {
-            window.history.back();
-        } else {
-            window.location.href = '/';
-        }
+        router.back();
     };
 
     return (
