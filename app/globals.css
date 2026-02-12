@@ -84,7 +84,23 @@ body {
   color: var(--text-primary);
   font-family: Arial, Helvetica, sans-serif;
   min-height: 100vh;
-  scrollbar-gutter: stable;
+  /* scrollbar-gutter removed - we are hiding scrollbars globally */
+}
+
+/* GLOBAL SCROLLBAR HIDING */
+/* Hide scrollbar for Chrome, Safari and Opera */
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+html,
+body,
+* {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
 [data-theme='light'] body {
