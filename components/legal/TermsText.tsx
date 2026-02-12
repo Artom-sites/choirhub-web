@@ -23,7 +23,7 @@ export default function TermsText() {
             <section className="space-y-3">
                 <h3 className="text-base font-semibold text-text-primary">2. Оператор</h3>
                 <ul className="list-none space-y-1 text-sm text-text-secondary">
-                    <li><strong>Оператор:</strong> Фізична особа — Артем (індивідуальний розробник)</li>
+                    <li><strong>Оператор:</strong> Фізична особа — Дуля Артьом</li>
                     <li><strong>Юрисдикція:</strong> Україна</li>
                     <li><strong>Email:</strong> artom.devv@gmail.com</li>
                 </ul>

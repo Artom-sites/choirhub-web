@@ -23,7 +23,7 @@ export default function PrivacyText() {
                     Оператором (контролером) персональних даних є:
                 </p>
                 <ul className="list-none space-y-1 text-sm text-text-secondary">
-                    <li><strong>Оператор:</strong> Фізична особа — Артем (індивідуальний розробник)</li>
+                    <li><strong>Оператор:</strong> Фізична особа — Дуля Артьом</li>
                     <li><strong>Юрисдикція:</strong> Україна</li>
                     <li><strong>Email для питань конфіденційності:</strong> artom.devv@gmail.com</li>
                     <li><strong>Telegram:</strong> <a href="https://t.me/artom_dev" className="text-primary hover:underline">@artom_dev</a></li>
