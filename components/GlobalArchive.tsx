@@ -931,11 +931,11 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                         }
                                     }}
                                 >
-                                    <div className="w-8 h-8 rounded-lg bg-text-primary flex items-center justify-center flex-shrink-0">
+                                    <div className="w-10 h-10 rounded-xl bg-text-primary flex items-center justify-center flex-shrink-0">
                                         {(song.pdfUrl || (song.partsCount && song.partsCount > 0) || (song.parts && song.parts.length > 0)) ? (
-                                            <Eye className="w-4 h-4 text-background" />
+                                            <Eye className="w-5 h-5 text-background" />
                                         ) : (
-                                            <Music className="w-4 h-4 text-background" />
+                                            <Music className="w-5 h-5 text-background" />
                                         )}
                                     </div>
 
