@@ -9,14 +9,22 @@ import TermsText from "./legal/TermsText";
 interface LegalModalProps {
     isOpen: boolean;
     onClose: () => void;
+    initialView?: 'main' | 'privacy' | 'terms';
     onOpenPrivacy?: () => void;
     onOpenTerms?: () => void;
 }
 
 type SubView = 'main' | 'privacy' | 'terms';
 
-export default function LegalModal({ isOpen, onClose }: LegalModalProps) {
-    const [subView, setSubView] = useState<SubView>('main');
+export default function LegalModal({ isOpen, onClose, initialView = 'main' }: LegalModalProps) {
+    const [subView, setSubView] = useState<SubView>(initialView);
+
+    // Reset view when modal opens/closes or initialView changes
+    useEffect(() => {
+        if (isOpen) {
+            setSubView(initialView);
+        }
+    }, [isOpen, initialView]);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     // Scroll to top when subView changes

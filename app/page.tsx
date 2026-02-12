@@ -91,6 +91,7 @@ function HomePageContent() {
   const [showEditName, setShowEditName] = useState(false);
   const [showChoirSettings, setShowChoirSettings] = useState(false);
   const [showLegalModal, setShowLegalModal] = useState(false);
+  const [legalInitialView, setLegalInitialView] = useState<'main' | 'privacy' | 'terms'>('main');
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showSendNotificationModal, setShowSendNotificationModal] = useState(false);
@@ -1319,7 +1320,7 @@ function HomePageContent() {
                 </a>
 
                 <button
-                  onClick={() => setShowLegalModal(true)}
+                  onClick={() => { setLegalInitialView('privacy'); setShowLegalModal(true); }}
                   className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
                 >
                   <Shield className="w-5 h-5 text-text-secondary" />
@@ -1327,11 +1328,19 @@ function HomePageContent() {
                 </button>
 
                 <button
-                  onClick={() => setShowHelpModal(true)}
+                  onClick={() => { setLegalInitialView('terms'); setShowLegalModal(true); }}
                   className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
                 >
                   <FileText className="w-5 h-5 text-text-secondary" />
                   <span>Умови використання</span>
+                </button>
+
+                <button
+                  onClick={() => setShowHelpModal(true)}
+                  className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
+                >
+                  <HelpCircle className="w-5 h-5 text-text-secondary" />
+                  <span>Довідка та FAQ</span>
                 </button>
 
                 <button
@@ -1872,6 +1881,7 @@ function HomePageContent() {
       <LegalModal
         isOpen={showLegalModal}
         onClose={() => setShowLegalModal(false)}
+        initialView={legalInitialView}
       />
       <HelpModal
         isOpen={showHelpModal}
