@@ -819,7 +819,7 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                 ) : (
                     <>
                         {/* Desktop: Table View */}
-                        <table className="w-full hidden md:table">
+                        <table className="w-full hidden md:table table-fixed">
                             <thead>
                                 <tr className="border-b border-border">
                                     <th className="text-left py-3 pl-0 pr-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Назва</th>
@@ -855,7 +855,7 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                         }}
                                         className="border-b border-border/50 hover:bg-surface-highlight cursor-pointer transition-colors group"
                                     >
-                                        <td className="py-3 pl-0 pr-4">
+                                        <td className="py-3 pl-0 pr-4 max-w-0">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-text-primary">
                                                     {(song.pdfUrl || (song.partsCount && song.partsCount > 0) || (song.parts && song.parts.length > 0)) ? (

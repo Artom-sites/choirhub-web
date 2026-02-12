@@ -483,7 +483,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                     ) : (
                         <>
                             {/* Desktop: Table View */}
-                            <table className="w-full hidden md:table table-fixed">
+                            <table className="w-full hidden md:table">
                                 <thead>
                                     <tr className="border-b border-border">
                                         <th className="text-left py-3 pl-0 pr-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Назва</th>
@@ -506,7 +506,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                                                 exit={{ opacity: 0 }}
                                                 transition={{ duration: 0.2, delay: Math.min(index * 0.03, 0.5) }}
                                             >
-                                                <td className="py-3 pl-0 pr-4 max-w-0">
+                                                <td className="py-3 pl-0 pr-4">
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-text-primary">
                                                             {song.hasPdf ? (
