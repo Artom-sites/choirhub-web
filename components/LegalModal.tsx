@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { X, ExternalLink, ShieldAlert, FileText, Music2, Scale, Lock, Copyright, ArrowLeft } from "lucide-react";
 import { Browser } from "@capacitor/browser";
 
@@ -15,6 +15,14 @@ type SubView = 'main' | 'privacy' | 'terms';
 
 export default function LegalModal({ isOpen, onClose }: LegalModalProps) {
     const [subView, setSubView] = useState<SubView>('main');
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+    // Scroll to top when subView changes
+    useEffect(() => {
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTo({ top: 0, behavior: 'instant' });
+        }
+    }, [subView]);
 
     const openExternal = async (url: string) => {
         await Browser.open({ url });
@@ -60,7 +68,7 @@ export default function LegalModal({ isOpen, onClose }: LegalModalProps) {
                     </button>
                 </div>
 
-                <div className="p-6 overflow-y-auto space-y-6">
+                <div ref={scrollContainerRef} className="p-6 overflow-y-auto space-y-6">
                     {subView === 'main' && <MainContent openExternal={openExternal} onOpenPrivacy={() => setSubView('privacy')} onOpenTerms={() => setSubView('terms')} />}
                     {subView === 'privacy' && <PrivacyContent />}
                     {subView === 'terms' && <TermsContent />}
