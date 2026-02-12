@@ -322,7 +322,8 @@ function SetupPageContent() {
     };
 
     // Prevent flash of content if user is already in a choir or profile is still loading
-    if (authLoading || (user && !userData) || (user && userData?.choirId)) return <Preloader />;
+    // We remove (user && !userData) because that is the state of a NEW user who needs to see this page.
+    if (authLoading || (user && userData?.choirId)) return <Preloader />;
 
     if (!user && view !== 'email_auth' && view !== 'reset_password') {
         return (

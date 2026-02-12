@@ -121,11 +121,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const signUpWithEmail = async (email: string, password: string, name: string) => {
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            // Create initial profile in Firestore
+            await createUser(userCredential.user.uid, {
+                id: userCredential.user.uid,
+                email: email,
+                name: name,
+                createdAt: new Date().toISOString()
+            });
+
             await updateProfile(userCredential.user, {
                 displayName: name
             });
-            // Profile entry creation happens optionally here or in the setup page, 
-            // but createUser trigger auth state change so we are good.
+
+            // Reload user data to ensure context updates
+            await loadUserProfile(userCredential.user.uid);
         } catch (error) {
             console.error("Error signing up with Email:", error);
             throw error;
