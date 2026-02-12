@@ -160,9 +160,11 @@ function HomePageContent() {
   useEffect(() => {
     if (searchParams.get('view') === 'account') {
       setShowAccount(true);
-      // Optional: Clear the param so it doesn't reopen on refresh,
-      // but keeping it might be better for "persistence" behavior.
-      // For now, let's keep it simple.
+      // Clear the param so it doesn't reopen on every navigation
+      const newParams = new URLSearchParams(searchParams.toString());
+      newParams.delete('view');
+      const paramString = newParams.toString();
+      router.replace(paramString ? `/?${paramString}` : '/', { scroll: false });
     }
   }, [searchParams]);
 
