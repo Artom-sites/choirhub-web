@@ -315,6 +315,11 @@ function HomePageContent() {
 
       servicesLoaded = true;
       checkReady();
+    }, (error) => {
+      console.error("Error fetching services:", error);
+      // Even on error, mark as loaded so we don't hang
+      servicesLoaded = true;
+      checkReady();
     });
 
     const unsubChoir = onSnapshot(doc(db, "choirs", choirId), (docSnap) => {
@@ -322,6 +327,10 @@ function HomePageContent() {
         const fetchedChoir = { id: docSnap.id, ...docSnap.data() } as Choir;
         setChoir(fetchedChoir);
       }
+      choirLoaded = true;
+      checkReady();
+    }, (error) => {
+      console.error("Error fetching choir:", error);
       choirLoaded = true;
       checkReady();
     });
