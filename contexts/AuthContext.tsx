@@ -64,9 +64,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(firebaseUser);
 
             if (firebaseUser) {
-                await loadUserProfile(firebaseUser.uid);
+                try {
+                    await loadUserProfile(firebaseUser.uid);
+                } catch (error) {
+                    console.error("Error loading user profile:", error);
+                    // We still set user, but userData might be null.
+                    // The app should handle this gracefully (e.g. redirect to setup)
+                }
             } else {
-
                 setUserData(null);
             }
 
@@ -94,8 +99,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const credential = GoogleAuthProvider.credential(result.credential?.idToken);
                 await signInWithCredential(auth, credential);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error signing in with Google:", error);
+            if (error.code === 'auth/popup-closed-by-user') {
+                console.warn("User closed the Google login popup or browser blocked it.");
+                // Optionally notify user via UI toast/alert here if we had one in context
+            }
             throw error;
         }
     };
