@@ -381,6 +381,17 @@ function HomePageContent() {
     }
   }, [memberFilter, userData?.choirId]);
 
+  // Sync selectedService with real-time updates from services array
+  // This fixes the bug where editing song credits in one song would be overwritten by stale data
+  useEffect(() => {
+    if (selectedService) {
+      const updated = services.find(s => s.id === selectedService.id);
+      if (updated && JSON.stringify(updated) !== JSON.stringify(selectedService)) {
+        setSelectedService(updated);
+      }
+    }
+  }, [services, selectedService]);
+
   // Handle Service Selection with URL sync
   const handleSelectService = (service: Service | null) => {
     const newParams = new URLSearchParams(searchParams.toString());
