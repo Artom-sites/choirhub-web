@@ -279,7 +279,8 @@ function HomePageContent() {
 
     // 2. Unauthenticated -> Redirect to Setup
     if (!user || !userData?.choirId) {
-      router.replace("/setup");
+      const currentParams = searchParams.toString();
+      router.replace(currentParams ? `/setup?${currentParams}` : "/setup");
       return;
     }
 
