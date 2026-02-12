@@ -7,11 +7,6 @@ import { CATEGORIES as OFFICIAL_THEMES_IMPORTED } from "@/lib/themes";
 
 const OFFICIAL_THEMES = OFFICIAL_THEMES_IMPORTED;
 
-const SECTIONS = [
-    { id: "choir", label: "Хор" },
-    { id: "orchestra", label: "Оркестр" },
-    { id: "ensemble", label: "Ансамбль" },
-];
 import { useAuth } from "@/contexts/AuthContext";
 import { updateDoc, doc, arrayRemove } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -40,8 +35,6 @@ export default function EditSongModal({
 }: EditSongModalProps) {
     const { userData } = useAuth();
 
-
-
     const normalizedRegents = useMemo(() => Array.from(new Set(regents.map(r => r.trim()))), [regents]);
     const uniqueKnownConductors = useMemo(() => (knownConductors || [])
         .map(c => c.trim())
@@ -50,26 +43,27 @@ export default function EditSongModal({
 
     const allConductors = useMemo(() => [...normalizedRegents, ...uniqueKnownConductors], [normalizedRegents, uniqueKnownConductors]);
 
-    // Use OFFICIAL_THEMES + knownCategories (filtering out sections) for the "Category" (Theme) list
+    // Use OFFICIAL_THEMES + knownCategories for the "Category" (Theme) list
     const allThemes = useMemo(() => {
-        const sectionsIds = SECTIONS.map(s => s.id);
         const merged = [...OFFICIAL_THEMES, ...(knownCategories || [])];
-        return Array.from(new Set(merged)).filter(t => !sectionsIds.includes(t));
+        return Array.from(new Set(merged));
     }, [knownCategories]);
 
     // Determine initial state logic
-    const initialIsCustomTheme = initialData.theme && !allThemes.includes(initialData.theme);
+    // We treat 'category' as the Theme (like in AddSongModal).
+    // If 'category' is not in standard list, it's a custom theme.
+    // Fallback to 'theme' property if exists (legacy data), otherwise use 'category'.
+    const initialThemeValue = initialData.category || initialData.theme || "Інші";
+    const initialIsCustomTheme = initialThemeValue && !allThemes.includes(initialThemeValue);
+
     const initialIsCustomConductor = initialData.conductor && !allConductors.includes(initialData.conductor);
 
     // Track initial values to detect changes
     const [title, setTitle] = useState(initialData.title);
 
-    // Section (Choir/Orchestra) - formerly Category
-    const [section, setSection] = useState(initialData.category || "choir");
-
-    // Theme (Christmas, etc.) - formerly handled variously
-    const [theme, setTheme] = useState(initialIsCustomTheme ? "" : (initialData.theme || ""));
-    const [customTheme, setCustomTheme] = useState(initialIsCustomTheme ? initialData.theme : "");
+    // Theme (Christmas, etc.) - mapped to 'category' field
+    const [theme, setTheme] = useState(initialIsCustomTheme ? "" : initialThemeValue);
+    const [customTheme, setCustomTheme] = useState(initialIsCustomTheme ? initialThemeValue : "");
     const [showCustomTheme, setShowCustomTheme] = useState(!!initialIsCustomTheme);
 
     const [conductor, setConductor] = useState(initialIsCustomConductor ? "" : (initialData.conductor || ""));
@@ -84,7 +78,6 @@ export default function EditSongModal({
     const [isPianistDropdownOpen, setIsPianistDropdownOpen] = useState(false);
     const pianistDropdownRef = useRef<HTMLDivElement>(null);
 
-    const [showAllThemes, setShowAllThemes] = useState(false);
     const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false);
     const themeDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -98,8 +91,6 @@ export default function EditSongModal({
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
-
-    // Combine static and known categories
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -152,7 +143,7 @@ export default function EditSongModal({
         setError("");
 
         try {
-            // Save custom theme if used (persisted as "knownCategory" for backward compatibility)
+            // Save custom theme if used (persisted as "knownCategory")
             if (showCustomTheme && customTheme?.trim() && userData?.choirId) {
                 try {
                     const { addKnownCategory } = await import("@/lib/db");
@@ -186,10 +177,10 @@ export default function EditSongModal({
 
             await onSave({
                 title: title.trim(),
-                category: section,
+                category: finalTheme, // Save Theme as Category
                 conductor: finalConductor,
                 pianist: finalPianist || undefined,
-                theme: finalTheme,
+                // theme: finalTheme, // Redundant if we map to category, but keeping it clean
             });
 
             onClose();
@@ -292,30 +283,7 @@ export default function EditSongModal({
                             />
                         </div>
 
-                        {/* Section (Type) */}
-                        <div>
-                            <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                                Розділ (Тип)
-                            </label>
-                            <div className="flex bg-surface-highlight rounded-xl p-1 w-full gap-1">
-                                {SECTIONS.map(sec => (
-                                    <button
-                                        key={sec.id}
-                                        type="button"
-                                        onClick={() => setSection(sec.id)}
-                                        className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${section === sec.id
-                                            ? 'bg-primary/20 text-primary shadow-sm'
-                                            : 'text-text-secondary hover:text-text-primary hover:bg-surface'
-                                            }`}
-                                    >
-                                        {sec.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-
-                        {/* Category (Theme) */}
+                        {/* Category (Theme) - NOW FIRST */}
                         <div>
                             <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
                                 Категорія (Тематика)
