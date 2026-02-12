@@ -156,17 +156,8 @@ function HomePageContent() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Check for view=account query param (e.g. returning from Privacy/Terms)
-  useEffect(() => {
-    if (searchParams.get('view') === 'account') {
-      setShowAccount(true);
-      // Clear the param so it doesn't reopen on every navigation
-      const newParams = new URLSearchParams(searchParams.toString());
-      newParams.delete('view');
-      const paramString = newParams.toString();
-      router.replace(paramString ? `/?${paramString}` : '/', { scroll: false });
-    }
-  }, [searchParams]);
+  // No longer needed: view=account was used for Privacy/Terms return navigation
+  // Privacy and Terms are now shown inline within LegalModal
 
   const setActiveTab = (tab: 'home' | 'songs' | 'members') => {
     localStorage.setItem('activeTab', tab);
@@ -1881,14 +1872,6 @@ function HomePageContent() {
       <LegalModal
         isOpen={showLegalModal}
         onClose={() => setShowLegalModal(false)}
-        onOpenPrivacy={() => {
-          setShowLegalModal(false);
-          router.push('/privacy');
-        }}
-        onOpenTerms={() => {
-          setShowLegalModal(false);
-          router.push('/terms');
-        }}
       />
       <HelpModal
         isOpen={showHelpModal}
