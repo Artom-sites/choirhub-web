@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import { X, ExternalLink, ShieldAlert, FileText, Music2, Scale, Lock, Copyright, ArrowLeft } from "lucide-react";
 import { Browser } from "@capacitor/browser";
+import PrivacyText from "./legal/PrivacyText";
+import TermsText from "./legal/TermsText";
 
 interface LegalModalProps {
     isOpen: boolean;
@@ -221,173 +223,9 @@ function MainContent({ openExternal, onOpenPrivacy, onOpenTerms }: { openExterna
 }
 
 function PrivacyContent() {
-    return (
-        <>
-            <p className="text-xs text-text-secondary">Останнє оновлення: 3 лютого 2026</p>
-
-            <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">1. Вступ</h3>
-                <p className="text-sm text-text-secondary leading-relaxed">
-                    Ця політика конфіденційності пояснює, як додаток &quot;MyChoir&quot; (далі — &quot;Додаток&quot;, &quot;ми&quot;, &quot;нас&quot;)
-                    збирає, використовує, зберігає та захищає вашу персональну інформацію.
-                    Використовуючи наш Додаток, ви погоджуєтесь з умовами цієї політики.
-                </p>
-            </section>
-
-            <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">2. Які дані ми збираємо</h3>
-                <p className="text-sm text-text-secondary leading-relaxed">Ми збираємо наступні категорії персональних даних:</p>
-                <ul className="list-disc pl-5 space-y-1.5 text-sm text-text-secondary">
-                    <li><strong>Облікові дані:</strong> Ім&apos;я, Email, фото профілю (через Google Sign-In).</li>
-                    <li><strong>Дані хору:</strong> Належність до хорів, роль, вокальна партія.</li>
-                    <li><strong>Активність:</strong> Відвідування репетицій та служінь, статистика присутності.</li>
-                    <li><strong>Контент:</strong> Пісні, ноти (PDF), аудіофайли.</li>
-                    <li><strong>Push-токени:</strong> Технічні ідентифікатори для сповіщень.</li>
-                </ul>
-            </section>
-
-            <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">3. Як ми використовуємо дані</h3>
-                <ul className="list-disc pl-5 space-y-1.5 text-sm text-text-secondary">
-                    <li>Для авторизації та ідентифікації користувача.</li>
-                    <li>Для відображення розкладу та репертуару хору.</li>
-                    <li>Для комунікації між регентом та хористами.</li>
-                    <li>Для ведення статистики відвідувань.</li>
-                    <li>Для покращення якості сервісу.</li>
-                </ul>
-            </section>
-
-            <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">4. Зберігання та захист даних</h3>
-                <p className="text-sm text-text-secondary leading-relaxed">
-                    Дані зберігаються на серверах Google Firebase та Cloudflare R2 з використанням шифрування TLS/SSL та AES-256.
-                    Сервери розташовані в ЄС та США відповідно до вимог GDPR.
-                </p>
-            </section>
-
-            <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">5. Передача даних третім сторонам</h3>
-                <p className="text-sm text-text-secondary leading-relaxed">
-                    Ми <strong>не продаємо</strong> та <strong>не передаємо</strong> ваші дані для маркетингу.
-                    Дані доступні лише сервіс-провайдерам: Google Firebase, Cloudflare, Vercel.
-                </p>
-            </section>
-
-            <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">6. Cookies та аналітика</h3>
-                <p className="text-sm text-text-secondary leading-relaxed">
-                    Ми використовуємо мінімальні cookies для сесії авторизації.
-                    Ми <strong>не використовуємо</strong> рекламні cookies або трекери.
-                </p>
-            </section>
-
-            <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">7. Ваші права (GDPR)</h3>
-                <ul className="list-disc pl-5 space-y-1.5 text-sm text-text-secondary">
-                    <li><strong>Доступ:</strong> Запитати копію ваших даних.</li>
-                    <li><strong>Виправлення:</strong> Оновити неточну інформацію.</li>
-                    <li><strong>Видалення:</strong> Повністю видалити акаунт та дані.</li>
-                    <li><strong>Переносність:</strong> Експортувати дані.</li>
-                    <li><strong>Обмеження / Заперечення:</strong> Обмежити обробку даних.</li>
-                </ul>
-            </section>
-
-            <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">8. Видалення даних</h3>
-                <p className="text-sm text-text-secondary leading-relaxed">
-                    Скористайтесь кнопкою &quot;Видалити акаунт&quot; в налаштуваннях профілю.
-                    Всі дані будуть стерті протягом 30 днів.
-                </p>
-            </section>
-
-            <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">9. Контакти</h3>
-                <ul className="list-none space-y-1 text-sm text-text-secondary">
-                    <li><strong>Email:</strong> artom.devv@gmail.com</li>
-                    <li><strong>Telegram:</strong> <a href="https://t.me/artom_dev" className="text-primary hover:underline">@artom_dev</a></li>
-                    <li><strong>Сайт:</strong> <a href="https://artom.dev" className="text-primary hover:underline">artom.dev</a></li>
-                </ul>
-            </section>
-
-            <footer className="border-t border-border pt-4 mt-4">
-                <p className="text-xs text-text-secondary text-center">© 2026 MyChoir. Всі права захищені.</p>
-            </footer>
-        </>
-    );
+    return <PrivacyText />;
 }
 
 function TermsContent() {
-    return (
-        <>
-            <p className="text-xs text-text-secondary">Останнє оновлення: 3 лютого 2026</p>
-
-            <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">1. Загальні положення</h3>
-                <p className="text-sm text-text-secondary leading-relaxed">
-                    Ці Умови використання регулюють доступ до додатку &quot;MyChoir&quot;.
-                    Використовуючи Додаток, ви погоджуєтесь із цими Умовами.
-                </p>
-            </section>
-
-            <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">2. Ліцензія на використання</h3>
-                <p className="text-sm text-text-secondary leading-relaxed">
-                    Ми надаємо обмежену, невиключну ліцензію для особистих та некомерційних цілей,
-                    пов&apos;язаних з організацією хорового служіння.
-                </p>
-                <p className="text-sm text-text-secondary leading-relaxed">Заборонено:</p>
-                <ul className="list-disc pl-5 space-y-1.5 text-sm text-text-secondary">
-                    <li>Копіювати, модифікувати або поширювати вихідний код.</li>
-                    <li>Використовувати для незаконної діяльності.</li>
-                    <li>Намагатися отримати несанкціонований доступ.</li>
-                </ul>
-            </section>
-
-            <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">3. Обліковий запис</h3>
-                <p className="text-sm text-text-secondary leading-relaxed">
-                    Ви несете відповідальність за конфіденційність облікових даних
-                    та всі дії під вашим обліковим записом. Ми залишаємо за собою право
-                    заблокувати акаунт у разі порушення Умов.
-                </p>
-            </section>
-
-            <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">4. Користувацький контент</h3>
-                <ul className="list-disc pl-5 space-y-1.5 text-sm text-text-secondary">
-                    <li>Ви зберігаєте всі права на завантажений Контент.</li>
-                    <li>Ви гарантуєте, що маєте право на його використання.</li>
-                    <li>Ми залишаємо за собою право видаляти Контент, що порушує законодавство.</li>
-                </ul>
-            </section>
-
-            <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">5. Відмова від гарантій</h3>
-                <p className="text-sm text-text-secondary leading-relaxed">
-                    Додаток надається &quot;як є&quot;. Ми не гарантуємо безперебійну роботу
-                    та не несемо відповідальності за втрату даних.
-                </p>
-            </section>
-
-            <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">6. Обмеження відповідальності</h3>
-                <p className="text-sm text-text-secondary leading-relaxed">
-                    Розробники не несуть відповідальності за будь-які прямі, непрямі або побічні збитки
-                    від використання Додатку.
-                </p>
-            </section>
-
-            <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">7. Контакти</h3>
-                <ul className="list-none space-y-1 text-sm text-text-secondary">
-                    <li><strong>Email:</strong> artom.devv@gmail.com</li>
-                    <li><strong>Telegram:</strong> <a href="https://t.me/artom_dev" className="text-primary hover:underline">@artom_dev</a></li>
-                </ul>
-            </section>
-
-            <footer className="border-t border-border pt-4 mt-4">
-                <p className="text-xs text-text-secondary text-center">© 2026 MyChoir. Всі права захищені.</p>
-            </footer>
-        </>
-    );
+    return <TermsText />;
 }
