@@ -43,6 +43,13 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
     const [confirmedMembers, setConfirmedMembers] = useState<string[]>(service.confirmedMembers || []);
     const [membersLoading, setMembersLoading] = useState(true);
 
+    // Sync local state with prop updates (real-time data)
+    useEffect(() => {
+        setCurrentService(service);
+        setAbsentMembers(service.absentMembers || []);
+        setConfirmedMembers(service.confirmedMembers || []);
+    }, [service]);
+
     useEffect(() => {
         async function fetchData() {
             setMembersLoading(true);
@@ -179,26 +186,40 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
 
     const handleVote = async (status: 'present' | 'absent') => {
         if (!userData?.choirId || !user?.uid) return;
+
+        // Optimistic update
+        const uid = user.uid;
+        const previousConfirmed = [...confirmedMembers];
+        const previousAbsent = [...absentMembers];
+        const previousService = { ...currentService };
+
+        let newConfirmed = [...confirmedMembers];
+        let newAbsent = [...absentMembers];
+
+        if (status === 'present') {
+            newConfirmed = [...newConfirmed, uid].filter((v, i, a) => a.indexOf(v) === i);
+            newAbsent = newAbsent.filter(id => id !== uid);
+        } else {
+            newAbsent = [...newAbsent, uid].filter((v, i, a) => a.indexOf(v) === i);
+            newConfirmed = newConfirmed.filter(id => id !== uid);
+        }
+
+        // Apply optimistic state immediately
+        setConfirmedMembers(newConfirmed);
+        setAbsentMembers(newAbsent);
+        setCurrentService({ ...currentService, confirmedMembers: newConfirmed, absentMembers: newAbsent });
         setVotingLoading(true);
+
         try {
             await setServiceAttendance(userData.choirId, currentService.id, user.uid, status);
-
-            const uid = user.uid;
-            let newConfirmed = currentService.confirmedMembers || [];
-            let newAbsent = currentService.absentMembers || [];
-
-            if (status === 'present') {
-                newConfirmed = [...newConfirmed, uid].filter((v, i, a) => a.indexOf(v) === i);
-                newAbsent = newAbsent.filter(id => id !== uid);
-            } else {
-                newAbsent = [...newAbsent, uid].filter((v, i, a) => a.indexOf(v) === i);
-                newConfirmed = newConfirmed.filter(id => id !== uid);
-            }
-
-            setCurrentService({ ...currentService, confirmedMembers: newConfirmed, absentMembers: newAbsent });
-            setConfirmedMembers(newConfirmed);
-            setAbsentMembers(newAbsent);
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error(e);
+            // Revert on error
+            setConfirmedMembers(previousConfirmed);
+            setAbsentMembers(previousAbsent);
+            setCurrentService(previousService);
+            alert("Не вдалося зберегти голос. Перевірте з'єднання.");
+        }
         finally { setVotingLoading(false); }
     };
 
