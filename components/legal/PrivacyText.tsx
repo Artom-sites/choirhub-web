@@ -5,153 +5,266 @@ export default function PrivacyText() {
         <>
             <p className="text-xs text-text-secondary">Останнє оновлення: 13 лютого 2026</p>
 
+            {/* 1. Introduction */}
             <section className="space-y-3">
                 <h3 className="text-base font-semibold text-text-primary">1. Вступ</h3>
                 <p className="text-sm text-text-secondary leading-relaxed">
-                    Ця політика конфіденційності пояснює, як додаток &quot;MyChoir&quot; (далі — &quot;Додаток&quot;, &quot;ми&quot;, &quot;нас&quot;)
-                    збирає, використовує, зберігає та захищає вашу персональну інформацію.
-                    Використовуючи наш Додаток, ви погоджуєтесь з умовами цієї політики.
+                    Ця Політика конфіденційності описує, як додаток &quot;MyChoir&quot; (далі — &quot;Додаток&quot;)
+                    збирає, використовує, зберігає та захищає персональні дані користувачів.
+                    Використовуючи Додаток, ви підтверджуєте, що ознайомились та погоджуєтесь
+                    з умовами цієї Політики.
                 </p>
             </section>
 
+            {/* A. Data Controller */}
             <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">2. Які дані ми збираємо</h3>
-                <p className="text-sm text-text-secondary leading-relaxed">Ми збираємо наступні категорії персональних даних:</p>
+                <h3 className="text-base font-semibold text-text-primary">2. Оператор даних</h3>
+                <p className="text-sm text-text-secondary leading-relaxed">
+                    Оператором (контролером) персональних даних є:
+                </p>
+                <ul className="list-none space-y-1 text-sm text-text-secondary">
+                    <li><strong>Оператор:</strong> Фізична особа — Артем (індивідуальний розробник)</li>
+                    <li><strong>Юрисдикція:</strong> Україна</li>
+                    <li><strong>Email для питань конфіденційності:</strong> artom.devv@gmail.com</li>
+                    <li><strong>Telegram:</strong> <a href="https://t.me/artom_dev" className="text-primary hover:underline">@artom_dev</a></li>
+                </ul>
+            </section>
 
-                <h4 className="text-sm font-semibold text-text-primary mt-2">2.1. Облікові дані (через Google Sign-In)</h4>
+            {/* 2. Data collected */}
+            <section className="space-y-3">
+                <h3 className="text-base font-semibold text-text-primary">3. Які дані ми збираємо</h3>
+
+                <h4 className="text-sm font-semibold text-text-primary mt-2">3.1. Облікові дані</h4>
+                <p className="text-sm text-text-secondary leading-relaxed">
+                    При авторизації через Google Sign-In ми отримуємо:
+                </p>
                 <ul className="list-disc pl-5 space-y-1 text-sm text-text-secondary">
                     <li>Ім&apos;я та прізвище</li>
-                    <li>Адреса електронної пошти (email)</li>
-                    <li>Фото профілю (URL з Google)</li>
-                    <li>Унікальний ідентифікатор Firebase Auth (UID)</li>
+                    <li>Адреса електронної пошти</li>
+                    <li>URL фото профілю</li>
+                    <li>Унікальний ідентифікатор користувача (Firebase UID)</li>
                 </ul>
 
-                <h4 className="text-sm font-semibold text-text-primary mt-2">2.2. Дані хору</h4>
+                <h4 className="text-sm font-semibold text-text-primary mt-2">3.2. Дані хору</h4>
                 <ul className="list-disc pl-5 space-y-1 text-sm text-text-secondary">
-                    <li>Належність до хорів (членство в одному або кількох хорах)</li>
-                    <li>Роль у хорі (хорист, регент, адміністратор)</li>
+                    <li>Членство у хорах</li>
+                    <li>Роль (хорист, регент, адміністратор)</li>
                     <li>Вокальна партія (Сопрано, Альт, Тенор, Бас)</li>
-                    <li>Коди запрошення до хору</li>
                 </ul>
 
-                <h4 className="text-sm font-semibold text-text-primary mt-2">2.3. Контент</h4>
+                <h4 className="text-sm font-semibold text-text-primary mt-2">3.3. Контент</h4>
                 <ul className="list-disc pl-5 space-y-1 text-sm text-text-secondary">
                     <li>Пісні: назва, композитор, категорія, тональність</li>
-                    <li>Ноти: PDF-файли партій (партитура, сопрано, альт, тенор, бас)</li>
-                    <li>Аудіофайли партій</li>
-                    <li>Плани служінь: дата, час, список пісень, порядок</li>
-                    <li>Анотації та нотатки до нот (зберігаються на пристрої)</li>
+                    <li>Файли нот (PDF) та аудіозаписи партій</li>
+                    <li>Плани служінь: дата, час, список пісень</li>
+                    <li>Анотації до нот (зберігаються локально на пристрої)</li>
                 </ul>
 
-                <h4 className="text-sm font-semibold text-text-primary mt-2">2.4. Активність</h4>
+                <h4 className="text-sm font-semibold text-text-primary mt-2">3.4. Дані активності</h4>
                 <ul className="list-disc pl-5 space-y-1 text-sm text-text-secondary">
-                    <li>Відвідування репетицій та служінь</li>
+                    <li>Відвідування служінь та репетицій</li>
                     <li>Статистика присутності</li>
                 </ul>
 
-                <h4 className="text-sm font-semibold text-text-primary mt-2">2.5. Технічні дані</h4>
+                <h4 className="text-sm font-semibold text-text-primary mt-2">3.5. Технічні дані</h4>
                 <ul className="list-disc pl-5 space-y-1 text-sm text-text-secondary">
-                    <li>Push-токени (FCM) для доставки сповіщень</li>
-                    <li>Налаштування теми оформлення (темна/світла)</li>
+                    <li>Токен push-сповіщень (Firebase Cloud Messaging)</li>
+                    <li>Налаштування теми оформлення</li>
                 </ul>
             </section>
 
+            {/* B. Legal Basis */}
             <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">3. Як ми використовуємо дані</h3>
+                <h3 className="text-base font-semibold text-text-primary">4. Правові підстави для обробки (GDPR, ст. 6)</h3>
+                <p className="text-sm text-text-secondary leading-relaxed">Ми обробляємо ваші дані на таких підставах:</p>
                 <ul className="list-disc pl-5 space-y-1.5 text-sm text-text-secondary">
-                    <li>Для авторизації та ідентифікації користувача (Firebase Authentication).</li>
-                    <li>Для відображення розкладу та репертуару хору.</li>
-                    <li>Для комунікації між регентом та хористами (push-сповіщення через Firebase Cloud Messaging).</li>
-                    <li>Для ведення статистики відвідувань.</li>
-                    <li>Для забезпечення автономної роботи (кешування даних для офлайн доступу).</li>
+                    <li>
+                        <strong>Виконання договору (ст. 6(1)(b)):</strong> обробка необхідна для надання основного
+                        функціоналу Додатку — авторизації, управління хором, відображення репертуару та служінь.
+                    </li>
+                    <li>
+                        <strong>Законний інтерес (ст. 6(1)(f)):</strong> ведення статистики відвідувань,
+                        забезпечення безпеки облікових записів, покращення якості сервісу.
+                    </li>
+                    <li>
+                        <strong>Згода (ст. 6(1)(a)):</strong> надсилання push-сповіщень. Ви можете відкликати
+                        згоду в будь-який момент через налаштування пристрою.
+                    </li>
                 </ul>
             </section>
 
+            {/* 3. Use */}
             <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">4. Де зберігаються дані</h3>
-
-                <h4 className="text-sm font-semibold text-text-primary mt-2">4.1. Серверне зберігання</h4>
-                <ul className="list-disc pl-5 space-y-1 text-sm text-text-secondary">
-                    <li><strong>Google Firebase (Firestore):</strong> облікові дані, профілі, хори, пісні (метадані), служіння, відвідуваність, push-токени. Шифрування TLS/SSL + AES-256.</li>
-                    <li><strong>Cloudflare R2:</strong> PDF-файли нот та аудіофайли з каталогу МХО. Шифрування при передачі (TLS) та у стані спокою.</li>
-                    <li><strong>Vercel:</strong> хостинг веб-додатку. Дані користувачів не зберігаються на серверах Vercel.</li>
-                </ul>
-
-                <h4 className="text-sm font-semibold text-text-primary mt-2">4.2. Локальне зберігання на пристрої</h4>
-                <ul className="list-disc pl-5 space-y-1 text-sm text-text-secondary">
-                    <li><strong>localStorage:</strong> тема оформлення, кешовані метадані пісень та служінь (для офлайн доступу, до 7 днів), анотації до нот.</li>
-                    <li><strong>IndexedDB:</strong> кешовані PDF-файли нот (для офлайн доступу, автоматично видаляються через 7 днів).</li>
-                </ul>
-                <p className="text-sm text-text-secondary leading-relaxed">
-                    Локальні дані зберігаються виключно на вашому пристрої і не передаються на сервер.
-                    Ви можете очистити їх через налаштування браузера або застосунку.
-                </p>
-            </section>
-
-            <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">5. Передача даних третім сторонам</h3>
-                <p className="text-sm text-text-secondary leading-relaxed">
-                    Ми <strong>не продаємо</strong> та <strong>не передаємо</strong> ваші дані для маркетингу чи рекламних цілей.
-                </p>
-                <p className="text-sm text-text-secondary leading-relaxed">Дані обробляються наступними сервіс-провайдерами:</p>
-                <ul className="list-disc pl-5 space-y-1 text-sm text-text-secondary">
-                    <li><strong>Google Firebase:</strong> авторизація (Auth), база даних (Firestore), push-сповіщення (FCM).</li>
-                    <li><strong>Cloudflare:</strong> зберігання файлів (R2), CDN.</li>
-                    <li><strong>Vercel:</strong> хостинг веб-додатку.</li>
-                </ul>
-            </section>
-
-            <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">6. Cookies та аналітика</h3>
-                <p className="text-sm text-text-secondary leading-relaxed">
-                    Ми використовуємо мінімальні cookies для сесії авторизації Firebase.
-                    Ми <strong>не використовуємо</strong> рекламні cookies, трекери, Google Analytics або інші інструменти відстеження.
-                </p>
-            </section>
-
-            <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">7. Ваші права (GDPR)</h3>
-                <p className="text-sm text-text-secondary leading-relaxed">Відповідно до GDPR, ви маєте такі права:</p>
+                <h3 className="text-base font-semibold text-text-primary">5. Як ми використовуємо дані</h3>
                 <ul className="list-disc pl-5 space-y-1.5 text-sm text-text-secondary">
-                    <li><strong>Доступ:</strong> Запитати копію ваших даних.</li>
-                    <li><strong>Виправлення:</strong> Оновити неточну інформацію (ім&apos;я — через налаштування профілю).</li>
-                    <li><strong>Видалення:</strong> Повністю видалити акаунт та всі пов&apos;язані дані.</li>
-                    <li><strong>Переносність:</strong> Експортувати дані у зручному форматі.</li>
-                    <li><strong>Обмеження / Заперечення:</strong> Обмежити обробку ваших даних.</li>
+                    <li>Авторизація та ідентифікація користувача.</li>
+                    <li>Відображення репертуару хору та розкладу служінь.</li>
+                    <li>Надсилання функціональних push-сповіщень (нове служіння, зміни в розкладі, повідомлення від регента).</li>
+                    <li>Ведення обліку відвідувань за рішенням регента хору.</li>
+                    <li>Забезпечення автономного доступу (кешування даних на пристрої).</li>
                 </ul>
                 <p className="text-sm text-text-secondary leading-relaxed">
-                    Для реалізації цих прав зв&apos;яжіться з нами за контактами нижче.
+                    Ми <strong>не використовуємо</strong> push-сповіщення для маркетингу чи реклами.
                 </p>
             </section>
 
+            {/* C. Data Location */}
             <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">8. Видалення даних</h3>
+                <h3 className="text-base font-semibold text-text-primary">6. Розташування та захист даних</h3>
+
+                <h4 className="text-sm font-semibold text-text-primary mt-2">6.1. Серверне зберігання</h4>
+                <ul className="list-disc pl-5 space-y-1 text-sm text-text-secondary">
+                    <li>
+                        <strong>Google Firebase (Firestore, Auth, FCM):</strong> облікові дані, профілі, метадані
+                        пісень, служіння, відвідуваність, push-токени.
+                    </li>
+                    <li>
+                        <strong>Cloudflare R2:</strong> PDF-файли нот та аудіозаписи.
+                    </li>
+                    <li>
+                        <strong>Vercel:</strong> хостинг веб-додатку (дані користувачів не зберігаються).
+                    </li>
+                </ul>
                 <p className="text-sm text-text-secondary leading-relaxed">
-                    Скористайтесь кнопкою &quot;Видалити акаунт&quot; в налаштуваннях профілю.
-                    Всі серверні дані будуть стерті протягом 30 днів.
-                    Локальний кеш на пристрої видаляється автоматично або через налаштування браузера.
+                    Дані можуть оброблятися в Європейському Союзі, США та інших юрисдикціях,
+                    де розташовані сервери наших провайдерів. Усі передачі даних захищені
+                    шифруванням TLS/SSL.
                 </p>
-            </section>
 
-            <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">9. Діти</h3>
+                <h4 className="text-sm font-semibold text-text-primary mt-2">6.2. Локальне зберігання на пристрої</h4>
+                <ul className="list-disc pl-5 space-y-1 text-sm text-text-secondary">
+                    <li>
+                        <strong>localStorage:</strong> тема оформлення, кешовані метадані пісень та служінь
+                        (для офлайн доступу, термін зберігання — до 7 днів), анотації до нот.
+                    </li>
+                    <li>
+                        <strong>IndexedDB:</strong> кешовані PDF-файли нот (автоматичне видалення через 7 днів).
+                    </li>
+                </ul>
                 <p className="text-sm text-text-secondary leading-relaxed">
-                    Додаток не призначений для дітей до 13 років. Ми свідомо не збираємо
-                    персональні дані неповнолітніх без згоди батьків або законних представників.
+                    Локальні дані зберігаються виключно на вашому пристрої, не передаються на сервер
+                    і можуть бути очищені через налаштування браузера або додатку.
                 </p>
             </section>
 
+            {/* 5. Third parties */}
             <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">10. Зміни до політики</h3>
+                <h3 className="text-base font-semibold text-text-primary">7. Передача даних третім сторонам</h3>
                 <p className="text-sm text-text-secondary leading-relaxed">
-                    Ми можемо оновлювати цю політику конфіденційності. Дата останнього оновлення
-                    вказана на початку документу. Продовжуючи використовувати Додаток після змін,
-                    ви приймаєте оновлену політику.
+                    Ми <strong>не продаємо</strong>, <strong>не передаємо</strong> та <strong>не надаємо</strong> ваші
+                    дані третім сторонам для маркетингу чи рекламних цілей.
+                </p>
+                <p className="text-sm text-text-secondary leading-relaxed">
+                    Дані можуть оброблятися наступними сервіс-провайдерами виключно для забезпечення
+                    роботи Додатку:
+                </p>
+                <ul className="list-disc pl-5 space-y-1 text-sm text-text-secondary">
+                    <li><strong>Google LLC:</strong> Firebase Authentication, Firestore, Cloud Messaging.</li>
+                    <li><strong>Cloudflare, Inc.:</strong> зберігання файлів (R2), CDN.</li>
+                    <li><strong>Vercel Inc.:</strong> хостинг веб-додатку.</li>
+                </ul>
+            </section>
+
+            {/* 6. Cookies */}
+            <section className="space-y-3">
+                <h3 className="text-base font-semibold text-text-primary">8. Cookies та аналітика</h3>
+                <p className="text-sm text-text-secondary leading-relaxed">
+                    Додаток використовує мінімальні cookies, необхідні для підтримки сесії авторизації Firebase.
+                    Ми <strong>не використовуємо</strong> рекламні cookies, трекери, Google Analytics
+                    або будь-які інші інструменти відстеження поведінки користувачів.
                 </p>
             </section>
 
+            {/* H. Data Retention */}
             <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">11. Контакти</h3>
+                <h3 className="text-base font-semibold text-text-primary">9. Строки зберігання даних</h3>
+                <ul className="list-disc pl-5 space-y-1.5 text-sm text-text-secondary">
+                    <li>
+                        <strong>Облікові дані та профіль:</strong> зберігаються протягом усього терміну
+                        існування облікового запису.
+                    </li>
+                    <li>
+                        <strong>Контент хору (пісні, служіння):</strong> зберігається, доки хор активний
+                        у системі.
+                    </li>
+                    <li>
+                        <strong>Статистика відвідувань:</strong> зберігається протягом терміну існування хору.
+                    </li>
+                    <li>
+                        <strong>Push-токени:</strong> оновлюються автоматично; видаляються при видаленні
+                        акаунту.
+                    </li>
+                    <li>
+                        <strong>Локальний кеш:</strong> автоматично видаляється через 7 днів або
+                        вручну через налаштування.
+                    </li>
+                </ul>
+            </section>
+
+            {/* 7. GDPR Rights */}
+            <section className="space-y-3">
+                <h3 className="text-base font-semibold text-text-primary">10. Ваші права (GDPR)</h3>
+                <p className="text-sm text-text-secondary leading-relaxed">
+                    Відповідно до Загального регламенту захисту даних (GDPR), ви маєте такі права:
+                </p>
+                <ul className="list-disc pl-5 space-y-1.5 text-sm text-text-secondary">
+                    <li><strong>Право доступу:</strong> отримати підтвердження обробки та копію ваших даних.</li>
+                    <li><strong>Право на виправлення:</strong> оновити неточну або неповну інформацію.</li>
+                    <li><strong>Право на видалення:</strong> вимагати видалення ваших даних.</li>
+                    <li><strong>Право на переносність:</strong> отримати дані у структурованому, машинозчитуваному форматі.</li>
+                    <li><strong>Право на обмеження обробки:</strong> обмежити обробку за певних обставин.</li>
+                    <li><strong>Право на заперечення:</strong> заперечити проти обробки на підставі законного інтересу.</li>
+                    <li><strong>Право відкликати згоду:</strong> відкликати раніше надану згоду (наприклад, на push-сповіщення).</li>
+                </ul>
+                <p className="text-sm text-text-secondary leading-relaxed">
+                    Для реалізації цих прав зверніться до нас за контактами, вказаними у розділі 2.
+                </p>
+            </section>
+
+            {/* F. Account Deletion */}
+            <section className="space-y-3">
+                <h3 className="text-base font-semibold text-text-primary">11. Видалення акаунту та даних</h3>
+                <p className="text-sm text-text-secondary leading-relaxed">
+                    Ви можете видалити свій обліковий запис у будь-який час через Додаток:
+                    Акаунт → &quot;Видалити акаунт&quot;.
+                </p>
+                <ul className="list-disc pl-5 space-y-1.5 text-sm text-text-secondary">
+                    <li>Усі персональні дані на серверах будуть безповоротно стерті протягом 30 днів.</li>
+                    <li>Контент хору (пісні, служіння), створений спільно, може залишатися доступним
+                        для інших учасників хору.</li>
+                    <li>Локальні дані на пристрої можна очистити через налаштування браузера.</li>
+                </ul>
+                <p className="text-sm text-text-secondary leading-relaxed">
+                    Ми не зберігаємо резервні копії персональних даних після завершення процедури видалення.
+                </p>
+            </section>
+
+            {/* D. Age Restriction */}
+            <section className="space-y-3">
+                <h3 className="text-base font-semibold text-text-primary">12. Вікові обмеження</h3>
+                <p className="text-sm text-text-secondary leading-relaxed">
+                    Додаток не призначений для осіб молодших за 13 років (або 16 років у юрисдикціях ЄС,
+                    де це вимагається). Ми свідомо не збираємо персональні дані неповнолітніх
+                    без згоди батьків або законних представників. Якщо ви вважаєте, що неповнолітня
+                    особа надала нам свої дані — зв&apos;яжіться з нами для їх видалення.
+                </p>
+            </section>
+
+            {/* 10. Changes */}
+            <section className="space-y-3">
+                <h3 className="text-base font-semibold text-text-primary">13. Зміни до Політики</h3>
+                <p className="text-sm text-text-secondary leading-relaxed">
+                    Ми залишаємо за собою право оновлювати цю Політику конфіденційності.
+                    Дата останнього оновлення вказана на початку документу.
+                    У разі суттєвих змін ми повідомимо вас через Додаток.
+                    Продовження використання Додатку після публікації змін означає вашу згоду
+                    з оновленою Політикою.
+                </p>
+            </section>
+
+            {/* 11. Contact */}
+            <section className="space-y-3">
+                <h3 className="text-base font-semibold text-text-primary">14. Контакти</h3>
                 <p className="text-sm text-text-secondary leading-relaxed">
                     З питань щодо конфіденційності ваших даних зв&apos;яжіться з нами:
                 </p>
