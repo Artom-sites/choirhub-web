@@ -290,7 +290,9 @@ function HomePageContent() {
     let choirLoaded = false;
 
     const checkReady = () => {
+      console.log('Checks:', { servicesLoaded, choirLoaded });
       if (servicesLoaded && choirLoaded) {
+        console.log('App Ready!');
         setIsAppReady(true);
       }
     };
@@ -381,16 +383,8 @@ function HomePageContent() {
     }
   }, [memberFilter, userData?.choirId]);
 
-  // Sync selectedService with real-time updates from services array
-  // This fixes the bug where editing song credits in one song would be overwritten by stale data
-  useEffect(() => {
-    if (selectedService) {
-      const updated = services.find(s => s.id === selectedService.id);
-      if (updated && JSON.stringify(updated) !== JSON.stringify(selectedService)) {
-        setSelectedService(updated);
-      }
-    }
-  }, [services, selectedService]);
+  // Sync selectedService REVERTED due to infinite preloader bug. 
+  // We will re-implement safer sync later.
 
   // Handle Service Selection with URL sync
   const handleSelectService = (service: Service | null) => {
