@@ -19,9 +19,10 @@ interface ServiceViewProps {
     canEdit: boolean;
     canEditCredits?: boolean; // Edit conductor/pianist
     canEditAttendance?: boolean; // Edit attendance
+    choir?: Choir | null;
 }
 
-export default function ServiceView({ service, onBack, canEdit, canEditCredits = false, canEditAttendance = false }: ServiceViewProps) {
+export default function ServiceView({ service, onBack, canEdit, canEditCredits = false, canEditAttendance = false, choir }: ServiceViewProps) {
     const router = useRouter();
     const { userData, user } = useAuth();
 
@@ -38,10 +39,10 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
     const [offlineModalSong, setOfflineModalSong] = useState<SimpleSong | null>(null);
 
     // Choir members for attendance
-    const [choirMembers, setChoirMembers] = useState<ChoirMember[]>([]);
+    const [choirMembers, setChoirMembers] = useState<ChoirMember[]>(choir?.members || []);
     const [absentMembers, setAbsentMembers] = useState<string[]>(service.absentMembers || []);
     const [confirmedMembers, setConfirmedMembers] = useState<string[]>(service.confirmedMembers || []);
-    const [membersLoading, setMembersLoading] = useState(true);
+    const [membersLoading, setMembersLoading] = useState(!(choir?.members && choir.members.length > 0));
 
     // Sync local state with prop updates (real-time data)
     useEffect(() => {
@@ -50,34 +51,49 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
         setConfirmedMembers(service.confirmedMembers || []);
     }, [service]);
 
+    // Sync choir data updates
     useEffect(() => {
-        async function fetchData() {
-            setMembersLoading(true);
-            if (userData?.choirId) {
-                const [songs, choir] = await Promise.all([
-                    getSongs(userData.choirId),
-                    getChoir(userData.choirId)
-                ]);
-
-                setAvailableSongs(songs);
-                if (choir?.members) {
-                    setChoirMembers(choir.members);
-                }
-                if (choir?.knownConductors) {
-                    setKnownConductors(choir.knownConductors);
-                }
-                if (choir?.knownPianists) {
-                    setKnownPianists(choir.knownPianists);
-                }
-            }
+        if (choir) {
+            setChoirMembers(choir.members || []);
+            if (choir.knownConductors) setKnownConductors(choir.knownConductors);
+            if (choir.knownPianists) setKnownPianists(choir.knownPianists);
             setMembersLoading(false);
         }
+    }, [choir]);
+
+    useEffect(() => {
+        async function fetchData() {
+            if (!userData?.choirId) return;
+
+            // Always fetch songs as they change frequently and might not be in parent state
+            const promises: Promise<any>[] = [getSongs(userData.choirId)];
+
+            // Only fetch choir if not provided via props
+            if (!choir) {
+                promises.push(getChoir(userData.choirId));
+                setMembersLoading(true);
+            }
+
+            const results = await Promise.all(promises);
+            const songs = results[0];
+            setAvailableSongs(songs);
+
+            if (!choir && results[1]) {
+                const fetchedChoir = results[1];
+                if (fetchedChoir?.members) {
+                    setChoirMembers(fetchedChoir.members);
+                }
+                if (fetchedChoir?.knownConductors) setKnownConductors(fetchedChoir.knownConductors);
+                if (fetchedChoir?.knownPianists) setKnownPianists(fetchedChoir.knownPianists);
+                setMembersLoading(false);
+            }
+        }
         fetchData();
-    }, [userData?.choirId]);
+    }, [userData?.choirId, choir]);
 
     // Song credits state
-    const [knownConductors, setKnownConductors] = useState<string[]>([]);
-    const [knownPianists, setKnownPianists] = useState<string[]>([]);
+    const [knownConductors, setKnownConductors] = useState<string[]>(choir?.knownConductors || []);
+    const [knownPianists, setKnownPianists] = useState<string[]>(choir?.knownPianists || []);
     const [editingSongIndex, setEditingSongIndex] = useState<number | null>(null);
     const [tempConductor, setTempConductor] = useState("");
     const [tempPianist, setTempPianist] = useState("");
@@ -428,12 +444,17 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
 
     const handleSaveAttendance = async () => {
         if (!userData?.choirId) return;
-        await updateService(userData.choirId, currentService.id, {
-            absentMembers,
-            confirmedMembers
-        });
-        setCurrentService({ ...currentService, absentMembers, confirmedMembers });
-        setShowAttendance(false);
+        try {
+            await updateService(userData.choirId, currentService.id, {
+                absentMembers,
+                confirmedMembers
+            });
+            setCurrentService({ ...currentService, absentMembers, confirmedMembers });
+            setShowAttendance(false);
+        } catch (error) {
+            console.error('Failed to save attendance:', error);
+            alert('Не вдалося зберегти. Спробуйте ще раз.');
+        }
     };
 
     const filteredSongs = availableSongs.filter(s =>
@@ -444,6 +465,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
     const absentCount = absentMembers.length;
     // Explicitly confirmed members (use local state)
     // If service is in the past, everyone not absent is considered present
+    // Calculate isFuture immediately based on props/current state
     const isFuture = isUpcoming(currentService.date, currentService.time);
 
     const displayConfirmedCount = !isFuture
@@ -630,8 +652,8 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                     <div className="bg-surface/50 border border-border rounded-2xl p-4 flex items-center justify-between opacity-75">
                         <div className="flex items-center gap-3">
                             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${myStatus === 'present' ? 'bg-green-500/20 text-green-500' :
-                                    myStatus === 'absent' ? 'bg-red-500/20 text-red-500' :
-                                        'bg-surface-highlight text-text-secondary'
+                                myStatus === 'absent' ? 'bg-red-500/20 text-red-500' :
+                                    'bg-surface-highlight text-text-secondary'
                                 }`}>
                                 {myStatus === 'present' ? <Check className="w-5 h-5" /> :
                                     myStatus === 'absent' ? <X className="w-5 h-5" /> :
@@ -683,7 +705,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                 <div className="flex items-center gap-6">
                                     <div className="flex items-center gap-2">
                                         <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"></div>
-                                        <span className="text-xl font-bold text-text-primary">{confirmedMembers.length}</span>
+                                        <span className="text-xl font-bold text-text-primary">{confirmedList.length}</span>
                                         <span className="text-sm text-text-secondary">всього</span>
                                     </div>
 
@@ -942,7 +964,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                             </div>
 
                             {(canEdit || canEditAttendance) && (
-                                <div className="p-4 bg-surface border-t border-border safe-area-bottom">
+                                <div className="p-4 bg-surface border-t border-border pb-safe-offset">
                                     <button
                                         onClick={handleSaveAttendance}
                                         className="w-full py-3 bg-primary text-background rounded-xl font-bold hover:opacity-90 transition-colors shadow-lg"

@@ -371,7 +371,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                             <input
                                 type="text"
                                 placeholder="Пошук..."
-                                className="w-full pl-11 pr-10 py-3 bg-surface rounded-xl text-base focus:outline-none text-text-primary placeholder:text-text-secondary/50 transition-all inner-shadow"
+                                className="w-full pl-11 pr-10 py-3 bg-surface rounded-xl text-base focus:outline-none text-text-primary placeholder:text-text-secondary/50 transition-all border border-transparent"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                             />
@@ -388,7 +388,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                         {/* Filter Toggle Button */}
                         <button
                             onClick={() => setShowFilters(!showFilters)}
-                            className={`flex items-center justify-center w-12 rounded-xl transition-all border ${showFilters
+                            className={`px-4 rounded-xl flex items-center gap-2 transition-all border ${showFilters
                                 ? "bg-primary text-background border-primary shadow-md"
                                 : "bg-surface text-text-secondary border-transparent hover:bg-surface-highlight"
                                 }`}

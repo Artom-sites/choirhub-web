@@ -47,13 +47,20 @@ export default function ServiceList({ onSelectService, canEdit, services }: Serv
         }
     };
 
-    const isUpcoming = (dateStr: string) => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        // Robust parsed date (handle timezone issues)
+    const isUpcoming = (dateStr: string, timeStr?: string) => {
+        const now = new Date();
         const [y, m, d] = dateStr.split('-').map(Number);
         const serviceDate = new Date(y, m - 1, d);
-        return serviceDate >= today;
+
+        if (timeStr) {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            serviceDate.setHours(hours, minutes, 0, 0);
+            return serviceDate > now;
+        } else {
+            // If no time, it's upcoming until the end of the day
+            serviceDate.setHours(23, 59, 59, 999);
+            return serviceDate >= now;
+        }
     };
 
     const [creating, setCreating] = useState(false);
@@ -184,7 +191,7 @@ export default function ServiceList({ onSelectService, canEdit, services }: Serv
                         <AnimatePresence mode="popLayout">
                             {displayServices.map((service, index) => {
                                 const status = getMyStatus(service);
-                                const isFuture = isUpcoming(service.date);
+                                const isFuture = isUpcoming(service.date, service.time);
 
                                 return (
                                     <motion.div

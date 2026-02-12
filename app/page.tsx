@@ -841,6 +841,7 @@ function HomePageContent() {
           canEdit={canEdit}
           canEditCredits={canEditCredits}
           canEditAttendance={canEditAttendance}
+          choir={choir}
         />
       </main>
     );

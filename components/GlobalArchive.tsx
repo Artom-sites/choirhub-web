@@ -637,13 +637,13 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                     <div className="sticky z-10 -mx-4 px-4 pt-3 pb-3 mt-2 bg-background/95 backdrop-blur-lg border-b border-border" style={{ top: 'calc(env(safe-area-inset-top) + 64px)' }}>
                         <div className="flex gap-2">
                             <div className="relative flex-1 group">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary group-focus-within:text-text-primary transition-colors" />
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
                                 <input
                                     type="text"
-                                    placeholder="Пошук пісні..."
+                                    placeholder="Пошук..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-12 pr-10 py-3 bg-surface rounded-2xl text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all"
+                                    className="w-full pl-11 pr-10 py-3 bg-surface rounded-xl text-base focus:outline-none text-text-primary placeholder:text-text-secondary/50 transition-all border border-transparent"
                                 />
                                 {searchQuery && (
                                     <button
@@ -656,9 +656,9 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                             </div>
                             <button
                                 onClick={() => setShowFilters(!showFilters)}
-                                className={`px-4 rounded-2xl flex items-center gap-2 transition-all ${showFilters || activeFiltersCount > 0
-                                    ? "bg-primary text-background"
-                                    : "bg-surface text-text-secondary hover:text-text-primary"
+                                className={`px-4 rounded-xl flex items-center gap-2 transition-all border ${showFilters || activeFiltersCount > 0
+                                    ? "bg-primary text-background border-primary shadow-md"
+                                    : "bg-surface text-text-secondary border-transparent hover:bg-surface-highlight"
                                     }`}
                             >
                                 <Filter className="w-5 h-5" />
@@ -931,32 +931,32 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                         }
                                     }}
                                 >
-                                    <div className="w-10 h-10 rounded-xl bg-text-primary flex items-center justify-center flex-shrink-0">
+                                    <div className="w-8 h-8 rounded-lg bg-text-primary flex items-center justify-center flex-shrink-0">
                                         {(song.pdfUrl || (song.partsCount && song.partsCount > 0) || (song.parts && song.parts.length > 0)) ? (
-                                            <Eye className="w-5 h-5 text-background" />
+                                            <Eye className="w-4 h-4 text-background" />
                                         ) : (
-                                            <Music className="w-5 h-5 text-background" />
+                                            <Music className="w-4 h-4 text-background" />
                                         )}
                                     </div>
 
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="font-semibold text-text-primary truncate">{song.title}</h3>
-                                        <div className="flex flex-wrap gap-1.5 items-center mt-0.5">
+                                        <p className="font-semibold text-text-primary truncate">{song.title}</p>
+                                        <div className="flex items-center gap-1.5 mt-0.5">
                                             {song.subcategory && (
-                                                <span className="text-[10px] text-text-secondary">
+                                                <span className="text-xs text-text-secondary">
                                                     {getSubcategoryLabel(song.category, song.subcategory)}
                                                 </span>
                                             )}
-                                            {song.subcategory && song.theme && <span className="text-[10px] text-text-secondary">•</span>}
+                                            {song.subcategory && song.theme && <span className="text-xs text-text-secondary">•</span>}
                                             {song.theme && (
-                                                <span className="text-[10px] text-text-secondary">
+                                                <span className="text-xs text-text-secondary">
                                                     {song.theme}
                                                 </span>
                                             )}
                                             {((song.partsCount && song.partsCount > 1) || (song.parts && song.parts.length > 1)) && (
                                                 <>
-                                                    <span className="text-[10px] text-text-secondary">•</span>
-                                                    <span className="text-[10px] text-text-secondary">
+                                                    <span className="text-xs text-text-secondary">•</span>
+                                                    <span className="text-xs text-text-secondary">
                                                         {song.partsCount || song.parts.length} партій
                                                     </span>
                                                 </>
@@ -972,9 +972,9 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                                     e.stopPropagation();
                                                     handleAddSongWrapper(song);
                                                 }}
-                                                className="p-2 rounded-xl text-text-secondary hover:text-primary transition-colors"
+                                                className="p-2 rounded-lg text-text-secondary hover:text-primary transition-colors"
                                             >
-                                                <Plus className="w-5 h-5" />
+                                                <Plus className="w-4 h-4" />
                                             </button>
                                         )}
                                     </div>
