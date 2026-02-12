@@ -891,9 +891,9 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                                                         e.stopPropagation();
                                                         handleAddSongWrapper(song);
                                                     }}
-                                                    className="p-2 rounded-xl text-text-secondary hover:text-primary transition-colors"
+                                                    className="p-2 rounded-lg text-text-secondary hover:text-primary transition-colors"
                                                 >
-                                                    <Plus className="w-5 h-5" />
+                                                    <Plus className="w-4 h-4" />
                                                 </button>
                                             </td>
                                         )}
