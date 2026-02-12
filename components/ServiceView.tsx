@@ -184,8 +184,39 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
         }
     }, [currentService, availableSongs, cacheServiceSongs, checkCacheStatus]);
 
+    const isUpcoming = (dateStr: string, timeStr?: string) => {
+        const now = new Date();
+        // Parse dateStr (e.g., YYYY-MM-DD) manually to avoid timezone issues.
+        // new Date("YYYY-MM-DD") is UTC, but we want local time for comparisons.
+        const parts = dateStr.split('-');
+        if (parts.length < 3) return false;
+
+        const year = parseInt(parts[0]);
+        const month = parseInt(parts[1]) - 1; // Month is 0-indexed
+        const day = parseInt(parts[2]);
+
+        const serviceDate = new Date(year, month, day);
+
+        if (timeStr) {
+            // Parse time and set it on the service date
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            serviceDate.setHours(hours, minutes, 0, 0);
+            return serviceDate > now;
+        } else {
+            // If no time, check if date is today or future (using end of day)
+            serviceDate.setHours(23, 59, 59, 999);
+            return serviceDate >= now;
+        }
+    };
+
     const handleVote = async (status: 'present' | 'absent') => {
         if (!userData?.choirId || !user?.uid) return;
+
+        // Strict Check: Prevent voting if service is in the past
+        if (!isUpcoming(currentService.date, currentService.time)) {
+            alert("Голосування вже закрите, оскільки час служіння минув.");
+            return;
+        }
 
         // Optimistic update
         const uid = user.uid;
@@ -221,22 +252,6 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
             alert("Не вдалося зберегти голос. Перевірте з'єднання.");
         }
         finally { setVotingLoading(false); }
-    };
-
-    const isUpcoming = (dateStr: string, timeStr?: string) => {
-        const now = new Date();
-        const serviceDate = new Date(dateStr);
-
-        if (timeStr) {
-            // Parse time and set it on the service date
-            const [hours, minutes] = timeStr.split(':').map(Number);
-            serviceDate.setHours(hours, minutes, 0, 0);
-            return serviceDate > now;
-        } else {
-            // If no time, check if date is today or future (using end of day)
-            serviceDate.setHours(23, 59, 59, 999);
-            return serviceDate >= now;
-        }
     };
 
     const getMyStatus = () => {
@@ -576,8 +591,8 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                     )}
                 </div>
 
-                {/* Voting Section - Compact */}
-                {isFuture && (
+                {/* Voting Section - Modified to show status if passed */}
+                {isFuture ? (
                     <div className="bg-surface border border-border rounded-2xl p-4">
                         <h3 className="text-xs font-bold text-text-secondary uppercase tracking-wide mb-3">Ваша участь</h3>
                         <div className="grid grid-cols-2 gap-2">
@@ -608,6 +623,28 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                 </div>
                                 <span className={`text-sm font-bold ${myStatus === 'absent' ? 'text-red-400' : 'text-text-secondary'}`}>Не буду</span>
                             </button>
+                        </div>
+                    </div>
+                ) : (
+                    /* Check if user voted */
+                    <div className="bg-surface/50 border border-border rounded-2xl p-4 flex items-center justify-between opacity-75">
+                        <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${myStatus === 'present' ? 'bg-green-500/20 text-green-500' :
+                                    myStatus === 'absent' ? 'bg-red-500/20 text-red-500' :
+                                        'bg-surface-highlight text-text-secondary'
+                                }`}>
+                                {myStatus === 'present' ? <Check className="w-5 h-5" /> :
+                                    myStatus === 'absent' ? <X className="w-5 h-5" /> :
+                                        <AlertCircle className="w-5 h-5" />}
+                            </div>
+                            <div>
+                                <p className="font-bold text-text-primary">
+                                    {myStatus === 'present' ? 'Ви були присутні' :
+                                        myStatus === 'absent' ? 'Ви були відсутні' :
+                                            'Статус не вказано'}
+                                </p>
+                                <p className="text-xs text-text-secondary">Голосування завершено</p>
+                            </div>
                         </div>
                     </div>
                 )}

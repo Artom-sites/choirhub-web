@@ -80,7 +80,11 @@ service cloud.firestore {
 
       match /services/{serviceId} {
         allow read: if isChoirMember(choirId) || isChoirAdmin(choirId);
-        allow write: if isChoirAdmin(choirId);
+        allow create, delete: if isChoirAdmin(choirId); 
+        allow update: if isChoirAdmin(choirId) || (
+          isChoirMember(choirId) && 
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['confirmedMembers', 'absentMembers'])
+        );
       }
 
       match /notifications/{notificationId} {
