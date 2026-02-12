@@ -823,9 +823,9 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
                             <thead>
                                 <tr className="border-b border-border">
                                     <th className="text-left py-3 pl-0 pr-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Назва</th>
-                                    <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Категорія</th>
-                                    <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Тематика</th>
-                                    <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Партії</th>
+                                    <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-[120px]">Категорія</th>
+                                    <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-[120px]">Тематика</th>
+                                    <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-[60px]">Партії</th>
                                     {onAddSong && (
                                         <th className="text-right py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-16"></th>
                                     )}
