@@ -61,6 +61,14 @@ function HomePageContent() {
   // App Readiness
   const [isAppReady, setIsAppReady] = useState(false);
 
+  // Tab Animation Variants
+  const tabVariants = {
+    initial: { opacity: 0, y: 10, scale: 0.99 },
+    animate: { opacity: 1, y: 0, scale: 1 },
+    exit: { opacity: 0, y: -10, scale: 0.99 },
+    transition: { duration: 0.2, ease: "easeInOut" }
+  };
+
   // Data
   const [choir, setChoir] = useState<Choir | null>(null);
   const [services, setServices] = useState<Service[]>([]);
@@ -1435,176 +1443,199 @@ function HomePageContent() {
       </header>
 
       {/* Tab Content */}
-      <div className="animate-in fade-in duration-300">
-        {/* Services Tab - always rendered, controlled by CSS */}
-        <div className={activeTab === 'home' ? 'block' : 'hidden'}>
-          <ServiceList onSelectService={handleSelectService} canEdit={canEdit} services={services} />
-        </div>
+      <div className="relative">
+        <AnimatePresence mode="wait">
+          {activeTab === 'home' && (
+            <motion.div
+              key="home"
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              variants={tabVariants}
+            >
+              <ServiceList onSelectService={handleSelectService} canEdit={canEdit} services={services} />
+            </motion.div>
+          )}
 
-        {/* Songs Tab - always rendered, controlled by CSS */}
-        <div className={activeTab === 'songs' ? 'block' : 'hidden'}>
-          <SongList
-            canAddSongs={canAddSongs}
-            regents={choir?.regents || []}
-            knownConductors={choir?.knownConductors || []}
-            knownCategories={choir?.knownCategories || []}
-            knownPianists={choir?.knownPianists || []}
-          />
-        </div>
+          {activeTab === 'songs' && (
+            <motion.div
+              key="songs"
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              variants={tabVariants}
+            >
+              <SongList
+                canAddSongs={canAddSongs}
+                regents={choir?.regents || []}
+                knownConductors={choir?.knownConductors || []}
+                knownCategories={choir?.knownCategories || []}
+                knownPianists={choir?.knownPianists || []}
+              />
+            </motion.div>
+          )}
 
-        {/* Members Tab - always rendered, controlled by CSS */}
-        <div className={activeTab === 'members' ? 'block' : 'hidden'}>
-          <div className="max-w-md mx-auto p-4 pb-32">
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center gap-3">
-                <h2 className="text-xl font-bold text-text-primary">Учасники</h2>
-                <button
-                  onClick={() => setShowStats(true)}
-                  className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-text-secondary hover:text-white hover:bg-white/10 transition-colors"
-                >
-                  <BarChart2 className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {(canEdit || userData?.permissions?.includes('notify_members')) && (
-                  <button
-                    onClick={() => setShowSendNotificationModal(true)}
-                    className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-text-secondary hover:text-white hover:bg-white/10 transition-colors"
-                    title="Надіслати сповіщення"
-                  >
-                    <Bell className="w-5 h-5" />
-                  </button>
-                )}
-
-                {canEdit && (
-                  <button
-                    onClick={() => { setEditingMember(null); setShowEditMemberModal(true); }}
-                    className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    Додати
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Filters */}
-            <div className="flex overflow-x-auto gap-2 scrollbar-hide -mx-4 px-4 pb-1 mb-6">
-              {['Всі', 'Soprano', 'Alto', 'Tenor', 'Bass', ...(canEdit ? ['Real Users'] : [])].map(filter => {
-                return (
-                  <button
-                    key={filter}
-                    onClick={() => setMemberFilter(filter === 'Всі' ? '' : filter === 'Real Users' ? 'real' : filter)}
-                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${(memberFilter === (filter === 'Всі' ? '' : filter === 'Real Users' ? 'real' : filter))
-                      ? 'bg-primary text-background'
-                      : 'bg-surface text-text-secondary shadow-sm border border-border'
-                      }`}
-                  >
-                    {filter === 'Real Users' ? '📱 App Users' : filter}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="space-y-6">
-              {memberFilter === 'real' ? (
-                // Show registered app users from Firebase
-                loadingRegisteredUsers ? (
-                  <div className="text-center py-12 text-text-secondary">
-                    <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin opacity-50" />
-                    <p>Завантаження...</p>
+          {activeTab === 'members' && (
+            <motion.div
+              key="members"
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              variants={tabVariants}
+            >
+              <div className="max-w-md mx-auto p-4 pb-32">
+                <div className="flex justify-between items-center mb-6">
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-xl font-bold text-text-primary">Учасники</h2>
+                    <button
+                      onClick={() => setShowStats(true)}
+                      className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-text-secondary hover:text-white hover:bg-white/10 transition-colors"
+                    >
+                      <BarChart2 className="w-5 h-5" />
+                    </button>
                   </div>
-                ) : registeredUsers.length === 0 ? (
-                  <div className="text-center py-12 text-text-secondary">
-                    <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Немає зареєстрованих користувачів</p>
-                    <p className="text-sm mt-2">Користувачі з'являться тут після входу через Google або email</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {registeredUsers.map(appUser => (
-                      <div
-                        key={appUser.id}
-                        className="p-4 bg-surface card-shadow rounded-2xl flex items-center justify-between group hover:bg-surface-highlight transition-colors"
+
+                  <div className="flex items-center gap-2">
+                    {(canEdit || userData?.permissions?.includes('notify_members')) && (
+                      <button
+                        onClick={() => setShowSendNotificationModal(true)}
+                        className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-text-secondary hover:text-white hover:bg-white/10 transition-colors"
+                        title="Надіслати сповіщення"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-sm">
-                            {appUser.name?.[0]?.toUpperCase() || appUser.email?.[0]?.toUpperCase() || "?"}
-                          </div>
-                          <div>
-                            <div className="text-text-primary font-bold flex items-center gap-2 mb-1">
-                              {appUser.name || 'Без імені'}
-                              <span className="text-[10px] bg-blue-500/10 text-blue-400 px-1.5 rounded-sm">📱 APP</span>
-                              {appUser.role && (
-                                <span className="text-[10px] bg-primary/10 text-primary px-1.5 rounded-sm uppercase">{appUser.role}</span>
-                              )}
-                            </div>
-                            <div className="text-text-secondary text-xs">
-                              {canEdit && appUser.email}
-                              {appUser.voice && <span className="ml-2 text-primary">{appUser.voice}</span>}
-                            </div>
-                          </div>
-                        </div>
+                        <Bell className="w-5 h-5" />
+                      </button>
+                    )}
 
-                        {canEdit && (
-                          <button
-                            onClick={() => setUserToDelete(appUser)}
-                            className="text-text-secondary/50 hover:text-danger transition-colors p-2 hover:bg-danger/10 rounded-lg"
-                            title="Видалити користувача"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    ))}
+                    {canEdit && (
+                      <button
+                        onClick={() => { setEditingMember(null); setShowEditMemberModal(true); }}
+                        className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors"
+                      >
+                        <UserPlus className="w-4 h-4" />
+                        Додати
+                      </button>
+                    )}
                   </div>
-                )
-              ) : (choir?.members || []).length === 0 ? (
-                <div className="text-center py-12 text-text-secondary">
-                  <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Немає учасників</p>
-                  {canEdit && <p className="text-sm mt-2">Додайте учасників, щоб відстежувати відвідуваність</p>}
                 </div>
-              ) : (
-                (() => {
-                  const filtered = (choir?.members || []).filter(m => {
-                    if (!memberFilter) return true;
-                    return m.voice === memberFilter;
-                  });
 
-                  // User requested flat list for "All" (no grouping)
-                  // Sorting: Alphabetical by name
-                  const sortedMembers = [...filtered].sort((a, b) =>
-                    (a.name || '').localeCompare(b.name || '', 'uk')
-                  );
+                {/* Filters */}
+                <div className="flex overflow-x-auto gap-2 scrollbar-hide -mx-4 px-4 pb-1 mb-6">
+                  {['Всі', 'Soprano', 'Alto', 'Tenor', 'Bass', ...(canEdit ? ['Real Users'] : [])].map(filter => {
+                    return (
+                      <button
+                        key={filter}
+                        onClick={() => setMemberFilter(filter === 'Всі' ? '' : filter === 'Real Users' ? 'real' : filter)}
+                        className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${(memberFilter === (filter === 'Всі' ? '' : filter === 'Real Users' ? 'real' : filter))
+                          ? 'bg-primary text-background'
+                          : 'bg-surface text-text-secondary shadow-sm border border-border'
+                          }`}
+                      >
+                        {filter === 'Real Users' ? '📱 App Users' : filter}
+                      </button>
+                    );
+                  })}
+                </div>
 
-                  if (sortedMembers.length === 0) {
-                    return <div className="text-center py-8 text-text-secondary">Нікого не знайдено</div>;
-                  }
+                <div className="space-y-6">
+                  {memberFilter === 'real' ? (
+                    // Show registered app users from Firebase
+                    loadingRegisteredUsers ? (
+                      <div className="text-center py-12 text-text-secondary">
+                        <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin opacity-50" />
+                        <p>Завантаження...</p>
+                      </div>
+                    ) : registeredUsers.length === 0 ? (
+                      <div className="text-center py-12 text-text-secondary">
+                        <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <p>Немає зареєстрованих користувачів</p>
+                        <p className="text-sm mt-2">Користувачі з'являться тут після входу через Google або email</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {registeredUsers.map(appUser => (
+                          <div
+                            key={appUser.id}
+                            className="p-4 bg-surface card-shadow rounded-2xl flex items-center justify-between group hover:bg-surface-highlight transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-sm">
+                                {appUser.name?.[0]?.toUpperCase() || appUser.email?.[0]?.toUpperCase() || "?"}
+                              </div>
+                              <div>
+                                <div className="text-text-primary font-bold flex items-center gap-2 mb-1">
+                                  {appUser.name || 'Без імені'}
+                                  <span className="text-[10px] bg-blue-500/10 text-blue-400 px-1.5 rounded-sm">📱 APP</span>
+                                  {appUser.role && (
+                                    <span className="text-[10px] bg-primary/10 text-primary px-1.5 rounded-sm uppercase">{appUser.role}</span>
+                                  )}
+                                </div>
+                                <div className="text-text-secondary text-xs">
+                                  {canEdit && appUser.email}
+                                  {appUser.voice && <span className="ml-2 text-primary">{appUser.voice}</span>}
+                                </div>
+                              </div>
+                            </div>
 
-                  return (
-                    <div className="space-y-2">
-                      <AnimatePresence mode="popLayout">
-                        {sortedMembers.map((member, index) => renderMemberCard(member, index))}
-                      </AnimatePresence>
+                            {canEdit && (
+                              <button
+                                onClick={() => setUserToDelete(appUser)}
+                                className="text-text-secondary/50 hover:text-danger transition-colors p-2 hover:bg-danger/10 rounded-lg"
+                                title="Видалити користувача"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  ) : (choir?.members || []).length === 0 ? (
+                    <div className="text-center py-12 text-text-secondary">
+                      <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>Немає учасників</p>
+                      {canEdit && <p className="text-sm mt-2">Додайте учасників, щоб відстежувати відвідуваність</p>}
                     </div>
-                  );
-                })()
-              )}
-            </div>
+                  ) : (
+                    (() => {
+                      const filtered = (choir?.members || []).filter(m => {
+                        if (!memberFilter) return true;
+                        return m.voice === memberFilter;
+                      });
 
-            {/* Stats summary */}
-            {services.length > 0 && (choir?.members || []).length > 0 && !memberFilter && (
-              <div className="mt-8 p-4 bg-surface card-shadow rounded-2xl">
-                <p className="text-text-primary text-sm font-bold mb-2">📊 Статистика</p>
-                <p className="text-text-secondary text-sm">
-                  Всього служінь: {services.length} • Учасників: {choir?.members?.length || 0}
-                </p>
+                      // User requested flat list for "All" (no grouping)
+                      // Sorting: Alphabetical by name
+                      const sortedMembers = [...filtered].sort((a, b) =>
+                        (a.name || '').localeCompare(b.name || '', 'uk')
+                      );
+
+                      if (sortedMembers.length === 0) {
+                        return <div className="text-center py-8 text-text-secondary">Нікого не знайдено</div>;
+                      }
+
+                      return (
+                        <div className="space-y-2">
+                          <AnimatePresence mode="popLayout">
+                            {sortedMembers.map((member, index) => renderMemberCard(member, index))}
+                          </AnimatePresence>
+                        </div>
+                      );
+                    })()
+                  )}
+                </div>
+
+                {/* Stats summary */}
+                {services.length > 0 && (choir?.members || []).length > 0 && !memberFilter && (
+                  <div className="mt-8 p-4 bg-surface card-shadow rounded-2xl">
+                    <p className="text-text-primary text-sm font-bold mb-2">📊 Статистика</p>
+                    <p className="text-text-secondary text-sm">
+                      Всього служінь: {services.length} • Учасників: {choir?.members?.length || 0}
+                    </p>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div >
 
       {/* Bottom Nav */}
