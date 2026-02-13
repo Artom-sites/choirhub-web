@@ -63,15 +63,7 @@ function SetupPageContent() {
             setCheckingProfile(false);
         }
     }, [authLoading, user, userData]);
-
-    // Prevent flash of content if user is already in a choir or profile is still loading
-    // We remove (user && !userData) because that is the state of a NEW user who needs to see this page.
-    if (authLoading || (user && userData?.choirId) || (user && !userData && checkingProfile)) {
-        console.log("[SetupPage] Waiting... AuthLoading:", authLoading, "User:", !!user, "ChoirId:", userData?.choirId, "CheckingProfile:", checkingProfile);
-        return <Preloader />;
-    }
-
-
+    // Fix: Redirect if user has choir
     useEffect(() => {
         if (!authLoading && userData?.choirId) {
             if (urlCode) {
@@ -82,6 +74,7 @@ function SetupPageContent() {
         }
     }, [authLoading, userData, router, urlCode]);
 
+    // Fix: Auto-switch to join view if invite code is present
     useEffect(() => {
         if (urlCode && !userData?.choirId) {
             setInviteCode(urlCode);
@@ -95,6 +88,16 @@ function SetupPageContent() {
             setView('welcome');
         }
     }, [user, userData, view]);
+
+    // Prevent flash of content if user is already in a choir or profile is still loading
+    // We remove (user && !userData) because that is the state of a NEW user who needs to see this page.
+    if (authLoading || (user && userData?.choirId) || (user && !userData && checkingProfile)) {
+        console.log("[SetupPage] Waiting... AuthLoading:", authLoading, "User:", !!user, "ChoirId:", userData?.choirId, "CheckingProfile:", checkingProfile);
+        return <Preloader />;
+    }
+
+
+
 
 
 
