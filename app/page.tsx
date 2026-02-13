@@ -1698,10 +1698,19 @@ function HomePageContent() {
                   });
 
                   // User requested flat list for "All" (no grouping)
-                  // Sorting: Alphabetical by name
-                  const sortedMembers = [...filtered].sort((a, b) =>
-                    (a.name || '').localeCompare(b.name || '', 'uk')
-                  );
+                  // Sorting: 
+                  // 1. Members with Voice (top)
+                  // 2. Members without Voice (bottom)
+                  // 3. Alphabetical within groups
+                  const sortedMembers = [...filtered].sort((a, b) => {
+                    const aHasVoice = !!a.voice;
+                    const bHasVoice = !!b.voice;
+
+                    if (aHasVoice && !bHasVoice) return -1;
+                    if (!aHasVoice && bHasVoice) return 1;
+
+                    return (a.name || '').localeCompare(b.name || '', 'uk');
+                  });
 
                   if (sortedMembers.length === 0) {
                     return <div className="text-center py-8 text-text-secondary">Нікого не знайдено</div>;
