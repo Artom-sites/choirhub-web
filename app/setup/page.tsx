@@ -657,7 +657,7 @@ function SetupPageContent() {
 
     // Authenticated but no profile configured
     return (
-        <div className="min-h-screen bg-background p-6 flex items-center justify-center transition-colors duration-300">
+        <div className="min-h-screen bg-background p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] flex items-center justify-center transition-colors duration-300">
             <div className="w-full max-w-md bg-surface border border-border rounded-3xl p-8 shadow-xl">
                 {view === 'welcome' && (
                     <div className="text-center space-y-4">

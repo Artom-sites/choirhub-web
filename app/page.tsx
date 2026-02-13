@@ -942,7 +942,7 @@ function HomePageContent() {
   };
 
   return (
-    <main className="min-h-screen bg-background pb-24 selection:bg-white/30">
+    <main className="min-h-screen bg-background pb-32 selection:bg-white/30">
       <InstallPrompt />
 
       {/* Logout Confirmation Modal */}
