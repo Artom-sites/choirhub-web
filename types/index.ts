@@ -40,6 +40,7 @@ export interface ChoirMember {
     voice?: 'Soprano' | 'Alto' | 'Tenor' | 'Bass';
     permissions?: Permission[]; // Custom admin permissions
     hasAccount?: boolean; // True if this member is linked to a real App Account
+    linkedUserIds?: string[]; // Additional linked app user UIDs
 }
 
 export interface Choir {

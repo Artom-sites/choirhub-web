@@ -87,7 +87,6 @@ function HomePageContent() {
   const [editingMember, setEditingMember] = useState<ChoirMember | null>(null);
   const [mergingMember, setMergingMember] = useState<ChoirMember | null>(null);
   const [linkingAppUser, setLinkingAppUser] = useState<any | null>(null);
-  const [linkedAppUserIds, setLinkedAppUserIds] = useState<Set<string>>(new Set());
   const [viewingMemberStats, setViewingMemberStats] = useState<ChoirMember | null>(null);
   const [showAdminCodeModal, setShowAdminCodeModal] = useState(false);
   const [showEditName, setShowEditName] = useState(false);
@@ -763,9 +762,22 @@ function HomePageContent() {
       const targetMember = (choir.members || []).find(m => m.id === targetMemberId);
 
       if (targetMember?.hasAccount) {
-        // Member already linked to another account — just migrate attendance
-        // from this app user's votes to the existing member ID
+        // Member already linked to another account — migrate attendance
+        // and save this UID to linkedUserIds on the member
         await mergeMembers(userData.choirId, linkingAppUser.id, targetMemberId);
+
+        // Persist linked UID on the member record
+        const updatedMembers = (choir.members || []).map(m => {
+          if (m.id === targetMemberId) {
+            const existing = m.linkedUserIds || [];
+            if (!existing.includes(linkingAppUser.id)) {
+              return { ...m, linkedUserIds: [...existing, linkingAppUser.id] };
+            }
+          }
+          return m;
+        });
+        await updateChoirMembers(userData.choirId, updatedMembers);
+        setChoir({ ...choir, members: updatedMembers });
       } else {
         // First link — update the member's ID to this app user's UID
         const updatedMembers = (choir.members || []).map(m => {
@@ -788,8 +800,6 @@ function HomePageContent() {
         setChoir({ ...choir, members: deduped });
       }
 
-      // Track this user as linked (for hiding the link button)
-      setLinkedAppUserIds(prev => new Set(prev).add(linkingAppUser.id));
       setLinkingAppUser(null);
     } catch (e) {
       console.error(e);
@@ -1641,8 +1651,8 @@ function HomePageContent() {
 
                         {canEdit && (
                           <div className="flex items-center gap-1">
-                            {/* Show link button only if user is NOT already linked */}
-                            {!(choir?.members || []).some(m => m.id === appUser.id) && !linkedAppUserIds.has(appUser.id) && (
+                            {/* Show link button only if user is NOT already linked (by ID or linkedUserIds) */}
+                            {!(choir?.members || []).some(m => m.id === appUser.id || (m.linkedUserIds || []).includes(appUser.id)) && (
                               <button
                                 onClick={() => setLinkingAppUser(appUser)}
                                 className="text-text-secondary/50 hover:text-accent transition-colors p-2 hover:bg-accent/10 rounded-lg"
