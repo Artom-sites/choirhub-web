@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode, useRef } from "react";
 import {
     getAuth,
     onAuthStateChanged,
@@ -15,7 +15,8 @@ import {
     sendPasswordResetEmail,
     signOut as firebaseSignOut,
     User as FirebaseUser,
-    signInWithCredential
+    signInWithCredential,
+    OAuthProvider
 } from "firebase/auth";
 import { Capacitor } from "@capacitor/core";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
@@ -28,6 +29,7 @@ interface AuthContextType {
     userData: UserData | null;
     loading: boolean;
     signInWithGoogle: () => Promise<void>;
+    signInWithApple: () => Promise<void>;
     signInWithEmail: (email: string, password: string) => Promise<void>;
     signUpWithEmail: (email: string, password: string, name: string) => Promise<void>;
     signInAsGuest: () => Promise<void>;
@@ -44,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<FirebaseUser | null>(null);
     const [userData, setUserData] = useState<UserData | null>(null);
     const [loading, setLoading] = useState(true);
+    const googleLoginLock = useRef(false);
 
     useEffect(() => {
         // Handle Redirect Result explicitly
@@ -89,6 +92,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     const signInWithGoogle = async () => {
+        if (googleLoginLock.current) {
+            console.warn("Google Sign-In is already in progress...");
+            return;
+        }
+        googleLoginLock.current = true;
         try {
             if (Capacitor.getPlatform() === 'web') {
                 const provider = new GoogleAuthProvider();
@@ -101,9 +109,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
         } catch (error: any) {
             console.error("Error signing in with Google:", error);
-            if (error.code === 'auth/popup-closed-by-user') {
+            if (error.code === 'auth/popup-closed-by-user' || error.errorMessage?.includes("canceled")) {
                 console.warn("User closed the Google login popup or browser blocked it.");
-                // Optionally notify user via UI toast/alert here if we had one in context
+            }
+            throw error;
+        } finally {
+            googleLoginLock.current = false;
+        }
+    };
+
+    const signInWithApple = async () => {
+        try {
+            if (Capacitor.getPlatform() === 'web') {
+                const provider = new OAuthProvider('apple.com');
+                await signInWithPopup(auth, provider);
+            } else {
+                const result = await FirebaseAuthentication.signInWithApple();
+                const credential = new OAuthProvider('apple.com').credential({
+                    idToken: result.credential?.idToken,
+                    accessToken: result.credential?.accessToken,
+                });
+                await signInWithCredential(auth, credential);
+            }
+        } catch (error: any) {
+            console.error("Error signing in with Apple:", error);
+            if (error.code === 'auth/popup-closed-by-user' || error.errorMessage?.includes("canceled")) {
+                console.warn("User closed the Apple login popup.");
             }
             throw error;
         }
@@ -175,6 +206,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             userData,
             loading,
             signInWithGoogle,
+            signInWithApple,
             signInWithEmail,
             signUpWithEmail,
             signInAsGuest,

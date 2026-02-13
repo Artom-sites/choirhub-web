@@ -463,9 +463,6 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
     );
 
     const absentCount = absentMembers.length;
-    // Explicitly confirmed members (use local state)
-    // If service is in the past, everyone not absent is considered present
-    // Calculate isFuture immediately based on props/current state
     const isFuture = isUpcoming(currentService.date, currentService.time);
 
     const displayConfirmedCount = !isFuture
@@ -476,7 +473,6 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
         ? 0
         : choirMembers.length - displayConfirmedCount - absentCount;
 
-    // Get avatars for preview (use displayConfirmedCount)
     const confirmedMembersList = choirMembers.filter(m => confirmedMembers.includes(m.id));
     const previewAttendees = membersLoading ? [] : confirmedMembersList.slice(0, 4);
     const extraAttendees = displayConfirmedCount > 4 ? displayConfirmedCount - 4 : 0;

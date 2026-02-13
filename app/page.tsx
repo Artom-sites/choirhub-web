@@ -28,7 +28,7 @@ import ConfirmationModal from "@/components/ConfirmationModal";
 import {
   Music2, Loader2, Copy, Check, HelpCircle, Mail, Shield,
   LogOut, ChevronLeft, ChevronRight, Home, User, Users, Repeat,
-  PlusCircle, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor, Scale
+  PlusCircle, Plus, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor, Scale
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SendNotificationModal from "@/components/SendNotificationModal";
@@ -86,6 +86,8 @@ function HomePageContent() {
   const [showEditMemberModal, setShowEditMemberModal] = useState(false);
   const [editingMember, setEditingMember] = useState<ChoirMember | null>(null);
   const [mergingMember, setMergingMember] = useState<ChoirMember | null>(null);
+  const [linkingAppUser, setLinkingAppUser] = useState<any | null>(null);
+  const [linkedAppUserIds, setLinkedAppUserIds] = useState<Set<string>>(new Set());
   const [viewingMemberStats, setViewingMemberStats] = useState<ChoirMember | null>(null);
   const [showAdminCodeModal, setShowAdminCodeModal] = useState(false);
   const [showEditName, setShowEditName] = useState(false);
@@ -96,6 +98,8 @@ function HomePageContent() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showSendNotificationModal, setShowSendNotificationModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showAddServiceModal, setShowAddServiceModal] = useState(false);
+  const [showAddSongModal, setShowAddSongModal] = useState(false);
 
   // Manager/Admin States
   const [managerMode, setManagerMode] = useState<'list' | 'create' | 'join'>('list');
@@ -308,6 +312,11 @@ function HomePageContent() {
       const sortedServices = [...upcoming, ...past];
       setServices(sortedServices);
 
+      // Prefetch common views while online to ensure chunks are in cache
+      if (typeof navigator !== 'undefined' && navigator.onLine) {
+        router.prefetch('/');
+      }
+
       servicesLoaded = true;
       checkReady();
     }, (error) => {
@@ -393,18 +402,25 @@ function HomePageContent() {
   // Handle Service Selection with URL sync
   const handleSelectService = (service: Service | null) => {
     const newParams = new URLSearchParams(searchParams.toString());
-    if (service) {
-      newParams.set('serviceId', service.id);
-      router.push(`/?${newParams.toString()}`, { scroll: false });
-      // State update will happen via useEffect or we can set it eagerly
-      setSelectedService(service);
-    } else {
-      newParams.delete('serviceId');
-      // If we are "going back", we might want router.back() if history length > 1, 
-      // but replacing is safer to just clear the param if clicked "Back" button in UI.
-      // However, if user clicks browser back, searchParams changes automatically.
-      // If user clicks UI back button, we should remove param.
-      router.back(); // This mimics browser back, which typically removes the last pushed state
+
+    // Eagerly set state first to make UI feel instant
+    setSelectedService(service);
+
+    try {
+      if (service) {
+        newParams.set('serviceId', service.id);
+        const url = `/?${newParams.toString()}`;
+        // router.push might fail/stuck if offline in some Next.js versions, but we don't want it to block UI
+        router.push(url, { scroll: false });
+      } else {
+        newParams.delete('serviceId');
+        // Check if we can safely go back
+        if (searchParams.get('serviceId')) {
+          router.back();
+        }
+      }
+    } catch (error) {
+      console.error("[Navigation] Push failed (likely offline):", error);
     }
   };
 
@@ -737,6 +753,47 @@ function HomePageContent() {
     } catch (e) {
       console.error(e);
       alert("Не вдалося об'єднати учасників");
+    }
+  };
+
+  const handleLinkAppUser = async (targetMemberId: string) => {
+    if (!choir || !userData?.choirId || !linkingAppUser) return;
+
+    try {
+      const targetMember = (choir.members || []).find(m => m.id === targetMemberId);
+
+      if (targetMember?.hasAccount) {
+        // Member already linked to another account — just migrate attendance
+        // from this app user's votes to the existing member ID
+        await mergeMembers(userData.choirId, linkingAppUser.id, targetMemberId);
+      } else {
+        // First link — update the member's ID to this app user's UID
+        const updatedMembers = (choir.members || []).map(m => {
+          if (m.id === targetMemberId) {
+            return { ...m, id: linkingAppUser.id, hasAccount: true };
+          }
+          return m;
+        });
+
+        // Remove any duplicate entry with the same UID
+        const deduped = updatedMembers.filter((m, i) => {
+          return updatedMembers.findIndex(x => x.id === m.id) === i;
+        });
+
+        await updateChoirMembers(userData.choirId, deduped);
+
+        // Migrate attendance from old member ID to new UID
+        await mergeMembers(userData.choirId, targetMemberId, linkingAppUser.id);
+
+        setChoir({ ...choir, members: deduped });
+      }
+
+      // Track this user as linked (for hiding the link button)
+      setLinkedAppUserIds(prev => new Set(prev).add(linkingAppUser.id));
+      setLinkingAppUser(null);
+    } catch (e) {
+      console.error(e);
+      alert("Не вдалося прив'язати користувача");
     }
   };
 
@@ -1138,6 +1195,18 @@ function HomePageContent() {
         />
       )}
 
+      {/* Link App User Modal */}
+      {linkingAppUser && choir?.members && (
+        <MergeMemberModal
+          isOpen={!!linkingAppUser}
+          onClose={() => setLinkingAppUser(null)}
+          sourceMember={{ id: linkingAppUser.id, name: linkingAppUser.name || 'App User', role: 'member' } as ChoirMember}
+          allMembers={choir.members}
+          onMerge={handleLinkAppUser}
+          mode="link"
+        />
+      )}
+
       {/* Member Stats Modal */}
       {viewingMemberStats && (
         <MemberStatsModal
@@ -1375,7 +1444,7 @@ function HomePageContent() {
 
       {/* Header */}
       <header className="bg-surface/80 backdrop-blur-2xl sticky top-0 z-30 border-b border-border shadow-[0_4px_20px_rgba(0,0,0,0.06)] pt-[env(safe-area-inset-top)] transition-all">
-        <div className="max-w-md mx-auto px-4 py-3 flex items-center gap-3">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
           {/* Left: Logo + Title */}
           <div className="flex items-center gap-3 shrink-0">
             {/* Logo - clickable to change icon (for regent/head only) */}
@@ -1453,9 +1522,15 @@ function HomePageContent() {
       </header>
 
       {/* Tab Content */}
-      <div className="relative pb-24">
+      <div className="relative pb-32 md:pb-24">
         {activeTab === 'home' && (
-          <ServiceList onSelectService={handleSelectService} canEdit={canEdit} services={services} />
+          <ServiceList
+            onSelectService={handleSelectService}
+            canEdit={canEdit}
+            services={services}
+            showCreateModal={showAddServiceModal}
+            setShowCreateModal={setShowAddServiceModal}
+          />
         )}
 
         {activeTab === 'songs' && (
@@ -1465,11 +1540,13 @@ function HomePageContent() {
             knownConductors={choir?.knownConductors || []}
             knownCategories={choir?.knownCategories || []}
             knownPianists={choir?.knownPianists || []}
+            showAddModal={showAddSongModal}
+            setShowAddModal={setShowAddSongModal}
           />
         )}
 
         {activeTab === 'members' && (
-          <div className="max-w-md mx-auto p-4 pb-32">
+          <div className="max-w-5xl mx-auto p-4 pb-32">
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-3">
                 <h2 className="text-xl font-bold text-text-primary">Учасники</h2>
@@ -1537,7 +1614,7 @@ function HomePageContent() {
                     <p className="text-sm mt-2">Користувачі з'являться тут після входу через Google або email</p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                     {registeredUsers.map(appUser => (
                       <div
                         key={appUser.id}
@@ -1563,13 +1640,25 @@ function HomePageContent() {
                         </div>
 
                         {canEdit && (
-                          <button
-                            onClick={() => setUserToDelete(appUser)}
-                            className="text-text-secondary/50 hover:text-danger transition-colors p-2 hover:bg-danger/10 rounded-lg"
-                            title="Видалити користувача"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center gap-1">
+                            {/* Show link button only if user is NOT already linked */}
+                            {!(choir?.members || []).some(m => m.id === appUser.id) && !linkedAppUserIds.has(appUser.id) && (
+                              <button
+                                onClick={() => setLinkingAppUser(appUser)}
+                                className="text-text-secondary/50 hover:text-accent transition-colors p-2 hover:bg-accent/10 rounded-lg"
+                                title="Прив'язати до учасника зі списку"
+                              >
+                                <Link2 className="w-4 h-4" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setUserToDelete(appUser)}
+                              className="text-text-secondary/50 hover:text-danger transition-colors p-2 hover:bg-danger/10 rounded-lg"
+                              title="Видалити користувача"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         )}
                       </div>
                     ))}
@@ -1599,7 +1688,7 @@ function HomePageContent() {
                   }
 
                   return (
-                    <div className="space-y-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       <AnimatePresence mode="popLayout">
                         {sortedMembers.map((member, index) => renderMemberCard(member, index))}
                       </AnimatePresence>
@@ -1622,9 +1711,23 @@ function HomePageContent() {
         )}
       </div >
 
+      {/* Global FAB */}
+      {((activeTab === 'home' && canEdit) || (activeTab === 'songs' && canAddSongs)) && (
+        <button
+          onClick={() => {
+            if (activeTab === 'home') setShowAddServiceModal(true);
+            else if (activeTab === 'songs') setShowAddSongModal(true);
+          }}
+          className="fixed bottom-28 md:bottom-24 right-6 w-14 h-14 bg-primary text-background rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60]"
+          title={activeTab === 'home' ? "Додати служіння" : "Додати пісню"}
+        >
+          <Plus className="w-7 h-7" />
+        </button>
+      )}
+
       {/* Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-surface/90 backdrop-blur-xl px-4 pb-safe pt-2 z-50 border-t border-border">
-        <div className="max-w-md mx-auto flex justify-around items-center h-16 relative">
+      <nav className="fixed bottom-0 left-0 right-0 bg-surface/90 backdrop-blur-xl px-4 pb-safe pt-2 md:pt-1 z-50 border-t border-border">
+        <div className="max-w-5xl mx-auto flex justify-around items-center h-16 md:h-14 relative">
 
           {[
             { id: 'home', label: 'Служіння', icon: Home },

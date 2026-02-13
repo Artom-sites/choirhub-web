@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Music2, Check, ExternalLink, User, Mail, Eye, EyeOff, UserX, AlertTriangle, ArrowLeft, LogOut } from "lucide-react";
+import { Music2, Check, ExternalLink, User, Mail, Eye, EyeOff, UserX, AlertTriangle, ArrowLeft, LogOut, Loader2, Apple } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { createUser, getChoir, updateChoirMembers } from "@/lib/db";
 import { Choir, UserData } from "@/types";
@@ -23,7 +23,7 @@ import Preloader from "@/components/Preloader";
 
 function SetupPageContent() {
     const router = useRouter();
-    const { user, userData, loading: authLoading, signInWithGoogle, signInWithEmail, signUpWithEmail, signInAsGuest, resetPassword, refreshProfile, isGuest, signOut } = useAuth();
+    const { user, userData, loading: authLoading, signInWithGoogle, signInWithApple, signInWithEmail, signUpWithEmail, signInAsGuest, resetPassword, refreshProfile, isGuest, signOut } = useAuth();
 
     const searchParams = useSearchParams();
     const urlCode = searchParams.get('code');
@@ -78,11 +78,37 @@ function SetupPageContent() {
     }, [user, userData, view]);
 
     const handleGoogleLogin = async () => {
+        setFormLoading(true);
+        setError("");
         try {
             await signInWithGoogle();
         } catch (err: any) {
             console.error(err);
-            alert("Google Login Error: " + (err.message || JSON.stringify(err)));
+            // Don't alert if user canceled, it's annoying
+            if (err.message?.includes("canceled") || err.errorMessage?.includes("canceled")) {
+                console.warn("Sign-in canceled by user");
+            } else {
+                alert("Google Login Error: " + (err.message || JSON.stringify(err)));
+            }
+        } finally {
+            setFormLoading(false);
+        }
+    };
+
+    const handleAppleLogin = async () => {
+        setFormLoading(true);
+        setError("");
+        try {
+            await signInWithApple();
+        } catch (err: any) {
+            console.error(err);
+            if (err.message?.includes("canceled") || err.errorMessage?.includes("canceled")) {
+                console.warn("Sign-in canceled by user");
+            } else {
+                alert("Apple Login Error: " + (err.message || JSON.stringify(err)));
+            }
+        } finally {
+            setFormLoading(false);
         }
     };
 
@@ -277,19 +303,49 @@ function SetupPageContent() {
                 }
             }
 
-            const memberData: any = {
-                id: user.uid,
-                name: user.displayName || "Користувач",
-                role: role
-            };
-            if (permissions && permissions.length > 0) {
-                memberData.permissions = permissions;
-            }
-
+            // Auto-merge: try to find existing member by name
             const choirRef = doc(db, "choirs", foundChoirId);
-            await updateDoc(choirRef, {
-                members: arrayUnion(memberData)
-            });
+            const choirSnap = await getDoc(choirRef);
+            const choirData = choirSnap.data();
+            const existingMembers: any[] = choirData?.members || [];
+            const userName = (user.displayName || "").trim().toLowerCase();
+
+            // Find member whose name matches (case-insensitive)
+            const matchIndex = userName
+                ? existingMembers.findIndex(m =>
+                    (m.name || "").trim().toLowerCase() === userName && m.id !== user.uid
+                )
+                : -1;
+
+            if (matchIndex >= 0) {
+                // Found a match — update existing member's ID to link to this account
+                const updatedMembers = [...existingMembers];
+                updatedMembers[matchIndex] = {
+                    ...updatedMembers[matchIndex],
+                    id: user.uid,
+                    hasAccount: true,
+                    role: role === 'regent' ? 'regent' : updatedMembers[matchIndex].role || role
+                };
+                if (permissions && permissions.length > 0) {
+                    updatedMembers[matchIndex].permissions = permissions;
+                }
+                await updateDoc(choirRef, { members: updatedMembers });
+                console.log("Auto-merged with existing member:", updatedMembers[matchIndex].name);
+            } else {
+                // No match — add as new member
+                const memberData: any = {
+                    id: user.uid,
+                    name: user.displayName || "Користувач",
+                    role: role,
+                    hasAccount: true
+                };
+                if (permissions && permissions.length > 0) {
+                    memberData.permissions = permissions;
+                }
+                await updateDoc(choirRef, {
+                    members: arrayUnion(memberData)
+                });
+            }
 
             const userData: any = {
                 id: user.uid,
@@ -337,17 +393,38 @@ function SetupPageContent() {
                 <div className="w-full max-w-sm space-y-3">
                     <button
                         onClick={handleGoogleLogin}
-                        className="w-full py-4 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-3 hover:bg-gray-200 transition-colors"
+                        disabled={formLoading}
+                        className="w-full py-4 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-3 hover:bg-gray-200 transition-colors disabled:opacity-50"
                     >
-                        <svg className="w-5 h-5" viewBox="0 0 24 24">
-                            <path fill="currentColor" d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z" />
-                        </svg>
-                        Увійти через Google
+                        {formLoading && view === 'welcome' ? (
+                            <Loader2 className="w-5 h-5 animate-spin text-black" />
+                        ) : (
+                            <svg className="w-5 h-5" viewBox="0 0 24 24">
+                                <path fill="currentColor" d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z" />
+                            </svg>
+                        )}
+                        {formLoading && view === 'welcome' ? 'Завантаження...' : 'Увійти через Google'}
                     </button>
+
+                    {/* Apple Sign-In — hidden until configured
+                    <button
+                        onClick={handleAppleLogin}
+                        disabled={formLoading}
+                        className="w-full py-4 bg-black text-white font-bold rounded-xl flex items-center justify-center gap-3 hover:bg-zinc-900 transition-colors disabled:opacity-50 border border-white/10"
+                    >
+                        {formLoading && view === 'welcome' ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                            <Apple className="w-5 h-5" />
+                        )}
+                        {formLoading && view === 'welcome' ? 'Завантаження...' : 'Увійти через Apple'}
+                    </button>
+                    */}
 
                     <button
                         onClick={() => { setView('email_auth'); setIsRegistering(false); setEmail(""); setPassword(""); setAuthName(""); setError(""); }}
-                        className="w-full py-4 bg-[#18181b] text-white font-bold rounded-xl flex items-center justify-center gap-3 hover:bg-[#27272a] transition-colors border border-white/10"
+                        disabled={formLoading}
+                        className="w-full py-4 bg-[#18181b] text-white font-bold rounded-xl flex items-center justify-center gap-3 hover:bg-[#27272a] transition-colors border border-white/10 disabled:opacity-50"
                     >
                         <Mail className="w-5 h-5" />
                         Увійти через пошту
@@ -367,7 +444,8 @@ function SetupPageContent() {
 
                     <button
                         onClick={() => setShowGuestWarning(true)}
-                        className="w-full py-3 text-white/60 text-sm font-medium hover:text-white transition-colors flex items-center justify-center gap-2"
+                        disabled={formLoading}
+                        className="w-full py-3 text-white/60 text-sm font-medium hover:text-white transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                         <UserX className="w-4 h-4" />
                         Увійти як гість

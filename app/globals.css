@@ -71,6 +71,13 @@
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+/* iPad in iPhone compatibility mode reports inflated safe-area — cap it */
+@media (min-width: 768px) {
+  .pb-safe {
+    padding-bottom: 8px;
+  }
+}
+
 .pt-safe {
   padding-top: env(safe-area-inset-top);
 }
@@ -95,8 +102,8 @@ body {
 
 /* Hide scrollbar for IE, Edge and Firefox */
 html,
-body,
-* {
+body {
+  background: var(--background);
   -ms-overflow-style: none;
   /* IE and Edge */
   scrollbar-width: none;

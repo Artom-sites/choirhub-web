@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getServices, getSongs } from '@/lib/db';
 import { useOfflineCache } from './useOfflineCache';
+import { useRouter } from 'next/navigation';
 
 /**
  * Background caching hook that automatically caches 
@@ -15,6 +16,7 @@ import { useOfflineCache } from './useOfflineCache';
 export function useBackgroundCache() {
     const { userData } = useAuth();
     const { cacheServiceSongs, progress } = useOfflineCache();
+    const router = useRouter();
     const hasRunRef = useRef(false);
 
     useEffect(() => {
@@ -27,6 +29,14 @@ export function useBackgroundCache() {
         const cacheUpcomingServices = async () => {
             try {
                 console.log('[BackgroundCache] Starting background cache...');
+
+                // Prefetch main routes to ensure chunks are in browser cache
+                if (typeof navigator !== 'undefined' && navigator.onLine) {
+                    console.log('[BackgroundCache] Prefetching app routes...');
+                    router.prefetch('/');
+                    router.prefetch('/?tab=songs');
+                    router.prefetch('/?tab=members');
+                }
 
                 // Get all services and songs
                 const [services, songs] = await Promise.all([

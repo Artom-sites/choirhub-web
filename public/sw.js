@@ -142,7 +142,15 @@ self.addEventListener('fetch', (event) => {
                 const networkResponse = await fetchPromise;
                 if (networkResponse) return networkResponse;
 
-                // No cache, no network - return empty response for non-critical resources
+                // No cache, no network - return empty response or 404
+                // For JS chunks, return a special script that might help debug
+                if (request.url.endsWith('.js')) {
+                    console.warn('[SW] Offline chunk request failed:', request.url);
+                    return new Response('console.error("Offline: Chunk failed to load");', {
+                        headers: { 'Content-Type': 'application/javascript' }
+                    });
+                }
+
                 return new Response('', { status: 404 });
             })()
         );

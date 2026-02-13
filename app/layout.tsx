@@ -69,7 +69,7 @@ export default function RootLayout({
   return (
     <html lang="uk">
       <head>
-        {/* Manual meta tags are replaced by metadata object */}
+        <style dangerouslySetInnerHTML={{ __html: `html { background: #09090b; }` }} />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-text-primary`}

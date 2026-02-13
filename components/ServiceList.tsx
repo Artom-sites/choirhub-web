@@ -16,13 +16,24 @@ interface ServiceListProps {
     onSelectService: (service: Service) => void;
     canEdit: boolean;
     services: Service[];
+    showCreateModal?: boolean;
+    setShowCreateModal?: (show: boolean) => void;
 }
 
-export default function ServiceList({ onSelectService, canEdit, services }: ServiceListProps) {
+export default function ServiceList({
+    onSelectService,
+    canEdit,
+    services,
+    showCreateModal: propsShowCreateModal,
+    setShowCreateModal: propsSetShowCreateModal
+}: ServiceListProps) {
     const { userData, user } = useAuth();
     const effectiveCanEdit = canEdit;
 
-    const [showCreateModal, setShowCreateModal] = useState(false);
+    // Local-to-prop state mapping
+    const [localShowCreateModal, setLocalShowCreateModal] = useState(false);
+    const showCreateModal = propsShowCreateModal ?? localShowCreateModal;
+    const setShowCreateModal = propsSetShowCreateModal ?? setLocalShowCreateModal;
     const [votingLoading, setVotingLoading] = useState<string | null>(null);
     const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
     const [showArchive, setShowArchive] = useState(false);
@@ -123,7 +134,7 @@ export default function ServiceList({ onSelectService, canEdit, services }: Serv
     };
 
     return (
-        <div className="max-w-5xl mx-auto px-4 py-4 space-y-6 pb-32">
+        <div className="max-w-5xl mx-auto px-4 py-4 space-y-6">
 
             {/* Header with Archive Toggle - Spacious & Clean */}
             <div className="flex items-center justify-between px-2 mb-4">
@@ -340,16 +351,6 @@ export default function ServiceList({ onSelectService, canEdit, services }: Serv
                 </div>
             )}
 
-            {/* Floating Action Button (FAB) for Adding Service */}
-            {effectiveCanEdit && !showArchive && (
-                <button
-                    onClick={() => setShowCreateModal(true)}
-                    className="fixed bottom-24 right-6 w-14 h-14 bg-primary text-background rounded-full shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40"
-                    title="Додати служіння"
-                >
-                    <Plus className="w-7 h-7" />
-                </button>
-            )}
 
             {/* Trash Bin */}
             {showTrashBin && userData?.choirId && (

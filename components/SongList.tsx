@@ -26,9 +26,20 @@ interface SongListProps {
     knownCategories: string[];
     knownPianists: string[];
     onRefresh?: () => void;
+    showAddModal?: boolean;
+    setShowAddModal?: (show: boolean) => void;
 }
 
-export default function SongList({ canAddSongs, regents, knownConductors, knownCategories, knownPianists, onRefresh }: SongListProps) {
+export default function SongList({
+    canAddSongs,
+    regents,
+    knownConductors,
+    knownCategories,
+    knownPianists,
+    onRefresh,
+    showAddModal: propsShowAddModal,
+    setShowAddModal: propsSetShowAddModal
+}: SongListProps) {
     const router = useRouter();
     const { userData } = useAuth();
 
@@ -39,8 +50,11 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
     const [showFilters, setShowFilters] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<Category | "All">("All");
     const [selectedConductor, setSelectedConductor] = useState<string | "All">("All");
-    // Modals
-    const [showAddModal, setShowAddModal] = useState(false);
+
+    // Local-to-prop state mapping
+    const [localShowAddModal, setLocalShowAddModal] = useState(false);
+    const showAddModal = propsShowAddModal ?? localShowAddModal;
+    const setShowAddModal = propsSetShowAddModal ?? setLocalShowAddModal;
     const [showAddOptions, setShowAddOptions] = useState(false);
     const [showTrashBin, setShowTrashBin] = useState(false);
     const [editingSong, setEditingSong] = useState<SimpleSong | null>(null);
@@ -260,7 +274,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
     }
 
     return (
-        <div className="max-w-5xl mx-auto px-4 pt-4 space-y-5 pb-32">
+        <div className="max-w-5xl mx-auto px-4 pt-4 space-y-5">
             {/* Sub-Tab Switcher */}
             {/* Sub-Tab Switcher */}
             <div className="flex bg-surface rounded-xl p-1 card-shadow relative isolate">
@@ -553,7 +567,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                             </table>
 
                             {/* Mobile: Simple List View */}
-                            <div className="md:hidden space-y-0 pb-32">
+                            <div className="md:hidden space-y-0">
                                 {filteredSongs.map((song) => (
                                     <div
                                         key={song.id}
@@ -600,18 +614,6 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                     )}
                 </div>
 
-                {/* Floating Add Button */}
-                {
-                    effectiveCanAdd && (
-                        <button
-                            onClick={() => setShowAddModal(true)}
-                            className="fixed bottom-24 right-6 z-40 w-14 h-14 bg-primary text-background rounded-full shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all"
-                            title="Додати пісню"
-                        >
-                            <Plus className="w-7 h-7" />
-                        </button>
-                    )
-                }
 
                 {/* Add Song Modal */}
                 {

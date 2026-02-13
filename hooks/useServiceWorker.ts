@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { Capacitor } from "@capacitor/core";
 
 /**
  * Hook to register the app Service Worker for offline support
@@ -8,6 +9,13 @@ import { useEffect } from "react";
 export function useServiceWorker() {
     useEffect(() => {
         if (typeof window === "undefined") return;
+
+        // Skip SW on native platforms - Capacitor handles its own local file serving
+        if (Capacitor.isNativePlatform()) {
+            console.log("[SW] Skipping Service Worker on native platform");
+            return;
+        }
+
         if (!("serviceWorker" in navigator)) {
             console.log("[SW] Service Workers not supported");
             return;

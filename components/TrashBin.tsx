@@ -119,7 +119,7 @@ export default function TrashBin({ choirId, onClose, onRestore, initialFilter = 
     return (
         <div className="fixed inset-0 z-[70] bg-background flex flex-col animate-in slide-in-from-bottom duration-300">
             {/* Header */}
-            <div className="sticky top-0 z-10 bg-surface border-b border-border px-4 py-3 flex items-center gap-3">
+            <div className="sticky top-0 z-10 bg-surface/90 backdrop-blur-xl border-b border-border px-4 pb-3 pt-[calc(env(safe-area-inset-top)+14px)] flex items-center gap-3">
                 <button onClick={onClose} className="p-2 hover:bg-surface-highlight rounded-xl">
                     <X className="w-5 h-5 text-text-primary" />
                 </button>
