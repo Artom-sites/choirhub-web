@@ -388,9 +388,16 @@ function HomePageContent() {
     if (memberFilter === 'real' && userData?.choirId) {
       setLoadingRegisteredUsers(true);
       getChoirUsers(userData.choirId).then(users => {
-        setRegisteredUsers(users);
+        // Client-side sort to avoid needing composite index
+        const sorted = users.sort((a, b) => {
+          const timeA = new Date(a.createdAt?.seconds ? a.createdAt.seconds * 1000 : a.createdAt || 0).getTime();
+          const timeB = new Date(b.createdAt?.seconds ? b.createdAt.seconds * 1000 : b.createdAt || 0).getTime();
+          return timeB - timeA;
+        });
+        setRegisteredUsers(sorted);
         setLoadingRegisteredUsers(false);
-      }).catch(() => {
+      }).catch((err) => {
+        console.error("Error fetching users:", err);
         setLoadingRegisteredUsers(false);
       });
     }
