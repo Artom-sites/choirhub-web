@@ -231,7 +231,7 @@ function HomePageContent() {
             <div className="text-text-primary font-bold flex items-center gap-2 mb-1">
               {member.name}
               {getVoiceBadge(member.voice)}
-              {member.hasAccount && <span className="text-[10px] bg-blue-500/10 text-blue-400 mb-0.5 px-1.5 rounded-sm flex items-center gap-1">📱 APP</span>}
+              {member.hasAccount && <span title="App User" className="text-xs">📱</span>}
             </div>
             <div className="flex items-center gap-2">
               {getRoleBadge(member.role)}
@@ -922,6 +922,7 @@ function HomePageContent() {
       regent: { label: "Регент", className: "bg-primary/10 text-primary border border-primary/20" },
       member: { label: "Хорист", className: "bg-surface-highlight text-text-secondary border border-border" },
     };
+    if (role === 'member') return null;
     const config = roleConfig[role] || roleConfig.member;
     return (
       <span className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full ${config.className}`}>
