@@ -1661,8 +1661,9 @@ function HomePageContent() {
 
                         {canEdit && (
                           <div className="flex items-center gap-1">
-                            {/* Show link button only if user is NOT already linked (by ID or linkedUserIds) */}
-                            {!(choir?.members || []).some(m => m.id === appUser.id || (m.linkedUserIds || []).includes(appUser.id)) && (
+                            {/* Show link button if user is NOT already linked to another member via linkedUserIds.
+                                Even if they are in the member list (as a separate entry), we allow merging them into another 'main' member. */}
+                            {!(choir?.members || []).some(m => (m.linkedUserIds || []).includes(appUser.id)) && (
                               <button
                                 onClick={() => setLinkingAppUser(appUser)}
                                 className="text-text-secondary/50 hover:text-accent transition-colors p-2 hover:bg-accent/10 rounded-lg"

@@ -681,7 +681,8 @@ export async function getChoirUsers(choirId: string): Promise<UserData[]> {
     try {
         const q = query(
             collection(db, "users"),
-            where("choirId", "==", choirId)
+            where("choirId", "==", choirId),
+            orderBy("createdAt", "desc")
         );
         const snapshot = await getDocs(q);
         return snapshot.docs.map(doc => ({
