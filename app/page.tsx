@@ -1737,7 +1737,7 @@ function HomePageContent() {
             if (activeTab === 'home') setShowAddServiceModal(true);
             else if (activeTab === 'songs') setShowAddSongModal(true);
           }}
-          className="fixed bottom-28 md:bottom-24 right-6 w-14 h-14 bg-primary text-background rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60]"
+          className="fixed bottom-28 md:bottom-20 right-6 w-14 h-14 bg-primary text-background rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60]"
           title={activeTab === 'home' ? "Додати служіння" : "Додати пісню"}
         >
           <Plus className="w-7 h-7" />
