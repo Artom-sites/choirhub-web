@@ -38,19 +38,29 @@ export default class ErrorBoundary extends React.Component<Props, State> {
 
     render() {
         if (this.state.hasError) {
+            const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+
             return (
                 <div className="min-h-screen bg-[#09090b] flex flex-col items-center justify-center p-6 text-center">
                     <div className="w-24 h-24 bg-[#18181b] rounded-3xl flex items-center justify-center mb-8 border border-white/10 shadow-2xl">
-                        <Music2 className="w-10 h-10 text-white" />
+                        {isOffline ? <WifiOff className="w-10 h-10 text-blue-400" /> : <Music2 className="w-10 h-10 text-red-500" />}
                     </div>
 
-                    <div className="flex items-center gap-3 mb-4">
-                        <WifiOff className="w-6 h-6 text-blue-400" />
-                        <h1 className="text-2xl font-bold text-white">Немає з'єднання</h1>
+                    <div className="flex flex-col items-center gap-2 mb-4">
+                        <h1 className="text-2xl font-bold text-white">
+                            {isOffline ? "Немає з'єднання" : "Щось пішло не так"}
+                        </h1>
+                        {!isOffline && this.state.error && (
+                            <p className="text-xs text-red-400 font-mono bg-red-950/30 p-2 rounded max-w-xs break-words">
+                                {this.state.error.message}
+                            </p>
+                        )}
                     </div>
 
                     <p className="text-[#a1a1aa] mb-8 max-w-sm">
-                        Але кешовані служіння та PDF все ще доступні!
+                        {isOffline
+                            ? "Але кешовані служіння та PDF все ще доступні!"
+                            : "Спробуйте оновити сторінку або перевірте з'єднання."}
                     </p>
 
                     <div className="flex flex-col gap-3 w-full max-w-xs">
