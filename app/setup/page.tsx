@@ -379,7 +379,14 @@ function SetupPageContent() {
 
     // Prevent flash of content if user is already in a choir or profile is still loading
     // We remove (user && !userData) because that is the state of a NEW user who needs to see this page.
-    if (authLoading || (user && userData?.choirId)) return <Preloader />;
+    if (authLoading || (user && userData?.choirId)) {
+        console.log("[SetupPage] Waiting... AuthLoading:", authLoading, "User:", !!user, "ChoirId:", userData?.choirId);
+        return <Preloader />;
+    }
+
+    if (user && !userData) {
+        console.log("[SetupPage] User present but no profile data (yet?):", user.uid);
+    }
 
     if (!user && view !== 'email_auth' && view !== 'reset_password') {
         return (
