@@ -1668,17 +1668,23 @@ function HomePageContent() {
 
                         {canEdit && (
                           <div className="flex items-center gap-1">
-                            {/* Show link button if user is NOT already linked to another member via linkedUserIds.
-                                Even if they are in the member list (as a separate entry), we allow merging them into another 'main' member. */}
-                            {!(choir?.members || []).some(m => (m.linkedUserIds || []).includes(appUser.id)) && (
-                              <button
-                                onClick={() => setLinkingAppUser(appUser)}
-                                className="text-text-secondary/50 hover:text-accent transition-colors p-2 hover:bg-accent/10 rounded-lg"
-                                title="Прив'язати до учасника зі списку"
-                              >
-                                <Link2 className="w-4 h-4" />
-                              </button>
-                            )}
+                            {/* Show link button if:
+                                1. User is NOT in linkedUserIds of any member (secondary account)
+                                2. AND User is NOT the main ID of a member who already has a voice (established member)
+                                This allows merging "fresh" accounts (even if they are in the list as no-voice members) but prevents merging established ones. */}
+                            {(() => {
+                              const isLinkedSecondary = (choir?.members || []).some(m => (m.linkedUserIds || []).includes(appUser.id));
+                              const isEstablishedMain = (choir?.members || []).some(m => m.id === appUser.id && !!m.voice);
+                              return !isLinkedSecondary && !isEstablishedMain;
+                            })() && (
+                                <button
+                                  onClick={() => setLinkingAppUser(appUser)}
+                                  className="text-text-secondary/50 hover:text-accent transition-colors p-2 hover:bg-accent/10 rounded-lg"
+                                  title="Прив'язати до учасника зі списку"
+                                >
+                                  <Link2 className="w-4 h-4" />
+                                </button>
+                              )}
                             <button
                               onClick={() => setUserToDelete(appUser)}
                               className="text-text-secondary/50 hover:text-danger transition-colors p-2 hover:bg-danger/10 rounded-lg"
