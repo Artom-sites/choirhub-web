@@ -1654,10 +1654,7 @@ function HomePageContent() {
                           <div>
                             <div className="text-text-primary font-bold flex items-center gap-2 mb-1">
                               {appUser.name || 'Без імені'}
-                              <span className="text-[10px] bg-blue-500/10 text-blue-400 px-1.5 rounded-sm">📱 APP</span>
-                              {appUser.role && (
-                                <span className="text-[10px] bg-primary/10 text-primary px-1.5 rounded-sm uppercase">{appUser.role}</span>
-                              )}
+                              <span title="App User" className="text-xs">📱</span>
                             </div>
                             <div className="text-text-secondary text-xs">
                               {canEdit && appUser.email}
