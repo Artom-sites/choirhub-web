@@ -31,6 +31,20 @@ function SetupPageContent() {
     // UI State
     const [view, setView] = useState<'welcome' | 'join' | 'create' | 'email_auth' | 'reset_password'>('welcome');
     const [showGuestWarning, setShowGuestWarning] = useState(false);
+    // Form State (Moved to top to avoid hook violation)
+    const [choirName, setChoirName] = useState("");
+    const [inviteCode, setInviteCode] = useState("");
+    const [formLoading, setFormLoading] = useState(false);
+    const [error, setError] = useState("");
+    const [resetSent, setResetSent] = useState(false);
+
+    // Email Auth State
+    const [isRegistering, setIsRegistering] = useState(false);
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [authName, setAuthName] = useState("");
+
     // Add a grace period for profile loading to prevent flash
     const [checkingProfile, setCheckingProfile] = useState(true);
 
@@ -56,18 +70,7 @@ function SetupPageContent() {
         console.log("[SetupPage] Waiting... AuthLoading:", authLoading, "User:", !!user, "ChoirId:", userData?.choirId, "CheckingProfile:", checkingProfile);
         return <Preloader />;
     }
-    const [choirName, setChoirName] = useState("");
-    const [inviteCode, setInviteCode] = useState("");
-    const [formLoading, setFormLoading] = useState(false);
-    const [error, setError] = useState("");
-    const [resetSent, setResetSent] = useState(false);
 
-    // Email Auth State
-    const [isRegistering, setIsRegistering] = useState(false);
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [showPassword, setShowPassword] = useState(false);
-    const [authName, setAuthName] = useState("");
 
     useEffect(() => {
         if (!authLoading && userData?.choirId) {
@@ -93,12 +96,7 @@ function SetupPageContent() {
         }
     }, [user, userData, view]);
 
-    // Fix: Reset view to welcome if user authenticates while in email_auth/reset views
-    useEffect(() => {
-        if (user && !userData?.choirId && (view === 'email_auth' || view === 'reset_password')) {
-            setView('welcome');
-        }
-    }, [user, userData, view]);
+
 
     const handleGoogleLogin = async () => {
         setFormLoading(true);

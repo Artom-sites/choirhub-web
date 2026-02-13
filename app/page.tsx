@@ -31,6 +31,7 @@ import {
   PlusCircle, Plus, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor, Scale
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import NotificationPrompt from "@/components/NotificationPrompt";
 import SendNotificationModal from "@/components/SendNotificationModal";
 import { collection as firestoreCollection, addDoc, getDocs, getDoc, where, query, doc, updateDoc, arrayUnion, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -1958,6 +1959,9 @@ function HomePageContent() {
         confirmLabel="Видалити"
         isDestructive
       />
+
+      {/* Notifications Permission Prompt */}
+      <NotificationPrompt />
 
       {/* Notifications Modal */}
       <NotificationsModal
