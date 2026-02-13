@@ -64,15 +64,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         handleRedirect();
 
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            console.log("Auth State Changed:", firebaseUser ? `User ${firebaseUser.uid}` : "No User");
             setUser(firebaseUser);
 
             if (firebaseUser) {
                 try {
+                    console.log("Loading profile for:", firebaseUser.uid);
                     await loadUserProfile(firebaseUser.uid);
                 } catch (error) {
                     console.error("Error loading user profile:", error);
-                    // We still set user, but userData might be null.
-                    // The app should handle this gracefully (e.g. redirect to setup)
                 }
             } else {
                 setUserData(null);
@@ -86,8 +86,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const loadUserProfile = async (uid: string) => {
         const profile = await getUserProfile(uid);
+        console.log("Loaded profile:", profile);
         if (profile) {
             setUserData(profile);
+        } else {
+            console.warn("No user profile found for UID:", uid);
         }
     };
 
