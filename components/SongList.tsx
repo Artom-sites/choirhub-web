@@ -504,7 +504,7 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                                                 initial={{ opacity: 0, y: 10 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 exit={{ opacity: 0 }}
-                                                transition={{ duration: 0.2, delay: Math.min(index * 0.03, 0.5) }}
+                                                transition={{ duration: 0.2 }}
                                             >
                                                 <td className="py-3 pl-0 pr-4">
                                                     <div className="flex items-center gap-3">
@@ -553,59 +553,48 @@ export default function SongList({ canAddSongs, regents, knownConductors, knownC
                             </table>
 
                             {/* Mobile: Simple List View */}
-                            <div className="md:hidden space-y-0">
-                                <AnimatePresence mode="popLayout">
-                                    {filteredSongs.map((song, index) => (
-                                        <motion.div
-                                            key={song.id}
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, scale: 0.95 }}
-                                            transition={{ duration: 0.3, delay: Math.min(index * 0.05, 0.5) }}
-                                        >
-                                            <SwipeableCard
-                                                onDelete={() => setDeletingSongId(song.id)}
-                                                disabled={!effectiveCanAdd}
+                            <div className="md:hidden space-y-0 pb-32">
+                                {filteredSongs.map((song) => (
+                                    <div
+                                        key={song.id}
+                                        onClick={() => handleSongClick(song)}
+                                        className="flex items-center gap-3 py-3 border-b border-border/30 cursor-pointer active:bg-surface-highlight transition-colors"
+                                    >
+                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-text-primary">
+                                            {song.hasPdf ? (
+                                                <Eye className="w-5 h-5 text-background" />
+                                            ) : (
+                                                <FileText className="w-5 h-5 text-background" />
+                                            )}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-semibold text-text-primary truncate">{song.title}</p>
+                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                {song.conductor && (
+                                                    <span className="text-xs text-primary font-medium flex items-center gap-1">
+                                                        <User className="w-3 h-3" />
+                                                        {song.conductor}
+                                                    </span>
+                                                )}
+                                                {song.conductor && <span className="text-xs text-text-secondary">•</span>}
+                                                <span className="text-xs text-text-secondary">{song.category}</span>
+                                            </div>
+                                        </div>
+                                        {effectiveCanAdd && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    handleEditClick(e, song);
+                                                }}
+                                                className="p-2 rounded-lg text-text-secondary"
+                                                title="Редагувати"
                                             >
-                                                <div
-                                                    onClick={() => handleSongClick(song)}
-                                                    className="flex items-center gap-3 py-3 border-b border-border/30 cursor-pointer active:bg-surface-highlight transition-colors bg-background"
-                                                >
-                                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-text-primary">
-                                                        {song.hasPdf ? (
-                                                            <Eye className="w-5 h-5 text-background" />
-                                                        ) : (
-                                                            <FileText className="w-5 h-5 text-background" />
-                                                        )}
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="font-semibold text-text-primary truncate">{song.title}</p>
-                                                        <div className="flex items-center gap-1.5 mt-0.5">
-                                                            {song.conductor && (
-                                                                <span className="text-xs text-primary font-medium flex items-center gap-1"><User className="w-3 h-3" />{song.conductor}</span>
-                                                            )}
-                                                            {song.conductor && <span className="text-xs text-text-secondary">•</span>}
-                                                            <span className="text-xs text-text-secondary">{song.category}</span>
-                                                        </div>
-                                                    </div>
-                                                    {effectiveCanAdd && (
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.preventDefault();
-                                                                e.stopPropagation();
-                                                                handleEditClick(e, song);
-                                                            }}
-                                                            className="p-2 rounded-lg text-text-secondary"
-                                                            title="Редагувати"
-                                                        >
-                                                            <Pencil className="w-4 h-4" />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </SwipeableCard>
-                                        </motion.div>
-                                    ))}
-                                </AnimatePresence>
+                                                <Pencil className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
                         </>
                     )}

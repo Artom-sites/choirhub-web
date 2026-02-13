@@ -188,76 +188,69 @@ export default function ServiceList({ onSelectService, canEdit, services }: Serv
 
                 return (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <AnimatePresence mode="popLayout">
-                            {displayServices.map((service, index) => {
-                                const status = getMyStatus(service);
-                                const isFuture = isUpcoming(service.date, service.time);
+                        {displayServices.map((service) => {
+                            const status = getMyStatus(service);
+                            const isFuture = isUpcoming(service.date, service.time);
 
-                                return (
-                                    <motion.div
-                                        key={service.id}
-                                        layout
-                                        initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.9 }}
-                                        transition={{ duration: 0.3, delay: index * 0.05 }}
-                                        className="h-full"
+                            return (
+                                <div
+                                    key={service.id}
+                                    className="h-full"
+                                >
+                                    <SwipeableCard
+                                        onDelete={() => setServiceToDelete(service.id)}
+                                        disabled={!effectiveCanEdit}
+                                        className="rounded-2xl h-full"
                                     >
-                                        <SwipeableCard
-                                            onDelete={() => setServiceToDelete(service.id)}
-                                            disabled={!effectiveCanEdit}
-                                            className="rounded-2xl h-full"
+                                        <div
+                                            onClick={() => onSelectService(service)}
+                                            className={`relative group p-5 rounded-2xl transition-all cursor-pointer h-full flex flex-col justify-between card-shadow ${isToday(service.date) ? 'bg-accent/10 border border-accent/20' : 'bg-surface'}`}
                                         >
-                                            <div
-                                                onClick={() => onSelectService(service)}
-                                                className={`relative group p-5 rounded-2xl transition-all cursor-pointer h-full flex flex-col justify-between card-shadow ${isToday(service.date) ? 'bg-accent/10 border border-accent/20' : 'bg-surface'}`}
-                                            >
-                                                <div className="flex justify-between items-start">
-                                                    <div>
-                                                        <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${isToday(service.date) ? 'text-accent' : 'text-text-secondary'}`}>
-                                                            {isToday(service.date) ? 'Сьогодні' : formatDate(service.date)}
-                                                        </p>
-                                                        <h3 className="text-xl font-bold text-text-primary mb-2">{service.title}</h3>
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${isToday(service.date) ? 'text-accent' : 'text-text-secondary'}`}>
+                                                        {isToday(service.date) ? 'Сьогодні' : formatDate(service.date)}
+                                                    </p>
+                                                    <h3 className="text-xl font-bold text-text-primary mb-2">{service.title}</h3>
 
-                                                        <div className="flex items-center gap-2 mb-3">
-                                                            <div className={`px-2.5 py-1 rounded-full text-xs font-medium border ${isToday(service.date) ? 'bg-accent/10 border-accent/30 text-accent' : 'bg-surface-highlight border-border text-text-primary'}`}>
-                                                                {service.songs.length} пісень
-                                                            </div>
+                                                    <div className="flex items-center gap-2 mb-3">
+                                                        <div className={`px-2.5 py-1 rounded-full text-xs font-medium border ${isToday(service.date) ? 'bg-accent/10 border-accent/30 text-accent' : 'bg-surface-highlight border-border text-text-primary'}`}>
+                                                            {service.songs.length} пісень
                                                         </div>
-
-                                                        {isFuture && (
-                                                            <div className="flex gap-2 mt-3" onClick={e => e.stopPropagation()}>
-                                                                {(status === 'unknown' || status === 'present') && (
-                                                                    <button
-                                                                        onClick={(e) => handleVote(e, service.id, 'present')}
-                                                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${status === 'present' ? 'bg-success text-white ring-2 ring-success/50' : 'bg-background text-text-secondary hover:bg-surface-highlight'}`}
-                                                                    >
-                                                                        <Check className="w-3.5 h-3.5" />
-                                                                        {status === 'present' ? 'Я буду' : 'Буду'}
-                                                                    </button>
-                                                                )}
-
-                                                                {(status === 'unknown' || status === 'absent') && (
-                                                                    <button
-                                                                        onClick={(e) => handleVote(e, service.id, 'absent')}
-                                                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${status === 'absent' ? 'bg-danger/20 text-danger ring-1 ring-danger/50' : 'bg-background text-text-secondary hover:bg-surface-highlight'}`}
-                                                                    >
-                                                                        <X className="w-3.5 h-3.5" />
-                                                                        {status === 'absent' ? 'Не буду' : 'Не буду'}
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                        )}
                                                     </div>
 
-                                                    <ChevronRight className="w-5 h-5 text-text-secondary group-hover:text-text-primary transition-colors" />
+                                                    {isFuture && (
+                                                        <div className="flex gap-2 mt-3" onClick={e => e.stopPropagation()}>
+                                                            {(status === 'unknown' || status === 'present') && (
+                                                                <button
+                                                                    onClick={(e) => handleVote(e, service.id, 'present')}
+                                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${status === 'present' ? 'bg-success text-white ring-2 ring-success/50' : 'bg-background text-text-secondary hover:bg-surface-highlight'}`}
+                                                                >
+                                                                    <Check className="w-3.5 h-3.5" />
+                                                                    {status === 'present' ? 'Я буду' : 'Буду'}
+                                                                </button>
+                                                            )}
+
+                                                            {(status === 'unknown' || status === 'absent') && (
+                                                                <button
+                                                                    onClick={(e) => handleVote(e, service.id, 'absent')}
+                                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${status === 'absent' ? 'bg-danger/20 text-danger ring-1 ring-danger/50' : 'bg-background text-text-secondary hover:bg-surface-highlight'}`}
+                                                                >
+                                                                    <X className="w-3.5 h-3.5" />
+                                                                    {status === 'absent' ? 'Не буду' : 'Не буду'}
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
+
+                                                <ChevronRight className="w-5 h-5 text-text-secondary group-hover:text-text-primary transition-colors" />
                                             </div>
-                                        </SwipeableCard>
-                                    </motion.div>
-                                )
-                            })}
-                        </AnimatePresence>
+                                        </div>
+                                    </SwipeableCard>
+                                </div>
+                            )
+                        })}
                     </div>
                 );
             })()}
