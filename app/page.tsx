@@ -1329,49 +1329,61 @@ function HomePageContent() {
                         </button>
                       </div>
 
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.memberCode}`)}
-                          className="flex items-center gap-2 px-3 py-2 bg-surface-highlight rounded-xl group hover:bg-accent/10 transition-colors"
-                        >
-                          <span className="text-text-secondary text-xs">Хористи</span>
-                          <code className="text-sm font-mono font-bold text-text-primary">{choir.memberCode}</code>
-                          {copiedCode === `https://${window.location.host}/setup?code=${choir.memberCode}`
-                            ? <Check className="w-3.5 h-3.5 text-success" />
-                            : <Link2 className="w-3.5 h-3.5 text-text-secondary group-hover:text-accent transition-colors" />}
-                        </button>
+                      <div className="bg-surface-highlight rounded-xl overflow-hidden">
+                        {/* Member Code */}
+                        <div className="flex items-center justify-between p-4 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+                          <span className="text-text-primary text-base">Хористи</span>
+                          <div className="flex items-center gap-3">
+                            <code className="text-base font-mono font-medium text-text-primary">{choir.memberCode}</code>
+                            <button
+                              onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.memberCode}`)}
+                              className="text-text-secondary hover:text-accent transition-colors"
+                            >
+                              {copiedCode === `https://${window.location.host}/setup?code=${choir.memberCode}`
+                                ? <Check className="w-5 h-5 text-success" />
+                                : <Copy className="w-5 h-5" />}
+                            </button>
+                          </div>
+                        </div>
 
-                        <button
-                          onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.regentCode}`)}
-                          className="flex items-center gap-2 px-3 py-2 bg-surface-highlight rounded-xl group hover:bg-accent/10 transition-colors"
-                        >
-                          <span className="text-text-secondary text-xs">Регенти</span>
-                          <code className="text-sm font-mono font-bold text-text-primary">{choir.regentCode}</code>
-                          {copiedCode === `https://${window.location.host}/setup?code=${choir.regentCode}`
-                            ? <Check className="w-3.5 h-3.5 text-success" />
-                            : <Link2 className="w-3.5 h-3.5 text-text-secondary group-hover:text-accent transition-colors" />}
-                        </button>
+                        {/* Regent Code */}
+                        <div className="flex items-center justify-between p-4 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+                          <span className="text-text-primary text-base">Регенти</span>
+                          <div className="flex items-center gap-3">
+                            <code className="text-base font-mono font-medium text-text-primary">{choir.regentCode}</code>
+                            <button
+                              onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.regentCode}`)}
+                              className="text-text-secondary hover:text-accent transition-colors"
+                            >
+                              {copiedCode === `https://${window.location.host}/setup?code=${choir.regentCode}`
+                                ? <Check className="w-5 h-5 text-success" />
+                                : <Copy className="w-5 h-5" />}
+                            </button>
+                          </div>
+                        </div>
 
-                        {/* Admin Codes - inline chips */}
+                        {/* Admin Codes */}
                         {choir.adminCodes && choir.adminCodes.length > 0 && choir.adminCodes.map((ac, idx) => (
-                          <div key={idx} className="flex items-center gap-0 bg-surface-highlight rounded-xl overflow-hidden">
-                            <button
-                              onClick={() => copyCode(`https://${window.location.host}/setup?code=${ac.code}`)}
-                              className="flex items-center gap-2 px-3 py-2 group hover:bg-accent/10 transition-colors"
-                            >
-                              <span className="text-text-secondary text-xs">{ac.label || 'Адмін'}</span>
-                              <code className="text-sm font-mono font-bold text-text-primary">{ac.code}</code>
-                              {copiedCode === `https://${window.location.host}/setup?code=${ac.code}`
-                                ? <Check className="w-3.5 h-3.5 text-success" />
-                                : <Link2 className="w-3.5 h-3.5 text-text-secondary group-hover:text-accent transition-colors" />}
-                            </button>
-                            <button
-                              onClick={() => setDeletingAdminCode(ac.code)}
-                              className="px-2 py-2 text-text-secondary/40 hover:text-danger hover:bg-danger/10 transition-colors"
-                              title="Видалити код"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
+                          <div key={idx} className="flex items-center justify-between p-4 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+                            <span className="text-text-primary text-base">{ac.label || 'Адмін'}</span>
+                            <div className="flex items-center gap-3">
+                              <code className="text-base font-mono font-medium text-text-primary">{ac.code}</code>
+                              <button
+                                onClick={() => copyCode(`https://${window.location.host}/setup?code=${ac.code}`)}
+                                className="text-text-secondary hover:text-accent transition-colors"
+                              >
+                                {copiedCode === `https://${window.location.host}/setup?code=${ac.code}`
+                                  ? <Check className="w-5 h-5 text-success" />
+                                  : <Copy className="w-5 h-5" />}
+                              </button>
+                              <button
+                                onClick={() => setDeletingAdminCode(ac.code)}
+                                className="text-text-secondary/50 hover:text-danger transition-colors ml-1"
+                                title="Видалити"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
