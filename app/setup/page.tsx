@@ -31,8 +31,31 @@ function SetupPageContent() {
     // UI State
     const [view, setView] = useState<'welcome' | 'join' | 'create' | 'email_auth' | 'reset_password'>('welcome');
     const [showGuestWarning, setShowGuestWarning] = useState(false);
+    // Add a grace period for profile loading to prevent flash
+    const [checkingProfile, setCheckingProfile] = useState(true);
 
-    // Form State
+    useEffect(() => {
+        // If auth is loading, we are checking.
+        if (authLoading) return;
+
+        // If user is logged in but userData is missing, wait a bit
+        if (user && !userData) {
+            const timer = setTimeout(() => {
+                setCheckingProfile(false);
+            }, 1000); // 1 second grace period
+            return () => clearTimeout(timer);
+        } else {
+            // If user is not logged in, or userData is present, we are done checking
+            setCheckingProfile(false);
+        }
+    }, [authLoading, user, userData]);
+
+    // Prevent flash of content if user is already in a choir or profile is still loading
+    // We remove (user && !userData) because that is the state of a NEW user who needs to see this page.
+    if (authLoading || (user && userData?.choirId) || (user && !userData && checkingProfile)) {
+        console.log("[SetupPage] Waiting... AuthLoading:", authLoading, "User:", !!user, "ChoirId:", userData?.choirId, "CheckingProfile:", checkingProfile);
+        return <Preloader />;
+    }
     const [choirName, setChoirName] = useState("");
     const [inviteCode, setInviteCode] = useState("");
     const [formLoading, setFormLoading] = useState(false);
@@ -376,17 +399,6 @@ function SetupPageContent() {
             setFormLoading(false);
         }
     };
-
-    // Prevent flash of content if user is already in a choir or profile is still loading
-    // We remove (user && !userData) because that is the state of a NEW user who needs to see this page.
-    if (authLoading || (user && userData?.choirId)) {
-        console.log("[SetupPage] Waiting... AuthLoading:", authLoading, "User:", !!user, "ChoirId:", userData?.choirId);
-        return <Preloader />;
-    }
-
-    if (user && !userData) {
-        console.log("[SetupPage] User present but no profile data (yet?):", user.uid);
-    }
 
     if (!user && view !== 'email_auth' && view !== 'reset_password') {
         return (
