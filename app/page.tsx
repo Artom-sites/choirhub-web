@@ -28,7 +28,7 @@ import ConfirmationModal from "@/components/ConfirmationModal";
 import {
   Music2, Loader2, Copy, Check, HelpCircle, Mail, Shield,
   LogOut, ChevronLeft, ChevronRight, Home, User, Users, Repeat,
-  PlusCircle, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor
+  PlusCircle, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor, Scale
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SendNotificationModal from "@/components/SendNotificationModal";
@@ -1316,23 +1316,15 @@ function HomePageContent() {
                   className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
                 >
                   <Mail className="w-5 h-5 text-text-secondary" />
-                  <span>Служба підтримки</span>
+                  <span>Підтримка та зворотний зв'язок</span>
                 </a>
 
                 <button
-                  onClick={() => { setLegalInitialView('privacy'); setShowLegalModal(true); }}
+                  onClick={() => { setLegalInitialView('main'); setShowLegalModal(true); }}
                   className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
                 >
-                  <Shield className="w-5 h-5 text-text-secondary" />
-                  <span>Політика конфіденційності</span>
-                </button>
-
-                <button
-                  onClick={() => { setLegalInitialView('terms'); setShowLegalModal(true); }}
-                  className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
-                >
-                  <FileText className="w-5 h-5 text-text-secondary" />
-                  <span>Умови використання</span>
+                  <Scale className="w-5 h-5 text-text-secondary" />
+                  <span>Джерела та контент</span>
                 </button>
 
                 <button

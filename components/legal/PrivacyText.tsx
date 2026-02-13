@@ -235,7 +235,9 @@ export default function PrivacyText() {
                     <li>Локальні дані на пристрої можна очистити через налаштування браузера.</li>
                 </ul>
                 <p className="text-sm text-text-secondary leading-relaxed">
-                    Ми не зберігаємо резервні копії персональних даних після завершення процедури видалення.
+                    Ми не зберігаємо активні резервні копії персональних даних після завершення
+                    процедури видалення. Технічні резервні копії провайдерів можуть зберігатися
+                    протягом обмеженого часу відповідно до їх політик.
                 </p>
             </section>
 
@@ -250,9 +252,19 @@ export default function PrivacyText() {
                 </p>
             </section>
 
+            {/* Complaints */}
+            <section className="space-y-3">
+                <h3 className="text-base font-semibold text-text-primary">13. Скарги</h3>
+                <p className="text-sm text-text-secondary leading-relaxed">
+                    Якщо ви вважаєте, що ваші права щодо захисту персональних даних були порушені,
+                    ви маєте право подати скаргу до наглядового органу з питань захисту персональних
+                    даних у вашій країні проживання.
+                </p>
+            </section>
+
             {/* 10. Changes */}
             <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">13. Зміни до Політики</h3>
+                <h3 className="text-base font-semibold text-text-primary">14. Зміни до Політики</h3>
                 <p className="text-sm text-text-secondary leading-relaxed">
                     Ми залишаємо за собою право оновлювати цю Політику конфіденційності.
                     Дата останнього оновлення вказана на початку документу.
@@ -264,7 +276,7 @@ export default function PrivacyText() {
 
             {/* 11. Contact */}
             <section className="space-y-3">
-                <h3 className="text-base font-semibold text-text-primary">14. Контакти</h3>
+                <h3 className="text-base font-semibold text-text-primary">15. Контакти</h3>
                 <p className="text-sm text-text-secondary leading-relaxed">
                     З питань щодо конфіденційності ваших даних зв&apos;яжіться з нами:
                 </p>
