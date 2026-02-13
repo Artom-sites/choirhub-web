@@ -1247,7 +1247,7 @@ function HomePageContent() {
               </button>
             </div>
 
-            <div className="max-w-md mx-auto w-full h-full flex flex-col p-6 overflow-y-auto">
+            <div className="max-w-xl mx-auto w-full h-full flex flex-col p-6 overflow-y-auto">
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-3xl font-bold text-text-primary tracking-tight">Акаунт</h2>
                 <div className="flex items-center gap-3">
@@ -1329,53 +1329,50 @@ function HomePageContent() {
                         </button>
                       </div>
 
-                      <div className="space-y-3">
+                      <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.memberCode}`)}
-                          className="w-full flex items-center justify-between py-2 group"
+                          className="flex items-center gap-2 px-3 py-2 bg-surface-highlight rounded-xl group hover:bg-accent/10 transition-colors"
                         >
-                          <div className="flex items-center gap-3">
-                            <span className="text-text-secondary text-sm">Хористи</span>
-                            <code className="text-lg font-mono font-bold text-text-primary">{choir.memberCode}</code>
-                          </div>
+                          <span className="text-text-secondary text-xs">Хористи</span>
+                          <code className="text-sm font-mono font-bold text-text-primary">{choir.memberCode}</code>
                           {copiedCode === `https://${window.location.host}/setup?code=${choir.memberCode}`
-                            ? <Check className="w-4 h-4 text-success" />
-                            : <Link2 className="w-4 h-4 text-text-secondary group-hover:text-accent transition-colors" />}
+                            ? <Check className="w-3.5 h-3.5 text-success" />
+                            : <Link2 className="w-3.5 h-3.5 text-text-secondary group-hover:text-accent transition-colors" />}
                         </button>
 
                         <button
                           onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.regentCode}`)}
-                          className="w-full flex items-center justify-between py-2 group"
+                          className="flex items-center gap-2 px-3 py-2 bg-surface-highlight rounded-xl group hover:bg-accent/10 transition-colors"
                         >
-                          <div className="flex items-center gap-3">
-                            <span className="text-text-secondary text-sm">Регенти</span>
-                            <code className="text-lg font-mono font-bold text-text-primary">{choir.regentCode}</code>
-                          </div>
+                          <span className="text-text-secondary text-xs">Регенти</span>
+                          <code className="text-sm font-mono font-bold text-text-primary">{choir.regentCode}</code>
                           {copiedCode === `https://${window.location.host}/setup?code=${choir.regentCode}`
-                            ? <Check className="w-4 h-4 text-success" />
-                            : <Link2 className="w-4 h-4 text-text-secondary group-hover:text-accent transition-colors" />}
+                            ? <Check className="w-3.5 h-3.5 text-success" />
+                            : <Link2 className="w-3.5 h-3.5 text-text-secondary group-hover:text-accent transition-colors" />}
                         </button>
 
-                        {/* Admin Codes - inline */}
+                        {/* Admin Codes - inline chips */}
                         {choir.adminCodes && choir.adminCodes.length > 0 && choir.adminCodes.map((ac, idx) => (
-                          <SwipeableCard
-                            key={idx}
-                            onDelete={() => setDeletingAdminCode(ac.code)}
-                            disabled={false}
-                          >
+                          <div key={idx} className="flex items-center gap-0 bg-surface-highlight rounded-xl overflow-hidden">
                             <button
                               onClick={() => copyCode(`https://${window.location.host}/setup?code=${ac.code}`)}
-                              className="w-full flex items-center justify-between py-2 group"
+                              className="flex items-center gap-2 px-3 py-2 group hover:bg-accent/10 transition-colors"
                             >
-                              <div className="flex items-center gap-3">
-                                <span className="text-text-secondary text-sm">{ac.label || 'Адмін'}</span>
-                                <code className="text-sm font-mono font-bold text-text-primary">{ac.code}</code>
-                              </div>
+                              <span className="text-text-secondary text-xs">{ac.label || 'Адмін'}</span>
+                              <code className="text-sm font-mono font-bold text-text-primary">{ac.code}</code>
                               {copiedCode === `https://${window.location.host}/setup?code=${ac.code}`
-                                ? <Check className="w-4 h-4 text-success" />
-                                : <Link2 className="w-4 h-4 text-text-secondary group-hover:text-accent transition-colors" />}
+                                ? <Check className="w-3.5 h-3.5 text-success" />
+                                : <Link2 className="w-3.5 h-3.5 text-text-secondary group-hover:text-accent transition-colors" />}
                             </button>
-                          </SwipeableCard>
+                            <button
+                              onClick={() => setDeletingAdminCode(ac.code)}
+                              className="px-2 py-2 text-text-secondary/40 hover:text-danger hover:bg-danger/10 transition-colors"
+                              title="Видалити код"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -1722,7 +1719,7 @@ function HomePageContent() {
       </div >
 
       {/* Global FAB */}
-      {((activeTab === 'home' && canEdit) || (activeTab === 'songs' && canAddSongs)) && (
+      {!showAccount && ((activeTab === 'home' && canEdit) || (activeTab === 'songs' && canAddSongs)) && (
         <button
           onClick={() => {
             if (activeTab === 'home') setShowAddServiceModal(true);
