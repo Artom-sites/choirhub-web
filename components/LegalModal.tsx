@@ -52,7 +52,7 @@ export default function LegalModal({ isOpen, onClose, initialView = 'main' }: Le
                 className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             />
 
-            <div className="relative bg-surface border border-border w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="relative bg-surface border border-border w-full max-w-md md:max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
                 {/* Header */}
                 <div className="p-6 border-b border-border flex items-center justify-between bg-surface sticky top-0 z-10">
                     <div className="flex items-center gap-3">
