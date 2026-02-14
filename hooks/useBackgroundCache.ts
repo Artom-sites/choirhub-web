@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getServices, getSongs } from '@/lib/db';
+import { getUpcomingServices, getSongsByIds } from '@/lib/db';
 import { useOfflineCache } from './useOfflineCache';
 import { useRouter } from 'next/navigation';
 
@@ -38,15 +38,11 @@ export function useBackgroundCache() {
                     router.prefetch('/?tab=members');
                 }
 
-                // Get all services and songs
-                const [services, songs] = await Promise.all([
-                    getServices(userData.choirId!),
-                    getSongs(userData.choirId!)
-                ]);
+                // Get nearest upcoming services (fetch a few more to handle today's passed services)
+                const candidateServices = await getUpcomingServices(userData.choirId!, 5);
 
-                // Find upcoming services (future date/time)
                 const now = new Date();
-                const upcomingServices = services
+                const upcomingServices = candidateServices
                     .filter(s => {
                         const serviceDate = new Date(s.date);
                         if (s.time) {
@@ -57,6 +53,7 @@ export function useBackgroundCache() {
                         }
                         return serviceDate > now;
                     })
+                    // Already sorted by DB, but good to be safe if client logic differs
                     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
                     .slice(0, 2); // Cache up to 2 nearest services
 
@@ -66,6 +63,23 @@ export function useBackgroundCache() {
                 }
 
                 console.log(`[BackgroundCache] Caching ${upcomingServices.length} upcoming service(s)...`);
+
+                // Extract all song IDs needed
+                const songIds = new Set<string>();
+                upcomingServices.forEach(s => {
+                    s.songs.forEach(song => {
+                        if (song.songId) songIds.add(song.songId);
+                    });
+                });
+
+                if (songIds.size === 0) {
+                    console.log('[BackgroundCache] No songs to cache in upcoming services');
+                    return;
+                }
+
+                // Fetch ONLY the needed songs
+                console.log(`[BackgroundCache] Fetching ${songIds.size} songs...`);
+                const songs = await getSongsByIds(userData.choirId!, Array.from(songIds));
 
                 // Cache each service's songs
                 for (const service of upcomingServices) {

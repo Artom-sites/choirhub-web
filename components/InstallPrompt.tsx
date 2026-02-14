@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Share, X, PlusSquare, Download } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
 
 interface BeforeInstallPromptEvent extends Event {
     prompt: () => Promise<void>;
@@ -16,7 +17,7 @@ export default function InstallPrompt() {
 
     useEffect(() => {
         // Check if running in standalone mode (already installed)
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone || Capacitor.isNativePlatform();
         if (isStandalone) return;
 
         // Check if running on iOS

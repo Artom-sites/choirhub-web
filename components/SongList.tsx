@@ -6,6 +6,7 @@ import { Search, FileText, Music2, ChevronRight, Filter, Plus, Eye, User, Loader
 import { SimpleSong } from "@/types";
 import { CATEGORIES, Category } from "@/lib/themes";
 import { AnimatePresence, motion } from "framer-motion";
+import { Virtuoso, TableVirtuoso } from 'react-virtuoso';
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getSongs, addSong, uploadSongPdf, deleteSong, addKnownConductor, updateSong, softDeleteLocalSong, syncSongs } from "@/lib/db";
@@ -43,8 +44,21 @@ export default function SongList({
     const router = useRouter();
     const { userData } = useAuth();
 
-    const [songs, setSongsState] = useState<SimpleSong[]>([]);
-    const [loading, setLoading] = useState(true);
+    // Lazy-initialize from localStorage cache to avoid spinner on tab switches
+    const [songs, setSongsState] = useState<SimpleSong[]>(() => {
+        if (typeof window === 'undefined' || !userData?.choirId) return [];
+        try {
+            const cached = localStorage.getItem(`choir_songs_v2_${userData.choirId}`);
+            if (cached) return JSON.parse(cached);
+        } catch (e) { /* ignore */ }
+        return [];
+    });
+    const [loading, setLoading] = useState(() => {
+        if (typeof window === 'undefined' || !userData?.choirId) return true;
+        try {
+            return !localStorage.getItem(`choir_songs_v2_${userData.choirId}`);
+        } catch (e) { return true; }
+    });
     const [isSyncing, setIsSyncing] = useState(false);
     const [search, setSearch] = useState("");
     const [showFilters, setShowFilters] = useState(false);
@@ -76,25 +90,18 @@ export default function SongList({
         const CACHE_KEY = `choir_songs_v2_${userData.choirId}`;
         const SYNC_KEY = `choir_sync_v2_${userData.choirId}`;
 
-        // 1. First Load Check: Load from LocalStorage if state is empty
-        if (songs.length === 0 && loading) {
-            try {
-                const cached = localStorage.getItem(CACHE_KEY);
-                if (cached) {
-                    const parsed = JSON.parse(cached);
-                    setSongsState(parsed);
-                    setLoading(false);
-                }
-            } catch (e) {
-                console.error("Cache load parsing error", e);
-            }
-        }
-
-        // 2. Smart Sync (Background)
+        // Smart Sync (Background) — cache is already loaded via lazy useState init
         setIsSyncing(true);
         try {
             const lastSync = localStorage.getItem(SYNC_KEY);
             const lastSyncTime = lastSync ? parseInt(lastSync) : 0;
+
+            // Optimize limits: Don't sync if checked less than 60 seconds ago
+            if (Date.now() - lastSyncTime < 60000) {
+                setLoading(false);
+                setIsSyncing(false);
+                return;
+            }
 
             // Fetch differences
             const { songs: updatedSongs, deletedIds } = await syncSongs(userData.choirId, lastSyncTime);
@@ -497,31 +504,30 @@ export default function SongList({
                     ) : (
                         <>
                             {/* Desktop: Table View */}
-                            <table className="w-full hidden md:table">
-                                <thead>
-                                    <tr className="border-b border-border">
-                                        <th className="text-left py-3 pl-0 pr-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Назва</th>
-                                        <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Категорія</th>
-                                        <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Диригент</th>
-                                        {effectiveCanAdd && (
-                                            <th className="text-right py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-16"></th>
-                                        )}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <AnimatePresence mode="popLayout">
-                                        {filteredSongs.map((song, index) => (
-                                            <motion.tr
-                                                key={song.id}
-                                                onClick={() => handleSongClick(song)}
-                                                className="border-b border-border/50 hover:bg-surface-highlight cursor-pointer transition-colors group"
-                                                initial={{ opacity: 0, y: 10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0 }}
-                                                transition={{ duration: 0.2 }}
-                                            >
+                            <div className="hidden md:block">
+                                <TableVirtuoso
+                                    useWindowScroll
+                                    initialItemCount={20}
+                                    data={filteredSongs}
+                                    components={{
+                                        Table: ({ style, ...props }) => <table {...props} style={{ ...style, width: '100%' }} />,
+                                    }}
+                                    fixedHeaderContent={() => (
+                                        <tr className="bg-background border-b border-border">
+                                            <th className="text-left py-3 pl-0 pr-4 text-xs font-bold text-text-secondary uppercase tracking-wider bg-background">Назва</th>
+                                            <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider bg-background">Категорія</th>
+                                            <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider bg-background">Диригент</th>
+                                            {effectiveCanAdd && (
+                                                <th className="text-right py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-16 bg-background"></th>
+                                            )}
+                                        </tr>
+                                    )}
+                                    itemContent={(index, song) => {
+                                        if (!song) return null;
+                                        return (
+                                            <>
                                                 <td className="py-3 pl-0 pr-4">
-                                                    <div className="flex items-center gap-3">
+                                                    <div className="flex items-center gap-3" onClick={() => handleSongClick(song)}>
                                                         <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-text-primary">
                                                             {song.hasPdf ? (
                                                                 <Eye className="w-4 h-4 text-background" />
@@ -529,7 +535,7 @@ export default function SongList({
                                                                 <FileText className="w-4 h-4 text-background" />
                                                             )}
                                                         </div>
-                                                        <p className="font-semibold text-text-primary truncate">{song.title}</p>
+                                                        <p className="font-semibold text-text-primary truncate cursor-pointer hover:underline">{song.title}</p>
                                                     </div>
                                                 </td>
                                                 <td className="py-3 px-4">
@@ -560,55 +566,62 @@ export default function SongList({
                                                         </button>
                                                     </td>
                                                 )}
-                                            </motion.tr>
-                                        ))}
-                                    </AnimatePresence>
-                                </tbody>
-                            </table>
+                                            </>
+                                        );
+                                    }}
+                                />
+                            </div>
 
                             {/* Mobile: Simple List View */}
-                            <div className="md:hidden space-y-0">
-                                {filteredSongs.map((song) => (
-                                    <div
-                                        key={song.id}
-                                        onClick={() => handleSongClick(song)}
-                                        className="flex items-center gap-3 py-3 border-b border-border/30 cursor-pointer active:bg-surface-highlight transition-colors"
-                                    >
-                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-text-primary">
-                                            {song.hasPdf ? (
-                                                <Eye className="w-5 h-5 text-background" />
-                                            ) : (
-                                                <FileText className="w-5 h-5 text-background" />
-                                            )}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-semibold text-text-primary truncate">{song.title}</p>
-                                            <div className="flex items-center gap-1.5 mt-0.5">
-                                                {song.conductor && (
-                                                    <span className="text-xs text-primary font-medium flex items-center gap-1">
-                                                        <User className="w-3 h-3" />
-                                                        {song.conductor}
-                                                    </span>
-                                                )}
-                                                {song.conductor && <span className="text-xs text-text-secondary">•</span>}
-                                                <span className="text-xs text-text-secondary">{song.category}</span>
-                                            </div>
-                                        </div>
-                                        {effectiveCanAdd && (
-                                            <button
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    e.stopPropagation();
-                                                    handleEditClick(e, song);
-                                                }}
-                                                className="p-2 rounded-lg text-text-secondary"
-                                                title="Редагувати"
+                            <div className="md:hidden">
+                                <Virtuoso
+                                    useWindowScroll
+                                    initialItemCount={20}
+                                    data={filteredSongs}
+                                    itemContent={(index, song) => {
+                                        if (!song) return null;
+                                        return (
+                                            <div
+                                                onClick={() => handleSongClick(song)}
+                                                className="flex items-center gap-3 py-3 border-b border-border/30 cursor-pointer active:bg-surface-highlight transition-colors"
                                             >
-                                                <Pencil className="w-4 h-4" />
-                                            </button>
-                                        )}
-                                    </div>
-                                ))}
+                                                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-text-primary">
+                                                    {song.hasPdf ? (
+                                                        <Eye className="w-5 h-5 text-background" />
+                                                    ) : (
+                                                        <FileText className="w-5 h-5 text-background" />
+                                                    )}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-semibold text-text-primary truncate">{song.title}</p>
+                                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                                        {song.conductor && (
+                                                            <span className="text-xs text-primary font-medium flex items-center gap-1">
+                                                                <User className="w-3 h-3" />
+                                                                {song.conductor}
+                                                            </span>
+                                                        )}
+                                                        {song.conductor && <span className="text-xs text-text-secondary">•</span>}
+                                                        <span className="text-xs text-text-secondary">{song.category}</span>
+                                                    </div>
+                                                </div>
+                                                {effectiveCanAdd && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            handleEditClick(e, song);
+                                                        }}
+                                                        className="p-2 rounded-lg text-text-secondary"
+                                                        title="Редагувати"
+                                                    >
+                                                        <Pencil className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )
+                                    }}
+                                />
                             </div>
                         </>
                     )}

@@ -9,20 +9,42 @@ import {
     query,
     where,
     orderBy,
+    limit,
+    documentId,
     Timestamp,
     serverTimestamp,
     updateDoc,
     arrayUnion,
     arrayRemove,
-    deleteField
+    deleteField,
+    Query
 } from "firebase/firestore";
-import { db } from "./firebase";
+import { db, functions, auth } from "./firebase";
+import { httpsCallable } from "firebase/functions";
 import {
     Service, SimpleSong, Choir, UserData, ServiceSong,
     GlobalSong, LocalSong, SongMeta, SongCategory, SongSource,
     PendingSong, SongSubmissionStatus
 } from "@/types";
 import { getCachedSongs, setCachedSongs, getCachedServices, setCachedServices, isOffline } from "./offlineDataCache";
+
+// ============ SAFETY HELPERS ============
+
+/**
+ * Safe wrapper around getDocs that guards against accidental full-collection reads.
+ * Logs read counts in dev mode. Throws if snapshot exceeds max.
+ */
+async function safeGetDocs(q: Query, label: string, max = 2000) {
+    const snapshot = await getDocs(q);
+    if (process.env.NODE_ENV === 'development') {
+        console.log(`📊 [${label}] Read ${snapshot.size} docs`);
+    }
+    if (snapshot.size > max) {
+        console.error(`🚨 [${label}] Read ${snapshot.size} docs — exceeds safety limit of ${max}!`);
+        throw new Error(`Collection read exceeded safety limit: ${snapshot.size}/${max}`);
+    }
+    return snapshot;
+}
 
 // Converters to handle Timestamp <-> Date/String conversions
 const songConverter = {
@@ -91,6 +113,37 @@ export async function deleteSong(choirId: string, songId: string): Promise<void>
     }
 }
 
+// Batch fetch songs by IDs (Optimized)
+export async function getSongsByIds(choirId: string, songIds: string[]): Promise<SimpleSong[]> {
+    if (!choirId || songIds.length === 0) return [];
+
+    // If offline, check cache first? No, specific IDs usually imply we need fresh data or check specific subset.
+    // But we can check cache if we want. For background cache, we might want fresh?
+    // Actually, background cache is for offline.
+    // Let's implement robust fetching:
+
+    const uniqueIds = Array.from(new Set(songIds));
+    const results: SimpleSong[] = [];
+
+    // Firestore 'in' query supports max 10 items
+    const chunkSize = 10;
+    for (let i = 0; i < uniqueIds.length; i += chunkSize) {
+        const batch = uniqueIds.slice(i, i + chunkSize);
+        try {
+            const q = query(
+                collection(db, `choirs/${choirId}/songs`),
+                where(documentId(), "in", batch)
+            );
+            const snapshot = await getDocs(q);
+            const batchSongs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SimpleSong));
+            results.push(...batchSongs);
+        } catch (e) {
+            console.error(`Error fetching songs batch ${i}:`, e);
+        }
+    }
+    return results;
+}
+
 export async function getSongs(choirId: string): Promise<SimpleSong[]> {
     if (!choirId) return [];
 
@@ -110,7 +163,7 @@ export async function getSongs(choirId: string): Promise<SimpleSong[]> {
             collection(db, `choirs/${choirId}/songs`),
             orderBy("title")
         );
-        const snapshot = await getDocs(q);
+        const snapshot = await safeGetDocs(q, `getSongs(${choirId})`, 500);
         const songs = snapshot.docs
             .map(doc => ({ id: doc.id, ...doc.data() } as SimpleSong))
             .filter(song => !song.deletedAt);
@@ -250,6 +303,28 @@ export async function uploadSongPdf(choirId: string, songId: string, file: File 
 
 // ============ SERVICES ============
 
+// Get only upcoming services (Optimized for background cache)
+export async function getUpcomingServices(choirId: string, limitCount = 5): Promise<Service[]> {
+    if (!choirId) return [];
+    try {
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0]; // "YYYY-MM-DD" assuming local timezone matches or is close enough
+
+        const q = query(
+            collection(db, `choirs/${choirId}/services`),
+            where("date", ">=", todayStr),
+            orderBy("date", "asc"),
+            limit(limitCount)
+        );
+
+        const snapshot = await safeGetDocs(q, `getUpcomingServices(${choirId})`, limitCount);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Service));
+    } catch (error) {
+        console.error("Error fetching upcoming services:", error);
+        return [];
+    }
+}
+
 export async function getServices(choirId: string): Promise<Service[]> {
     if (!choirId) return [];
 
@@ -266,9 +341,10 @@ export async function getServices(choirId: string): Promise<Service[]> {
 
     try {
         const q = query(
-            collection(db, `choirs/${choirId}/services`)
+            collection(db, `choirs/${choirId}/services`),
+            limit(200)
         );
-        const snapshot = await getDocs(q);
+        const snapshot = await safeGetDocs(q, `getServices(${choirId})`, 200);
         const services = snapshot.docs
             .map(doc => ({ id: doc.id, ...doc.data() } as Service))
             .filter(s => !s.deletedAt); // Exclude soft-deleted services
@@ -362,9 +438,10 @@ export async function getDeletedServices(choirId: string): Promise<Service[]> {
     try {
         const q = query(
             collection(db, `choirs/${choirId}/services`),
-            where("deletedAt", "!=", null)
+            where("deletedAt", "!=", null),
+            limit(100)
         );
-        const snapshot = await getDocs(q);
+        const snapshot = await safeGetDocs(q, `getDeletedServices(${choirId})`, 100);
         return snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Service[];
     } catch (error) {
         console.error("Error getting deleted services:", error);
@@ -576,9 +653,10 @@ export async function getChoirNotifications(choirId: string): Promise<any[]> {
     try {
         const q = query(
             collection(db, `choirs/${choirId}/notifications`),
-            orderBy("createdAt", "desc")
+            orderBy("createdAt", "desc"),
+            limit(100)
         );
-        const snapshot = await getDocs(q);
+        const snapshot = await safeGetDocs(q, `getChoirNotifications(${choirId})`, 100);
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
         console.error("Error fetching notifications:", error);
@@ -619,41 +697,11 @@ export async function createUser(userId: string, data: Partial<UserData>): Promi
     }
 }
 
-// Delete user account and cleanup references
+// Delete user account and cleanup references (ATOMIC)
 export async function deleteUserAccount(userId: string): Promise<void> {
     try {
-        const userRef = doc(db, "users", userId);
-        const userSnap = await getDoc(userRef);
-
-        if (userSnap.exists()) {
-            const userData = userSnap.data() as UserData;
-
-            // Remove from choirs
-            const memberships = userData.memberships || [];
-            // Fallback for old schema
-            if (memberships.length === 0 && userData.choirId) {
-                memberships.push({ choirId: userData.choirId, role: userData.role } as any);
-            }
-
-            for (const membership of memberships) {
-                if (!membership.choirId) continue;
-
-                const choirRef = doc(db, "choirs", membership.choirId);
-                const choirSnap = await getDoc(choirRef);
-
-                if (choirSnap.exists()) {
-                    const choirData = choirSnap.data();
-                    const members = choirData.members || [];
-                    const updatedMembers = members.filter((m: any) => m.id !== userId);
-
-                    if (updatedMembers.length !== members.length) {
-                        await updateDoc(choirRef, { members: updatedMembers });
-                    }
-                }
-            }
-        }
-
-        await deleteDoc(userRef);
+        const deleteFn = httpsCallable(functions, 'atomicDeleteUser');
+        await deleteFn({});
     } catch (error) {
         console.error("Error deleting user account:", error);
         throw error;
@@ -676,18 +724,28 @@ export async function getUserProfile(userId: string): Promise<UserData | null> {
     }
 }
 
-// Get all registered users for a specific choir
+// Get registered users for a specific choir
+// ✅ Reads choir doc (1 read) + batch-fetches user docs (max 10 per batch)
+// Instead of scanning entire users collection
 export async function getChoirUsers(choirId: string): Promise<UserData[]> {
     try {
-        const q = query(
-            collection(db, "users"),
-            where("choirId", "==", choirId)
-        );
-        const snapshot = await getDocs(q);
-        return snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        } as UserData));
+        const choir = await getChoir(choirId);
+        if (!choir?.members) return [];
+
+        // Filter for members who have an account
+        return choir.members
+            .filter(m => m.hasAccount)
+            .map(m => ({
+                id: m.id,
+                name: m.name,
+                role: m.role,
+                choirId: choirId,
+                choirName: choir.name,
+                // Note: email and createdAt are not available in choir.members
+                // Permissions might be available in member object
+                permissions: m.permissions,
+                // We don't have createdAt, so sorting in UI might treat it as undefined
+            }));
     } catch (error) {
         console.error("Error fetching choir users:", error);
         return [];
@@ -700,55 +758,47 @@ export async function mergeMembers(
     toMemberId: string
 ): Promise<void> {
     try {
-        // 1. Get all services
-        const services = await getServices(choirId);
-
-        // 2. Update each service that contains the old member
-        const updates = services.map(async (service) => {
-            let changed = false;
-            let newConfirmed = service.confirmedMembers || [];
-            let newAbsent = service.absentMembers || [];
-
-            // Helper to check and swap
-            if (newConfirmed.includes(fromMemberId)) {
-                newConfirmed = newConfirmed.filter(id => id !== fromMemberId);
-                if (!newConfirmed.includes(toMemberId)) {
-                    newConfirmed.push(toMemberId);
-                }
-                changed = true;
-            }
-
-            if (newAbsent.includes(fromMemberId)) {
-                newAbsent = newAbsent.filter(id => id !== fromMemberId);
-                if (!newAbsent.includes(toMemberId)) {
-                    newAbsent.push(toMemberId);
-                }
-                changed = true;
-            }
-
-            if (changed) {
-                const serviceRef = doc(db, `choirs/${choirId}/services`, service.id);
-                await updateDoc(serviceRef, {
-                    confirmedMembers: newConfirmed,
-                    absentMembers: newAbsent
-                });
-            }
-        });
-
-        await Promise.all(updates);
-
-        // 3. Remove the old member from the choir member list
-        const choirRef = doc(db, "choirs", choirId);
-        const choirSnap = await getDoc(choirRef);
-        if (choirSnap.exists()) {
-            const data = choirSnap.data();
-            const members = data.members || [];
-            const updatedMembers = members.filter((m: any) => m.id !== fromMemberId);
-            await updateDoc(choirRef, { members: updatedMembers });
-        }
-
+        const mergeFn = httpsCallable(functions, 'atomicMergeMembers');
+        await mergeFn({ choirId, fromMemberId, toMemberId });
     } catch (error) {
         console.error("Error merging members:", error);
+        throw error;
+    }
+}
+
+// ============ ATOMIC JOIN/LEAVE ============
+
+export async function joinChoir(inviteCode: string): Promise<any> {
+    try {
+        const joinFn = httpsCallable(functions, 'atomicJoinChoir');
+        const result = await joinFn({ inviteCode });
+        // Force token refresh to pick up new Custom Claims
+        await auth.currentUser?.getIdToken(true);
+        return result.data;
+    } catch (error) {
+        console.error("Error joining choir:", error);
+        throw error;
+    }
+}
+
+export async function leaveChoir(choirId: string): Promise<void> {
+    try {
+        const leaveFn = httpsCallable(functions, 'atomicLeaveChoir');
+        await leaveFn({ choirId });
+        // Force token refresh to pick up updated Custom Claims
+        await auth.currentUser?.getIdToken(true);
+    } catch (error) {
+        console.error("Error leaving choir:", error);
+        throw error;
+    }
+}
+
+export async function updateMember(choirId: string, memberId: string, updates: Record<string, any>): Promise<void> {
+    try {
+        const updateFn = httpsCallable(functions, 'atomicUpdateMember');
+        await updateFn({ choirId, memberId, updates });
+    } catch (error) {
+        console.error("Error updating member:", error);
         throw error;
     }
 }
@@ -756,10 +806,14 @@ export async function mergeMembers(
 // ============ GLOBAL ARCHIVE ============
 
 /**
- * Get all songs from the global archive (Братство)
- * Optionally filter by category
+ * ⚠️ DEPRECATED — DO NOT USE IN CLIENT UI
+ * Reads entire global_songs collection (7000+ docs = 7000+ reads per call).
+ * Use R2 JSON index (global_songs_index.json) instead.
+ * GlobalArchive.tsx already uses R2 → Cache → Firestore fallback correctly.
+ * This function is kept only for admin scripts.
  */
 export async function getGlobalSongs(category?: SongCategory): Promise<GlobalSong[]> {
+    console.warn('⚠️ getGlobalSongs() is deprecated — use R2 index instead. This reads 7000+ docs!');
     try {
         let q;
         if (category) {
@@ -986,36 +1040,50 @@ export async function addLocalSong(
 // ============ SONG METADATA (for search index) ============
 
 /**
- * Get lightweight metadata for all songs (global + local)
- * Used to build the search index
+ * Get lightweight metadata for all songs (global from R2 + local from Firestore).
+ * Global songs are loaded from R2 JSON index (0 Firestore reads).
+ * Local songs are fetched with limit(200).
  */
 export async function getSongsMeta(choirId?: string): Promise<SongMeta[]> {
     try {
         const results: SongMeta[] = [];
 
-        // Global songs
-        const globalSnapshot = await getDocs(
-            query(collection(db, "global_songs"), orderBy("title"))
-        );
-        globalSnapshot.docs.forEach(doc => {
-            const data = doc.data();
-            results.push({
-                id: doc.id,
-                title: data.title,
-                composer: data.composer,
-                category: data.category,
-                subcategory: data.subcategory,
-                keywords: data.keywords || [],
-                partCount: data.parts?.length || 1,
-                source: 'global' as SongSource
-            });
-        });
+        // Global songs — from R2 index (0 Firestore reads)
+        try {
+            const publicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
+            if (publicUrl) {
+                const res = await fetch(`${publicUrl}/global_songs_index.json?t=${Date.now()}`);
+                if (res.ok) {
+                    const globalSongs: GlobalSong[] = await res.json();
+                    globalSongs.forEach(song => {
+                        results.push({
+                            id: song.id || '',
+                            title: song.title,
+                            composer: song.composer,
+                            category: song.category as SongCategory,
+                            subcategory: song.subcategory,
+                            keywords: song.keywords || [],
+                            partCount: song.parts?.length || 1,
+                            source: 'global' as SongSource
+                        });
+                    });
+                    if (process.env.NODE_ENV === 'development') {
+                        console.log(`📊 [getSongsMeta] Loaded ${globalSongs.length} global songs from R2 (0 Firestore reads)`);
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('[getSongsMeta] R2 index unavailable, skipping global songs');
+        }
 
-        // Local songs (if choirId provided)
+        // Local songs (if choirId provided) — from Firestore with limit
         if (choirId) {
-            const localSnapshot = await getDocs(
-                query(collection(db, `choirs/${choirId}/local_songs`), orderBy("title"))
+            const localQ = query(
+                collection(db, `choirs/${choirId}/local_songs`),
+                orderBy("title"),
+                limit(200)
             );
+            const localSnapshot = await safeGetDocs(localQ, `getSongsMeta.local(${choirId})`, 200);
             localSnapshot.docs.forEach(doc => {
                 const data = doc.data();
                 results.push({
@@ -1138,9 +1206,10 @@ export async function getDeletedSongs(choirId: string): Promise<SimpleSong[]> {
     try {
         const q = query(
             collection(db, `choirs/${choirId}/songs`),
-            where("deletedAt", "!=", null)
+            where("deletedAt", "!=", null),
+            limit(200)
         );
-        const snapshot = await getDocs(q);
+        const snapshot = await safeGetDocs(q, `getDeletedSongs(${choirId})`, 200);
         return snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as SimpleSong[];
     } catch (error) {
         console.error("Error getting deleted songs:", error);
@@ -1153,9 +1222,10 @@ export async function getDeletedLocalSongs(choirId: string): Promise<LocalSong[]
         const q = query(
             collection(db, `choirs/${choirId}/local_songs`),
             where("deletedAt", "!=", null),
-            orderBy("deletedAt", "desc")
+            orderBy("deletedAt", "desc"),
+            limit(200)
         );
-        const snapshot = await getDocs(q);
+        const snapshot = await safeGetDocs(q, `getDeletedLocalSongs(${choirId})`, 200);
         return snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data(),

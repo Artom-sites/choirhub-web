@@ -3,113 +3,105 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helper Functions ---
+    // --- Helper Functions (Claims-Based, 0 Extra Reads) ---
 
-    // Check if user is signed in
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Check if user is accessing their own document
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Get user data from 'users' collection
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
+    // Claims structure: { choirs: { "choirId": "role" }, superAdmin?: true }
+    // Set by syncUserClaims() in Cloud Functions after join/leave/role-change.
 
-    // Check if user is a member of the specific choir
-    function isChoirMember(choirId) {
-      // Note: This requires the user doc to have 'choirId'. 
-      // If a user belongs to multiple choirs (array), this logic needs adjustment.
-      // For now, keeping logic consistent with your existing structure.
-      return isSignedIn() && (
-        getUserData().choirId == choirId || 
-        choirId in getUserData().choirs // Potential future proofing
-      );
-    }
-
-    // Check if user has admin/regent/head role for the specific choir
-    function isChoirAdmin(choirId) {
-      let user = getUserData();
-      return isSignedIn() && 
-             user.choirId == choirId && 
-             (user.role == 'admin' || user.role == 'regent' || user.role == 'head');
-    }
-    
-    // Check if user is a Super Admin (Global scope)
     function isSuperAdmin() {
-      return isSignedIn() && request.auth.token.email in ['artom.devv@gmail.com', 'artemdula0@gmail.com']; 
+      return isSignedIn() && request.auth.token.superAdmin == true;
+    }
+
+    // Check if user is a member of the choir (any role)
+    function isMemberOfChoir(choirId) {
+      return isSignedIn() && choirId in request.auth.token.choirs;
+    }
+
+    // Check if user has admin/regent/head role for the choir
+    function isChoirAdmin(choirId) {
+      return isMemberOfChoir(choirId) && 
+             request.auth.token.choirs[choirId] in ['admin', 'regent', 'head'];
     }
 
     // --- Collection Rules ---
 
     // 1. Users Collection
     match /users/{userId} {
-      allow read: if isOwner(userId) || isSignedIn(); // Relaxed read to allow searching/viewing profiles
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId) || isSuperAdmin();
-      allow delete: if isOwner(userId) || isSuperAdmin();
+      // Private: Only owner or SuperAdmin can read/write
+      allow read, write: if request.auth.uid == userId || isSuperAdmin();
     }
 
     // 2. Choirs Collection
     match /choirs/{choirId} {
-      allow read: if isSignedIn(); 
-
-      // FIX: Allow ANY authenticated user to create a choir (not just Super Admin)
+      allow read: if isMemberOfChoir(choirId) || isSuperAdmin();
       allow create: if isSignedIn();
-
-      // Update: Admin of that choir OR Super Admin
-      allow update: if isChoirAdmin(choirId) || isSuperAdmin() || 
-                    (resource.data.regentCode == request.resource.data.regentCode); // Allow joining updates
-
+      allow update: if isChoirAdmin(choirId) || isSuperAdmin();
       allow delete: if isSuperAdmin();
 
-      // Subcollections
+      // Songs (choir repertoire)
       match /songs/{songId} {
-        allow read: if isChoirMember(choirId) || isChoirAdmin(choirId);
-        allow write: if isChoirAdmin(choirId);
+        allow read: if isMemberOfChoir(choirId);
+        allow write: if isChoirAdmin(choirId) || isSuperAdmin();
       }
       
+      // Local Songs (choir private)
       match /local_songs/{songId} {
-        allow read: if isChoirMember(choirId) || isChoirAdmin(choirId);
-        allow write: if isChoirAdmin(choirId);
+        allow read: if isMemberOfChoir(choirId);
+        allow write: if isChoirAdmin(choirId) || isSuperAdmin();
       }
 
+      // Services
       match /services/{serviceId} {
-        allow read: if isChoirMember(choirId) || isChoirAdmin(choirId);
-        allow create, delete: if isChoirAdmin(choirId); 
-        allow update: if isChoirAdmin(choirId) || (
-          isChoirMember(choirId) && 
+        allow read: if isMemberOfChoir(choirId);
+        allow create, delete: if isChoirAdmin(choirId) || isSuperAdmin();
+        // Members can update their own attendance (confirmedMembers/absentMembers only)
+        allow update: if isChoirAdmin(choirId) || isSuperAdmin() || (
+          isMemberOfChoir(choirId) && 
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['confirmedMembers', 'absentMembers'])
         );
       }
 
+      // Notifications
       match /notifications/{notificationId} {
-         allow read: if isChoirMember(choirId) || isChoirAdmin(choirId);
-         allow create: if isChoirAdmin(choirId);
-         allow update: if isChoirMember(choirId); 
+        allow read: if isMemberOfChoir(choirId);
+        allow create: if isChoirAdmin(choirId) || isSuperAdmin();
+        // Members can mark notifications as read (readBy field)
+        allow update: if isMemberOfChoir(choirId);
       }
       
+      // Members subcollection (if used)
       match /members/{memberId} {
-        allow read: if isChoirMember(choirId) || isChoirAdmin(choirId);
-        allow write: if isChoirAdmin(choirId) || isOwner(memberId); // Allow user to add themselves
+        allow read: if isMemberOfChoir(choirId);
+        allow write: if isChoirAdmin(choirId) || isSuperAdmin();
       }
     }
 
-    // 3. Global Songs (Global Archive)
+    // 3. Global Songs (Public Archive)
     match /global_songs/{songId} {
       allow read: if isSignedIn();
       allow write: if isSuperAdmin();
     }
 
-    // 4. Pending Songs (Suggestions)
+    // 4. MSC Catalog (approved songs destination)
+    match /mscCatalog/{songId} {
+      allow read: if isSignedIn();
+      allow write: if isSuperAdmin();
+    }
+
+    // 5. Pending Songs (Community Submissions)
     match /pending_songs/{songId} {
       allow create: if isSignedIn();
-      allow read: if isOwner(resource.data.submittedBy) || isSuperAdmin();
-      allow write: if isSuperAdmin();
+      // Submitter can read their own; super admin can read all
+      allow read: if isSuperAdmin() || (isSignedIn() && resource.data.submittedBy == request.auth.uid);
+      allow update, delete: if isSuperAdmin();
     }
   }
 }

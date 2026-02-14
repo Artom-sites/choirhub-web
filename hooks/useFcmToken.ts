@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { getMessagingInstance, getToken, onMessage } from "@/lib/firebase";
-import { doc, updateDoc, arrayUnion } from "firebase/firestore";
+import { doc, setDoc, arrayUnion, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Capacitor } from "@capacitor/core";
@@ -58,10 +58,15 @@ export function useFcmToken() {
         if (!user?.uid) return;
         try {
             const userRef = doc(db, "users", user.uid);
-            await updateDoc(userRef, {
+            const userSnap = await getDoc(userRef);
+            if (!userSnap.exists()) {
+                console.warn("[useFcmToken] No user profile yet, skipping token save");
+                return;
+            }
+            await setDoc(userRef, {
                 fcmTokens: arrayUnion(fcmToken),
                 notificationsEnabled: true,
-            });
+            }, { merge: true });
             console.log("[useFcmToken] FCM Token saved to Firestore");
         } catch (err) {
             console.error("[useFcmToken] Error saving token:", err);

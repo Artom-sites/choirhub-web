@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Music2, Check, ExternalLink, User, Mail, Eye, EyeOff, UserX, AlertTriangle, ArrowLeft, LogOut, Loader2, Apple } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { createUser, getChoir, updateChoirMembers } from "@/lib/db";
+import { createUser, getChoir, updateChoirMembers, joinChoir } from "@/lib/db";
 import { Choir, UserData } from "@/types";
 import {
     collection as firestoreCollection,
@@ -45,24 +45,9 @@ function SetupPageContent() {
     const [showPassword, setShowPassword] = useState(false);
     const [authName, setAuthName] = useState("");
 
-    // Add a grace period for profile loading to prevent flash
-    const [checkingProfile, setCheckingProfile] = useState(true);
+    // (Removed checkingProfile state - now handled by AuthContext undefined state)
 
-    useEffect(() => {
-        // If auth is loading, we are checking.
-        if (authLoading) return;
-
-        // If user is logged in but userData is missing, wait a bit
-        if (user && !userData) {
-            const timer = setTimeout(() => {
-                setCheckingProfile(false);
-            }, 1000); // 1 second grace period
-            return () => clearTimeout(timer);
-        } else {
-            // If user is not logged in, or userData is present, we are done checking
-            setCheckingProfile(false);
-        }
-    }, [authLoading, user, userData]);
+    // (Removed checkingProfile effect)
     // Fix: Redirect if user has choir
     useEffect(() => {
         if (!authLoading && userData?.choirId) {
@@ -91,8 +76,8 @@ function SetupPageContent() {
 
     // Prevent flash of content if user is already in a choir or profile is still loading
     // We remove (user && !userData) because that is the state of a NEW user who needs to see this page.
-    if (authLoading || (user && userData?.choirId) || (user && !userData && checkingProfile)) {
-        console.log("[SetupPage] Waiting... AuthLoading:", authLoading, "User:", !!user, "ChoirId:", userData?.choirId, "CheckingProfile:", checkingProfile);
+    // Prevent flash: Wait while auth is loading OR profile is loading (undefined)
+    if (authLoading || userData === undefined || (user && userData?.choirId)) {
         return <Preloader />;
     }
 
@@ -274,128 +259,24 @@ function SetupPageContent() {
         setError("");
 
         try {
-            const codeUpper = inviteCode.toUpperCase();
-            console.log("=== JOIN CODE DEBUG ===");
-            console.log("Searching for code:", codeUpper);
-
-            const qMember = query(firestoreCollection(db, "choirs"), where("memberCode", "==", codeUpper));
-            const qRegent = query(firestoreCollection(db, "choirs"), where("regentCode", "==", codeUpper));
-
-            const [snapMember, snapRegent] = await Promise.all([getDocs(qMember), getDocs(qRegent)]);
-
-            console.log("snapRegent empty?", snapRegent.empty);
-            console.log("snapMember empty?", snapMember.empty);
-
-            let foundChoirId = "";
-            let role: 'member' | 'regent' = 'member';
-            let foundChoirName = "";
-            let permissions: string[] | undefined = undefined;
-
-            if (!snapRegent.empty) {
-                console.log("Found as REGENT code");
-                foundChoirId = snapRegent.docs[0].id;
-                role = 'regent';
-                foundChoirName = snapRegent.docs[0].data().name;
-            } else if (!snapMember.empty) {
-                console.log("Found as MEMBER code");
-                foundChoirId = snapMember.docs[0].id;
-                role = 'member';
-                foundChoirName = snapMember.docs[0].data().name;
-            } else {
-                console.log("Checking adminCodes...");
-                // Check all choirs for adminCodes
-                const allChoirsSnap = await getDocs(firestoreCollection(db, "choirs"));
-                for (const choirDoc of allChoirsSnap.docs) {
-                    const choirData = choirDoc.data();
-                    const adminCodes = choirData.adminCodes || [];
-                    console.log("Checking choir:", choirData.name, "adminCodes:", JSON.stringify(adminCodes));
-                    console.log("Looking for code:", codeUpper);
-                    const matchingCode = adminCodes.find((ac: any) => ac.code === codeUpper);
-                    if (matchingCode) {
-                        foundChoirId = choirDoc.id;
-                        foundChoirName = choirData.name;
-                        role = 'member'; // Admins appear as members
-                        permissions = matchingCode.permissions;
-                        break;
-                    }
-                }
-
-                if (!foundChoirId) {
-                    setError("Код не знайдено");
-                    setFormLoading(false);
-                    return;
-                }
-            }
-
-            // Auto-merge: try to find existing member by name
-            const choirRef = doc(db, "choirs", foundChoirId);
-            const choirSnap = await getDoc(choirRef);
-            const choirData = choirSnap.data();
-            const existingMembers: any[] = choirData?.members || [];
-            const userName = (user.displayName || "").trim().toLowerCase();
-
-            // Find member whose name matches (case-insensitive)
-            const matchIndex = userName
-                ? existingMembers.findIndex(m =>
-                    (m.name || "").trim().toLowerCase() === userName && m.id !== user.uid
-                )
-                : -1;
-
-            if (matchIndex >= 0) {
-                // Found a match — update existing member's ID to link to this account
-                const updatedMembers = [...existingMembers];
-                updatedMembers[matchIndex] = {
-                    ...updatedMembers[matchIndex],
-                    id: user.uid,
-                    hasAccount: true,
-                    role: role === 'regent' ? 'regent' : updatedMembers[matchIndex].role || role
-                };
-                if (permissions && permissions.length > 0) {
-                    updatedMembers[matchIndex].permissions = permissions;
-                }
-                await updateDoc(choirRef, { members: updatedMembers });
-                console.log("Auto-merged with existing member:", updatedMembers[matchIndex].name);
-            } else {
-                // No match — add as new member
-                const memberData: any = {
-                    id: user.uid,
-                    name: user.displayName || "Користувач",
-                    role: role,
-                    hasAccount: true
-                };
-                if (permissions && permissions.length > 0) {
-                    memberData.permissions = permissions;
-                }
-                await updateDoc(choirRef, {
-                    members: arrayUnion(memberData)
-                });
-            }
-
-            const userData: any = {
-                id: user.uid,
-                name: user.displayName || "Користувач",
-                email: user.email || undefined,
-                choirId: foundChoirId,
-                choirName: foundChoirName,
-                role: role,
-                memberships: arrayUnion({
-                    choirId: foundChoirId,
-                    choirName: foundChoirName,
-                    role: role
-                }) as any
-            };
-            if (permissions && permissions.length > 0) {
-                userData.permissions = permissions;
-            }
-
-            await createUser(user.uid, userData);
+            const result = await joinChoir(inviteCode);
+            console.log("Joined:", result);
 
             await refreshProfile();
             router.push("/");
         } catch (err: any) {
             console.error(err);
-            alert("Помилка приєднання: " + (err.message || JSON.stringify(err)));
-            setError("Помилка приєднання");
+            // Firebase functions error structure: err.details or err.message
+            const msg = err.message || "Помилка приєднання";
+            if (msg.includes("Invalid invite code")) {
+                setError("Невірний код");
+            } else if (msg.includes("Already a member")) {
+                alert("Ви вже є учасником цього хору");
+                router.push("/");
+            } else {
+                alert("Помилка приєднання: " + msg);
+                setError("Помилка приєднання");
+            }
         } finally {
             setFormLoading(false);
         }

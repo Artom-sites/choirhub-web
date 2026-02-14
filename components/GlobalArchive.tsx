@@ -225,7 +225,9 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
             const indexUrl = `${publicUrl}/global_songs_index.json`;
             const res = await fetch(indexUrl + '?t=' + Date.now());
             if (!res.ok) throw new Error("Index not found");
-            const data: GlobalSong[] = await res.json();
+            const text = await res.text();
+            if (!text || !text.trim().startsWith('[')) throw new Error("Invalid index format");
+            const data: GlobalSong[] = JSON.parse(text);
 
             const sortedSongs = processSongs(data);
             setSongs(sortedSongs);

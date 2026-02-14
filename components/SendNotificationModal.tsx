@@ -36,7 +36,9 @@ export default function SendNotificationModal({ isOpen, onClose }: SendNotificat
                 })
             });
 
-            const data = await response.json();
+            const text = await response.text();
+            let data: any = {};
+            try { data = JSON.parse(text); } catch { data = { error: text || "Невідома помилка сервера" }; }
 
             if (!response.ok) {
                 throw new Error(data.error || "Failed to send");

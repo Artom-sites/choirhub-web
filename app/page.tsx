@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon, mergeMembers, updateChoir, deleteUserAccount, deleteAdminCode, getChoirNotifications, getChoirUsers } from "@/lib/db";
+import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon, mergeMembers, updateChoir, deleteUserAccount, deleteAdminCode, getChoirNotifications, getChoirUsers, joinChoir, updateMember } from "@/lib/db";
 import { Service, Choir, UserMembership, ChoirMember, Permission, AdminCode } from "@/types";
 import SongList from "@/components/SongList";
 import SwipeableCard from "@/components/SwipeableCard";
@@ -43,7 +43,7 @@ import { useBackgroundCache } from "@/hooks/useBackgroundCache";
 function HomePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, userData, loading: authLoading, signOut, refreshProfile } = useAuth();
+  const { user, userData, loading: authLoading, signOut, refreshProfile, isGuest } = useAuth();
   const { theme, setTheme } = useTheme();
 
   // Global FCM Token Sync
@@ -150,26 +150,18 @@ function HomePageContent() {
   const activeTab = (activeTabRaw === 'songs' || activeTabRaw === 'members') ? activeTabRaw : 'home';
 
   // Restore tab from localStorage when returning from another page (e.g. /privacy, /terms)
-  useEffect(() => {
-    if (!activeTabRaw) {
-      const stored = localStorage.getItem('activeTab');
-      if (stored === 'songs' || stored === 'members') {
-        const newParams = new URLSearchParams(searchParams.toString());
-        newParams.set('tab', stored);
-        router.replace(`/?${newParams.toString()}`, { scroll: false });
-      }
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // (Tab restoration removed - always start on Home/Services)
+  // useEffect(() => { ... }, []);
 
   // No longer needed: view=account was used for Privacy/Terms return navigation
   // Privacy and Terms are now shown inline within LegalModal
 
   const setActiveTab = (tab: 'home' | 'songs' | 'members') => {
-    localStorage.setItem('activeTab', tab);
+    // localStorage.setItem('activeTab', tab); // Removed persistence
     const newParams = new URLSearchParams(searchParams.toString());
     if (tab === 'home') {
       newParams.delete('tab');
-      localStorage.setItem('activeTab', 'home');
+      // localStorage.setItem('activeTab', 'home');
     } else {
       newParams.set('tab', tab);
     }
@@ -272,8 +264,8 @@ function HomePageContent() {
   //  CORE APP INITIALIZATION
   // ------------------------------------------------------------------
   useEffect(() => {
-    // 1. Wait for Auth Context
-    if (authLoading) return;
+    // 1. Wait for Auth Context or Profile Loading
+    if (authLoading || userData === undefined) return;
 
     // 2. Unauthenticated -> Redirect to Setup
     if (!user || !userData?.choirId) {
@@ -504,140 +496,20 @@ function HomePageContent() {
     if (!user || !joinCode || joinCode.length !== 6) return;
     setManagerLoading(true);
     try {
-      const codeUpper = joinCode.toUpperCase();
-      const qMember = query(firestoreCollection(db, "choirs"), where("memberCode", "==", codeUpper));
-      const qRegent = query(firestoreCollection(db, "choirs"), where("regentCode", "==", codeUpper));
-
-      const [snapMember, snapRegent] = await Promise.all([getDocs(qMember), getDocs(qRegent)]);
-
-      let foundChoirId = "";
-      let role: 'member' | 'regent' = 'member';
-      let foundChoirName = "";
-      let permissions: Permission[] | undefined = undefined;
-
-      if (!snapRegent.empty) {
-        foundChoirId = snapRegent.docs[0].id;
-        role = 'regent';
-        foundChoirName = snapRegent.docs[0].data().name;
-      } else if (!snapMember.empty) {
-        foundChoirId = snapMember.docs[0].id;
-        role = 'member';
-        foundChoirName = snapMember.docs[0].data().name;
-      } else {
-        // Check adminCodes in all choirs
-        const allChoirsSnap = await getDocs(firestoreCollection(db, "choirs"));
-        for (const choirDoc of allChoirsSnap.docs) {
-          const choirData = choirDoc.data();
-          const adminCodes = choirData.adminCodes || [];
-          const matchingCode = adminCodes.find((ac: any) => ac.code === codeUpper);
-          if (matchingCode) {
-            foundChoirId = choirDoc.id;
-            foundChoirName = choirData.name;
-            role = 'member';
-            permissions = matchingCode.permissions;
-            break;
-          }
-        }
-
-        if (!foundChoirId) {
-          setManagerError("Код не знайдено");
-          setManagerLoading(false);
-          return;
-        }
-      }
-
-      const isAlreadyMember = userData?.memberships?.some(m => m.choirId === foundChoirId);
-      const currentMembership = userData?.memberships?.find(m => m.choirId === foundChoirId);
-
-      // If already a member, check if we should upgrade role or add permissions
-      if (isAlreadyMember) {
-        // Check if this is a role upgrade (member -> regent)
-        const isRoleUpgrade = role === 'regent' && currentMembership?.role !== 'regent' && currentMembership?.role !== 'head';
-
-        if (isRoleUpgrade || (permissions && permissions.length > 0)) {
-          const userRef = doc(db, "users", user.uid);
-          const choirRef = doc(db, "choirs", foundChoirId);
-
-          // Build update for user document
-          const userUpdate: any = {};
-          if (isRoleUpgrade) {
-            userUpdate.role = 'regent';
-            // Update membership in the memberships array
-            const updatedMemberships = userData?.memberships?.map(m =>
-              m.choirId === foundChoirId ? { ...m, role: 'regent' } : m
-            ) || [];
-            userUpdate.memberships = updatedMemberships;
-          }
-          if (permissions && permissions.length > 0) {
-            const existingPermissions = userData?.permissions || [];
-            userUpdate.permissions = [...new Set([...existingPermissions, ...permissions])];
-          }
-          await updateDoc(userRef, userUpdate);
-
-          // Also update in choir.members
-          const choirSnap = await getDoc(choirRef);
-          if (choirSnap.exists()) {
-            const choirData = choirSnap.data();
-            const updatedMembers = choirData.members?.map((m: any) => {
-              if (m.id === user.uid) {
-                const updates: any = {};
-                if (isRoleUpgrade) updates.role = 'regent';
-                if (permissions && permissions.length > 0) {
-                  const memberPermissions = m.permissions || [];
-                  updates.permissions = [...new Set([...memberPermissions, ...permissions])];
-                }
-                return { ...m, ...updates };
-              }
-              return m;
-            }) || [];
-            await updateDoc(choirRef, { members: updatedMembers });
-          }
-
-          await refreshProfile();
-          window.location.reload();
-        } else {
-          setManagerError("Ви вже є учасником цього хору");
-          setManagerLoading(false);
-          return;
-        }
-      } else {
-        // New member - add them
-        const memberData: any = {
-          id: user.uid,
-          name: userData?.name || "Користувач",
-          role: role
-        };
-        if (permissions && permissions.length > 0) {
-          memberData.permissions = permissions;
-        }
-
-        const choirRef = doc(db, "choirs", foundChoirId);
-        await updateDoc(choirRef, {
-          members: arrayUnion(memberData)
-        });
-
-        const userDataToSave: any = {
-          choirId: foundChoirId,
-          choirName: foundChoirName,
-          role: role,
-          memberships: arrayUnion({
-            choirId: foundChoirId,
-            choirName: foundChoirName,
-            role: role
-          }) as any
-        };
-        if (permissions && permissions.length > 0) {
-          userDataToSave.permissions = permissions;
-        }
-
-        await createUser(user.uid, userDataToSave);
-
-        await refreshProfile();
-        window.location.reload();
-      }
-    } catch (e) {
+      const result = await joinChoir(joinCode);
+      console.log("Joined:", result);
+      await refreshProfile();
+      window.location.reload();
+    } catch (e: any) {
       console.error(e);
-      setManagerError("Помилка приєднання");
+      const msg = e.message || "Помилка приєднання";
+      if (msg.includes("Invalid invite code")) {
+        setManagerError("Невірний код");
+      } else if (msg.includes("Already a member")) {
+        setManagerError("Ви вже є учасником цього хору");
+      } else {
+        setManagerError("Помилка приєднання");
+      }
     } finally {
       setManagerLoading(false);
     }
@@ -726,21 +598,75 @@ function HomePageContent() {
   const handleSaveMember = async (member: ChoirMember) => {
     if (!choir || !userData?.choirId) return;
 
-    const existingIndex = (choir.members || []).findIndex(m => m.id === member.id);
-    const updatedMembers = [...(choir.members || [])];
-
-    if (existingIndex >= 0) {
-      updatedMembers[existingIndex] = member;
-    } else {
-      updatedMembers.push(member);
-    }
-
     try {
-      await updateChoirMembers(userData.choirId, updatedMembers);
-      setChoir({ ...choir, members: updatedMembers });
+      // Updates: name, voice, role...
+      // member object contains updated fields.
+      // We extract what we want to update.
+      const updates = {
+        name: member.name,
+        voice: member.voice,
+        role: member.role
+        // permissions? EditMemberModal doesn't seem to edit permissions yet, just role.
+      };
+
+      await updateMember(userData.choirId, member.id, updates);
+
+      // Update local state optimistic (or reload)
+      const existingIndex = (choir.members || []).findIndex(m => m.id === member.id);
+      const updatedMembers = [...(choir.members || [])];
+
+      const updatedMemberObj = {
+        ...(existingIndex >= 0 ? updatedMembers[existingIndex] : {}),
+        ...member
+      };
+
+      if (existingIndex >= 0) {
+        updatedMembers[existingIndex] = updatedMemberObj;
+      } else {
+        // This case (adding new member manually) might fail if memberId is not real userId?
+        // atomicUpdateMember requires memberId to exist in choir.members?
+        // atomicUpdateMember: "const memberIndex = members.findIndex... if -1 throw not-found"
+        // So atomicUpdateMember ONLY supports updating EXISTING members.
+        // EditMemberModal supports "New Member"?
+        // Line 74: {isEditing ? "Редагувати учасника" : "Новий учасник"}
+        // If "New Member", we need atomicAddMember?
+        // Or we use updateChoirMembers (if it's just a dummy member)?
+        // If it's a "New Member" (manual), they don't have an account.
+        // So atomicUpdateMember handles account sync.
+        // If we add a manual member, we can just use updateChoirMembers (admin right).
+        // But atomicUpdateMember FAILS if member not found.
+
+        // Let's check if member exists.
+        if (existingIndex === -1) {
+          // Adding NEW manual member.
+          // We can fall back to updateChoirMembers for this specific case?
+          // Or create atomicAddMember.
+          // Manual members don't have User docs, so simple updateChoirMembers IS safe-ish (permissions irrelevant).
+          // But we should be consistent.
+          updatedMembers.push(member);
+          await updateChoirMembers(userData.choirId, updatedMembers);
+        } else {
+          updatedMembers[existingIndex] = updatedMemberObj;
+          // Use our new function for existing members (to sync roles)
+          setChoir({ ...choir, members: updatedMembers }); // Optimistic
+          // We re-call updateMember for the sync side-effects.
+          // But valid memberId?
+          // If member is manual (id="manual_..."), atomicUpdateMember will find it in choir, but won't find User doc.
+          // Logic: "if (oldMember.hasAccount || newMember.hasAccount) ... sync"
+          // So it handles manual members gracefully (skips sync).
+        }
+      }
+
+      // Wait, if I use updateMember for existing, I don't need updateChoirMembers call.
+      if (existingIndex >= 0) {
+        await updateMember(userData.choirId, member.id, updates);
+        setChoir({ ...choir, members: updatedMembers });
+      }
+
       setShowEditMemberModal(false);
     } catch (e) {
       console.error(e);
+      setManagerError("Помилка збереження");
     }
   };
 
@@ -900,21 +826,8 @@ function HomePageContent() {
     );
   }
 
-  // If viewing a specific service, render ServiceView full screen
-  if (selectedService) {
-    return (
-      <main className="min-h-screen bg-background selection:bg-white/30">
-        <ServiceView
-          service={selectedService}
-          onBack={() => handleSelectService(null)}
-          canEdit={canEdit}
-          canEditCredits={canEditCredits}
-          canEditAttendance={canEditAttendance}
-          choir={choir}
-        />
-      </main>
-    );
-  }
+  // Temporary helper to fix permissions
+
 
   const getRoleBadge = (role: string) => {
     const roleConfig: Record<string, { label: string; className: string }> = {
@@ -950,8 +863,31 @@ function HomePageContent() {
     );
   };
 
+  if (authLoading) return <Preloader />;
+
+  // If viewing a specific service, render ServiceView full screen
+  if (selectedService) {
+    return (
+      <main className="min-h-screen bg-background selection:bg-white/30">
+        <ServiceView
+          service={selectedService}
+          onBack={() => handleSelectService(null)}
+          canEdit={canEdit}
+          canEditCredits={canEditCredits}
+          canEditAttendance={canEditAttendance}
+          choir={choir}
+        />
+      </main>
+    );
+  }
+
   return (
-    <main className="min-h-screen bg-background pb-32 selection:bg-white/30">
+    <main className={`min-h-screen pb-32 sm:pb-0 font-[family-name:var(--font-geist-sans)] 
+            ${isGuest ? 'guest-mode' : ''} selection:bg-teal-500/30`}>
+
+
+
+
       <InstallPrompt />
 
       {/* Logout Confirmation Modal */}

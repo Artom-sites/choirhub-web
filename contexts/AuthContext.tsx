@@ -26,7 +26,7 @@ import { UserData } from "@/types";
 
 interface AuthContextType {
     user: FirebaseUser | null;
-    userData: UserData | null;
+    userData: UserData | null | undefined; // undefined = loading, null = no profile
     loading: boolean;
     signInWithGoogle: () => Promise<void>;
     signInWithApple: () => Promise<void>;
@@ -44,7 +44,7 @@ const auth = getAuth(app);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<FirebaseUser | null>(null);
-    const [userData, setUserData] = useState<UserData | null>(null);
+    const [userData, setUserData] = useState<UserData | null | undefined>(undefined); // Start as undefined
     const [loading, setLoading] = useState(true);
     const googleLoginLock = useRef(false);
 
@@ -69,10 +69,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             if (firebaseUser) {
                 try {
+                    // Reset to undefined to indicate loading profile
+                    setUserData(undefined);
                     console.log("Loading profile for:", firebaseUser.uid);
-                    await loadUserProfile(firebaseUser.uid);
+                    const profile = await getUserProfile(firebaseUser.uid);
+
+                    if (profile) {
+                        setUserData(profile);
+                    } else if (!firebaseUser.isAnonymous) {
+                        // Auto-create profile for Google/Apple/Email users on first login
+                        console.log("Creating profile for new user:", firebaseUser.uid);
+                        const newProfile = {
+                            id: firebaseUser.uid,
+                            email: firebaseUser.email || "",
+                            name: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "User",
+                            photoURL: firebaseUser.photoURL || "",
+                            createdAt: new Date().toISOString()
+                        };
+                        await createUser(firebaseUser.uid, newProfile);
+                        setUserData(newProfile as any);
+                    } else {
+                        setUserData(null);
+                    }
                 } catch (error) {
                     console.error("Error loading user profile:", error);
+                    setUserData(null);
                 }
             } else {
                 setUserData(null);
@@ -91,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUserData(profile);
         } else {
             console.warn("No user profile found for UID:", uid);
+            setUserData(null);
         }
     };
 
