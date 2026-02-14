@@ -426,7 +426,7 @@ function SetupPageContent() {
                         {formLoading && view === 'welcome' ? 'Завантаження...' : 'Увійти через Google'}
                     </button>
 
-                    {/* Apple Sign-In — hidden until configured
+                    {/* Apple Sign-In */}
                     <button
                         onClick={handleAppleLogin}
                         disabled={formLoading}
@@ -439,7 +439,6 @@ function SetupPageContent() {
                         )}
                         {formLoading && view === 'welcome' ? 'Завантаження...' : 'Увійти через Apple'}
                     </button>
-                    */}
 
                     <button
                         onClick={() => { setView('email_auth'); setIsRegistering(false); setEmail(""); setPassword(""); setAuthName(""); setError(""); }}
