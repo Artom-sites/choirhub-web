@@ -571,52 +571,49 @@ export const atomicUpdateMember = functions.https.onCall(async (data, context) =
         const oldMember = members[memberIndex];
         const newMember = { ...oldMember, ...updates }; // Apply updates
 
+        // --- ALL READS FIRST (Firestore requirement) ---
+        let targetUserDoc: FirebaseFirestore.DocumentSnapshot | null = null;
+        const targetUserRef = db.collection("users").doc(memberId);
+        if (oldMember.hasAccount || newMember.hasAccount) {
+            targetUserDoc = await transaction.get(targetUserRef);
+        }
+
+        // --- ALL WRITES AFTER ---
+
         // Update Choir Doc
         const updatedMembers = [...members];
         updatedMembers[memberIndex] = newMember;
         transaction.update(choirRef, { members: updatedMembers });
 
         // If member has account, sync to User Doc
-        if (oldMember.hasAccount || newMember.hasAccount) {
-            const targetUserRef = db.collection("users").doc(memberId);
-            const targetUserDoc = await transaction.get(targetUserRef);
+        if (targetUserDoc?.exists) {
+            const targetUserData = targetUserDoc.data()!;
 
-            if (targetUserDoc.exists) {
-                const targetUserData = targetUserDoc.data()!;
-
-                // Update memberships array
-                const memberships = targetUserData.memberships || [];
-                const updatedMemberships = memberships.map((m: any) => {
-                    if (m.choirId === choirId) {
-                        return { ...m, role: newMember.role }; // Sync role
-                    }
-                    return m;
-                });
-
-                const userUpdates: any = { memberships: updatedMemberships };
-
-                // Sync active role if this is their active choir
-                if (targetUserData.choirId === choirId) {
-                    userUpdates.role = newMember.role;
-                    userUpdates.voice = newMember.voice;
-                    if (updates.permissions) {
-                        userUpdates.permissions = updates.permissions; // dangerous? caller is admin.
-                        // But we should be careful. 
-                        // For now, let's allow syncing permissions if provided
-                    }
+            // Update memberships array
+            const memberships = targetUserData.memberships || [];
+            const updatedMemberships = memberships.map((m: any) => {
+                if (m.choirId === choirId) {
+                    return { ...m, role: newMember.role }; // Sync role
                 }
+                return m;
+            });
 
-                if (updates.permissions && targetUserData.choirId !== choirId) {
-                    // Even if not active, we might want to update global permissions?
-                    // Or permissions are per-choir in memberships? My schema has global permissions.
-                    // Logic in atomicJoinChoir merges them.
-                    // Here we OVERWRITE them?
-                    // Let's assume permissions are global.
-                    if (updates.permissions) userUpdates.permissions = updates.permissions;
+            const userUpdates: any = { memberships: updatedMemberships };
+
+            // Sync active role if this is their active choir
+            if (targetUserData.choirId === choirId) {
+                userUpdates.role = newMember.role;
+                userUpdates.voice = newMember.voice;
+                if (updates.permissions) {
+                    userUpdates.permissions = updates.permissions;
                 }
-
-                transaction.update(targetUserRef, userUpdates);
             }
+
+            if (updates.permissions && targetUserData.choirId !== choirId) {
+                if (updates.permissions) userUpdates.permissions = updates.permissions;
+            }
+
+            transaction.update(targetUserRef, userUpdates);
         }
 
         return { success: true };

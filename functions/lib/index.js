@@ -517,46 +517,42 @@ exports.atomicUpdateMember = functions.https.onCall(async (data, context) => {
             throw new functions.https.HttpsError("not-found", "Member not found");
         const oldMember = members[memberIndex];
         const newMember = Object.assign(Object.assign({}, oldMember), updates); // Apply updates
+        // --- ALL READS FIRST (Firestore requirement) ---
+        let targetUserDoc = null;
+        const targetUserRef = db.collection("users").doc(memberId);
+        if (oldMember.hasAccount || newMember.hasAccount) {
+            targetUserDoc = await transaction.get(targetUserRef);
+        }
+        // --- ALL WRITES AFTER ---
         // Update Choir Doc
         const updatedMembers = [...members];
         updatedMembers[memberIndex] = newMember;
         transaction.update(choirRef, { members: updatedMembers });
         // If member has account, sync to User Doc
-        if (oldMember.hasAccount || newMember.hasAccount) {
-            const targetUserRef = db.collection("users").doc(memberId);
-            const targetUserDoc = await transaction.get(targetUserRef);
-            if (targetUserDoc.exists) {
-                const targetUserData = targetUserDoc.data();
-                // Update memberships array
-                const memberships = targetUserData.memberships || [];
-                const updatedMemberships = memberships.map((m) => {
-                    if (m.choirId === choirId) {
-                        return Object.assign(Object.assign({}, m), { role: newMember.role }); // Sync role
-                    }
-                    return m;
-                });
-                const userUpdates = { memberships: updatedMemberships };
-                // Sync active role if this is their active choir
-                if (targetUserData.choirId === choirId) {
-                    userUpdates.role = newMember.role;
-                    userUpdates.voice = newMember.voice;
-                    if (updates.permissions) {
-                        userUpdates.permissions = updates.permissions; // dangerous? caller is admin.
-                        // But we should be careful. 
-                        // For now, let's allow syncing permissions if provided
-                    }
+        if (targetUserDoc === null || targetUserDoc === void 0 ? void 0 : targetUserDoc.exists) {
+            const targetUserData = targetUserDoc.data();
+            // Update memberships array
+            const memberships = targetUserData.memberships || [];
+            const updatedMemberships = memberships.map((m) => {
+                if (m.choirId === choirId) {
+                    return Object.assign(Object.assign({}, m), { role: newMember.role }); // Sync role
                 }
-                if (updates.permissions && targetUserData.choirId !== choirId) {
-                    // Even if not active, we might want to update global permissions?
-                    // Or permissions are per-choir in memberships? My schema has global permissions.
-                    // Logic in atomicJoinChoir merges them.
-                    // Here we OVERWRITE them?
-                    // Let's assume permissions are global.
-                    if (updates.permissions)
-                        userUpdates.permissions = updates.permissions;
+                return m;
+            });
+            const userUpdates = { memberships: updatedMemberships };
+            // Sync active role if this is their active choir
+            if (targetUserData.choirId === choirId) {
+                userUpdates.role = newMember.role;
+                userUpdates.voice = newMember.voice;
+                if (updates.permissions) {
+                    userUpdates.permissions = updates.permissions;
                 }
-                transaction.update(targetUserRef, userUpdates);
             }
+            if (updates.permissions && targetUserData.choirId !== choirId) {
+                if (updates.permissions)
+                    userUpdates.permissions = updates.permissions;
+            }
+            transaction.update(targetUserRef, userUpdates);
         }
         return { success: true };
     });
