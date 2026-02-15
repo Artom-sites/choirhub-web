@@ -127,6 +127,7 @@ export function useFcmToken() {
 
             console.log("[useFcmToken] Registering token via Cloud Function...");
             const { getFunctions, httpsCallable } = await import("firebase/functions");
+            const { app } = await import("@/lib/firebase");
             const functions = getFunctions(app);
             const registerToken = httpsCallable(functions, 'registerFcmToken');
 
