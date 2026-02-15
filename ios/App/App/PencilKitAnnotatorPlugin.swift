@@ -63,7 +63,7 @@ public class PencilKitAnnotatorPlugin: CAPPlugin, CAPBridgedPlugin {
             let canvas = PKCanvasView()
             canvas.backgroundColor = .clear
             canvas.isOpaque = false
-            canvas.drawingPolicy = .pencil  // Only pencil draws; fingers pass through for scroll/zoom
+            canvas.drawingPolicy = .pencilOnly  // Only pencil draws; fingers pass through for scroll/zoom
             canvas.isScrollEnabled = false
             canvas.translatesAutoresizingMaskIntoConstraints = false
 
