@@ -6,12 +6,13 @@ import { StatusBar, Style } from '@capacitor/status-bar';
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { getSong, updateSong, uploadSongPdf, deleteSong, getChoir } from "@/lib/db";
-import { getPdf } from "@/lib/offlineDb";
+import { getPdf, getCachedSong } from "@/lib/offlineDb";
 import { SimpleSong } from "@/types";
 import PDFViewer from "@/components/PDFViewer";
 import EditSongModal from "@/components/EditSongModal";
-import { ArrowLeft, FileText, Upload, Loader2, Check, AlertCircle, Trash2, ExternalLink, Pencil, User, Download, X, Search } from "lucide-react";
+import { ArrowLeft, FileText, Upload, Loader2, Check, AlertCircle, Trash2, ExternalLink, Pencil, User, Download, X, Search, WifiOff } from "lucide-react";
 import { extractInstrument, getFileNameFromUrl, isGenericPartName } from "@/lib/utils";
+import { PencilKitAnnotator } from "@/plugins/PencilKitAnnotator";
 
 import ConfirmationModal from "@/components/ConfirmationModal";
 import Toast from "@/components/Toast";
@@ -34,6 +35,7 @@ function SongContent() {
     const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [errorMessage, setErrorMessage] = useState("");
     const [currentPartIndex, setCurrentPartIndex] = useState(0);
+    const [isOfflineMode, setIsOfflineMode] = useState(false);
 
     // Interaction State
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -119,16 +121,51 @@ function SongContent() {
 
     useEffect(() => {
         async function loadSong() {
-            if (!userData?.choirId || !songId) return;
+            if (!songId) return;
 
             setLoading(true);
-            const fetched = await getSong(userData.choirId, songId);
+            let fetched: SimpleSong | null = null;
+            let offlineData = null;
 
-            // Try to load PDF from offline cache
-            const cachedPdf = await getPdf(songId);
-            if (cachedPdf && fetched) {
-                fetched.pdfData = cachedPdf;
-                fetched.hasPdf = true;
+            try {
+                if (userData?.choirId) {
+                    fetched = await getSong(userData.choirId, songId);
+                }
+            } catch (e) {
+                console.warn("Failed to fetch song from Firestore (likely offline):", e);
+            }
+
+            // Try to load from offline cache
+            // First check if we have full song data cached
+            const cachedSong = await getCachedSong(songId);
+            if (cachedSong) {
+                offlineData = cachedSong;
+                // If network fetch failed, use cached data
+                if (!fetched) {
+                    fetched = {
+                        id: cachedSong.id,
+                        title: cachedSong.title,
+                        hasPdf: true,
+                        pdfData: cachedSong.pdfBase64,
+                        category: 'Збережено офлайн',
+                    };
+                    setIsOfflineMode(true);
+                }
+            }
+
+            // If we have a fetched song (either from DB or constructed from cache), attach PDF data if available
+            if (fetched) {
+                if (offlineData) {
+                    fetched.pdfData = offlineData.pdfBase64;
+                    fetched.hasPdf = true;
+                } else {
+                    // Fallback to legacy getPdf if needed
+                    const cachedPdf = await getPdf(songId);
+                    if (cachedPdf) {
+                        fetched.pdfData = cachedPdf;
+                        fetched.hasPdf = true;
+                    }
+                }
             }
 
             setSong(fetched);
@@ -141,15 +178,17 @@ function SongContent() {
             setLoading(false);
 
             // Load choir data for editing
-            if (userData.role === 'head' || userData.role === 'regent') {
-                const choir = await getChoir(userData.choirId);
-                if (choir) {
-                    setChoirData({
-                        regents: choir.regents || [],
-                        knownConductors: choir.knownConductors || [],
-                        knownCategories: choir.knownCategories || [],
-                        knownPianists: choir.knownPianists || []
-                    });
+            if (userData?.role === 'head' || userData?.role === 'regent') {
+                if (userData?.choirId) {
+                    const choir = await getChoir(userData.choirId);
+                    if (choir) {
+                        setChoirData({
+                            regents: choir.regents || [],
+                            knownConductors: choir.knownConductors || [],
+                            knownCategories: choir.knownCategories || [],
+                            knownPianists: choir.knownPianists || []
+                        });
+                    }
                 }
             }
         }
@@ -326,7 +365,17 @@ function SongContent() {
 
                         <div className="flex items-center gap-1">
                             <button
-                                onClick={() => setIsAnnotating(!isAnnotating)}
+                                onClick={() => {
+                                    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios') {
+                                        PencilKitAnnotator.openAnnotator({
+                                            pdfUrl: currentPdfUrl,
+                                            songId: songId as string,
+                                            userUid: userData?.id || '',
+                                        }).catch(err => console.error('[PencilKit] Error:', err));
+                                    } else {
+                                        setIsAnnotating(!isAnnotating);
+                                    }
+                                }}
                                 className={`p-2 rounded-full transition-colors ${isAnnotating ? 'bg-gray-900 text-white' : 'hover:bg-gray-100 text-gray-700'}`}
                                 title="Малювати на PDF"
                             >

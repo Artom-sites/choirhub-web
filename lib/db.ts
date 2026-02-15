@@ -19,6 +19,7 @@ import {
     deleteField,
     Query
 } from "firebase/firestore";
+import { signOut } from "firebase/auth";
 import { db, functions, auth } from "./firebase";
 import { httpsCallable } from "firebase/functions";
 import {
@@ -700,8 +701,16 @@ export async function createUser(userId: string, data: Partial<UserData>): Promi
 // Self-delete: always deletes the currently authenticated user
 export async function deleteMyAccount(): Promise<void> {
     try {
+        console.log("Calling atomicDeleteSelf function...");
         const deleteFn = httpsCallable(functions, 'atomicDeleteSelf');
-        await deleteFn({});
+        const result = await deleteFn({});
+        console.log("atomicDeleteSelf completed, result:", result);
+
+        // Force client-side signout to ensure UI updates immediately
+        // even if server-side auth deletion takes time to propagate
+        console.log("Forcing client-side signout...");
+        await signOut(auth);
+        console.log("Client-side signout complete");
     } catch (error) {
         console.error("Error deleting own account:", error);
         throw error;
@@ -773,6 +782,17 @@ export async function mergeMembers(
         await mergeFn({ choirId, fromMemberId, toMemberId });
     } catch (error) {
         console.error("Error merging members:", error);
+        throw error;
+    }
+}
+
+export async function claimMember(choirId: string, targetMemberId: string): Promise<any> {
+    try {
+        const claimFn = httpsCallable(functions, 'claimMember');
+        const result = await claimFn({ choirId, targetMemberId });
+        return result.data;
+    } catch (error) {
+        console.error("Error claiming member:", error);
         throw error;
     }
 }

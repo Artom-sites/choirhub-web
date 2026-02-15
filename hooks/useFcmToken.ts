@@ -153,6 +153,10 @@ export function useFcmToken() {
     const requestPermissionNative = useCallback(async () => {
         setLoading(true);
         setError(null);
+        // User explicitly requested permissions, so clear the disabled flag
+        if (typeof window !== "undefined") {
+            localStorage.removeItem('fcm_manually_disabled');
+        }
 
         try {
             const { PushNotifications } = await import("@capacitor/push-notifications");
@@ -218,6 +222,10 @@ export function useFcmToken() {
 
         setLoading(true);
         setError(null);
+        // User explicitly requested permissions, so clear the disabled flag
+        if (typeof window !== "undefined") {
+            localStorage.removeItem('fcm_manually_disabled');
+        }
 
         try {
             const permission = await Notification.requestPermission();
@@ -275,8 +283,14 @@ export function useFcmToken() {
     // Auto-register if already granted
     useEffect(() => {
         // Only auto-register if we have a user and don't have a token yet
-        if (permissionStatus === 'granted' && !token && !loading && user?.uid) {
+        // AND user hasn't manually disabled notifications
+        const manuallyDisabled = typeof window !== "undefined" && localStorage.getItem('fcm_manually_disabled') === 'true';
+
+        if (permissionStatus === 'granted' && !token && !loading && user?.uid && !manuallyDisabled) {
+            console.log("[useFcmToken] Auto-registering (permission granted + not disabled)");
             requestPermission();
+        } else if (manuallyDisabled) {
+            console.log("[useFcmToken] Subscribed suppressed (manually disabled)");
         }
     }, [permissionStatus, token, loading, user?.uid, requestPermission]);
 
@@ -334,13 +348,45 @@ export function useFcmToken() {
         setupForegroundListener();
     }, [isNative]);
 
+    // Unsubscribe (remove token from server)
+    const unsubscribe = useCallback(async () => {
+        if (!token || !user?.uid) return;
+        setLoading(true);
+        try {
+            const { getFirestore, doc, updateDoc, arrayRemove } = await import("firebase/firestore");
+            const { app } = await import("@/lib/firebase");
+            const db = getFirestore(app);
+
+            const userRef = doc(db, "users", user.uid);
+            await updateDoc(userRef, {
+                fcmTokens: arrayRemove(token)
+            });
+
+            // Remove from local storage
+            localStorage.removeItem('fcm_registration_cache');
+            if (typeof window !== "undefined") {
+                localStorage.setItem('fcm_manually_disabled', 'true');
+            }
+            setToken(null);
+            setFcmToken(null);
+            setPermissionStatus("default"); // Reset status locally to allow re-prompt or show "off"
+            console.log("[useFcmToken] Unsubscribed successfully");
+        } catch (err) {
+            console.error("[useFcmToken] Error unsubscribing:", err);
+            setError("Помилка при вимкненні сповіщень");
+        } finally {
+            setLoading(false);
+        }
+    }, [token, user?.uid, setFcmToken]);
+
     return {
         token,
         permissionStatus,
         loading,
         error,
         requestPermission,
+        unsubscribe,
         isSupported: isNative || permissionStatus !== "unsupported",
-        isGranted: permissionStatus === "granted",
+        isGranted: permissionStatus === "granted" && !!token, // Only considered granted if we have a token
     };
 }

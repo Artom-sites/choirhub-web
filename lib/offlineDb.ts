@@ -142,6 +142,34 @@ export const isCached = async (songId: string): Promise<boolean> => {
 };
 
 /**
+ * Get full cached song object (for offline song page)
+ */
+export const getCachedSong = async (songId: string): Promise<CachedPdf | null> => {
+    try {
+        const db = await openDb();
+
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction(STORE_NAME, 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.get(songId);
+
+            request.onsuccess = () => {
+                const result = request.result as CachedPdf | undefined;
+                if (result && result.expiresAt > Date.now()) {
+                    resolve(result);
+                } else {
+                    resolve(null);
+                }
+            };
+            request.onerror = () => reject(request.error);
+        });
+    } catch (e) {
+        console.warn('getCachedSong error:', e);
+        return null;
+    }
+};
+
+/**
  * Check multiple songs cache status
  */
 export const getCachedStatus = async (songIds: string[]): Promise<Record<string, boolean>> => {

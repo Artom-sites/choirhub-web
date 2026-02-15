@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Service } from "@/types";
-import { getServices, addService, deleteService, setServiceAttendance } from "@/lib/db";
+import { getServices, addService, deleteService, setServiceAttendance, getChoir } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
-import { Calendar, Plus, ChevronRight, X, Trash2, Loader2, Check, Clock } from "lucide-react";
+import { Calendar, Plus, ChevronRight, X, Trash2, Loader2, Check, Clock, Mic2 } from "lucide-react";
 import { collection, query, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { Service } from "@/types";
 import ConfirmationModal from "./ConfirmationModal";
 import TrashBin from "./TrashBin";
 import SwipeableCard from "./SwipeableCard";
@@ -43,6 +43,21 @@ export default function ServiceList({
     const [newTitle, setNewTitle] = useState("Співанка");
     const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
     const [newTime, setNewTime] = useState("10:00");
+    const [newWarmupConductor, setNewWarmupConductor] = useState("");
+    const [regents, setRegents] = useState<string[]>([]);
+
+    useEffect(() => {
+        if (!userData?.choirId) return;
+        getChoir(userData.choirId).then(c => {
+            if (c) {
+                const list = Array.from(new Set([
+                    ...(c.regents || []),
+                    ...(c.members?.filter(m => m.role === 'regent' || m.role === 'head').map(m => m.name) || [])
+                ])).filter(Boolean);
+                setRegents(list);
+            }
+        });
+    }, [userData?.choirId]);
 
     const handleVote = async (e: React.MouseEvent, serviceId: string, status: 'present' | 'absent') => {
         e.stopPropagation();
@@ -81,17 +96,21 @@ export default function ServiceList({
 
         setCreating(true);
         try {
-            await addService(userData.choirId, {
+            const serviceData: any = {
                 title: newTitle,
                 date: newDate,
-                time: newTime || undefined,
                 songs: []
-            });
+            };
+            if (newTime) serviceData.time = newTime;
+            if (newWarmupConductor) serviceData.warmupConductor = newWarmupConductor;
+
+            await addService(userData.choirId, serviceData);
 
             setShowCreateModal(false);
             setNewTitle("Співанка");
             setNewDate(new Date().toISOString().split('T')[0]);
             setNewTime("10:00");
+            setNewWarmupConductor("");
         } catch (error) {
             console.error("Failed to create service:", error);
         } finally {
@@ -137,7 +156,7 @@ export default function ServiceList({
         <div className="max-w-5xl mx-auto px-4 py-4 space-y-6">
 
             {/* Header with Archive Toggle - Spacious & Clean */}
-            <div className="flex items-center justify-between px-2 mb-4">
+            <div className="flex items-center justify-between px-2 mb-4 relative z-10">
                 <h2 className="text-lg font-bold text-text-primary">
                     {showArchive ? 'Архів служінь' : 'Найближчі служіння'}
                 </h2>
@@ -331,6 +350,23 @@ export default function ServiceList({
                                         />
                                         <Clock className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary pointer-events-none" />
                                     </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Хто проводить розспіванку</label>
+                                <div className="relative w-full">
+                                    <select
+                                        value={newWarmupConductor}
+                                        onChange={(e) => setNewWarmupConductor(e.target.value)}
+                                        className="w-full h-12 pl-4 pr-10 bg-surface-highlight border border-border rounded-xl text-text-primary text-base appearance-none focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                                    >
+                                        <option value="">Не вказано</option>
+                                        {regents.map((name, i) => (
+                                            <option key={i} value={name}>{name}</option>
+                                        ))}
+                                    </select>
+                                    <Mic2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary pointer-events-none" />
                                 </div>
                             </div>
 

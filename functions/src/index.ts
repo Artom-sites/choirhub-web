@@ -147,7 +147,13 @@ export const atomicJoinChoir = functions.https.onCall(async (data, context) => {
         const isUpgrade = (newRole !== currentRole) || (uniquePermissions.length > currentPermissions.length);
 
         if (existingMembership && !isUpgrade) {
-            return { success: true, message: "Already a member" };
+            // Even if already a member, return unlinked members so they can claim a legacy entry if needed
+            const members = choirData.members || [];
+            const unlinkedMembers = members
+                .filter((m: any) => !m.hasAccount && !m.accountUid && m.id !== userId)
+                .map((m: any) => ({ id: m.id, name: m.name, voice: m.voice || "" }));
+
+            return { success: true, message: "Already a member", choirId, unlinkedMembers };
         }
 
         // --- UPDATE USER ---
@@ -208,7 +214,13 @@ export const atomicJoinChoir = functions.https.onCall(async (data, context) => {
             });
         }
 
-        return { success: true, message: isUpgrade ? "Role Upgraded" : "Joined", choirId };
+        // Collect unlinked members for client-side "Claim Member" UI
+        // Use original members array (before our write) — the new auto-created entry is excluded by filter
+        const unlinkedMembers = members
+            .filter((m: any) => !m.hasAccount && !m.accountUid && m.id !== userId)
+            .map((m: any) => ({ id: m.id, name: m.name, voice: m.voice || "" }));
+
+        return { success: true, message: isUpgrade ? "Role Upgraded" : "Joined", choirId, unlinkedMembers };
     });
 
     // ✅ Sync claims AFTER transaction commits
@@ -289,16 +301,19 @@ export const atomicDeleteSelf = functions.https.onCall(async (_data, context) =>
     const userId = context.auth.uid;
 
     try {
+        console.log("atomicDeleteSelf: triggered for user", userId);
         const userRef = db.collection("users").doc(userId);
         const userSnap = await userRef.get();
 
         if (!userSnap.exists) {
-            try { await admin.auth().deleteUser(userId); } catch (e) { }
+            console.log("atomicDeleteSelf: user doc not found, deleting auth only");
+            try { await admin.auth().deleteUser(userId); } catch (e) { console.error("Auth delete error:", e); }
             return { success: true };
         }
 
         const userData = userSnap.data()!;
         const memberships = userData.memberships || [];
+        console.log(`atomicDeleteSelf: found ${memberships.length} memberships`);
 
         if (memberships.length === 0 && userData.choirId) {
             memberships.push({ choirId: userData.choirId });
@@ -308,6 +323,7 @@ export const atomicDeleteSelf = functions.https.onCall(async (_data, context) =>
 
         for (const membership of memberships) {
             if (!membership.choirId) continue;
+            console.log("atomicDeleteSelf: processing choir", membership.choirId);
 
             const choirRef = db.collection("choirs").doc(membership.choirId);
             const choirSnap = await choirRef.get();
@@ -315,8 +331,14 @@ export const atomicDeleteSelf = functions.https.onCall(async (_data, context) =>
                 const choirData = choirSnap.data()!;
                 const currentMembers = choirData.members || [];
                 const updatedMembers = currentMembers.map((m: any) => {
-                    if (m.id === userId) {
-                        return { ...m, hasAccount: false };
+                    // Check strict ID match OR linked account match
+                    if (m.id === userId || m.accountUid === userId) {
+                        // Keep member but remove account link
+                        const { accountUid, fcmTokens, ...rest } = m;
+                        return {
+                            ...rest,
+                            hasAccount: false
+                        };
                     }
                     return m;
                 });
@@ -328,9 +350,14 @@ export const atomicDeleteSelf = functions.https.onCall(async (_data, context) =>
         }
 
         batch.delete(userRef);
+        console.log("atomicDeleteSelf: committing batch...");
         await batch.commit();
+        console.log("atomicDeleteSelf: batch committed");
 
-        try { await admin.auth().deleteUser(userId); } catch (e) {
+        try {
+            await admin.auth().deleteUser(userId);
+            console.log("atomicDeleteSelf: auth deleted");
+        } catch (e) {
             console.log("Error deleting auth:", e);
         }
 
@@ -411,8 +438,13 @@ export const adminDeleteUser = functions.https.onCall(async (data, context) => {
                 const currentMembers = choirData.members || [];
                 // Mark member as deleted but preserve in list
                 const updatedMembers = currentMembers.map((m: any) => {
-                    if (m.id === targetUid) {
-                        return { ...m, hasAccount: false, fcmTokens: [] };
+                    // Check strict ID match OR linked account match
+                    if (m.id === targetUid || m.accountUid === targetUid) {
+                        const { accountUid, fcmTokens, ...rest } = m;
+                        return {
+                            ...rest,
+                            hasAccount: false
+                        };
                     }
                     return m;
                 });
@@ -521,6 +553,132 @@ export const atomicMergeMembers = functions.https.onCall(async (data, context) =
     }
 
     return { success: true, updatedServices: batchOpCount };
+});
+
+/**
+ * claimMember
+ * Links a user's Firebase account to an existing choir member entry.
+ * 
+ * SAFETY GUARANTEES:
+ * - member.id is NEVER mutated
+ * - Attendance arrays are NEVER modified
+ * - Duplicates are marked, not deleted
+ * - All checks happen inside transaction (race-safe)
+ * - One UID per choir (no double-linking)
+ */
+export const claimMember = functions.https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError("unauthenticated", "Must be logged in");
+    }
+
+    const callerUid = context.auth.uid;
+    const { choirId, targetMemberId } = data;
+
+    // --- INPUT VALIDATION ---
+    if (!choirId || typeof choirId !== 'string') {
+        throw new functions.https.HttpsError("invalid-argument", "choirId is required");
+    }
+    if (!targetMemberId || typeof targetMemberId !== 'string') {
+        throw new functions.https.HttpsError("invalid-argument", "targetMemberId is required");
+    }
+    if (targetMemberId === callerUid) {
+        throw new functions.https.HttpsError("invalid-argument", "Cannot claim your own auto-created entry");
+    }
+
+    // --- PERMISSION CHECK: caller must be a member of this choir ---
+    const callerChoirs = (context.auth.token as any).choirs || {};
+    let isMember = !!callerChoirs[choirId];
+
+    // Firestore fallback if claims are empty (e.g. after account restore)
+    if (!isMember) {
+        const callerDoc = await db.collection("users").doc(callerUid).get();
+        if (callerDoc.exists) {
+            const callerData = callerDoc.data()!;
+            if (callerData.choirId === choirId) {
+                isMember = true;
+            } else {
+                isMember = (callerData.memberships || []).some((m: any) => m.choirId === choirId);
+            }
+        }
+    }
+
+    if (!isMember) {
+        throw new functions.https.HttpsError("permission-denied", "You are not a member of this choir");
+    }
+
+    // --- TRANSACTION: all reads before writes ---
+    const result = await db.runTransaction(async (transaction) => {
+        const choirRef = db.collection("choirs").doc(choirId);
+        const choirDoc = await transaction.get(choirRef);
+
+        if (!choirDoc.exists) {
+            throw new functions.https.HttpsError("not-found", "Choir not found");
+        }
+
+        const choirData = choirDoc.data()!;
+        const members: any[] = choirData.members || [];
+
+        // ── GUARD 1: Prevent double-link ──
+        // Abort if ANY member in this choir already has accountUid === callerUid
+        const alreadyLinked = members.find((m: any) => m.accountUid === callerUid);
+        if (alreadyLinked) {
+            throw new functions.https.HttpsError(
+                "already-exists",
+                `You are already linked to member "${alreadyLinked.name}"`
+            );
+        }
+
+        // ── GUARD 2: Find and validate target member ──
+        const targetIndex = members.findIndex((m: any) => m.id === targetMemberId);
+        if (targetIndex === -1) {
+            throw new functions.https.HttpsError("not-found", "Target member not found");
+        }
+
+        const target = members[targetIndex];
+
+        // Race-safe re-check: target must still be unclaimed
+        if (target.hasAccount) {
+            throw new functions.https.HttpsError("failed-precondition", "This member already has an account linked");
+        }
+        if (target.accountUid) {
+            throw new functions.https.HttpsError("failed-precondition", "This member is already claimed by another user");
+        }
+
+        // ── BUILD UPDATED MEMBERS ARRAY ──
+        const updatedMembers = [...members];
+
+        // Link target: set accountUid, mark hasAccount
+        updatedMembers[targetIndex] = {
+            ...target,
+            accountUid: callerUid,
+            hasAccount: true
+        };
+
+        // ── GUARD 3: Find auto-created duplicate safely ──
+        // Match by: id === callerUid AND no accountUid (auto-created by atomicJoinChoir)
+        const dupeIndex = updatedMembers.findIndex(
+            (m: any) => m.id === callerUid && !m.accountUid
+        );
+
+        if (dupeIndex >= 0 && dupeIndex !== targetIndex) {
+            // Mark as duplicate — do NOT delete
+            updatedMembers[dupeIndex] = {
+                ...updatedMembers[dupeIndex],
+                isDuplicate: true
+            };
+        }
+
+        // ── SINGLE WRITE ──
+        transaction.update(choirRef, { members: updatedMembers });
+
+        return {
+            success: true,
+            claimedMember: target.name,
+            duplicateMarked: dupeIndex >= 0 && dupeIndex !== targetIndex
+        };
+    });
+
+    return result;
 });
 
 /**

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Music2, Check, ExternalLink, User, Mail, Eye, EyeOff, UserX, AlertTriangle, ArrowLeft, LogOut, Loader2, Apple } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { createUser, getChoir, updateChoirMembers, joinChoir } from "@/lib/db";
+import { createUser, getChoir, updateChoirMembers, joinChoir, claimMember } from "@/lib/db";
 import { Choir, UserData } from "@/types";
 import {
     collection as firestoreCollection,
@@ -45,19 +45,29 @@ function SetupPageContent() {
     const [showPassword, setShowPassword] = useState(false);
     const [authName, setAuthName] = useState("");
 
+    // Claim Modal State
+    const [showClaimModal, setShowClaimModal] = useState(false);
+    const [claimMembers, setClaimMembers] = useState<any[]>([]);
+    const [claimChoirId, setClaimChoirId] = useState<string | null>(null);
+    const [claimLoading, setClaimLoading] = useState(false);
+    const [selectedClaimId, setSelectedClaimId] = useState<string | null>(null);
+    const [showNameInput, setShowNameInput] = useState(false);
+    const [customName, setCustomName] = useState("");
+    const [savingName, setSavingName] = useState(false);
+
     // (Removed checkingProfile state - now handled by AuthContext undefined state)
 
     // (Removed checkingProfile effect)
     // Fix: Redirect if user has choir
     useEffect(() => {
-        if (!authLoading && userData?.choirId) {
+        if (!authLoading && userData?.choirId && !showClaimModal) {
             if (urlCode) {
                 router.push(`/?joinCode=${urlCode}`);
             } else {
                 router.push("/");
             }
         }
-    }, [authLoading, userData, router, urlCode]);
+    }, [authLoading, userData, router, urlCode, showClaimModal]);
 
     // Fix: Auto-switch to join view if invite code is present
     useEffect(() => {
@@ -247,6 +257,8 @@ function SetupPageContent() {
         }
     };
 
+
+
     const handleJoinChoir = async () => {
         if (!user) return;
 
@@ -262,23 +274,91 @@ function SetupPageContent() {
             const result = await joinChoir(inviteCode);
             console.log("Joined:", result);
 
-            await refreshProfile();
-            router.push("/");
+            // Removed early refreshProfile() to prevent premature redirect by useEffect
+
+            // Check if there are unlinked members to claim
+            const unlinked = result?.unlinkedMembers || [];
+            if (unlinked.length > 0 && result?.choirId) {
+                setClaimMembers(unlinked);
+                setClaimChoirId(result.choirId);
+                setShowClaimModal(true);
+            } else {
+                // Now we verify profile and redirect
+                await refreshProfile();
+                router.push("/");
+            }
         } catch (err: any) {
             console.error(err);
-            // Firebase functions error structure: err.details or err.message
             const msg = err.message || "Помилка приєднання";
             if (msg.includes("Invalid invite code")) {
                 setError("Невірний код");
             } else if (msg.includes("Already a member")) {
                 alert("Ви вже є учасником цього хору");
-                router.push("/");
+                // Check if unlinked members are returned even on error/warning
+                if (err.details?.unlinkedMembers) {
+                    setClaimMembers(err.details.unlinkedMembers);
+                    setClaimChoirId(err.details.choirId);
+                    setShowClaimModal(true);
+                } else {
+                    router.push("/");
+                }
             } else {
                 alert("Помилка приєднання: " + msg);
                 setError("Помилка приєднання");
             }
         } finally {
             setFormLoading(false);
+        }
+    };
+
+    const handleClaimMember = async (targetMemberId: string) => {
+        if (!claimChoirId) return;
+        setClaimLoading(true);
+        try {
+            await claimMember(claimChoirId, targetMemberId);
+            await refreshProfile();
+            router.push("/");
+        } catch (e: any) {
+            console.error("Claim error:", e);
+            alert(e.message || "Помилка прив'язки");
+        } finally {
+            setClaimLoading(false);
+        }
+    };
+
+    const handleSaveCustomName = async () => {
+        if (!customName.trim() || !user || !claimChoirId) return;
+        const finalName = customName.trim();
+
+        if (!finalName.includes(" ")) {
+            alert("Будь ласка, введіть 'Прізвище та Ім'я' через пробіл.");
+            return;
+        }
+
+        setSavingName(true);
+        try {
+            // 1. Update User Profile
+            await createUser(user.uid, { name: finalName });
+
+            // 2. Update Choir Member
+            // We need to fetch current members first
+            const choirDocRef = doc(db, "choirs", claimChoirId);
+            const choirSnap = await getDoc(choirDocRef);
+            if (choirSnap.exists()) {
+                const cData = choirSnap.data() as Choir;
+                const updatedMembers = (cData.members || []).map(m =>
+                    m.id === user.uid ? { ...m, name: finalName } : m
+                );
+                await updateDoc(choirDocRef, { members: updatedMembers });
+            }
+
+            await refreshProfile();
+            router.push("/");
+        } catch (e: any) {
+            console.error("Save Name Error:", e);
+            alert("Помилка збереження імені");
+        } finally {
+            setSavingName(false);
         }
     };
 
@@ -636,6 +716,98 @@ function SetupPageContent() {
                             >
                                 {formLoading ? <div className="w-5 h-5 border-2 border-background/20 border-t-background rounded-full animate-spin" /> : "Приєднатися"}
                             </button>
+                        </div>
+                    </div>
+                )}
+                {/* Claim Member Modal */}
+                {showClaimModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-[#18181b] border border-white/10 rounded-3xl p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200">
+                            <h3 className="text-xl font-bold text-white mb-2">Це ви?</h3>
+                            <p className="text-sm text-text-secondary mb-6">
+                                Ми знайшли учасників з таким ім'ям. Якщо це ви — оберіть себе, щоб зберегти історію.
+                            </p>
+
+                            <div className="space-y-2 max-h-60 overflow-y-auto mb-6 pr-2 custom-scrollbar">
+                                {claimMembers.map(member => (
+                                    <button
+                                        key={member.id}
+                                        onClick={() => setSelectedClaimId(member.id)}
+                                        disabled={claimLoading}
+                                        className={`w-full p-4 rounded-xl flex items-center justify-between group transition-all border ${selectedClaimId === member.id
+                                            ? 'bg-primary/20 border-primary'
+                                            : 'bg-white/5 hover:bg-white/10 border-transparent hover:border-white/10'
+                                            }`}
+                                    >
+                                        <div className="text-left">
+                                            <div className="font-bold text-white">{member.name}</div>
+                                            <div className="text-xs text-white/50">{member.voice || "Без партії"}</div>
+                                        </div>
+                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${selectedClaimId === member.id ? 'bg-primary text-background' : 'bg-white/10'
+                                            }`}>
+                                            {selectedClaimId === member.id && <Check className="w-4 h-4" />}
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="space-y-3">
+                                <button
+                                    onClick={() => selectedClaimId && handleClaimMember(selectedClaimId)}
+                                    disabled={claimLoading || !selectedClaimId}
+                                    className="w-full py-4 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-all flex justify-center shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {claimLoading ? (
+                                        <div className="w-5 h-5 border-2 border-background/20 border-t-background rounded-full animate-spin" />
+                                    ) : (
+                                        "Так, це я"
+                                    )}
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowClaimModal(false);
+                                        setShowNameInput(true);
+                                    }}
+                                    disabled={claimLoading}
+                                    className="w-full py-3 text-sm text-text-secondary hover:text-white transition-colors"
+                                >
+                                    Це не я, створити нового
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Name Input Modal */}
+                {showNameInput && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-[#18181b] border border-white/10 rounded-3xl p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200">
+                            <h3 className="text-xl font-bold text-white mb-2">Вкажіть ваше ім'я</h3>
+                            <p className="text-sm text-text-secondary mb-6">
+                                Для зручності, будь ласка, вкажіть спочатку прізвище.
+                            </p>
+
+                            <div className="space-y-4">
+                                <input
+                                    value={customName}
+                                    onChange={(e) => setCustomName(e.target.value)}
+                                    placeholder="Прізвище Ім'я (наприклад: Шевченко Тарас)"
+                                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:border-primary/50"
+                                    autoFocus
+                                />
+
+                                <button
+                                    onClick={handleSaveCustomName}
+                                    disabled={savingName || !customName.trim()}
+                                    className="w-full py-4 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-all flex justify-center shadow-lg disabled:opacity-50"
+                                >
+                                    {savingName ? (
+                                        <div className="w-5 h-5 border-2 border-background/20 border-t-background rounded-full animate-spin" />
+                                    ) : (
+                                        "Зберегти і увійти"
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}

@@ -63,7 +63,7 @@ export default function OfflinePdfModal({ isOpen, onClose, song }: OfflinePdfMod
                         initial={{ y: -20, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ delay: 0.1 }}
-                        className="flex items-center justify-between px-4 py-3 bg-[#18181b]/95 border-b border-white/10 shrink-0"
+                        className="flex items-center justify-between px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 bg-[#18181b]/95 border-b border-white/10 shrink-0"
                     >
                         <button
                             onClick={onClose}

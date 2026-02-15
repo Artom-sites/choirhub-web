@@ -75,6 +75,7 @@ export interface Service {
     songs: ServiceSong[];
     absentMembers?: string[]; // Array of member IDs
     confirmedMembers?: string[]; // Array of member IDs
+    warmupConductor?: string; // Who conducts the warm-up (Rozspivanka)
     deletedAt?: string; // ISO timestamp for soft-delete (trash bin)
 }
 

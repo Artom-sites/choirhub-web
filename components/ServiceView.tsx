@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { Service, ServiceSong, SimpleSong, Choir, ChoirMember } from "@/types";
 import { getSongs, addSongToService, removeSongFromService, getChoir, updateService, setServiceAttendance, addKnownConductor, addKnownPianist } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
-import { ChevronLeft, Eye, X, Plus, Users, UserX, Check, Calendar, Music, UserCheck, AlertCircle, Trash2, User as UserIcon, CloudDownload, CheckCircle, Loader, ChevronDown } from "lucide-react";
+import { ChevronLeft, Eye, X, Plus, Users, UserX, Check, Calendar, Music, UserCheck, AlertCircle, Trash2, User as UserIcon, CloudDownload, CheckCircle, Loader, ChevronDown, Mic2 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { useRouter } from "next/navigation";
@@ -117,6 +117,38 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
+
+    // Warmup Conductor
+    const [isWarmupDropdownOpen, setIsWarmupDropdownOpen] = useState(false);
+    const warmupDropdownRef = useRef<HTMLDivElement>(null);
+    const [warmupConductor, setWarmupConductor] = useState(service.warmupConductor || "");
+
+    useEffect(() => {
+        setWarmupConductor(service.warmupConductor || "");
+    }, [service.warmupConductor]);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (warmupDropdownRef.current && !warmupDropdownRef.current.contains(e.target as Node)) {
+                setIsWarmupDropdownOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const handleUpdateWarmup = async (name: string) => {
+        setWarmupConductor(name);
+        setIsWarmupDropdownOpen(false);
+        if (userData?.choirId) {
+            await updateService(userData.choirId, currentService.id, { warmupConductor: name });
+        }
+    };
+
+    const regentsList = Array.from(new Set([
+        ...(choir?.regents || []),
+        ...(choirMembers.filter(m => m.role === 'regent' || m.role === 'head').map(m => m.name))
+    ])).filter(Boolean);
 
     // Offline Caching
     const { cacheServiceSongs, progress: cacheProgress, checkCacheStatus } = useOfflineCache();
@@ -504,6 +536,48 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                         {new Date(currentService.date).toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' })}
                         {currentService.time && <span className="text-blue-400 ml-2">о {currentService.time}</span>}
                     </p>
+                </div>
+
+                {/* Warmup Conductor */}
+                <div className="flex items-center gap-3 text-text-secondary bg-surface/50 p-3 rounded-2xl border border-border">
+                    <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center">
+                        <Mic2 className="w-4 h-4 text-orange-400" />
+                    </div>
+                    <div className="flex-1 relative" ref={warmupDropdownRef}>
+                        <div
+                            className={`flex items-center gap-2 ${canEdit ? 'cursor-pointer hover:text-text-primary transition-colors' : ''}`}
+                            onClick={() => canEdit && setIsWarmupDropdownOpen(!isWarmupDropdownOpen)}
+                        >
+                            <span className="text-sm font-medium">Розспіванка:</span>
+                            <span className={`text-sm font-bold ${warmupConductor ? 'text-text-primary' : 'text-text-secondary/50'}`}>
+                                {warmupConductor || "Не вказано"}
+                            </span>
+                            {canEdit && <ChevronDown className="w-4 h-4 opacity-50" />}
+                        </div>
+
+                        {/* Dropdown */}
+                        {isWarmupDropdownOpen && (
+                            <div className="absolute top-full left-0 mt-2 w-full min-w-[200px] bg-surface border border-border rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                                <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                                    <button
+                                        onClick={() => handleUpdateWarmup("")}
+                                        className="w-full text-left px-4 py-3 hover:bg-surface-highlight text-sm text-text-secondary border-b border-border/50"
+                                    >
+                                        Не вказано
+                                    </button>
+                                    {regentsList.map((name, i) => (
+                                        <button
+                                            key={i}
+                                            onClick={() => handleUpdateWarmup(name)}
+                                            className={`w-full text-left px-4 py-3 hover:bg-surface-highlight text-sm transition-colors ${warmupConductor === name ? 'text-primary font-bold bg-primary/5' : 'text-text-primary'}`}
+                                        >
+                                            {name}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Songs Program - FIRST */}

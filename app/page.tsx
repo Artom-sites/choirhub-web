@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon, mergeMembers, updateChoir, deleteMyAccount, adminDeleteUser, deleteAdminCode, getChoirNotifications, getChoirUsers, joinChoir, updateMember } from "@/lib/db";
+import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon, mergeMembers, updateChoir, deleteMyAccount, adminDeleteUser, deleteAdminCode, getChoirNotifications, getChoirUsers, joinChoir, updateMember, claimMember } from "@/lib/db";
 import { Service, Choir, UserMembership, ChoirMember, Permission, AdminCode } from "@/types";
 import SongList from "@/components/SongList";
 import SwipeableCard from "@/components/SwipeableCard";
@@ -108,6 +108,13 @@ function HomePageContent() {
   const [managerLoading, setManagerLoading] = useState(false);
   const [managerError, setManagerError] = useState("");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  // Claim Member modal state
+  const [showClaimModal, setShowClaimModal] = useState(false);
+  const [claimMembers, setClaimMembers] = useState<{ id: string, name: string, voice: string }[]>([]);
+  const [claimChoirId, setClaimChoirId] = useState<string | null>(null);
+  const [claimLoading, setClaimLoading] = useState(false);
+  const [selectedClaimId, setSelectedClaimId] = useState<string | null>(null);
   const [deletingAdminCode, setDeletingAdminCode] = useState<string | null>(null);
   const [newAdminLabel, setNewAdminLabel] = useState("");
   const [selectedPermissions, setSelectedPermissions] = useState<Permission[]>([]);
@@ -503,10 +510,23 @@ function HomePageContent() {
     setManagerLoading(true);
     try {
       const result = await joinChoir(joinCode);
-      console.log("Joined:", result);
+      console.log("Joined result:", result);
       await refreshProfile();
-      setShowChoirManager(false);
-      // window.location.reload();
+
+      // Check if there are unlinked members to claim
+      const unlinked = result?.unlinkedMembers || [];
+      console.log("Unlinked members found:", unlinked.length, unlinked);
+
+      if (unlinked.length > 0 && result?.choirId) {
+        console.log("Showing claim modal for choir:", result.choirId);
+        setClaimMembers(unlinked);
+        setClaimChoirId(result.choirId);
+        setShowChoirManager(false);
+        setShowClaimModal(true);
+      } else {
+        console.log("No unlinked members or no choirId, closing manager");
+        setShowChoirManager(false);
+      }
     } catch (e: any) {
       console.error(e);
       const msg = e.message || "Помилка приєднання";
@@ -519,6 +539,24 @@ function HomePageContent() {
       }
     } finally {
       setManagerLoading(false);
+    }
+  };
+
+  const handleClaimMember = async (targetMemberId: string) => {
+    if (!claimChoirId) return;
+    setClaimLoading(true);
+    try {
+      const result = await claimMember(claimChoirId, targetMemberId);
+      console.log("Claimed:", result);
+      await refreshProfile();
+      setShowClaimModal(false);
+      setClaimMembers([]);
+      setClaimChoirId(null);
+    } catch (e: any) {
+      console.error("Claim error:", e);
+      setManagerError(e.message || "Помилка прив'язки");
+    } finally {
+      setClaimLoading(false);
     }
   };
 
@@ -562,6 +600,11 @@ function HomePageContent() {
   const handleSaveName = async () => {
     if (!newName.trim() || !user) return;
     const finalName = newName.trim();
+
+    if (!finalName.includes(" ")) {
+      alert("Будь ласка, введіть 'Прізвище та Ім'я' через пробіл (наприклад: Шевченко Тарас).");
+      return;
+    }
     const oldName = userData?.name;
     setSavingName(true);
     try {
@@ -898,7 +941,7 @@ function HomePageContent() {
   }
 
   return (
-    <main className={`min-h-screen pb-32 sm:pb-0 font-[family-name:var(--font-geist-sans)] 
+    <main className={`min-h-screen font-[family-name:var(--font-geist-sans)] 
             ${isGuest ? 'guest-mode' : ''} selection:bg-teal-500/30`}>
 
 
@@ -1187,6 +1230,84 @@ function HomePageContent() {
         />
       )}
 
+      {/* Claim Member Modal */}
+      <AnimatePresence>
+        {showClaimModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-surface card-shadow w-full max-w-sm p-6 rounded-3xl shadow-2xl overflow-hidden relative"
+            >
+              <h3 className="text-xl font-bold text-text-primary mb-2">Оберіть себе зі списку</h3>
+              <p className="text-sm text-text-secondary mb-4">
+                Ви приєдналися до хору. Якщо ви вже є в списку учасників — оберіть своє ім&apos;я:
+              </p>
+
+              <div className="max-h-64 overflow-y-auto space-y-2 mb-4 pr-1 custom-scrollbar">
+                {claimMembers.map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => setSelectedClaimId(m.id)}
+                    disabled={claimLoading}
+                    className={`w-full text-left p-3 rounded-xl transition-all flex items-center justify-between border ${selectedClaimId === m.id
+                      ? 'bg-primary/20 border-primary'
+                      : 'bg-surface-highlight border-transparent hover:bg-primary/10'
+                      }`}
+                  >
+                    <div>
+                      <span className="text-text-primary font-medium">{m.name}</span>
+                      {m.voice && (
+                        <span className="ml-2 text-xs text-text-secondary">({m.voice})</span>
+                      )}
+                    </div>
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${selectedClaimId === m.id ? 'bg-primary text-background' : 'bg-white/10'
+                      }`}>
+                      {selectedClaimId === m.id && <Check className="w-3 h-3" />}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="space-y-3">
+                <button
+                  onClick={() => selectedClaimId && handleClaimMember(selectedClaimId)}
+                  disabled={claimLoading || !selectedClaimId}
+                  className="w-full py-3 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-all flex justify-center shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {claimLoading ? (
+                    <div className="w-5 h-5 border-2 border-background/20 border-t-background rounded-full animate-spin" />
+                  ) : (
+                    "Так, це я"
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowClaimModal(false);
+                    setClaimMembers([]);
+                    setClaimChoirId(null);
+                    setSelectedClaimId(null);
+                    // Open Edit Name to enforce Surname First
+                    setNewName("");
+                    setShowEditName(true);
+                  }}
+                  disabled={claimLoading}
+                  className="w-full py-2 text-sm text-text-secondary hover:text-white transition-colors"
+                >
+                  Мене нема в списку (Створити нове)
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Account Overlay */}
       <AnimatePresence>
         {showAccount && (
@@ -1423,7 +1544,7 @@ function HomePageContent() {
 
 
       {/* Header */}
-      <header className="bg-surface/80 backdrop-blur-2xl sticky top-0 z-30 border-b border-border shadow-[0_4px_20px_rgba(0,0,0,0.06)] pt-[env(safe-area-inset-top)] transition-all">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-surface/90 backdrop-blur-3xl border-b border-border shadow-sm pt-safe transition-all">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
           {/* Left: Logo + Title */}
           <div className="flex items-center gap-3 shrink-0">
@@ -1502,7 +1623,7 @@ function HomePageContent() {
       </header>
 
       {/* Tab Content */}
-      <div className="relative pb-32 md:pb-24">
+      <div className="relative pt-[calc(4rem+env(safe-area-inset-top))] pb-32 md:pb-24">
         {activeTab === 'home' && (
           <ServiceList
             onSelectService={handleSelectService}
@@ -1632,13 +1753,15 @@ function HomePageContent() {
                                   <Link2 className="w-4 h-4" />
                                 </button>
                               )}
-                            <button
-                              onClick={() => setUserToDelete(appUser)}
-                              className="text-text-secondary/50 hover:text-danger transition-colors p-2 hover:bg-danger/10 rounded-lg"
-                              title="Видалити користувача"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {user?.uid !== appUser.id && (
+                              <button
+                                onClick={() => setUserToDelete(appUser)}
+                                className="text-text-secondary/50 hover:text-danger transition-colors p-2 hover:bg-danger/10 rounded-lg"
+                                title="Видалити користувача"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1654,6 +1777,8 @@ function HomePageContent() {
               ) : (
                 (() => {
                   const filtered = (choir?.members || []).filter(m => {
+                    // Hide duplicate entries created by claim flow
+                    if ((m as any).isDuplicate) return false;
                     if (!memberFilter) return true;
                     return m.voice === memberFilter;
                   });
@@ -1853,7 +1978,7 @@ function HomePageContent() {
                       type="text"
                       value={newName}
                       onChange={(e) => setNewName(e.target.value)}
-                      placeholder="Введіть нове ім'я"
+                      placeholder="Прізвище Ім'я (наприклад: Шевченко Тарас)"
                       className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl focus:outline-none focus:border-primary/50 text-text-primary placeholder:text-text-secondary"
                       autoFocus
                     />

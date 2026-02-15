@@ -24,6 +24,7 @@ export default function NotificationsModal({ isOpen, onClose }: NotificationsMod
         permissionStatus,
         loading: fcmLoading,
         requestPermission,
+        unsubscribe,
         isSupported,
         isGranted,
     } = useFcmToken();
@@ -88,14 +89,21 @@ export default function NotificationsModal({ isOpen, onClose }: NotificationsMod
                                     <p className="text-xs text-text-secondary mt-1">Отримувати сповіщення на цей пристрій</p>
                                 </div>
                                 {isGranted ? (
-                                    <span className="px-3 py-1 bg-green-500/20 text-green-500 rounded-full text-xs font-bold">Увімкнено</span>
+                                    <button
+                                        onClick={unsubscribe}
+                                        disabled={fcmLoading}
+                                        className="relative inline-flex h-6 w-11 items-center rounded-full bg-green-500 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                                    >
+                                        <span className="translate-x-6 inline-block h-4 w-4 transform rounded-full bg-white transition-transform" />
+                                    </button>
                                 ) : (
                                     <button
                                         onClick={requestPermission}
                                         disabled={fcmLoading || permissionStatus === "denied"}
-                                        className="px-3 py-1 bg-primary text-background rounded-full text-xs font-bold"
+                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${permissionStatus === "denied" ? "bg-red-400 cursor-not-allowed" : "bg-gray-200"
+                                            }`}
                                     >
-                                        Увімкнути
+                                        <span className="translate-x-1 inline-block h-4 w-4 transform rounded-full bg-white transition-transform" />
                                     </button>
                                 )}
                             </div>

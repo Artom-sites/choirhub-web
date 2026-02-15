@@ -43,11 +43,11 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Referrer-Policy',
-            value: 'strict-origin-when-cross-origin'
+            value: 'no-referrer-when-downgrade' // Relaxed for dev
           },
           {
             key: 'Cross-Origin-Opener-Policy',
-            value: 'same-origin-allow-popups',
+            value: 'unsafe-none',
           },
           // Basic CSP - Adjust as needed for specific Firebase/External scripts
           {
