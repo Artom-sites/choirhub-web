@@ -1,7 +1,7 @@
 import { registerPlugin } from '@capacitor/core';
 
 export interface PencilKitAnnotatorPlugin {
-    startAnnotating(options: { songId: string; userUid: string }): Promise<void>;
+    startAnnotating(options: { songId: string; userUid: string; topOffset?: number }): Promise<void>;
     stopAnnotating(options: { songId: string; userUid: string }): Promise<void>;
 }
 

@@ -27,6 +27,7 @@ function SongContent() {
     const songId = searchParams.get('id');
     const { userData } = useAuth();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const pdfHeaderRef = useRef<HTMLDivElement>(null);
 
     const [song, setSong] = useState<SimpleSong | null>(null);
     const [loading, setLoading] = useState(true);
@@ -347,7 +348,7 @@ function SongContent() {
         return (
             <div className="h-screen bg-white flex flex-col">
                 {/* PDF Header */}
-                <div className="bg-white border-b border-gray-200 shadow-sm z-10 pt-[env(safe-area-inset-top)]">
+                <div ref={pdfHeaderRef} className="bg-white border-b border-gray-200 shadow-sm z-10 pt-[env(safe-area-inset-top)]">
                     <div className="px-4 py-3 flex items-center justify-between">
                         <button
                             onClick={() => router.back()}
@@ -381,6 +382,7 @@ function SongContent() {
                                                 await PencilKitAnnotator.startAnnotating({
                                                     songId: songId as string,
                                                     userUid: userData?.id || '',
+                                                    topOffset: pdfHeaderRef.current?.getBoundingClientRect().bottom || 0,
                                                 });
                                             }
                                         } catch (err) {

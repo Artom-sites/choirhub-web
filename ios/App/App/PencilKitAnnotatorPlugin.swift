@@ -53,10 +53,13 @@ public class PencilKitAnnotatorPlugin: CAPPlugin, CAPBridgedPlugin {
             canvas.isScrollEnabled = false  // Don't scroll the canvas itself
             canvas.translatesAutoresizingMaskIntoConstraints = false
 
-            // Add on top of the web view
+            // Offset from top so the header/nav buttons remain tappable
+            let topOffset = CGFloat(call.getFloat("topOffset") ?? 0)
+
+            // Add on top of the web view, below the header
             webView.superview?.addSubview(canvas)
             NSLayoutConstraint.activate([
-                canvas.topAnchor.constraint(equalTo: webView.topAnchor),
+                canvas.topAnchor.constraint(equalTo: webView.topAnchor, constant: topOffset),
                 canvas.leadingAnchor.constraint(equalTo: webView.leadingAnchor),
                 canvas.trailingAnchor.constraint(equalTo: webView.trailingAnchor),
                 canvas.bottomAnchor.constraint(equalTo: webView.bottomAnchor),
