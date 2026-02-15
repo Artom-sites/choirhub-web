@@ -3,6 +3,27 @@ import Capacitor
 import UIKit
 import PencilKit
 
+// MARK: - Canvas that passes finger touches through to views underneath
+
+/// Only captures Apple Pencil touches for drawing.
+/// Finger touches (scroll, pinch-to-zoom) fall through to the WKWebView below.
+class PassthroughCanvasView: PKCanvasView {
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        // Check if any of the current touches are from Apple Pencil
+        if let touches = event?.allTouches {
+            for touch in touches {
+                if touch.type == .pencil || touch.type == .stylus {
+                    return super.point(inside: point, with: event)
+                }
+            }
+        }
+        // Finger touches — pass through to web view underneath
+        return false
+    }
+}
+
+// MARK: - Plugin
+
 /// Simple PencilKit overlay plugin.
 /// startAnnotating: adds a transparent PKCanvasView over the web view + shows tool picker.
 /// stopAnnotating:  saves the drawing, hides tool picker, makes canvas read-only (drawing stays visible).
@@ -60,11 +81,11 @@ public class PencilKitAnnotatorPlugin: CAPPlugin, CAPBridgedPlugin {
             self.currentSongId = songId
             self.currentUserUid = userUid
 
-            // Create transparent canvas over the web view
-            let canvas = PKCanvasView()
+            // Create transparent passthrough canvas over the web view
+            let canvas = PassthroughCanvasView()
             canvas.backgroundColor = .clear
             canvas.isOpaque = false
-            canvas.drawingPolicy = .pencilOnly  // Only pencil draws; fingers pass through for scroll/zoom
+            canvas.drawingPolicy = .pencilOnly
             canvas.isScrollEnabled = false
             canvas.translatesAutoresizingMaskIntoConstraints = false
 
@@ -117,7 +138,7 @@ public class PencilKitAnnotatorPlugin: CAPPlugin, CAPBridgedPlugin {
                 self.toolPicker?.setVisible(false, forFirstResponder: canvas)
                 self.toolPicker?.removeObserver(canvas)
                 canvas.resignFirstResponder()
-                canvas.isUserInteractionEnabled = false  // Read-only: drawing stays visible
+                canvas.isUserInteractionEnabled = false  // Read-only: drawing stays visible, touches pass through
             }
             self.toolPicker = nil
 
