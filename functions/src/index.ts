@@ -186,8 +186,8 @@ export const atomicJoinChoir = functions.https.onCall(async (data, context) => {
         const members = choirData.members || [];
         const memberIndex = members.findIndex((m: any) => m.id === userId);
 
-        const userName = userData.name || "Unknown";
-        const userVoice = userData.voice || "Soprano";
+        const userName = userData.name || context.auth?.token?.name || "Unknown";
+        const userVoice = userData.voice || "";
 
         const memberData = {
             id: userId,

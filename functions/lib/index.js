@@ -123,6 +123,7 @@ exports.atomicJoinChoir = functions.https.onCall(async (data, context) => {
     }
     // 2. Perform Join/Upgrade Logic
     const result = await db.runTransaction(async (transaction) => {
+        var _a, _b;
         const userRef = db.collection("users").doc(userId);
         const choirRef = db.collection("choirs").doc(choirId);
         const userDoc = await transaction.get(userRef);
@@ -181,8 +182,8 @@ exports.atomicJoinChoir = functions.https.onCall(async (data, context) => {
         // --- UPDATE CHOIR MEMBER LIST ---
         const members = choirData.members || [];
         const memberIndex = members.findIndex((m) => m.id === userId);
-        const userName = userData.name || "Unknown";
-        const userVoice = userData.voice || "Soprano";
+        const userName = userData.name || ((_b = (_a = context.auth) === null || _a === void 0 ? void 0 : _a.token) === null || _b === void 0 ? void 0 : _b.name) || "Unknown";
+        const userVoice = userData.voice || "";
         const memberData = {
             id: userId,
             name: userName,
