@@ -196,6 +196,8 @@ function SongContent() {
         loadSong();
     }, [userData?.choirId, songId, userData?.role]);
 
+
+
     const isTelegramLink = (url?: string) => {
         if (!url) return false;
         return url.includes('t.me/') || url.includes('telegram.me/');
@@ -336,9 +338,11 @@ function SongContent() {
     // Show PDF Viewer (Only if NOT telegram link)
     if (showViewer && ((song.parts && song.parts.length > 0) || song.pdfUrl || song.pdfData) && !isTg) {
         const hasParts = song.parts && song.parts.length > 1;
-        const currentPdfUrl = (song.parts && song.parts.length > 0)
+        const originalPdfUrl = (song.parts && song.parts.length > 0)
             ? song.parts[currentPartIndex].pdfUrl
             : (song.pdfUrl || song.pdfData!);
+        // Use annotated PDF
+        const currentPdfUrl = originalPdfUrl;
 
         return (
             <div className="h-screen bg-white flex flex-col">
@@ -365,16 +369,25 @@ function SongContent() {
 
                         <div className="flex items-center gap-1">
                             <button
-                                onClick={() => {
+                                onClick={async () => {
                                     if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios') {
-                                        PencilKitAnnotator.openAnnotator({
-                                            pdfUrl: currentPdfUrl,
-                                            songId: songId as string,
-                                            userUid: userData?.id || '',
-                                        }).catch(err => console.error('[PencilKit] Error:', err));
-                                    } else {
-                                        setIsAnnotating(!isAnnotating);
+                                        try {
+                                            if (isAnnotating) {
+                                                await PencilKitAnnotator.stopAnnotating({
+                                                    songId: songId as string,
+                                                    userUid: userData?.id || '',
+                                                });
+                                            } else {
+                                                await PencilKitAnnotator.startAnnotating({
+                                                    songId: songId as string,
+                                                    userUid: userData?.id || '',
+                                                });
+                                            }
+                                        } catch (err) {
+                                            console.error('[PencilKit] Error:', err);
+                                        }
                                     }
+                                    setIsAnnotating(!isAnnotating);
                                 }}
                                 className={`p-2 rounded-full transition-colors ${isAnnotating ? 'bg-gray-900 text-white' : 'hover:bg-gray-100 text-gray-700'}`}
                                 title="Малювати на PDF"
@@ -425,7 +438,7 @@ function SongContent() {
                         songId={songId as string}
                         title={song.title}
                         onClose={() => router.back()}
-                        isAnnotating={isAnnotating}
+                        isAnnotating={isAnnotating && !(Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios')}
                         onAnnotatingChange={setIsAnnotating}
                     />
                 </div>
