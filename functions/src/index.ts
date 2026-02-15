@@ -278,10 +278,11 @@ export const atomicLeaveChoir = functions.https.onCall(async (data, context) => 
 });
 
 /**
- * atomicDeleteUser
- * Deletes user and removes them from all choirs securely.
+ * atomicDeleteSelf
+ * Self-deletion ONLY. Always deletes context.auth.uid.
+ * Ignores all client-side data to prevent any manipulation.
  */
-export const atomicDeleteUser = functions.https.onCall(async (data, context) => {
+export const atomicDeleteSelf = functions.https.onCall(async (_data, context) => {
     if (!context.auth) {
         throw new functions.https.HttpsError("unauthenticated", "Must be logged in");
     }
@@ -309,29 +310,19 @@ export const atomicDeleteUser = functions.https.onCall(async (data, context) => 
             if (!membership.choirId) continue;
 
             const choirRef = db.collection("choirs").doc(membership.choirId);
-
-            // Read the choir document to get the current members array
             const choirSnap = await choirRef.get();
             if (choirSnap.exists) {
                 const choirData = choirSnap.data()!;
                 const currentMembers = choirData.members || [];
-
-                // Update the member object: keep history, mark as deleted account
                 const updatedMembers = currentMembers.map((m: any) => {
                     if (m.id === userId) {
-                        return {
-                            ...m,
-                            hasAccount: false,
-                            // We can optionally append (Deleted) to name if desired, but user asked to preserve props.
-                        };
+                        return { ...m, hasAccount: false };
                     }
                     return m;
                 });
-
                 batch.update(choirRef, { members: updatedMembers });
             }
 
-            // Remove from Members subcollection if exists (Legacy cleanup)
             const memberRef = choirRef.collection("members").doc(userId);
             batch.delete(memberRef);
         }
@@ -339,17 +330,102 @@ export const atomicDeleteUser = functions.https.onCall(async (data, context) => 
         batch.delete(userRef);
         await batch.commit();
 
-        try {
-            await admin.auth().deleteUser(userId);
-        } catch (e) {
+        try { await admin.auth().deleteUser(userId); } catch (e) {
             console.log("Error deleting auth:", e);
         }
 
         return { success: true };
-
     } catch (error) {
-        console.error("Delete user error:", error);
+        console.error("Self-delete error:", error);
         throw new functions.https.HttpsError("internal", "Failed to delete account");
+    }
+});
+
+/**
+ * adminDeleteUser
+ * Admin-only: deletes ANOTHER user's account.
+ * Strict validation prevents any accidental self-deletion.
+ */
+export const adminDeleteUser = functions.https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError("unauthenticated", "Must be logged in");
+    }
+
+    const callerUid = context.auth.uid;
+    const targetUid = data?.targetUid;
+
+    // --- VALIDATION ---
+    if (!targetUid || typeof targetUid !== 'string') {
+        throw new functions.https.HttpsError("invalid-argument", "targetUid is required");
+    }
+    if (targetUid === callerUid) {
+        throw new functions.https.HttpsError("invalid-argument", "Cannot delete yourself via admin path. Use self-delete.");
+    }
+
+    // Claims-based permission check
+    const callerChoirs = (context.auth.token as any).choirs || {};
+    const hasAdminRole = Object.values(callerChoirs).some(
+        (role: any) => ['head', 'regent'].includes(role)
+    );
+    if (!hasAdminRole) {
+        throw new functions.https.HttpsError("permission-denied", "Only head/regent can delete users");
+    }
+
+    // --- EXECUTION ---
+    try {
+        const userRef = db.collection("users").doc(targetUid);
+        const userSnap = await userRef.get();
+
+        if (!userSnap.exists) {
+            // Still clean up Auth if it exists
+            try { await admin.auth().deleteUser(targetUid); } catch (e) { }
+            return { success: true };
+        }
+
+        const userData = userSnap.data()!;
+        const memberships = userData.memberships || [];
+
+        if (memberships.length === 0 && userData.choirId) {
+            memberships.push({ choirId: userData.choirId });
+        }
+
+        const batch = db.batch();
+
+        for (const membership of memberships) {
+            if (!membership.choirId) continue;
+
+            const choirRef = db.collection("choirs").doc(membership.choirId);
+            const choirSnap = await choirRef.get();
+            if (choirSnap.exists) {
+                const choirData = choirSnap.data()!;
+                const currentMembers = choirData.members || [];
+                // Mark member as deleted but preserve in list
+                const updatedMembers = currentMembers.map((m: any) => {
+                    if (m.id === targetUid) {
+                        return { ...m, hasAccount: false, fcmTokens: [] };
+                    }
+                    return m;
+                });
+                batch.update(choirRef, { members: updatedMembers });
+            }
+
+            const memberRef = choirRef.collection("members").doc(targetUid);
+            batch.delete(memberRef);
+        }
+
+        // Delete Firestore user doc
+        batch.delete(userRef);
+        await batch.commit();
+
+        // Delete Firebase Auth record
+        try { await admin.auth().deleteUser(targetUid); } catch (e) {
+            console.log("Error deleting target auth:", e);
+        }
+
+        return { success: true, deletedUid: targetUid };
+    } catch (error) {
+        console.error("Admin delete user error:", error);
+        throw new functions.https.HttpsError("internal", "Failed to delete user");
     }
 });
 
@@ -407,9 +483,24 @@ export const atomicMergeMembers = functions.https.onCall(async (data, context) =
     if (choirSnap.exists) {
         const cData = choirSnap.data()!;
         const members = cData.members || [];
-        const updatedMembers = members.filter((m: any) => m.id !== fromMemberId);
+        const fromMember = members.find((m: any) => m.id === fromMemberId);
+        let updatedMembers = members.filter((m: any) => m.id !== fromMemberId);
 
-        if (updatedMembers.length !== members.length) {
+        // Transfer account data from source to target if source had an account
+        if (fromMember?.hasAccount) {
+            updatedMembers = updatedMembers.map((m: any) => {
+                if (m.id === toMemberId && !m.hasAccount) {
+                    return {
+                        ...m,
+                        hasAccount: true,
+                        linkedUserIds: [...(m.linkedUserIds || []), fromMemberId]
+                    };
+                }
+                return m;
+            });
+        }
+
+        if (updatedMembers.length !== members.length || fromMember?.hasAccount) {
             batch.update(choirRef, { members: updatedMembers });
             batchOpCount++;
         }
@@ -556,4 +647,59 @@ export const migrateAllClaims = functions.https.onCall(async (data, context) => 
     }
 
     return { success: true, migrated, errors, total: docs.length };
+});
+// --- Notification Token Management ---
+
+export const registerFcmToken = functions.https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError("unauthenticated", "User must be logged in");
+    }
+
+    const { token } = data;
+    if (!token || typeof token !== "string" || token.length > 4096) {
+        throw new functions.https.HttpsError("invalid-argument", "Token must be a valid non-empty string under 4096 chars");
+    }
+
+    const userId = context.auth.uid;
+    const userRef = db.collection("users").doc(userId);
+    const batch = db.batch();
+
+    try {
+        // 1. Find ANY user that has this token (including the current one, potentially)
+        // We use collectionGroup if users is root, or just collection. `users` is root here.
+        const snapshot = await db.collection("users")
+            .where("fcmTokens", "array-contains", token)
+            .get();
+
+        let removedCount = 0;
+
+        // 2. Remove token from others
+        snapshot.docs.forEach((doc) => {
+            if (doc.id !== userId) {
+                // Determine if this user really needs an update (double check)
+                const userData = doc.data();
+                if (userData.fcmTokens && userData.fcmTokens.includes(token)) {
+                    batch.update(doc.ref, {
+                        fcmTokens: admin.firestore.FieldValue.arrayRemove(token),
+                    });
+                    removedCount++;
+                    console.log(`[TokenEnforcement] Removing stolen token from user ${doc.id}`);
+                }
+            }
+        });
+
+        // 3. Add token to current user (idempotent via arrayUnion)
+        batch.set(userRef, {
+            fcmTokens: admin.firestore.FieldValue.arrayUnion(token),
+            notificationsEnabled: true,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+
+        await batch.commit();
+
+        return { success: true, removedFromOthers: removedCount };
+    } catch (error) {
+        console.error("[TokenEnforcement] Error registering token:", error);
+        throw new functions.https.HttpsError("internal", "Failed to register token");
+    }
 });

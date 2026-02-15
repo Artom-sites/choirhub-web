@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon, mergeMembers, updateChoir, deleteUserAccount, deleteAdminCode, getChoirNotifications, getChoirUsers, joinChoir, updateMember } from "@/lib/db";
+import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon, mergeMembers, updateChoir, deleteMyAccount, adminDeleteUser, deleteAdminCode, getChoirNotifications, getChoirUsers, joinChoir, updateMember } from "@/lib/db";
 import { Service, Choir, UserMembership, ChoirMember, Permission, AdminCode } from "@/types";
 import SongList from "@/components/SongList";
 import SwipeableCard from "@/components/SwipeableCard";
@@ -28,7 +28,7 @@ import ConfirmationModal from "@/components/ConfirmationModal";
 import {
   Music2, Loader2, Copy, Check, HelpCircle, Mail, Shield,
   LogOut, ChevronLeft, ChevronRight, Home, User, Users, Repeat,
-  PlusCircle, Plus, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor, Scale
+  PlusCircle, Plus, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor, Scale, Smartphone
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import NotificationPrompt from "@/components/NotificationPrompt";
@@ -196,18 +196,23 @@ function HomePageContent() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setViewingMemberStats(member)}
-            className="w-10 h-10 rounded-full bg-surface-highlight flex items-center justify-center text-text-primary font-bold text-sm relative hover:ring-2 hover:ring-primary/50 transition-all active:scale-95"
+            className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm relative hover:ring-2 hover:ring-primary/50 transition-all active:scale-95 ${!member.photoURL && member.voice === 'Soprano' ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30' :
+              !member.photoURL && member.voice === 'Alto' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
+                !member.photoURL && member.voice === 'Tenor' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                  !member.photoURL && member.voice === 'Bass' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                    'bg-surface-highlight text-text-primary'
+              }`}
           >
-            {member.name?.[0]?.toUpperCase() || "?"}
+            {member.photoURL ? (
+              <img src={member.photoURL} alt={member.name} className="w-full h-full object-cover rounded-full" />
+            ) : (
+              member.voice ? member.voice[0] : (member.name?.[0]?.toUpperCase() || "?")
+            )}
+
             {absences > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-surface z-10">
                 {absences}
               </span>
-            )}
-            {member.hasAccount && (
-              <div className="absolute -bottom-1 -right-1 bg-blue-500 text-white p-0.5 rounded-full border-2 border-surface" title="App User">
-                <div className="w-2 h-2 rounded-full bg-white" />
-              </div>
             )}
           </button>
 
@@ -220,18 +225,17 @@ function HomePageContent() {
             }}
             className={canEdit ? 'cursor-pointer' : ''}
           >
-            <div className="text-text-primary font-bold flex items-center gap-2 mb-1">
-              {member.name}
-              {getVoiceBadge(member.voice)}
-              {member.hasAccount && <span title="App User" className="text-xs">📱</span>}
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-text-primary font-bold">{member.name}</span>
+              {member.hasAccount && (
+                <div title="Зареєстрований користувач" className="text-blue-400">
+                  <Smartphone className="w-4 h-4" />
+                </div>
+              )}
+              {member.photoURL && getVoiceBadge(member.voice)}
             </div>
             <div className="flex items-center gap-2">
               {getRoleBadge(member.role)}
-              {absences > 0 && (
-                <span className="text-[10px] text-orange-400">
-                  {absences} {absences === 1 ? 'пропуск' : absences < 5 ? 'пропуски' : 'пропусків'}
-                </span>
-              )}
             </div>
           </div>
         </div>
@@ -445,7 +449,8 @@ function HomePageContent() {
     });
 
     await refreshProfile();
-    window.location.reload();
+    setShowChoirManager(false);
+    // window.location.reload(); // Removed to prevent double loading
   };
 
   const handleCreateChoir = async () => {
@@ -482,7 +487,8 @@ function HomePageContent() {
       });
 
       await refreshProfile();
-      window.location.reload();
+      setShowChoirManager(false);
+      // window.location.reload();
 
     } catch (e) {
       console.error(e);
@@ -499,7 +505,8 @@ function HomePageContent() {
       const result = await joinChoir(joinCode);
       console.log("Joined:", result);
       await refreshProfile();
-      window.location.reload();
+      setShowChoirManager(false);
+      // window.location.reload();
     } catch (e: any) {
       console.error(e);
       const msg = e.message || "Помилка приєднання";
@@ -676,8 +683,20 @@ function HomePageContent() {
     try {
       await mergeMembers(userData.choirId, mergingMember.id, targetMemberId);
 
-      // Update local state by removing the merged member
-      const updatedMembers = (choir.members || []).filter(m => m.id !== mergingMember.id);
+      // Update local state: remove source, transfer account data to target
+      const fromMember = (choir.members || []).find(m => m.id === mergingMember.id);
+      const updatedMembers = (choir.members || [])
+        .filter(m => m.id !== mergingMember.id)
+        .map(m => {
+          if (m.id === targetMemberId && fromMember?.hasAccount && !m.hasAccount) {
+            return {
+              ...m,
+              hasAccount: true,
+              linkedUserIds: [...(m.linkedUserIds || []), fromMember.id]
+            };
+          }
+          return m;
+        });
       setChoir({ ...choir, members: updatedMembers });
 
       setMergingMember(null);
@@ -760,14 +779,11 @@ function HomePageContent() {
   const handleDeleteAccount = async () => {
     if (!user) return;
     try {
-      // 1. Clean up Firestore
-      await deleteUserAccount(user.uid);
-      // 2. Delete Auth User
-      await user.delete();
+      // Cloud Function handles both Firestore cleanup and Auth deletion
+      await deleteMyAccount();
       // Navigation handles itself (auth state change)
     } catch (error) {
       console.error("Delete Account Error:", error);
-      // If requires re-login (common for sensitive actions)
       setManagerError("Для видалення потрібно перезайти в акаунт");
     }
   };
@@ -1903,7 +1919,7 @@ function HomePageContent() {
         onConfirm={async () => {
           if (userToDelete?.id) {
             try {
-              await deleteUserAccount(userToDelete.id);
+              await adminDeleteUser(userToDelete.id);
               setRegisteredUsers(prev => prev.filter(u => u.id !== userToDelete.id));
             } catch (e) {
               console.error("Error deleting user:", e);

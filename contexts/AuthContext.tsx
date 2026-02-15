@@ -37,6 +37,7 @@ interface AuthContextType {
     signOut: () => Promise<void>;
     refreshProfile: () => Promise<void>;
     isGuest: boolean;
+    setFcmToken: (token: string | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -47,6 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [userData, setUserData] = useState<UserData | null | undefined>(undefined); // Start as undefined
     const [loading, setLoading] = useState(true);
     const googleLoginLock = useRef(false);
+
+    const [fcmToken, setFcmToken] = useState<string | null>(null);
 
     useEffect(() => {
         // Handle Redirect Result explicitly
@@ -97,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 }
             } else {
                 setUserData(null);
+                setFcmToken(null); // Clear token on auth state clear
             }
 
             setLoading(false);
@@ -209,8 +213,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const signOut = async () => {
         try {
+            // Detach FCM token if exists
+            if (user?.uid && fcmToken) {
+                try {
+                    const { doc, updateDoc, arrayRemove, getFirestore } = await import("firebase/firestore");
+                    const db = getFirestore(app);
+                    const userRef = doc(db, "users", user.uid);
+
+                    console.log("[Auth] Detaching FCM token:", fcmToken);
+                    await updateDoc(userRef, {
+                        fcmTokens: arrayRemove(fcmToken)
+                    });
+                } catch (err) {
+                    // Non-blocking error (e.g., offline or permission)
+                    console.warn("[Auth] Failed to detach FCM token:", err);
+                }
+            }
+
             await firebaseSignOut(auth);
             setUserData(null);
+            setFcmToken(null);
         } catch (error) {
             console.error("Error signing out:", error);
         }
@@ -240,7 +262,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             refreshProfile: async () => {
                 if (user) await loadUserProfile(user.uid);
             },
-            isGuest: user?.isAnonymous ?? false
+            isGuest: user?.isAnonymous ?? false,
+            setFcmToken // Exposed for useFcmToken hook
         }}>
             {children}
         </AuthContext.Provider>

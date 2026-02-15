@@ -697,13 +697,24 @@ export async function createUser(userId: string, data: Partial<UserData>): Promi
     }
 }
 
-// Delete user account and cleanup references (ATOMIC)
-export async function deleteUserAccount(userId: string): Promise<void> {
+// Self-delete: always deletes the currently authenticated user
+export async function deleteMyAccount(): Promise<void> {
     try {
-        const deleteFn = httpsCallable(functions, 'atomicDeleteUser');
+        const deleteFn = httpsCallable(functions, 'atomicDeleteSelf');
         await deleteFn({});
     } catch (error) {
-        console.error("Error deleting user account:", error);
+        console.error("Error deleting own account:", error);
+        throw error;
+    }
+}
+
+// Admin-delete: deletes another user by their UID
+export async function adminDeleteUser(targetUid: string): Promise<void> {
+    try {
+        const deleteFn = httpsCallable(functions, 'adminDeleteUser');
+        await deleteFn({ targetUid });
+    } catch (error) {
+        console.error("Error deleting user:", error);
         throw error;
     }
 }

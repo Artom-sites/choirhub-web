@@ -83,6 +83,16 @@ export default function SongList({
     // PDF Viewer state
     const [viewingSong, setViewingSong] = useState<SimpleSong | null>(null);
 
+    // Screen size detection for Virtuoso
+    const [isMobile, setIsMobile] = useState<boolean | null>(null);
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile(); // Initial check
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
 
     const fetchSongs = useCallback(async () => {
         if (!userData?.choirId) return;
@@ -504,125 +514,129 @@ export default function SongList({
                     ) : (
                         <>
                             {/* Desktop: Table View */}
-                            <div className="hidden md:block">
-                                <TableVirtuoso
-                                    useWindowScroll
-                                    initialItemCount={20}
-                                    data={filteredSongs}
-                                    components={{
-                                        Table: ({ style, ...props }) => <table {...props} style={{ ...style, width: '100%' }} />,
-                                    }}
-                                    fixedHeaderContent={() => (
-                                        <tr className="bg-background border-b border-border">
-                                            <th className="text-left py-3 pl-0 pr-4 text-xs font-bold text-text-secondary uppercase tracking-wider bg-background">Назва</th>
-                                            <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider bg-background">Категорія</th>
-                                            <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider bg-background">Диригент</th>
-                                            {effectiveCanAdd && (
-                                                <th className="text-right py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-16 bg-background"></th>
-                                            )}
-                                        </tr>
-                                    )}
-                                    itemContent={(index, song) => {
-                                        if (!song) return null;
-                                        return (
-                                            <>
-                                                <td className="py-3 pl-0 pr-4">
-                                                    <div className="flex items-center gap-3" onClick={() => handleSongClick(song)}>
-                                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-text-primary">
-                                                            {song.hasPdf ? (
-                                                                <Eye className="w-4 h-4 text-background" />
-                                                            ) : (
-                                                                <FileText className="w-4 h-4 text-background" />
-                                                            )}
-                                                        </div>
-                                                        <p className="font-semibold text-text-primary truncate cursor-pointer hover:underline">{song.title}</p>
-                                                    </div>
-                                                </td>
-                                                <td className="py-3 px-4">
-                                                    <span className="text-sm text-text-secondary">{song.category}</span>
-                                                </td>
-                                                <td className="py-3 px-4">
-                                                    {song.conductor ? (
-                                                        <div className="flex items-center gap-1.5 text-sm text-primary font-medium">
-                                                            <User className="w-3.5 h-3.5" />
-                                                            <span>{song.conductor}</span>
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-sm text-text-secondary/50">—</span>
-                                                    )}
-                                                </td>
+                            {isMobile === false && (
+                                <div>
+                                    <TableVirtuoso
+                                        useWindowScroll
+                                        initialItemCount={20}
+                                        data={filteredSongs}
+                                        components={{
+                                            Table: ({ style, ...props }) => <table {...props} style={{ ...style, width: '100%' }} />,
+                                        }}
+                                        fixedHeaderContent={() => (
+                                            <tr className="bg-background border-b border-border">
+                                                <th className="text-left py-3 pl-0 pr-4 text-xs font-bold text-text-secondary uppercase tracking-wider bg-background">Назва</th>
+                                                <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider bg-background">Категорія</th>
+                                                <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider bg-background">Диригент</th>
                                                 {effectiveCanAdd && (
-                                                    <td className="py-3 px-4 text-right">
+                                                    <th className="text-right py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-16 bg-background"></th>
+                                                )}
+                                            </tr>
+                                        )}
+                                        itemContent={(index, song) => {
+                                            if (!song) return null;
+                                            return (
+                                                <>
+                                                    <td className="py-3 pl-0 pr-4">
+                                                        <div className="flex items-center gap-3" onClick={() => handleSongClick(song)}>
+                                                            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-text-primary">
+                                                                {song.hasPdf ? (
+                                                                    <Eye className="w-4 h-4 text-background" />
+                                                                ) : (
+                                                                    <FileText className="w-4 h-4 text-background" />
+                                                                )}
+                                                            </div>
+                                                            <p className="font-semibold text-text-primary truncate cursor-pointer hover:underline">{song.title}</p>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-3 px-4">
+                                                        <span className="text-sm text-text-secondary">{song.category}</span>
+                                                    </td>
+                                                    <td className="py-3 px-4">
+                                                        {song.conductor ? (
+                                                            <div className="flex items-center gap-1.5 text-sm text-primary font-medium">
+                                                                <User className="w-3.5 h-3.5" />
+                                                                <span>{song.conductor}</span>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-sm text-text-secondary/50">—</span>
+                                                        )}
+                                                    </td>
+                                                    {effectiveCanAdd && (
+                                                        <td className="py-3 px-4 text-right">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    e.stopPropagation();
+                                                                    handleEditClick(e, song);
+                                                                }}
+                                                                className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface transition-colors"
+                                                                title="Редагувати"
+                                                            >
+                                                                <Pencil className="w-4 h-4" />
+                                                            </button>
+                                                        </td>
+                                                    )}
+                                                </>
+                                            );
+                                        }}
+                                    />
+                                </div>
+                            )}
+
+                            {/* Mobile: Simple List View */}
+                            {isMobile === true && (
+                                <div>
+                                    <Virtuoso
+                                        useWindowScroll
+                                        initialItemCount={20}
+                                        data={filteredSongs}
+                                        itemContent={(index, song) => {
+                                            if (!song) return null;
+                                            return (
+                                                <div
+                                                    onClick={() => handleSongClick(song)}
+                                                    className="flex items-center gap-3 py-3 border-b border-border/30 cursor-pointer active:bg-surface-highlight transition-colors"
+                                                >
+                                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-text-primary">
+                                                        {song.hasPdf ? (
+                                                            <Eye className="w-5 h-5 text-background" />
+                                                        ) : (
+                                                            <FileText className="w-5 h-5 text-background" />
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-semibold text-text-primary truncate">{song.title}</p>
+                                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                                            {song.conductor && (
+                                                                <span className="text-xs text-primary font-medium flex items-center gap-1">
+                                                                    <User className="w-3 h-3" />
+                                                                    {song.conductor}
+                                                                </span>
+                                                            )}
+                                                            {song.conductor && <span className="text-xs text-text-secondary">•</span>}
+                                                            <span className="text-xs text-text-secondary">{song.category}</span>
+                                                        </div>
+                                                    </div>
+                                                    {effectiveCanAdd && (
                                                         <button
                                                             onClick={(e) => {
                                                                 e.preventDefault();
                                                                 e.stopPropagation();
                                                                 handleEditClick(e, song);
                                                             }}
-                                                            className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface transition-colors"
+                                                            className="p-2 rounded-lg text-text-secondary"
                                                             title="Редагувати"
                                                         >
                                                             <Pencil className="w-4 h-4" />
                                                         </button>
-                                                    </td>
-                                                )}
-                                            </>
-                                        );
-                                    }}
-                                />
-                            </div>
-
-                            {/* Mobile: Simple List View */}
-                            <div className="md:hidden">
-                                <Virtuoso
-                                    useWindowScroll
-                                    initialItemCount={20}
-                                    data={filteredSongs}
-                                    itemContent={(index, song) => {
-                                        if (!song) return null;
-                                        return (
-                                            <div
-                                                onClick={() => handleSongClick(song)}
-                                                className="flex items-center gap-3 py-3 border-b border-border/30 cursor-pointer active:bg-surface-highlight transition-colors"
-                                            >
-                                                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-text-primary">
-                                                    {song.hasPdf ? (
-                                                        <Eye className="w-5 h-5 text-background" />
-                                                    ) : (
-                                                        <FileText className="w-5 h-5 text-background" />
                                                     )}
                                                 </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-semibold text-text-primary truncate">{song.title}</p>
-                                                    <div className="flex items-center gap-1.5 mt-0.5">
-                                                        {song.conductor && (
-                                                            <span className="text-xs text-primary font-medium flex items-center gap-1">
-                                                                <User className="w-3 h-3" />
-                                                                {song.conductor}
-                                                            </span>
-                                                        )}
-                                                        {song.conductor && <span className="text-xs text-text-secondary">•</span>}
-                                                        <span className="text-xs text-text-secondary">{song.category}</span>
-                                                    </div>
-                                                </div>
-                                                {effectiveCanAdd && (
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            e.stopPropagation();
-                                                            handleEditClick(e, song);
-                                                        }}
-                                                        className="p-2 rounded-lg text-text-secondary"
-                                                        title="Редагувати"
-                                                    >
-                                                        <Pencil className="w-4 h-4" />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        )
-                                    }}
-                                />
-                            </div>
+                                            )
+                                        }}
+                                    />
+                                </div>
+                            )}
                         </>
                     )}
                 </div>
