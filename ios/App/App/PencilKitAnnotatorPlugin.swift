@@ -5,8 +5,7 @@ import PencilKit
 
 /// Simple PencilKit overlay plugin.
 /// startAnnotating: adds a transparent PKCanvasView over the web view + shows tool picker.
-/// stopAnnotating:  saves the drawing, removes the canvas + hides tool picker.
-/// Works exactly like the web annotation toggle — no extra screens.
+/// stopAnnotating:  saves the drawing, hides tool picker, makes canvas read-only (drawing stays visible).
 @objc(PencilKitAnnotatorPlugin)
 public class PencilKitAnnotatorPlugin: CAPPlugin, CAPBridgedPlugin {
 
@@ -39,8 +38,23 @@ public class PencilKitAnnotatorPlugin: CAPPlugin, CAPBridgedPlugin {
                 return
             }
 
-            // Remove previous canvas if any
-            self.cleanupCanvas()
+            // If canvas already exists for this song, just re-enable it
+            if let canvas = self.canvasView,
+               self.currentSongId == songId,
+               self.currentUserUid == userUid {
+                canvas.isUserInteractionEnabled = true
+                let picker = PKToolPicker()
+                picker.setVisible(true, forFirstResponder: canvas)
+                picker.addObserver(canvas)
+                canvas.becomeFirstResponder()
+                self.toolPicker = picker
+                print("[PencilKit] Re-enabled canvas for song \(songId)")
+                call.resolve()
+                return
+            }
+
+            // Different song or no canvas — create fresh
+            self.removeCanvas()
 
             self.currentSongId = songId
             self.currentUserUid = userUid
@@ -49,14 +63,13 @@ public class PencilKitAnnotatorPlugin: CAPPlugin, CAPBridgedPlugin {
             let canvas = PKCanvasView()
             canvas.backgroundColor = .clear
             canvas.isOpaque = false
-            canvas.drawingPolicy = .anyInput
-            canvas.isScrollEnabled = false  // Don't scroll the canvas itself
+            canvas.drawingPolicy = .pencil  // Only pencil draws; fingers pass through for scroll/zoom
+            canvas.isScrollEnabled = false
             canvas.translatesAutoresizingMaskIntoConstraints = false
 
             // Offset from top so the header/nav buttons remain tappable
             let topOffset = CGFloat(call.getFloat("topOffset") ?? 0)
 
-            // Add on top of the web view, below the header
             webView.superview?.addSubview(canvas)
             NSLayoutConstraint.activate([
                 canvas.topAnchor.constraint(equalTo: webView.topAnchor, constant: topOffset),
@@ -82,7 +95,7 @@ public class PencilKitAnnotatorPlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
 
-    // MARK: - Stop Annotating
+    // MARK: - Stop Annotating (keep canvas visible, just disable interaction)
 
     @objc func stopAnnotating(_ call: CAPPluginCall) {
         DispatchQueue.main.async { [weak self] in
@@ -98,16 +111,23 @@ public class PencilKitAnnotatorPlugin: CAPPlugin, CAPBridgedPlugin {
                 self.saveDrawing(from: canvas, songId: songId, userUid: userUid)
             }
 
-            self.cleanupCanvas()
+            // Hide tool picker but keep canvas visible (read-only)
+            if let canvas = self.canvasView {
+                self.toolPicker?.setVisible(false, forFirstResponder: canvas)
+                self.toolPicker?.removeObserver(canvas)
+                canvas.resignFirstResponder()
+                canvas.isUserInteractionEnabled = false  // Read-only: drawing stays visible
+            }
+            self.toolPicker = nil
 
-            print("[PencilKit] Stopped annotating")
+            print("[PencilKit] Stopped annotating (drawing remains visible)")
             call.resolve()
         }
     }
 
-    // MARK: - Cleanup
+    // MARK: - Full cleanup (remove canvas entirely)
 
-    private func cleanupCanvas() {
+    private func removeCanvas() {
         if let canvas = canvasView {
             toolPicker?.setVisible(false, forFirstResponder: canvas)
             toolPicker?.removeObserver(canvas)
