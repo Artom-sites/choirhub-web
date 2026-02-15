@@ -15,6 +15,7 @@ public class PencilKitAnnotatorPlugin: CAPPlugin, CAPBridgedPlugin {
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "startAnnotating", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "stopAnnotating", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "clearCanvas", returnType: CAPPluginReturnPromise),
     ]
 
     private var canvasView: PKCanvasView?
@@ -121,6 +122,16 @@ public class PencilKitAnnotatorPlugin: CAPPlugin, CAPBridgedPlugin {
             self.toolPicker = nil
 
             print("[PencilKit] Stopped annotating (drawing remains visible)")
+            call.resolve()
+        }
+    }
+
+    // MARK: - Clear canvas (called when leaving the page)
+
+    @objc func clearCanvas(_ call: CAPPluginCall) {
+        DispatchQueue.main.async { [weak self] in
+            self?.removeCanvas()
+            print("[PencilKit] Canvas removed (page exit)")
             call.resolve()
         }
     }

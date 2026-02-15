@@ -86,6 +86,20 @@ function SongContent() {
         setStatusBarStyle();
     }, [showViewer]);
 
+    // Clear native PencilKit canvas when leaving PDF viewer or page
+    useEffect(() => {
+        if (!showViewer && Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios') {
+            PencilKitAnnotator.clearCanvas().catch(() => { });
+            setIsAnnotating(false);
+        }
+        return () => {
+            // Also clear on unmount (e.g. navigating away)
+            if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios') {
+                PencilKitAnnotator.clearCanvas().catch(() => { });
+            }
+        };
+    }, [showViewer]);
+
     const handleLinkArchive = async (globalSong: GlobalSong) => {
         if (!song || !userData?.choirId) return;
 
