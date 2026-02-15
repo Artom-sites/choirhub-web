@@ -335,9 +335,17 @@ exports.adminDeleteUser = functions.https.onCall(async (data, context) => {
     if (targetUid === callerUid) {
         throw new functions.https.HttpsError("invalid-argument", "Cannot delete yourself via admin path. Use self-delete.");
     }
-    // Claims-based permission check
+    // Claims-based permission check with Firestore fallback
     const callerChoirs = context.auth.token.choirs || {};
-    const hasAdminRole = Object.values(callerChoirs).some((role) => ['head', 'regent'].includes(role));
+    let hasAdminRole = Object.values(callerChoirs).some((role) => ['head', 'regent'].includes(role));
+    // Fallback: if claims are empty (e.g. after account restore), check Firestore
+    if (!hasAdminRole) {
+        const callerDoc = await db.collection("users").doc(callerUid).get();
+        if (callerDoc.exists) {
+            const callerData = callerDoc.data();
+            hasAdminRole = ['head', 'regent'].includes(callerData.role);
+        }
+    }
     if (!hasAdminRole) {
         throw new functions.https.HttpsError("permission-denied", "Only head/regent can delete users");
     }
@@ -476,9 +484,24 @@ exports.atomicUpdateMember = functions.https.onCall(async (data, context) => {
     if (!context.auth)
         throw new functions.https.HttpsError("unauthenticated", "Locked");
     const { choirId, memberId, updates } = data; // updates: { name, voice, role, permissions? }
-    // ✅ Claims-based permission check (no Firestore read)
+    // ✅ Claims-based permission check with Firestore fallback
     const callerChoirs = context.auth.token.choirs || {};
-    const callerRole = callerChoirs[choirId];
+    let callerRole = callerChoirs[choirId];
+    // Fallback: if claims are empty (e.g. after account restore), check Firestore
+    if (!callerRole) {
+        const callerDoc = await db.collection("users").doc(context.auth.uid).get();
+        if (callerDoc.exists) {
+            const callerData = callerDoc.data();
+            if (callerData.choirId === choirId) {
+                callerRole = callerData.role;
+            }
+            else {
+                const membership = (callerData.memberships || []).find((m) => m.choirId === choirId);
+                if (membership)
+                    callerRole = membership.role;
+            }
+        }
+    }
     if (!callerRole || !['admin', 'regent', 'head'].includes(callerRole)) {
         throw new functions.https.HttpsError("permission-denied", "Unauthorized");
     }
