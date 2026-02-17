@@ -145,11 +145,11 @@ export default function SwipeableCard({ children, onDelete, disabled = false, cl
         >
             {/* Delete button behind */}
             <div
-                className="absolute inset-y-0 right-0 w-24 bg-red-500 flex items-center justify-center transition-opacity cursor-pointer active:bg-red-600 shadow-sm rounded-l-3xl"
+                className="absolute inset-0 flex items-center justify-end pr-6 bg-red-500 transition-opacity cursor-pointer active:bg-red-600"
                 style={{ opacity: Math.abs(translateX) / DELETE_AREA_WIDTH }}
                 onClick={handleDeleteClick}
             >
-                <div className="flex items-center justify-center text-white mr-2">
+                <div className="flex items-center justify-center text-white">
                     <Trash2 className="w-6 h-6" />
                 </div>
             </div>
