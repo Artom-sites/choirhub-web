@@ -236,13 +236,13 @@ export default function ServiceList({
                                     <SwipeableCard
                                         onDelete={() => setServiceToDelete(service.id)}
                                         disabled={!effectiveCanEdit}
-                                        className="rounded-2xl h-full shadow-sm" // Moved shadow here to wrapper? No, keep simple.
+                                        className="rounded-2xl h-full" // Removed shadow-sm to avoid visual height mismatch
                                         contentClassName=""
-                                        backgroundClassName="" // Allow red bg to be rectangular (clipped by wrapper)
+                                        backgroundClassName="rounded-2xl" // Force rounded red background to match card
                                     >
                                         <div
                                             onClick={() => onSelectService(service)}
-                                            className={`relative group p-5 transition-all cursor-pointer h-full flex flex-col justify-between ${isToday(service.date) ? 'bg-accent/10 border border-accent/20' : 'bg-surface'}`}
+                                            className={`relative group p-5 rounded-2xl transition-all cursor-pointer h-full flex flex-col justify-between card-shadow ${isToday(service.date) ? 'bg-accent/10 border border-accent/20' : 'bg-surface'}`}
                                         >
                                             <div className="flex justify-between items-start">
                                                 <div>
