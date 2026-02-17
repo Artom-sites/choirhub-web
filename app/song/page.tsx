@@ -6,6 +6,7 @@ import { StatusBar, Style } from '@capacitor/status-bar';
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { getSong, updateSong, uploadSongPdf, deleteSong, getChoir } from "@/lib/db";
+import { getCachedSongs } from "@/lib/offlineDataCache";
 import { getPdf, getCachedSong } from "@/lib/offlineDb";
 import { SimpleSong } from "@/types";
 import PDFViewer from "@/components/PDFViewer";
@@ -57,6 +58,9 @@ function SongContent() {
     // Annotation State
     const [isAnnotating, setIsAnnotating] = useState(false);
 
+    // iOS detection
+    const isIOS = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
+
     // Status Bar control for PDF viewer (white background needs dark icons)
     useEffect(() => {
         if (!Capacitor.isNativePlatform()) return;
@@ -84,20 +88,6 @@ function SongContent() {
         };
 
         setStatusBarStyle();
-    }, [showViewer]);
-
-    // Clear native PencilKit canvas when leaving PDF viewer or page
-    useEffect(() => {
-        if (!showViewer && Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios') {
-            PencilKitAnnotator.clearCanvas().catch(() => { });
-            setIsAnnotating(false);
-        }
-        return () => {
-            // Also clear on unmount (e.g. navigating away)
-            if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios') {
-                PencilKitAnnotator.clearCanvas().catch(() => { });
-            }
-        };
     }, [showViewer]);
 
     const handleLinkArchive = async (globalSong: GlobalSong) => {
@@ -135,6 +125,31 @@ function SongContent() {
     };
 
     useEffect(() => {
+        // iOS fast-path: open native viewer IMMEDIATELY from cached data
+        if (isIOS && songId && userData?.choirId) {
+            const cached = getCachedSongs(userData.choirId);
+            if (cached) {
+                const cachedSong = cached.find((s: any) => s.id === songId);
+                if (cachedSong) {
+                    const pdfUrl = cachedSong.parts?.[0]?.pdfUrl || cachedSong.pdfUrl;
+                    if (pdfUrl && !pdfUrl.includes('t.me/') && !pdfUrl.includes('telegram.me/')) {
+                        PencilKitAnnotator.openNativePdfViewer({
+                            pdfUrl,
+                            songId,
+                            userUid: userData?.id || 'anonymous',
+                            title: cachedSong.title,
+                        }).then(() => {
+                            router.back();
+                        }).catch(e => {
+                            console.error('[NativePdf] Error:', e);
+                            setLoading(false);
+                        });
+                        return; // Skip loadSong entirely on iOS
+                    }
+                }
+            }
+        }
+
         async function loadSong() {
             if (!songId) return;
 
@@ -187,7 +202,26 @@ function SongContent() {
             // Auto-open PDF if available AND valid PDF (not Telegram link)
             if (fetched?.hasPdf && (fetched.pdfUrl || fetched.pdfData)) {
                 if (!isTelegramLink(fetched.pdfUrl || "")) {
-                    setShowViewer(true);
+                    if (isIOS) {
+                        // iOS fallback: if fast-path didn't trigger (no cache)
+                        const url = (fetched.parts && fetched.parts.length > 0)
+                            ? fetched.parts[0].pdfUrl
+                            : (fetched.pdfUrl || fetched.pdfData!);
+                        PencilKitAnnotator.openNativePdfViewer({
+                            pdfUrl: url,
+                            songId: songId!,
+                            userUid: userData?.id || 'anonymous',
+                            title: fetched.title,
+                        }).then(() => {
+                            router.back();
+                        }).catch(e => {
+                            console.error('[NativePdf] Error:', e);
+                            setLoading(false);
+                        });
+                        return; // Don't setLoading(false) — keep preloader showing
+                    } else {
+                        setShowViewer(true);
+                    }
                 }
             }
             setLoading(false);
@@ -256,17 +290,42 @@ function SongContent() {
         }
     };
 
-    const handleUpdateSong = async (updates: Partial<SimpleSong>) => {
+    const handleUpdateSong = async (updates: Partial<SimpleSong>, pdfFile?: File) => {
         if (!userData?.choirId || !songId) return;
 
         try {
-            await updateSong(userData.choirId, songId, updates);
-            setSong(prev => prev ? { ...prev, ...updates } : null);
+            let finalUpdates = { ...updates };
+
+            // Upload PDF if provided
+            if (pdfFile) {
+                // Upload directly to Storage
+                const url = await uploadSongPdf(userData.choirId, songId, pdfFile);
+                finalUpdates.hasPdf = true;
+                finalUpdates.pdfUrl = url;
+                // Clear any legacy base64 data to prefer the new URL
+                finalUpdates.pdfData = undefined;
+            }
+
+            await updateSong(userData.choirId, songId, finalUpdates);
+
+            setSong(prev => prev ? { ...prev, ...finalUpdates } : null);
             setShowEditModal(false);
-            setToast({ message: "Пісню оновлено", type: "success" });
+
+            // Show toast based on what happened
+            if (pdfFile) {
+                setToast({ message: "Пісню та файл оновлено", type: "success" });
+                // If we uploaded a new file, we might want to refresh the viewer if it's open
+                if (showViewer) {
+                    setShowViewer(false);
+                    setTimeout(() => setShowViewer(true), 100);
+                }
+            } else {
+                setToast({ message: "Дані пісні оновлено", type: "success" });
+            }
+
         } catch (error) {
             console.error("Failed to update song:", error);
-            setToast({ message: "Помилка оновлення пісні", type: "error" });
+            setToast({ message: "Помилка оновлення", type: "error" });
         }
     };
 
@@ -330,6 +389,10 @@ function SongContent() {
     };
 
     if (loading) {
+        // On iOS, show blank white screen (native viewer opens on top immediately)
+        if (isIOS) {
+            return <div className="min-h-screen bg-white" />;
+        }
         return <Preloader />;
     }
 
@@ -350,8 +413,8 @@ function SongContent() {
     // Check if link is Telegram
     const isTg = isTelegramLink(song.pdfUrl);
 
-    // Show PDF Viewer (Only if NOT telegram link)
-    if (showViewer && ((song.parts && song.parts.length > 0) || song.pdfUrl || song.pdfData) && !isTg) {
+    // Show PDF Viewer (Web/Android only — iOS uses native viewer)
+    if (!isIOS && showViewer && ((song.parts && song.parts.length > 0) || song.pdfUrl || song.pdfData) && !isTg) {
         const hasParts = song.parts && song.parts.length > 1;
         const originalPdfUrl = (song.parts && song.parts.length > 0)
             ? song.parts[currentPartIndex].pdfUrl
@@ -384,27 +447,7 @@ function SongContent() {
 
                         <div className="flex items-center gap-1">
                             <button
-                                onClick={async () => {
-                                    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios') {
-                                        try {
-                                            if (isAnnotating) {
-                                                await PencilKitAnnotator.stopAnnotating({
-                                                    songId: songId as string,
-                                                    userUid: userData?.id || '',
-                                                });
-                                            } else {
-                                                await PencilKitAnnotator.startAnnotating({
-                                                    songId: songId as string,
-                                                    userUid: userData?.id || '',
-                                                    topOffset: pdfHeaderRef.current?.getBoundingClientRect().bottom || 0,
-                                                });
-                                            }
-                                        } catch (err) {
-                                            console.error('[PencilKit] Error:', err);
-                                        }
-                                    }
-                                    setIsAnnotating(!isAnnotating);
-                                }}
+                                onClick={() => setIsAnnotating(!isAnnotating)}
                                 className={`p-2 rounded-full transition-colors ${isAnnotating ? 'bg-gray-900 text-white' : 'hover:bg-gray-100 text-gray-700'}`}
                                 title="Малювати на PDF"
                             >
@@ -572,7 +615,21 @@ function SongContent() {
 
                                     <div className="flex gap-3 mb-4">
                                         <button
-                                            onClick={() => setShowViewer(true)}
+                                            onClick={() => {
+                                                if (isIOS) {
+                                                    const url = (song.parts && song.parts.length > 0)
+                                                        ? song.parts[currentPartIndex].pdfUrl
+                                                        : (song.pdfUrl || song.pdfData!);
+                                                    PencilKitAnnotator.openNativePdfViewer({
+                                                        pdfUrl: url,
+                                                        songId: songId!,
+                                                        userUid: userData?.id || 'anonymous',
+                                                        title: song.title,
+                                                    }).catch(e => console.error('[NativePdf] Error:', e));
+                                                } else {
+                                                    setShowViewer(true);
+                                                }
+                                            }}
                                             className="flex-1 py-4 bg-primary text-background rounded-xl font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
                                         >
                                             Відкрити ноти

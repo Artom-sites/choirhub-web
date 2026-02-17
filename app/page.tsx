@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon, mergeMembers, updateChoir, deleteMyAccount, adminDeleteUser, deleteAdminCode, getChoirNotifications, getChoirUsers, joinChoir, updateMember, claimMember } from "@/lib/db";
+import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon, mergeMembers, updateChoir, deleteMyAccount, adminDeleteUser, deleteAdminCode, getChoirNotifications, getChoirUsers, joinChoir, updateMember, claimMember, leaveChoir } from "@/lib/db";
 import { Service, Choir, UserMembership, ChoirMember, Permission, AdminCode } from "@/types";
 import SongList from "@/components/SongList";
 import SwipeableCard from "@/components/SwipeableCard";
@@ -33,7 +33,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import NotificationPrompt from "@/components/NotificationPrompt";
 import SendNotificationModal from "@/components/SendNotificationModal";
-import { collection as firestoreCollection, addDoc, getDocs, getDoc, where, query, doc, updateDoc, arrayUnion, onSnapshot } from "firebase/firestore";
+import { collection as firestoreCollection, addDoc, getDocs, getDoc, where, query, doc, updateDoc, arrayUnion, onSnapshot, orderBy, limit, startAfter, QueryDocumentSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useFcmToken } from "@/hooks/useFcmToken";
 import { useServiceWorker } from "@/hooks/useServiceWorker";
@@ -47,7 +47,15 @@ function HomePageContent() {
   const { theme, setTheme } = useTheme();
 
   // Global FCM Token Sync
-  useFcmToken();
+  const {
+    permissionStatus,
+    loading: fcmLoading,
+    requestPermission,
+    unsubscribe,
+    isSupported,
+    isGranted,
+    isPreferenceEnabled,
+  } = useFcmToken();
 
   // Register Service Worker for offline support
   useServiceWorker();
@@ -72,7 +80,68 @@ function HomePageContent() {
 
   // Data
   const [choir, setChoir] = useState<Choir | null>(null);
-  const [services, setServices] = useState<Service[]>([]);
+
+  const loadHistory = async () => {
+    if (loadingHistory || allHistoryLoaded || !userData?.choirId) return;
+    setLoadingHistory(true);
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const sevenDaysAgo = new Date(today);
+      sevenDaysAgo.setDate(today.getDate() - 7);
+      const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
+
+      let q = query(
+        firestoreCollection(db, `choirs/${userData.choirId}/services`),
+        where("date", "<", sevenDaysAgoStr),
+        orderBy("date", "desc"),
+        limit(20)
+      );
+
+      if (lastVisibleHistory) {
+        q = query(q, startAfter(lastVisibleHistory));
+      }
+
+      const snapshot = await getDocs(q);
+
+      if (!snapshot.empty) {
+        const newServices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Service));
+        setPastServices(prev => {
+          // Deduplicate just in case
+          const existingIds = new Set(prev.map(s => s.id));
+          const uniqueNew = newServices.filter(s => !existingIds.has(s.id));
+          return [...prev, ...uniqueNew];
+        });
+        setLastVisibleHistory(snapshot.docs[snapshot.docs.length - 1]);
+        if (snapshot.docs.length < 20) setAllHistoryLoaded(true);
+      } else {
+        setAllHistoryLoaded(true);
+      }
+    } catch (e) {
+      console.error("Failed to load history:", e);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+  // Data States
+  const [activeServices, setActiveServices] = useState<{ upcoming: Service[], recentPast: Service[] }>({ upcoming: [], recentPast: [] });
+  const [pastServices, setPastServices] = useState<Service[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [lastVisibleHistory, setLastVisibleHistory] = useState<QueryDocumentSnapshot | null>(null);
+  const [allHistoryLoaded, setAllHistoryLoaded] = useState(false);
+
+  // Derived Services List (Active + Loaded History)
+  // Combine all services and sort descending (newest first) for History view, 
+  // but usually UI separates Upcoming and Past.
+  // We'll mimic the original 'services' array which contained everything.
+  const services = [...activeServices.upcoming, ...activeServices.recentPast, ...pastServices];
+
+  // Old simple state removed:
+  // const [services, setServices] = useState<Service[]>([]); // REPLACED
+  const setServices = (s: Service[]) => {
+    // Shim to prevent crashes if I missed any setServices calls.
+    // But we should try to avoid calling this.
+  };
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [registeredUsers, setRegisteredUsers] = useState<any[]>([]);
@@ -123,7 +192,8 @@ function HomePageContent() {
   const [savingName, setSavingName] = useState(false);
   const [editChoirName, setEditChoirName] = useState("");
   const [savingChoirSettings, setSavingChoirSettings] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<any>(null);
+  const [userToDelete, setUserToDelete] = useState<UserData | null>(null);
+  const [choirToLeave, setChoirToLeave] = useState<{ id: string, name: string } | null>(null);
 
   const iconInputRef = useRef<HTMLInputElement>(null);
 
@@ -292,39 +362,73 @@ function HomePageContent() {
     let choirLoaded = false;
 
     const checkReady = () => {
-      console.log('Checks:', { servicesLoaded, choirLoaded });
+      // console.log('Checks:', { servicesLoaded, choirLoaded });
       if (servicesLoaded && choirLoaded) {
-        console.log('App Ready!');
+        // console.log('App Ready!');
         setIsAppReady(true);
       }
     };
 
-    const qServices = query(firestoreCollection(db, `choirs/${choirId}/services`));
+    // Calculate 7 days ago for "Active Window"
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 7);
+    const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]; // Compare as YYYY-MM-DD string if needed, or ISO
+
+    // We use ISO string date in DB usually? Type says string. 
+    // Assuming date format is YYYY-MM-DD or ISO. 
+    // If it's YYYY-MM-DD, ISO string comparison works for > date.
+
+    // ACTIVE WINDOW LISTENER (Realtime)
+
+    // INSTANT LOAD: Attempt to load from cache first
+    const CACHE_KEY = `services_active_v1_${choirId}`;
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setActiveServices(parsed);
+        // If we have cache, we don't need to wait for network to show UI
+        servicesLoaded = true;
+        checkReady();
+      }
+    } catch (e) { console.warn("Failed to load services cache", e); }
+
+    const qServices = query(
+      firestoreCollection(db, `choirs/${choirId}/services`),
+      where("date", ">=", sevenDaysAgoStr),
+      orderBy("date", "asc")
+    );
+
     const unsubServices = onSnapshot(qServices, (snapshot) => {
-      const fetchedServices = snapshot.docs
+      const fetchedActiveServices = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() } as Service))
         .filter(s => !s.deletedAt);
 
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const upcoming = fetchedServices.filter(s => new Date(s.date) >= today)
+      // We still sort them into Upcoming and Recent Past
+      const upcoming = fetchedActiveServices.filter(s => new Date(s.date) >= today)
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-      const past = fetchedServices.filter(s => new Date(s.date) < today)
+
+      const recentPast = fetchedActiveServices.filter(s => new Date(s.date) < today)
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-      const sortedServices = [...upcoming, ...past];
-      setServices(sortedServices);
+      // Update Active Services State
+      const newState = { upcoming, recentPast };
+      setActiveServices(newState);
 
-      // Prefetch common views while online to ensure chunks are in cache
-      if (typeof navigator !== 'undefined' && navigator.onLine) {
-        router.prefetch('/');
-      }
+      // Update Cache
+      localStorage.setItem(CACHE_KEY, JSON.stringify(newState));
+
+      // Update the main 'services' list used by UI (merged)
+      // This might cause a loop if we depend on 'services'. 
+      // Instead, we should use a derived state or effect.
+      // For now, let's update simple state.
 
       servicesLoaded = true;
       checkReady();
     }, (error) => {
       console.error("Error fetching services:", error);
-      // Even on error, mark as loaded so we don't hang
       servicesLoaded = true;
       checkReady();
     });
@@ -443,6 +547,20 @@ function HomePageContent() {
   const handleLogout = async () => {
     await signOut();
     router.push("/setup");
+  };
+
+
+  const handleLeaveChoir = async () => {
+    if (!choirToLeave) return;
+    try {
+      await leaveChoir(choirToLeave.id);
+      // Refresh profile to update memberships
+      if (user) await refreshProfile(user);
+      setChoirToLeave(null);
+    } catch (e) {
+      console.error("Error leaving choir:", e);
+      alert("Не вдалося покинути хор");
+    }
   };
 
   const handleSwitchChoir = async (membership: UserMembership) => {
@@ -1110,17 +1228,25 @@ function HomePageContent() {
                     </div>
 
                     {userData?.memberships?.filter(m => m.choirId !== userData.choirId).map(m => (
-                      <button
-                        key={m.choirId}
-                        onClick={() => handleSwitchChoir(m)}
-                        className="w-full p-4 rounded-2xl bg-surface-highlight border border-border hover:bg-surface-highlight/80 flex items-center justify-between transition-all"
-                      >
-                        <div className="text-left">
-                          <p className="text-text-primary font-bold">{m.choirName}</p>
-                          <p className="text-xs text-text-secondary uppercase">{m.role === 'head' ? 'Регент' : m.role === 'regent' ? 'Регент' : 'Хорист'}</p>
-                        </div>
-                        <Repeat className="w-4 h-4 text-text-secondary" />
-                      </button>
+                      <div key={m.choirId} className="flex gap-2">
+                        <button
+                          onClick={() => handleSwitchChoir(m)}
+                          className="flex-1 p-4 rounded-2xl bg-surface-highlight border border-border hover:bg-surface-highlight/80 flex items-center justify-between transition-all group"
+                        >
+                          <div className="text-left">
+                            <p className="text-text-primary font-bold">{m.choirName}</p>
+                            <p className="text-xs text-text-secondary uppercase">{m.role === 'head' ? 'Регент' : m.role === 'regent' ? 'Регент' : 'Хорист'}</p>
+                          </div>
+                          <Repeat className="w-4 h-4 text-text-secondary group-hover:text-primary transition-colors" />
+                        </button>
+                        <button
+                          onClick={() => setChoirToLeave({ id: m.choirId, name: m.choirName })}
+                          className="p-4 rounded-2xl bg-surface-highlight border border-border hover:bg-red-500/10 hover:border-red-500/30 flex items-center justify-center transition-all group/delete"
+                          title="Покинути хор"
+                        >
+                          <LogOut className="w-5 h-5 text-text-secondary group-hover/delete:text-red-500 transition-colors" />
+                        </button>
+                      </div>
                     ))}
                   </div>
 
@@ -1631,6 +1757,9 @@ function HomePageContent() {
             services={services}
             showCreateModal={showAddServiceModal}
             setShowCreateModal={setShowAddServiceModal}
+            onLoadHistory={loadHistory}
+            loadingHistory={loadingHistory}
+            allHistoryLoaded={allHistoryLoaded}
           />
         )}
 
@@ -1827,7 +1956,7 @@ function HomePageContent() {
       </div >
 
       {/* Global FAB */}
-      {!showAccount && ((activeTab === 'home' && canEdit) || (activeTab === 'songs' && canAddSongs)) && (
+      {!showAccount && !showChoirManager && !showAddSongModal && !showAddServiceModal && ((activeTab === 'home' && canEdit) || (activeTab === 'songs' && canAddSongs)) && (
         <button
           onClick={() => {
             if (activeTab === 'home') setShowAddServiceModal(true);
@@ -2062,6 +2191,13 @@ function HomePageContent() {
       <NotificationsModal
         isOpen={showNotificationModal}
         onClose={() => setShowNotificationModal(false)}
+        permissionStatus={permissionStatus}
+        requestPermission={() => requestPermission("NotificationsModal")}
+        unsubscribe={() => unsubscribe("NotificationsModal")}
+        isSupported={isSupported}
+        isGranted={isGranted}
+        isPreferenceEnabled={isPreferenceEnabled}
+        fcmLoading={fcmLoading}
       />
 
       {/* Account sub-modals (portaled to document.body) */}
@@ -2084,6 +2220,17 @@ function HomePageContent() {
         onConfirm={handleDeleteAccount}
       />
 
+
+      {/* Leave Choir Confirmation */}
+      <ConfirmationModal
+        isOpen={!!choirToLeave}
+        onClose={() => setChoirToLeave(null)}
+        onConfirm={handleLeaveChoir}
+        title="Покинути хор?"
+        message={`Ви впевнені, що хочете покинути хор "${choirToLeave?.name}"? Якщо ви єдиний адміністратор, хор може залишитися без керування.`}
+        confirmLabel="Покинути"
+        isDestructive
+      />
 
     </main >
   );

@@ -1,392 +1,431 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { getMessagingInstance, getToken, onMessage } from "@/lib/firebase";
-import { doc, setDoc, arrayUnion, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { useAuth } from "@/contexts/AuthContext";
 import { Capacitor } from "@capacitor/core";
+import { useAuth } from "@/contexts/AuthContext";
 
-// VAPID key from Firebase Console -> Project Settings -> Cloud Messaging -> Web Push certificates
+// ------------------------------------------------------------------
+// MODULE-LEVEL SINGLETON STATE (Global across all hook instances)
+// ------------------------------------------------------------------
+let globalPermissionStatus: NotificationPermission | "unsupported" | "default" = "default";
+let globalToken: string | null = null;
+let globalPreference = typeof window !== "undefined" ? localStorage.getItem('fcm_enabled') === 'true' : false;
+let isListenerSetup = false;
+let hasAutoRegistered = false;
+
+// Token State Listeners (Pub/Sub)
+const tokenListeners = new Set<(token: string | null) => void>();
+const preferenceListeners = new Set<(enabled: boolean) => void>();
+
+const broadcastTokenUpdate = (newToken: string | null) => {
+    globalToken = newToken;
+    tokenListeners.forEach(listener => listener(newToken));
+};
+
+const broadcastPreferenceUpdate = (enabled: boolean) => {
+    globalPreference = enabled;
+    preferenceListeners.forEach(listener => listener(enabled));
+};
+
+// Promise Deduplication
+let initPromise: Promise<any> | null = null;
+let registerPromise: Promise<string | null> | null = null;
+
 const VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY || "";
+
+// Debug Module ID to detect multiple instances
+const MODULE_ID = Math.random().toString(36).substring(7);
+console.log(`[useFcmToken] Module Loaded. ID: ${MODULE_ID}`);
 
 export function useFcmToken() {
     const { user, setFcmToken } = useAuth();
-    const [token, setToken] = useState<string | null>(null);
-    const [permissionStatus, setPermissionStatus] = useState<NotificationPermission | "unsupported">("default");
+
+    // Local State (Synced with Global via Pub/Sub)
+    const [token, setToken] = useState<string | null>(globalToken);
+    const [isPreferenceEnabled, setIsPreferenceEnabled] = useState(globalPreference);
+    const [permissionStatus, setPermissionStatus] = useState<typeof globalPermissionStatus>(globalPermissionStatus);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const isNative = Capacitor.isNativePlatform();
 
-    // Check if notifications are supported
+    // Circuit Breaker for Registration Loop (Instance Level)
+    const registerCallCount = useRef(0);
+    const lastRegisterTime = useRef(0);
+    const lastDisableTime = useRef(0);
+
+    // Subscribe to global token updates
     useEffect(() => {
-        if (typeof window === "undefined") return;
-
-        if (isNative) {
-            // On native, push notifications are always supported via Capacitor plugin
-            checkNativePermission();
-        } else {
-            // Web: check browser support
-            if (!("Notification" in window) || !("serviceWorker" in navigator)) {
-                setPermissionStatus("unsupported");
-                return;
-            }
-            setPermissionStatus(Notification.permission);
-        }
-    }, [isNative]);
-
-    // Check native push notification permission
-    const checkNativePermission = async () => {
-        try {
-            const { PushNotifications } = await import("@capacitor/push-notifications");
-            const result = await PushNotifications.checkPermissions();
-            if (result.receive === "granted") {
-                setPermissionStatus("granted");
-            } else if (result.receive === "denied") {
-                setPermissionStatus("denied");
-            } else {
-                setPermissionStatus("default");
-            }
-        } catch (err) {
-            console.error("[useFcmToken] Error checking native permissions:", err);
-            setPermissionStatus("default");
-        }
-    };
-
-    // Cleanup Stale Tokens (Offline Queue)
-    useEffect(() => {
-        const processCleanupQueue = async () => {
-            if (typeof window === "undefined") return;
-            const queueStr = localStorage.getItem('fcm_cleanup_queue');
-            if (!queueStr) return;
-
-            try {
-                const queue = JSON.parse(queueStr);
-                if (!Array.isArray(queue) || queue.length === 0) return;
-
-                console.log("[useFcmToken] Processing cleanup queue:", queue.length);
-                const { doc, updateDoc, arrayRemove, getFirestore } = await import("firebase/firestore");
-                const { app } = await import("@/lib/firebase"); // Lazy load
-                const db = getFirestore(app);
-
-                const remainingQueue = [];
-
-                for (const item of queue) {
-                    if (!item.uid || !item.token) continue;
-                    // Expiry: discard items older than 30 days to prevent infinite retries of deleted users
-                    if (item.timestamp && Date.now() - item.timestamp > 30 * 24 * 60 * 60 * 1000) continue;
-
-                    try {
-                        const userRef = doc(db, "users", item.uid);
-                        await updateDoc(userRef, {
-                            fcmTokens: arrayRemove(item.token)
-                        });
-                        console.log("[useFcmToken] Cleaned up stale token for user:", item.uid);
-                    } catch (err: any) {
-                        console.warn("[useFcmToken] Failed to cleanup token (will retry):", err);
-                        // If permission denied (user account deleted?), discard
-                        if (err.code === 'permission-denied') {
-                            console.log("[useFcmToken] Permission denied, discarding cleanup item");
-                            continue;
-                        }
-                        remainingQueue.push(item);
-                    }
-                }
-
-                if (remainingQueue.length === 0) {
-                    localStorage.removeItem('fcm_cleanup_queue');
-                } else {
-                    localStorage.setItem('fcm_cleanup_queue', JSON.stringify(remainingQueue));
-                }
-            } catch (err) {
-                console.error("[useFcmToken] Error processing cleanup queue:", err);
-            }
+        const tokenListener = (newToken: string | null) => {
+            setToken(newToken);
+        };
+        const prefListener = (enabled: boolean) => {
+            setIsPreferenceEnabled(enabled);
         };
 
-        // Run cleanup on mount (once)
-        processCleanupQueue();
+        tokenListeners.add(tokenListener);
+        preferenceListeners.add(prefListener);
+
+        // Sync immediately in case it changed before effect ran
+        if (globalToken !== token) setToken(globalToken);
+        if (globalPreference !== isPreferenceEnabled) setIsPreferenceEnabled(globalPreference);
+
+        return () => {
+            tokenListeners.delete(tokenListener);
+            preferenceListeners.delete(prefListener);
+        };
     }, []);
 
-    // Save token to Firestore (Server-Side Enforcement)
-    const saveTokenToFirestore = useCallback(async (fcmToken: string) => {
-        if (!user?.uid) return;
-        try {
-            // Optimization: Prevent redundant Cloud Function calls on every app launch
-            if (typeof window !== "undefined") {
-                const cached = localStorage.getItem('fcm_registration_cache');
-                if (cached) {
-                    try {
-                        const { token: t, uid: u } = JSON.parse(cached);
-                        if (t === fcmToken && u === user.uid) {
-                            console.log("[useFcmToken] Token already registered, skipping.");
-                            return;
+    const isNative = Capacitor.isNativePlatform();
+
+    // ----------------------------------------
+    // 1. INITIALIZATION (Once per session lazy-check)
+    // ----------------------------------------
+    const init = useCallback(async () => {
+        if (!initPromise) {
+            initPromise = (async () => {
+                let status: typeof globalPermissionStatus = "default";
+                if (typeof window === "undefined") return "default";
+
+                try {
+                    if (isNative) {
+                        const { PushNotifications } = await import("@capacitor/push-notifications");
+                        const result = await PushNotifications.checkPermissions();
+                        if (result.receive === "granted") status = "granted";
+                        else if (result.receive === "denied") status = "denied";
+                    } else {
+                        if (!("Notification" in window) || !("serviceWorker" in navigator)) {
+                            status = "unsupported";
+                        } else {
+                            status = Notification.permission;
                         }
-                    } catch (e) { }
+                    }
+                } catch (err) {
+                    console.error("[useFcmToken] Permission check failed:", err);
                 }
-            }
-
-            console.log("[useFcmToken] Registering token via Cloud Function...");
-            const { getFunctions, httpsCallable } = await import("firebase/functions");
-            const { app } = await import("@/lib/firebase");
-            const functions = getFunctions(app);
-            const registerToken = httpsCallable(functions, 'registerFcmToken');
-
-            await registerToken({ token: fcmToken });
-            console.log("[useFcmToken] Token registered successfully (Single Owner Enforced)");
-
-            // Note: We do NOT need to manually cache or cleanup queue anymore for cross-user privacy,
-            // because the server guarantees that if User B registers, User A loses the token immediately.
-
-            if (typeof window !== "undefined") {
-                localStorage.setItem('fcm_registration_cache', JSON.stringify({
-                    token: fcmToken,
-                    uid: user.uid,
-                    timestamp: Date.now()
-                }));
-            }
-        } catch (err) {
-            console.error("[useFcmToken] Error registering token:", err);
-        }
-    }, [user?.uid]);
-
-    // Request permission and get token - NATIVE path
-    const requestPermissionNative = useCallback(async () => {
-        setLoading(true);
-        setError(null);
-        // User explicitly requested permissions, so clear the disabled flag
-        if (typeof window !== "undefined") {
-            localStorage.removeItem('fcm_manually_disabled');
+                globalPermissionStatus = status;
+                return status;
+            })();
         }
 
-        try {
-            const { PushNotifications } = await import("@capacitor/push-notifications");
+        const status = await initPromise;
+        setPermissionStatus(status);
+    }, [isNative]);
 
-            // Request permission
-            const permResult = await PushNotifications.requestPermissions();
-            if (permResult.receive !== "granted") {
-                setPermissionStatus("denied");
-                setError("Дозвіл на сповіщення не надано");
-                setLoading(false);
-                return null;
-            }
-
-            setPermissionStatus("granted");
-
-            // Register for push notifications
-            await PushNotifications.register();
-
-            // Listen for registration success
-            return new Promise<string | null>((resolve) => {
-                const timeout = setTimeout(() => {
-                    setError("Не вдалося отримати токен сповіщень");
-                    setLoading(false);
-                    resolve(null);
-                }, 10000);
-
-                // Remove existing listeners to avoid duplicates
-                PushNotifications.removeAllListeners();
-
-                PushNotifications.addListener("registration", async (registrationToken) => {
-                    clearTimeout(timeout);
-                    const fcmToken = registrationToken.value;
-                    console.log("[useFcmToken] Native FCM token:", fcmToken);
-                    setToken(fcmToken);
-                    setFcmToken(fcmToken); // Sync with AuthContext
-                    await saveTokenToFirestore(fcmToken);
-                    setLoading(false);
-                    resolve(fcmToken);
-                });
-
-                PushNotifications.addListener("registrationError", (err) => {
-                    clearTimeout(timeout);
-                    console.error("[useFcmToken] Native registration error:", err);
-                    setError("Помилка реєстрації сповіщень");
-                    setLoading(false);
-                    resolve(null);
-                });
-            });
-        } catch (err) {
-            console.error("[useFcmToken] Native push error:", err);
-            setError("Помилка налаштування сповіщень");
-            setLoading(false);
-            return null;
-        }
-    }, [saveTokenToFirestore, setFcmToken]); // Added setFcmToken dependency
-
-    // Request permission and get token - WEB path
-    const requestPermissionWeb = useCallback(async () => {
-        if (permissionStatus === "unsupported") {
-            setError("Сповіщення не підтримуються на цьому пристрої");
-            return null;
-        }
-
-        setLoading(true);
-        setError(null);
-        // User explicitly requested permissions, so clear the disabled flag
-        if (typeof window !== "undefined") {
-            localStorage.removeItem('fcm_manually_disabled');
-        }
-
-        try {
-            const permission = await Notification.requestPermission();
-            setPermissionStatus(permission);
-
-            if (permission !== "granted") {
-                setError("Дозвіл на сповіщення не надано");
-                setLoading(false);
-                return null;
-            }
-
-            // Register service worker
-            const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
-            console.log("[useFcmToken] Service Worker registered:", registration);
-
-            // Get messaging instance
-            const messaging = await getMessagingInstance();
-            if (!messaging) {
-                setError("Firebase Messaging не підтримується");
-                setLoading(false);
-                return null;
-            }
-
-            // Get FCM token
-            const fcmToken = await getToken(messaging, {
-                vapidKey: VAPID_KEY,
-                serviceWorkerRegistration: registration,
-            });
-
-            if (fcmToken) {
-                setToken(fcmToken);
-                setFcmToken(fcmToken); // Sync with AuthContext
-                await saveTokenToFirestore(fcmToken);
-            }
-
-            setLoading(false);
-            return fcmToken;
-        } catch (err) {
-            console.error("[useFcmToken] Error getting FCM token:", err);
-            setError("Помилка налаштування сповіщень");
-            setLoading(false);
-            return null;
-        }
-    }, [permissionStatus, saveTokenToFirestore, setFcmToken]);
-
-    // Main requestPermission - chooses native vs web path
-    const requestPermission = useCallback(async () => {
-        if (isNative) {
-            return requestPermissionNative();
-        } else {
-            return requestPermissionWeb();
-        }
-    }, [isNative, requestPermissionNative, requestPermissionWeb]);
-
-    // Auto-register if already granted
     useEffect(() => {
-        // Only auto-register if we have a user and don't have a token yet
-        // AND user hasn't manually disabled notifications
-        const manuallyDisabled = typeof window !== "undefined" && localStorage.getItem('fcm_manually_disabled') === 'true';
+        init();
+    }, [init]);
 
-        if (permissionStatus === 'granted' && !token && !loading && user?.uid && !manuallyDisabled) {
-            console.log("[useFcmToken] Auto-registering (permission granted + not disabled)");
-            requestPermission();
-        } else if (manuallyDisabled) {
-            console.log("[useFcmToken] Subscribed suppressed (manually disabled)");
-        }
-    }, [permissionStatus, token, loading, user?.uid, requestPermission]);
 
-    // Listen for foreground messages (native)
+    // ----------------------------------------
+    // 2. LISTENER SETUP (Strictly Once Global)
+    // ----------------------------------------
     useEffect(() => {
-        if (!isNative) return;
+        if (!isNative || isListenerSetup) return;
 
-        const setupNativeListeners = async () => {
+        // Synchronous Lock to prevent race condition
+        isListenerSetup = true;
+
+        const setupGlobalListeners = async () => {
             try {
                 const { PushNotifications } = await import("@capacitor/push-notifications");
 
-                // Note: registration listeners are set in requestPermissionNative locally to avoid race conditions.
-                // Here we set operational listeners.
+                // CRITICAL: Remove listeners only ONCE globally
+                await PushNotifications.removeAllListeners();
 
-                await PushNotifications.removeAllListeners(); // Safety cleanup before adding logic listeners
-
-                PushNotifications.addListener("pushNotificationReceived", (notification) => {
-                    console.log("[useFcmToken] Native foreground notification:", notification);
+                // Permanent Listeners
+                await PushNotifications.addListener("pushNotificationReceived", (notification) => {
+                    console.log("[FCM] Foreground:", notification);
                 });
 
-                PushNotifications.addListener("pushNotificationActionPerformed", (action) => {
-                    console.log("[useFcmToken] Native notification action:", action);
+                await PushNotifications.addListener("pushNotificationActionPerformed", (action) => {
+                    console.log("[FCM] Action:", action);
+                });
+
+                // Registration Listener (Handles all token updates)
+                await PushNotifications.addListener("registration", async (registrationToken) => {
+                    console.log("[FCM] Native Registration Success:", registrationToken.value);
+                    handleTokenReceived(registrationToken.value);
+                });
+
+                await PushNotifications.addListener("registrationError", (err) => {
+                    console.error("[FCM] Registration Error:", err);
                 });
             } catch (err) {
-                console.error("[useFcmToken] Error setting up native listeners:", err);
+                console.error("[FCM] Error setting listeners:", err);
+                isListenerSetup = false; // Allow retry if failed
             }
         };
 
-        setupNativeListeners();
+        setupGlobalListeners();
     }, [isNative]);
 
 
-    // Listen for foreground messages (web)
-    useEffect(() => {
-        if (typeof window === "undefined" || isNative) return;
+    // ----------------------------------------
+    // 3. REGISTRATION (Deduplicated)
+    // ----------------------------------------
+    // ----------------------------------------
+    // 3. REGISTRATION (Deduplicated)
+    // ----------------------------------------
+    // ----------------------------------------
+    // HELPERS (Hoisted)
+    // ----------------------------------------
 
-        const setupForegroundListener = async () => {
-            const messaging = await getMessagingInstance();
-            if (!messaging) return;
 
-            const unsubscribe = onMessage(messaging, (payload) => {
-                console.log("[useFcmToken] Foreground message received:", payload);
-
-                if (Notification.permission === "granted" && payload.notification) {
-                    new Notification(payload.notification.title || "ChoirHub", {
-                        body: payload.notification.body,
-                        icon: "/icons/icon-192x192.png",
-                    });
-                }
-            });
-
-            return unsubscribe;
-        };
-
-        setupForegroundListener();
-    }, [isNative]);
-
-    // Unsubscribe (remove token from server)
-    const unsubscribe = useCallback(async () => {
-        if (!token || !user?.uid) return;
-        setLoading(true);
+    const saveTokenToFirestore = async (t: string, uid: string) => {
         try {
-            const { getFirestore, doc, updateDoc, arrayRemove } = await import("firebase/firestore");
-            const { app } = await import("@/lib/firebase");
-            const db = getFirestore(app);
-
-            const userRef = doc(db, "users", user.uid);
-            await updateDoc(userRef, {
-                fcmTokens: arrayRemove(token)
-            });
-
-            // Remove from local storage
-            localStorage.removeItem('fcm_registration_cache');
-            if (typeof window !== "undefined") {
-                localStorage.setItem('fcm_manually_disabled', 'true');
+            const cacheKey = 'fcm_reg_cache';
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+                const p = JSON.parse(cached);
+                if (p.t === t && p.u === uid) return;
             }
-            setToken(null);
+
+            const { getFunctions, httpsCallable } = await import("firebase/functions");
+            const { app } = await import("@/lib/firebase");
+            const functions = getFunctions(app);
+            const registerFn = httpsCallable(functions, 'registerFcmToken');
+            await registerFn({ token: t });
+
+            localStorage.setItem(cacheKey, JSON.stringify({ t, u: uid, ts: Date.now() }));
+        } catch (e) {
+            console.error("[FCM] Save to DB failed", e);
+        }
+    };
+
+    const handleTokenReceived = async (newToken: string) => {
+        broadcastTokenUpdate(newToken);
+        setFcmToken(newToken); // Sync AuthContext
+
+        // Server-side registration (Idempotent safe)
+        if (user?.uid) {
+            await saveTokenToFirestore(newToken, user.uid);
+        }
+    };
+
+    // ----------------------------------------
+    // 3. REGISTRATION (Enable Flow)
+    // ----------------------------------------
+
+    const enableNotifications = useCallback(async (caller: string = "unknown"): Promise<string | null> => {
+        // 1. Deduplication
+        if (registerPromise) {
+            console.log(`[useFcmToken] Enable/Register deduplicated. Caller: ${caller}. ID: ${MODULE_ID}`);
+            return registerPromise;
+        }
+
+        // 2. Circuit Breaker
+        const now = Date.now();
+        if (now - lastRegisterTime.current > 10000) {
+            registerCallCount.current = 0;
+        }
+        registerCallCount.current++;
+        lastRegisterTime.current = now;
+
+        if (registerCallCount.current > 3) {
+            console.error(`[useFcmToken] Loop Blocked! Count: ${registerCallCount.current}. ID: ${MODULE_ID}`);
+            return null;
+        }
+
+        const timeSinceDisable = Date.now() - (lastDisableTime.current || 0);
+        if (timeSinceDisable < 2000) {
+            console.warn(`[useFcmToken] Enable blocked: Cooldown active (${timeSinceDisable}ms). Caller: ${caller}`);
+            return null;
+        }
+
+        console.log(`[useFcmToken] ENABLING NOTIFICATIONS. Caller: ${caller}. ID: ${MODULE_ID}`);
+        setLoading(true);
+        setError(null);
+
+        registerPromise = (async () => {
+            try {
+                // 1. Persist Preference FIRST
+                if (typeof window !== "undefined") {
+                    localStorage.setItem('fcm_enabled', 'true');
+                    broadcastPreferenceUpdate(true);
+                }
+
+                if (isNative) {
+                    const { PushNotifications } = await import("@capacitor/push-notifications");
+
+                    // 2. Request Permission (if needed)
+                    // We check first to avoid unnecessary prompts if already granted/denied
+                    let status = globalPermissionStatus;
+                    if (status === 'default') {
+                        const perm = await PushNotifications.requestPermissions();
+                        status = perm.receive === 'granted' ? 'granted' : 'denied';
+                        globalPermissionStatus = status;
+                        setPermissionStatus(status);
+                    }
+
+                    if (status !== 'granted') {
+                        throw new Error("Permission denied");
+                    }
+
+                    // 3. Register (Race against timeout)
+                    return new Promise<string | null>((resolve, reject) => {
+                        let isResolved = false;
+                        const timeoutId = setTimeout(() => {
+                            if (!isResolved) {
+                                isResolved = true;
+                                console.warn("[useFcmToken] Registration timeout - likely Simulator");
+                                reject(new Error("Registration timed out"));
+                            }
+                        }, 10000);
+
+                        const listener = (t: string | null) => {
+                            if (!isResolved && t) {
+                                isResolved = true;
+                                clearTimeout(timeoutId);
+                                resolve(t);
+                            }
+                        };
+                        tokenListeners.add(listener);
+
+                        // Trigger Native Register
+                        PushNotifications.register().catch(e => {
+                            if (!isResolved) {
+                                isResolved = true;
+                                clearTimeout(timeoutId);
+                                reject(e);
+                            }
+                        });
+                    });
+                } else {
+                    // Web Flow
+                    const perm = await Notification.requestPermission();
+                    if (perm !== "granted") throw new Error("Permission denied");
+
+                    const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+                    const messaging = await getMessagingInstance();
+                    if (!messaging) throw new Error("No messaging");
+
+                    const fcmToken = await getToken(messaging, {
+                        vapidKey: VAPID_KEY,
+                        serviceWorkerRegistration: registration,
+                    });
+
+                    if (fcmToken) {
+                        await handleTokenReceived(fcmToken);
+                        return fcmToken;
+                    }
+                    return null;
+                }
+            } catch (err: any) {
+                console.error("[useFcmToken] Enable failed:", err);
+                setError(err.message || "Registration failed");
+                // IMPORTANT: Do NOT disable fcm_enabled here? 
+                // If it was a network error, we might want to retry later.
+                // But if permission denied, maybe?
+                // For now, keep preference 'true' so next app start might retry if it was transient.
+                return null;
+            } finally {
+                setLoading(false);
+                registerPromise = null;
+                hasAutoRegistered = true;
+            }
+        })();
+
+        return registerPromise;
+    }, [isNative, user?.uid]);
+
+    // ----------------------------------------
+    // 4. DISABLE FLOW (Unsubscribe)
+    // ----------------------------------------
+    const disableNotifications = useCallback(async (caller: string = "unknown") => {
+        setLoading(true);
+        lastDisableTime.current = Date.now();
+        console.log(`[useFcmToken] DISABLING NOTIFICATIONS. Caller: ${caller}. ID: ${MODULE_ID}`);
+
+        try {
+            // 1. Remove from Firestore
+            if (token && user?.uid) {
+                const { getFirestore, doc, updateDoc, arrayRemove } = await import("firebase/firestore");
+                const { app } = await import("@/lib/firebase");
+                const db = getFirestore(app);
+                await updateDoc(doc(db, "users", user.uid), { fcmTokens: arrayRemove(token) });
+            }
+
+            // 2. Update Local State
+            broadcastTokenUpdate(null);
             setFcmToken(null);
-            setPermissionStatus("default"); // Reset status locally to allow re-prompt or show "off"
-            console.log("[useFcmToken] Unsubscribed successfully");
-        } catch (err) {
-            console.error("[useFcmToken] Error unsubscribing:", err);
-            setError("Помилка при вимкненні сповіщень");
+
+            // 3. Persist Preference
+            localStorage.setItem('fcm_enabled', 'false');
+            localStorage.removeItem('fcm_reg_cache');
+            broadcastPreferenceUpdate(false);
+
+            // 4. Native Unregister? (Optional, usually not needed if we delete from DB)
+            if (isNative) {
+                const { PushNotifications } = await import("@capacitor/push-notifications");
+                // Capacitor doesn't expose strict 'unregister' in all versions or it might be buggy.
+                // Simply dropping the token from DB is the standard way to "stop" notifications.
+                await PushNotifications.removeAllListeners();
+                // Restoring listeners is tricky if we re-enable. 
+                // Better to just leave listeners but we simply won't have a valid token in DB.
+
+                // Actually, we SHOULD remove listeners to be clean?
+                // But our useEffect adds them back only on mount.
+                // Let's keep listeners active, just drop the token.
+            }
+
+        } catch (e) {
+            console.error(e);
+            setError("Error disabling notifications");
         } finally {
             setLoading(false);
         }
-    }, [token, user?.uid, setFcmToken]);
+    }, [token, user?.uid, isNative, setFcmToken]);
+
+    // ----------------------------------------
+    // 5. AUTO-REGISTER
+    // ----------------------------------------
+    useEffect(() => {
+        if (hasAutoRegistered || !user?.uid) return;
+
+        const performAutoRegister = async () => {
+            const isEnabled = typeof window !== "undefined" && localStorage.getItem('fcm_enabled') === 'true';
+
+            if (!isEnabled) {
+                hasAutoRegistered = true;
+                return;
+            }
+
+            if (globalToken) {
+                console.log("[useFcmToken] Syncing existing global token...");
+                // Just ensure it's in DB
+                saveTokenToFirestore(globalToken, user.uid);
+                hasAutoRegistered = true;
+                return;
+            }
+
+            // Wait for init
+            await initPromise;
+
+            // Only register if we have permission AND enabled
+            // Actually, if 'fcm_enabled' is true, we should try to register (which asks permission if needed)
+            // But usually 'fcm_enabled' implies we successfully enabled it before.
+            console.log("[useFcmToken] Auto-registering...");
+            hasAutoRegistered = true;
+            enableNotifications("auto-register");
+        };
+
+        performAutoRegister();
+    }, [user?.uid, enableNotifications]);
+
+    // ... Helpers ...
+
+
 
     return {
         token,
         permissionStatus,
         loading,
         error,
-        requestPermission,
-        unsubscribe,
+        requestPermission: enableNotifications, // Alias for backward compat
+        unsubscribe: disableNotifications,     // Alias
         isSupported: isNative || permissionStatus !== "unsupported",
-        isGranted: permissionStatus === "granted" && !!token, // Only considered granted if we have a token
+        isGranted: permissionStatus === "granted" && !!token, // Technical Success State
+        isPreferenceEnabled, // User Intent State
     };
+
 }

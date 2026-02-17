@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useRef } from "react";
 import { Service, ServiceSong, SimpleSong, Choir, ChoirMember } from "@/types";
-import { getSongs, addSongToService, removeSongFromService, getChoir, updateService, setServiceAttendance, addKnownConductor, addKnownPianist } from "@/lib/db";
+import { addSongToService, removeSongFromService, getChoir, updateService, setServiceAttendance, addKnownConductor, addKnownPianist } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRepertoire } from "@/contexts/RepertoireContext";
 import { ChevronLeft, Eye, X, Plus, Users, UserX, Check, Calendar, Music, UserCheck, AlertCircle, Trash2, User as UserIcon, CloudDownload, CheckCircle, Loader, ChevronDown, Mic2 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { StatusBar, Style } from '@capacitor/status-bar';
@@ -28,7 +29,8 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
 
     // Local state for optimistic updates
     const [currentService, setCurrentService] = useState<Service>(service);
-    const [availableSongs, setAvailableSongs] = useState<SimpleSong[]>([]);
+    // const [availableSongs, setAvailableSongs] = useState<SimpleSong[]>([]); // Replaced by Context
+    const { songs: availableSongs } = useRepertoire();
     const [showAddSong, setShowAddSong] = useState(false);
     const [showAttendance, setShowAttendance] = useState(false);
     const [search, setSearch] = useState("");
@@ -65,27 +67,23 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
         async function fetchData() {
             if (!userData?.choirId) return;
 
-            // Always fetch songs as they change frequently and might not be in parent state
-            const promises: Promise<any>[] = [getSongs(userData.choirId)];
+            // Songs are now handled by RepertoireContext (no fetch here)
 
             // Only fetch choir if not provided via props
             if (!choir) {
-                promises.push(getChoir(userData.choirId));
                 setMembersLoading(true);
-            }
-
-            const results = await Promise.all(promises);
-            const songs = results[0];
-            setAvailableSongs(songs);
-
-            if (!choir && results[1]) {
-                const fetchedChoir = results[1];
-                if (fetchedChoir?.members) {
-                    setChoirMembers(fetchedChoir.members);
+                try {
+                    const fetchedChoir = await getChoir(userData.choirId);
+                    if (fetchedChoir?.members) {
+                        setChoirMembers(fetchedChoir.members);
+                    }
+                    if (fetchedChoir?.knownConductors) setKnownConductors(fetchedChoir.knownConductors);
+                    if (fetchedChoir?.knownPianists) setKnownPianists(fetchedChoir.knownPianists);
+                } catch (e) {
+                    console.error("Error fetching choir details:", e);
+                } finally {
+                    setMembersLoading(false);
                 }
-                if (fetchedChoir?.knownConductors) setKnownConductors(fetchedChoir.knownConductors);
-                if (fetchedChoir?.knownPianists) setKnownPianists(fetchedChoir.knownPianists);
-                setMembersLoading(false);
             }
         }
         fetchData();

@@ -13,6 +13,8 @@ export default function NotificationSettings() {
         isGranted,
     } = useFcmToken();
 
+    console.log("[NotificationSettings] Render. Status:", permissionStatus, "IsGranted:", isGranted);
+
     if (!isSupported) {
         return (
             <div className="p-4 bg-surface card-shadow rounded-2xl">
@@ -54,7 +56,7 @@ export default function NotificationSettings() {
 
                 {!isGranted && (
                     <button
-                        onClick={requestPermission}
+                        onClick={() => requestPermission("NotificationSettings")}
                         disabled={loading || permissionStatus === "denied"}
                         className="px-4 py-2 bg-primary text-background rounded-xl font-bold text-sm hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >

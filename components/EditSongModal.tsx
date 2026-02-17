@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
-import { X, Plus, Loader2, Save, Check, ChevronDown, Trash2 } from "lucide-react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { X, Plus, Loader2, Save, Check, ChevronDown, Trash2, Upload } from "lucide-react";
 import { SimpleSong } from "@/types";
 import { CATEGORIES as OFFICIAL_THEMES_IMPORTED } from "@/lib/themes";
 
@@ -15,7 +15,7 @@ import ConfirmationModal from "./ConfirmationModal";
 interface EditSongModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (updates: Partial<SimpleSong>) => Promise<void>;
+    onSave: (updates: Partial<SimpleSong>, pdfFile?: File) => Promise<void>;
     initialData: SimpleSong;
     regents: string[];
     knownConductors: string[];
@@ -35,8 +35,14 @@ export default function EditSongModal({
 }: EditSongModalProps) {
     const { userData } = useAuth();
 
-    const normalizedRegents = useMemo(() => Array.from(new Set(regents.map(r => r.trim()))), [regents]);
+    const normalizedRegents = useMemo(() => Array.from(new Set(
+        (regents || [])
+            .filter(r => typeof r === 'string' && r)
+            .map(r => r.trim())
+    )), [regents]);
+
     const uniqueKnownConductors = useMemo(() => (knownConductors || [])
+        .filter(c => typeof c === 'string' && c)
         .map(c => c.trim())
         .filter(c => !normalizedRegents.some(r => r.toLowerCase() === c.toLowerCase()))
         .filter((c, index, self) => self.indexOf(c) === index), [knownConductors, normalizedRegents]);
@@ -45,7 +51,7 @@ export default function EditSongModal({
 
     // Use OFFICIAL_THEMES + knownCategories for the "Category" (Theme) list
     const allThemes = useMemo(() => {
-        const merged = [...OFFICIAL_THEMES, ...(knownCategories || [])];
+        const merged = [...OFFICIAL_THEMES, ...(knownCategories || []).filter(c => typeof c === 'string' && c)];
         return Array.from(new Set(merged));
     }, [knownCategories]);
 
@@ -78,6 +84,9 @@ export default function EditSongModal({
     const [isPianistDropdownOpen, setIsPianistDropdownOpen] = useState(false);
     const pianistDropdownRef = useRef<HTMLDivElement>(null);
 
+    // PDF File State
+    const [pdfFile, setPdfFile] = useState<File | null>(null);
+
     const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false);
     const themeDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -107,6 +116,18 @@ export default function EditSongModal({
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
+
+    // Lock body scroll
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [isOpen]);
 
 
     if (!isOpen) return null;
@@ -181,7 +202,7 @@ export default function EditSongModal({
                 conductor: finalConductor,
                 pianist: finalPianist || undefined,
                 // theme: finalTheme, // Redundant if we map to category, but keeping it clean
-            });
+            }, pdfFile || undefined);
 
             onClose();
         } catch (err) {
@@ -481,7 +502,7 @@ export default function EditSongModal({
                                                             onClick={(e) => handlePianistDeleteClick(p, e)}
                                                             className="p-1.5 hover:bg-red-500/20 text-text-secondary hover:text-red-400 rounded-lg transition-colors z-30"
                                                         >
-                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                            <Trash2 className="w-4 h-4" />
                                                         </button>
                                                     )}
                                                 </div>
@@ -520,6 +541,57 @@ export default function EditSongModal({
                                     )}
                                 </div>
                             )}
+                        </div>
+
+                        {/* PDF File - NEW SECTION */}
+                        <div>
+                            <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                                PDF файл нот
+                            </label>
+                            <div className="relative group">
+                                <input
+                                    type="file"
+                                    accept=".pdf"
+                                    onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                />
+                                <div className={`w-full px-4 py-3.5 bg-surface-highlight border-2 border-dashed rounded-xl flex items-center justify-center gap-3 transition-all group-hover:border-primary/50 group-hover:bg-surface ${pdfFile ? 'border-primary/30 bg-primary/5' : 'border-border'}`}>
+                                    {pdfFile ? (
+                                        <>
+                                            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                                                <Check className="w-4 h-4" />
+                                            </div>
+                                            <div className="text-left flex-1 min-w-0">
+                                                <p className="text-sm font-medium text-text-primary truncate">
+                                                    {pdfFile.name}
+                                                </p>
+                                                <p className="text-xs text-text-secondary">
+                                                    {(pdfFile.size / 1024 / 1024).toFixed(2)} MB
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.preventDefault(); // Prevent opening file dialog
+                                                    setPdfFile(null);
+                                                }}
+                                                className="p-2 hover:bg-red-500/10 text-text-secondary hover:text-red-500 rounded-lg transition-colors z-20"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="w-8 h-8 rounded-full bg-surface flex items-center justify-center text-text-secondary group-hover:text-primary group-hover:scale-110 transition-all">
+                                                <Upload className="w-4 h-4" />
+                                            </div>
+                                            <span className="text-sm font-medium text-text-secondary group-hover:text-text-primary transition-colors">
+                                                {initialData.hasPdf ? "Замінити поточний файл" : "Натисніть щоб завантажити PDF"}
+                                            </span>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
                         </div>
 
 

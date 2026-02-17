@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { Capacitor } from "@capacitor/core";
 import { Search, FileText, Music2, ChevronRight, Filter, Plus, Eye, User, Loader2, Trash2, Pencil, MoreVertical, Library, X } from "lucide-react";
 import { SimpleSong } from "@/types";
 import { CATEGORIES, Category } from "@/lib/themes";
@@ -9,8 +10,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Virtuoso, TableVirtuoso } from 'react-virtuoso';
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { getSongs, addSong, uploadSongPdf, deleteSong, addKnownConductor, updateSong, softDeleteLocalSong, syncSongs } from "@/lib/db";
+import { addSong, uploadSongPdf, deleteSong, addKnownConductor, updateSong, softDeleteLocalSong } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRepertoire } from "@/contexts/RepertoireContext";
 import AddSongModal from "./AddSongModal";
 import EditSongModal from "./EditSongModal";
 import PDFViewer from "./PDFViewer";
@@ -43,22 +45,8 @@ export default function SongList({
 }: SongListProps) {
     const router = useRouter();
     const { userData } = useAuth();
+    const { songs, loading, refreshRepertoire } = useRepertoire();
 
-    // Lazy-initialize from localStorage cache to avoid spinner on tab switches
-    const [songs, setSongsState] = useState<SimpleSong[]>(() => {
-        if (typeof window === 'undefined' || !userData?.choirId) return [];
-        try {
-            const cached = localStorage.getItem(`choir_songs_v2_${userData.choirId}`);
-            if (cached) return JSON.parse(cached);
-        } catch (e) { /* ignore */ }
-        return [];
-    });
-    const [loading, setLoading] = useState(() => {
-        if (typeof window === 'undefined' || !userData?.choirId) return true;
-        try {
-            return !localStorage.getItem(`choir_songs_v2_${userData.choirId}`);
-        } catch (e) { return true; }
-    });
     const [isSyncing, setIsSyncing] = useState(false);
     const [search, setSearch] = useState("");
     const [showFilters, setShowFilters] = useState(false);
@@ -87,76 +75,21 @@ export default function SongList({
     const [isMobile, setIsMobile] = useState<boolean | null>(null);
 
     useEffect(() => {
-        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
         checkMobile(); // Initial check
         window.addEventListener('resize', checkMobile);
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
 
-    const fetchSongs = useCallback(async () => {
-        if (!userData?.choirId) return;
-
-        const CACHE_KEY = `choir_songs_v2_${userData.choirId}`;
-        const SYNC_KEY = `choir_sync_v2_${userData.choirId}`;
-
-        // Smart Sync (Background) — cache is already loaded via lazy useState init
-        setIsSyncing(true);
-        try {
-            const lastSync = localStorage.getItem(SYNC_KEY);
-            const lastSyncTime = lastSync ? parseInt(lastSync) : 0;
-
-            // Optimize limits: Don't sync if checked less than 60 seconds ago
-            if (Date.now() - lastSyncTime < 60000) {
-                setLoading(false);
-                setIsSyncing(false);
-                return;
-            }
-
-            // Fetch differences
-            const { songs: updatedSongs, deletedIds } = await syncSongs(userData.choirId, lastSyncTime);
-
-            if (updatedSongs.length > 0 || deletedIds.length > 0) {
-                setSongsState(prev => {
-                    const currentMap = new Map(prev.map(s => [s.id, s]));
-
-                    // Remove deleted
-                    deletedIds.forEach(id => currentMap.delete(id));
-
-                    // Add/Update modified
-                    updatedSongs.forEach(s => currentMap.set(s.id, s));
-
-                    const merged = Array.from(currentMap.values())
-                        .sort((a, b) => a.title.localeCompare(b.title, 'uk'));
-
-                    // Update Cache
-                    localStorage.setItem(CACHE_KEY, JSON.stringify(merged));
-                    return merged;
-                });
-                console.log(`Smart Sync: +${updatedSongs.length}, -${deletedIds.length}`);
-            } else {
-                console.log("Smart Sync: No changes");
-            }
-
-            // Update Sync Time
-            localStorage.setItem(SYNC_KEY, Date.now().toString());
-
-        } catch (error) {
-            console.error("Smart Sync failed:", error);
-        } finally {
-            setLoading(false);
-            setIsSyncing(false);
-        }
-    }, [userData?.choirId]); // Don't depend on songs/loading (handled via closure/refs if needed, but here simple usage)
-
     useEffect(() => {
-        fetchSongs();
-
         // Refresh on focus
-        const onFocus = () => fetchSongs();
+        const onFocus = () => refreshRepertoire();
         window.addEventListener('focus', onFocus);
         return () => window.removeEventListener('focus', onFocus);
-    }, [fetchSongs]);
+    }, [refreshRepertoire]);
 
     // Close menu on click outside
 
@@ -235,7 +168,7 @@ export default function SongList({
         }
 
         // 3. Refresh list
-        await fetchSongs();
+        await refreshRepertoire();
         if (onRefresh) onRefresh();
 
         // Just close modal, the listener handles the UI
@@ -247,14 +180,23 @@ export default function SongList({
         setEditingSong(song);
     };
 
-    const handleEditSave = async (updates: Partial<SimpleSong>) => {
+    const handleEditSave = async (updates: Partial<SimpleSong>, pdfFile?: File) => {
         if (!userData?.choirId || !editingSong) return;
         try {
             await updateSong(userData.choirId, editingSong.id, updates);
-            // Optimistic update - Not strictly needed as listener will update, but good for immediate feedback
-            // setSongsState(prev => prev.map(s => s.id === editingSong.id ? { ...s, ...updates } : s));
+
+            if (pdfFile) {
+                try {
+                    await uploadSongPdf(userData.choirId, editingSong.id, pdfFile);
+                } catch (e) {
+                    console.error("Failed to upload new PDF:", e);
+                    alert("Дані оновлено, але не вдалося замінити файл.");
+                }
+            }
+
+            // Optimistic update
             setEditingSong(null);
-            await fetchSongs();
+            await refreshRepertoire();
             if (onRefresh) onRefresh();
         } catch (e) {
             console.error("Failed to update song:", e);
@@ -275,7 +217,7 @@ export default function SongList({
             // setSongsState(prev => prev.filter(s => s.id !== deletingSongId));
             await softDeleteLocalSong(userData.choirId, deletingSongId, userData.id || "unknown");
             setToast({ message: "Пісню видалено", type: "success" });
-            await fetchSongs();
+            await refreshRepertoire();
             if (onRefresh) onRefresh();
         } catch (e) {
             console.error("Failed to delete song", e);
@@ -352,7 +294,7 @@ export default function SongList({
                                 parts: globalSong.parts, // Save all parts
                             });
                             // Refresh songs list
-                            await fetchSongs();
+                            await refreshRepertoire();
                             if (onRefresh) onRefresh();
                         } catch (e) {
                             console.error(e);
@@ -513,32 +455,38 @@ export default function SongList({
                         </div>
                     ) : (
                         <>
-                            {/* Desktop: Table View */}
+                            {/* Desktop/Tablet: Swipeable Grid View */}
                             {isMobile === false && (
-                                <div>
-                                    <TableVirtuoso
+                                <div className="flex flex-col h-full">
+                                    {/* Header */}
+                                    <div className="grid grid-cols-[1fr_180px_180px_60px] gap-4 py-3 pl-0 pr-4 border-b border-border bg-background text-xs font-bold text-text-secondary uppercase tracking-wider">
+                                        <div>Назва</div>
+                                        <div>Категорія</div>
+                                        <div>Диригент</div>
+                                        <div></div>
+                                    </div>
+
+                                    {/* List */}
+                                    <Virtuoso
                                         useWindowScroll
                                         initialItemCount={20}
                                         data={filteredSongs}
-                                        components={{
-                                            Table: ({ style, ...props }) => <table {...props} style={{ ...style, width: '100%' }} />,
-                                        }}
-                                        fixedHeaderContent={() => (
-                                            <tr className="bg-background border-b border-border">
-                                                <th className="text-left py-3 pl-0 pr-4 text-xs font-bold text-text-secondary uppercase tracking-wider bg-background">Назва</th>
-                                                <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider bg-background">Категорія</th>
-                                                <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider bg-background">Диригент</th>
-                                                {effectiveCanAdd && (
-                                                    <th className="text-right py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-16 bg-background"></th>
-                                                )}
-                                            </tr>
-                                        )}
                                         itemContent={(index, song) => {
                                             if (!song) return null;
                                             return (
-                                                <>
-                                                    <td className="py-3 pl-0 pr-4">
-                                                        <div className="flex items-center gap-3" onClick={() => handleSongClick(song)}>
+                                                <SwipeableCard
+                                                    key={song.id}
+                                                    disabled={!effectiveCanAdd}
+                                                    onDelete={() => initiateDelete(null, song.id)}
+                                                    className="border-b border-border/30"
+                                                    contentClassName="bg-background"
+                                                >
+                                                    <div
+                                                        className="grid grid-cols-[1fr_180px_180px_60px] gap-4 py-3 pl-0 pr-4 hover:bg-surface items-center cursor-pointer transition-colors relative z-10"
+                                                        onClick={() => handleSongClick(song)}
+                                                    >
+                                                        {/* Title Column */}
+                                                        <div className="flex items-center gap-3 min-w-0">
                                                             <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-text-primary">
                                                                 {song.hasPdf ? (
                                                                     <Eye className="w-4 h-4 text-background" />
@@ -546,38 +494,44 @@ export default function SongList({
                                                                     <FileText className="w-4 h-4 text-background" />
                                                                 )}
                                                             </div>
-                                                            <p className="font-semibold text-text-primary truncate cursor-pointer hover:underline">{song.title}</p>
+                                                            <p className="font-semibold text-text-primary truncate">{song.title}</p>
                                                         </div>
-                                                    </td>
-                                                    <td className="py-3 px-4">
-                                                        <span className="text-sm text-text-secondary">{song.category}</span>
-                                                    </td>
-                                                    <td className="py-3 px-4">
-                                                        {song.conductor ? (
-                                                            <div className="flex items-center gap-1.5 text-sm text-primary font-medium">
-                                                                <User className="w-3.5 h-3.5" />
-                                                                <span>{song.conductor}</span>
-                                                            </div>
-                                                        ) : (
-                                                            <span className="text-sm text-text-secondary/50">—</span>
-                                                        )}
-                                                    </td>
-                                                    {effectiveCanAdd && (
-                                                        <td className="py-3 px-4 text-right">
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.preventDefault();
-                                                                    e.stopPropagation();
-                                                                    handleEditClick(e, song);
-                                                                }}
-                                                                className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface transition-colors"
-                                                                title="Редагувати"
-                                                            >
-                                                                <Pencil className="w-4 h-4" />
-                                                            </button>
-                                                        </td>
-                                                    )}
-                                                </>
+
+                                                        {/* Category Column */}
+                                                        <div className="truncate">
+                                                            <span className="text-sm text-text-secondary">{song.category}</span>
+                                                        </div>
+
+                                                        {/* Conductor Column */}
+                                                        <div className="truncate">
+                                                            {song.conductor ? (
+                                                                <div className="flex items-center gap-1.5 text-sm text-primary font-medium">
+                                                                    <User className="w-3.5 h-3.5" />
+                                                                    <span>{song.conductor}</span>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-sm text-text-secondary/50">—</span>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Actions Column */}
+                                                        <div className="flex justify-end">
+                                                            {effectiveCanAdd && (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                        handleEditClick(e, song);
+                                                                    }}
+                                                                    className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface transition-colors"
+                                                                    title="Редагувати"
+                                                                >
+                                                                    <Pencil className="w-4 h-4" />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </SwipeableCard>
                                             );
                                         }}
                                     />
@@ -594,44 +548,51 @@ export default function SongList({
                                         itemContent={(index, song) => {
                                             if (!song) return null;
                                             return (
-                                                <div
-                                                    onClick={() => handleSongClick(song)}
-                                                    className="flex items-center gap-3 py-3 border-b border-border/30 cursor-pointer active:bg-surface-highlight transition-colors"
+                                                <SwipeableCard
+                                                    key={song.id}
+                                                    disabled={!effectiveCanAdd}
+                                                    onDelete={() => initiateDelete(null, song.id)}
+                                                    className="border-b border-border/30"
                                                 >
-                                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-text-primary">
-                                                        {song.hasPdf ? (
-                                                            <Eye className="w-5 h-5 text-background" />
-                                                        ) : (
-                                                            <FileText className="w-5 h-5 text-background" />
+                                                    <div
+                                                        onClick={() => handleSongClick(song)}
+                                                        className="flex items-center gap-3 py-3 px-2 bg-surface cursor-pointer active:bg-surface-highlight transition-colors relative z-10"
+                                                    >
+                                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-text-primary">
+                                                            {song.hasPdf ? (
+                                                                <Eye className="w-5 h-5 text-background" />
+                                                            ) : (
+                                                                <FileText className="w-5 h-5 text-background" />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="font-semibold text-text-primary truncate">{song.title}</p>
+                                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                                {song.conductor && (
+                                                                    <span className="text-xs text-primary font-medium flex items-center gap-1">
+                                                                        <User className="w-3 h-3" />
+                                                                        {song.conductor}
+                                                                    </span>
+                                                                )}
+                                                                {song.conductor && <span className="text-xs text-text-secondary">•</span>}
+                                                                <span className="text-xs text-text-secondary">{song.category}</span>
+                                                            </div>
+                                                        </div>
+                                                        {effectiveCanAdd && (
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    e.stopPropagation();
+                                                                    handleEditClick(e, song);
+                                                                }}
+                                                                className="p-2 rounded-lg text-text-secondary hover:text-text-primary active:scale-95 transition-transform"
+                                                                title="Редагувати"
+                                                            >
+                                                                <Pencil className="w-4 h-4" />
+                                                            </button>
                                                         )}
                                                     </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="font-semibold text-text-primary truncate">{song.title}</p>
-                                                        <div className="flex items-center gap-1.5 mt-0.5">
-                                                            {song.conductor && (
-                                                                <span className="text-xs text-primary font-medium flex items-center gap-1">
-                                                                    <User className="w-3 h-3" />
-                                                                    {song.conductor}
-                                                                </span>
-                                                            )}
-                                                            {song.conductor && <span className="text-xs text-text-secondary">•</span>}
-                                                            <span className="text-xs text-text-secondary">{song.category}</span>
-                                                        </div>
-                                                    </div>
-                                                    {effectiveCanAdd && (
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.preventDefault();
-                                                                e.stopPropagation();
-                                                                handleEditClick(e, song);
-                                                            }}
-                                                            className="p-2 rounded-lg text-text-secondary"
-                                                            title="Редагувати"
-                                                        >
-                                                            <Pencil className="w-4 h-4" />
-                                                        </button>
-                                                    )}
-                                                </div>
+                                                </SwipeableCard>
                                             )
                                         }}
                                     />
@@ -683,7 +644,7 @@ export default function SongList({
                                 onClose={() => setShowTrashBin(false)}
                                 initialFilter="song"
                                 onRestore={() => {
-                                    fetchSongs();
+                                    refreshRepertoire();
                                 }}
                             />
                         </>

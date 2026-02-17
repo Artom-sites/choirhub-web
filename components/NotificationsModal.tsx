@@ -11,23 +11,34 @@ import { useFcmToken } from "@/hooks/useFcmToken";
 interface NotificationsModalProps {
     isOpen: boolean;
     onClose: () => void;
+    // FCM Props passed from parent (Single Source of Truth)
+    permissionStatus: NotificationPermission | "unsupported" | "default";
+    requestPermission: (caller?: string) => Promise<string | null>;
+    unsubscribe: (caller?: string) => Promise<void>;
+    isSupported: boolean;
+    isGranted: boolean;
+    isPreferenceEnabled: boolean;
+    fcmLoading: boolean;
 }
 
-export default function NotificationsModal({ isOpen, onClose }: NotificationsModalProps) {
+export default function NotificationsModal({
+    isOpen,
+    onClose,
+    permissionStatus,
+    requestPermission,
+    unsubscribe,
+    isSupported,
+    isGranted,
+    isPreferenceEnabled,
+    fcmLoading
+}: NotificationsModalProps) {
     const { userData } = useAuth();
     const [notifications, setNotifications] = useState<ChoirNotification[]>([]);
     const [loading, setLoading] = useState(true);
     const [showSettings, setShowSettings] = useState(false);
 
-    // FCM Settings
-    const {
-        permissionStatus,
-        loading: fcmLoading,
-        requestPermission,
-        unsubscribe,
-        isSupported,
-        isGranted,
-    } = useFcmToken();
+    // useFcmToken REMOVED internally to prevent re-render loops.
+    // Props are used instead.
 
     useEffect(() => {
         if (isOpen && userData?.choirId) {
@@ -88,17 +99,18 @@ export default function NotificationsModal({ isOpen, onClose }: NotificationsMod
                                     <p className="font-bold text-text-primary">Пуш-сповіщення</p>
                                     <p className="text-xs text-text-secondary mt-1">Отримувати сповіщення на цей пристрій</p>
                                 </div>
-                                {isGranted ? (
+                                {isPreferenceEnabled ? (
                                     <button
-                                        onClick={unsubscribe}
+                                        onClick={() => unsubscribe("NotificationsModalButton")}
                                         disabled={fcmLoading}
-                                        className="relative inline-flex h-6 w-11 items-center rounded-full bg-green-500 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${!isGranted && !fcmLoading ? "bg-amber-400" : "bg-green-500"
+                                            }`}
                                     >
                                         <span className="translate-x-6 inline-block h-4 w-4 transform rounded-full bg-white transition-transform" />
                                     </button>
                                 ) : (
                                     <button
-                                        onClick={requestPermission}
+                                        onClick={() => requestPermission("NotificationsModalSettings")}
                                         disabled={fcmLoading || permissionStatus === "denied"}
                                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${permissionStatus === "denied" ? "bg-red-400 cursor-not-allowed" : "bg-gray-200"
                                             }`}

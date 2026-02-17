@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUpcomingServices, getSongsByIds } from '@/lib/db';
 import { useOfflineCache } from './useOfflineCache';
+import { useRepertoire } from '@/contexts/RepertoireContext';
 import { useRouter } from 'next/navigation';
 
 /**
@@ -15,6 +16,7 @@ import { useRouter } from 'next/navigation';
  */
 export function useBackgroundCache() {
     const { userData } = useAuth();
+    const { songs: repertoireSongs } = useRepertoire();
     const { cacheServiceSongs, progress } = useOfflineCache();
     const router = useRouter();
     const hasRunRef = useRef(false);
@@ -65,6 +67,7 @@ export function useBackgroundCache() {
                 console.log(`[BackgroundCache] Caching ${upcomingServices.length} upcoming service(s)...`);
 
                 // Extract all song IDs needed
+                // Extract all song IDs needed
                 const songIds = new Set<string>();
                 upcomingServices.forEach(s => {
                     s.songs.forEach(song => {
@@ -77,15 +80,28 @@ export function useBackgroundCache() {
                     return;
                 }
 
-                // Fetch ONLY the needed songs
-                console.log(`[BackgroundCache] Fetching ${songIds.size} songs...`);
-                const songs = await getSongsByIds(userData.choirId!, Array.from(songIds));
+                // Filter out songs we already have in repertoire
+                const missingSongIds = Array.from(songIds).filter(id => !repertoireSongs.find(s => s.id === id));
+
+                let fetchedSongs: any[] = [];
+                if (missingSongIds.length > 0) {
+                    console.log(`[BackgroundCache] Fetching ${missingSongIds.length} missing songs...`);
+                    fetchedSongs = await getSongsByIds(userData.choirId!, missingSongIds);
+                }
+
+                // Combine repertoire songs and fetched songs
+                const allNeededSongs = [
+                    ...repertoireSongs.filter(s => songIds.has(s.id)),
+                    ...fetchedSongs
+                ];
+
+
 
                 // Cache each service's songs
                 for (const service of upcomingServices) {
                     const songsToCache = service.songs
                         .map(s => {
-                            const fullSong = songs.find(song => song.id === s.songId);
+                            const fullSong = allNeededSongs.find(song => song.id === s.songId);
                             if (fullSong && (fullSong.pdfUrl || (fullSong.parts && fullSong.parts.length > 0))) {
                                 return {
                                     id: fullSong.id,

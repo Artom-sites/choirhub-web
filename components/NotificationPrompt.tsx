@@ -9,6 +9,8 @@ export default function NotificationPrompt() {
     const { permissionStatus, requestPermission, loading, isSupported } = useFcmToken();
     const [isVisible, setIsVisible] = useState(false);
 
+    console.log("[NotificationPrompt] Render. Status:", permissionStatus);
+
     useEffect(() => {
         // 1. Check if supported
         if (!isSupported) return;
@@ -36,7 +38,7 @@ export default function NotificationPrompt() {
     }, [permissionStatus, isSupported]);
 
     const handleEnable = async () => {
-        await requestPermission();
+        await requestPermission("NotificationPrompt");
         setIsVisible(false);
     };
 

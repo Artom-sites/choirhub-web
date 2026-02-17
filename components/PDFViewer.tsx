@@ -44,6 +44,8 @@ interface PDFViewerProps {
 }
 
 export default function PDFViewer({ url, songId, title, onClose, onAddAction, isAnnotating: externalIsAnnotating, onAnnotatingChange }: PDFViewerProps) {
+    console.log(`[PDFViewer] Mounted. URL: ${url ? 'Yes' : 'No'}, songId: ${songId}, title: ${title}`);
+
     const [numPages, setNumPages] = useState<number>(0);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -90,8 +92,16 @@ export default function PDFViewer({ url, songId, title, onClose, onAddAction, is
             setError(null);
 
             try {
-                // 1. First check IndexedDB offline cache (by songId)
-                if (songId) {
+                // 1. Priority: Local/Generated/Data URLs override offline cache
+                const isPriorityUrl = url && (
+                    url.startsWith('data:') ||
+                    url.startsWith('blob:') ||
+                    url.includes('localhost') ||
+                    url.includes('_capacitor_file_')
+                );
+
+                // 2. First check IndexedDB offline cache (by songId) ONLY if not priority URL
+                if (!isPriorityUrl && songId) {
                     const offlinePdf = await getOfflinePdf(songId);
                     if (offlinePdf && active) {
                         console.log('[PDFViewer] Loaded from IndexedDB offline cache');
@@ -133,7 +143,7 @@ export default function PDFViewer({ url, songId, title, onClose, onAddAction, is
                     }
 
                     // Native: Use CapacitorHttp to bypass CORS
-                    if (Capacitor.isNativePlatform()) {
+                    if (Capacitor.isNativePlatform() && !url.includes('localhost') && !url.includes('_capacitor_file_')) {
                         try {
                             const safeUrl = new URL(url).toString();
                             const response = await CapacitorHttp.get({

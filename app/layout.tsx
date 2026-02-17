@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { RepertoireProvider } from "@/contexts/RepertoireContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import ClientErrorBoundary from "@/components/ClientErrorBoundary";
 import "./globals.css";
@@ -76,9 +77,11 @@ export default function RootLayout({
       >
         <ClientErrorBoundary>
           <AuthProvider>
-            <ThemeProvider>
-              {children}
-            </ThemeProvider>
+            <RepertoireProvider>
+              <ThemeProvider>
+                {children}
+              </ThemeProvider>
+            </RepertoireProvider>
           </AuthProvider>
         </ClientErrorBoundary>
       </body>

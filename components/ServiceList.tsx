@@ -18,6 +18,9 @@ interface ServiceListProps {
     services: Service[];
     showCreateModal?: boolean;
     setShowCreateModal?: (show: boolean) => void;
+    onLoadHistory?: () => void;
+    loadingHistory?: boolean;
+    allHistoryLoaded?: boolean;
 }
 
 export default function ServiceList({
@@ -25,7 +28,10 @@ export default function ServiceList({
     canEdit,
     services,
     showCreateModal: propsShowCreateModal,
-    setShowCreateModal: propsSetShowCreateModal
+    setShowCreateModal: propsSetShowCreateModal,
+    onLoadHistory,
+    loadingHistory = false,
+    allHistoryLoaded = false
 }: ServiceListProps) {
     const { userData, user } = useAuth();
     const effectiveCanEdit = canEdit;
@@ -284,6 +290,29 @@ export default function ServiceList({
                     </div>
                 );
             })()}
+
+            {/* Load More History Button */}
+            {showArchive && onLoadHistory && !allHistoryLoaded && (
+                <div className="flex justify-center mt-6 mb-8">
+                    <button
+                        onClick={onLoadHistory}
+                        disabled={loadingHistory}
+                        className="px-6 py-3 bg-surface border border-border rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-highlight transition-all font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {loadingHistory ? (
+                            <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Завантаження...
+                            </>
+                        ) : (
+                            <>
+                                <Clock className="w-4 h-4" />
+                                Завантажити старіші
+                            </>
+                        )}
+                    </button>
+                </div>
+            )}
 
             <ConfirmationModal
                 isOpen={!!serviceToDelete}

@@ -206,14 +206,16 @@ export async function syncSongs(choirId: string, lastSyncTimestamp: number): Pro
             );
         }
 
-        const snapshot = await getDocs(q);
+        const snapshot = await safeGetDocs(q, `syncSongs(${choirId})`, 2000);
         const changes = snapshot.docs.map(doc => {
             const data = doc.data();
+            // Fallback: If no updatedAt, use addedAt. Do NOT fabricate timestamps.
+            const updatedAtVal = data.updatedAt || data.addedAt || null;
             return {
                 id: doc.id,
                 ...data,
                 addedAt: data.addedAt?.toDate?.()?.toISOString() || data.addedAt,
-                updatedAt: data.updatedAt?.toDate?.()?.toISOString() || data.updatedAt,
+                updatedAt: updatedAtVal?.toDate?.()?.toISOString() || updatedAtVal,
             } as unknown as SimpleSong;
         });
 
@@ -222,6 +224,9 @@ export async function syncSongs(choirId: string, lastSyncTimestamp: number): Pro
 
         return { songs, deletedIds };
     } catch (error) {
+        // If query fails (e.g. missing index), fall back to full sync or empty?
+        // Better to return empty and let next full sync handle it, or log error.
+        // For "MyChoir", we expect the index to exist.
         console.error("Error syncing songs:", error);
         return { songs: [], deletedIds: [] };
     }
@@ -343,6 +348,7 @@ export async function getServices(choirId: string): Promise<Service[]> {
     try {
         const q = query(
             collection(db, `choirs/${choirId}/services`),
+            orderBy("date", "desc"),
             limit(200)
         );
         const snapshot = await safeGetDocs(q, `getServices(${choirId})`, 200);

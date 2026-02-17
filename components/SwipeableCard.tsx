@@ -7,15 +7,17 @@ interface SwipeableCardProps {
     children: ReactNode;
     onDelete: () => void;
     disabled?: boolean;
-    className?: string;
+    className?: string; // Outer wrapper class
+    contentClassName?: string; // Inner content class (for background overrides)
 }
 
-export default function SwipeableCard({ children, onDelete, disabled = false, className = "" }: SwipeableCardProps) {
+export default function SwipeableCard({ children, onDelete, disabled = false, className = "", contentClassName = "bg-surface" }: SwipeableCardProps) {
     const [translateX, setTranslateX] = useState(0);
     const [isRevealed, setIsRevealed] = useState(false);
     const startX = useRef(0);
     const currentX = useRef(0);
     const isDragging = useRef(false);
+    const shouldBlockClick = useRef(false);
 
     const THRESHOLD = 80; // Pixels to reveal delete button
     const DELETE_AREA_WIDTH = 80;
@@ -24,7 +26,7 @@ export default function SwipeableCard({ children, onDelete, disabled = false, cl
         if (disabled) return;
         startX.current = e.touches[0].clientX;
         currentX.current = translateX;
-        // Don't set isDragging true yet, wait for move
+        shouldBlockClick.current = false; // Reset
     };
 
     const handleTouchMove = (e: React.TouchEvent) => {
@@ -34,17 +36,15 @@ export default function SwipeableCard({ children, onDelete, disabled = false, cl
 
         // If we haven't started dragging yet
         if (!isDragging.current) {
-            // Check if horizontal swipe is intended (threshold)
             if (Math.abs(diff) > 10) {
                 isDragging.current = true;
+                shouldBlockClick.current = true; // We are dragging, so block subsequent click
             } else {
-                // If moving less than 10px, treat as potential scroll or click, do nothing yet
                 return;
             }
         }
 
         let newX = currentX.current + diff;
-        // Limit swipe logic
         newX = Math.min(0, Math.max(-DELETE_AREA_WIDTH, newX));
         setTranslateX(newX);
     };
@@ -53,8 +53,6 @@ export default function SwipeableCard({ children, onDelete, disabled = false, cl
         if (disabled) return;
 
         if (!isDragging.current) {
-            // It was a tap or vertical scroll, didn't trigger swipe
-            // Reset just in case, but don't prevent click
             return;
         }
 
@@ -63,9 +61,13 @@ export default function SwipeableCard({ children, onDelete, disabled = false, cl
         if (Math.abs(translateX) > THRESHOLD / 2) {
             setTranslateX(-DELETE_AREA_WIDTH);
             setIsRevealed(true);
+            shouldBlockClick.current = true; // Keep blocked if revealed
         } else {
             setTranslateX(0);
             setIsRevealed(false);
+            // If we swiped but cancelled, we still want to block the click that comes immediately
+            // setTimeout(() => shouldBlockClick.current = false, 100); 
+            // Actually, keep it true for this event loop.
         }
     };
 
@@ -74,14 +76,16 @@ export default function SwipeableCard({ children, onDelete, disabled = false, cl
         startX.current = e.clientX;
         currentX.current = translateX;
         isDragging.current = true;
+        shouldBlockClick.current = false;
     };
 
     const handleMouseMove = (e: React.MouseEvent) => {
         if (!isDragging.current || disabled) return;
 
         const diff = e.clientX - startX.current;
-        let newX = currentX.current + diff;
+        if (Math.abs(diff) > 5) shouldBlockClick.current = true;
 
+        let newX = currentX.current + diff;
         newX = Math.min(0, Math.max(-DELETE_AREA_WIDTH, newX));
         setTranslateX(newX);
     };
@@ -105,20 +109,40 @@ export default function SwipeableCard({ children, onDelete, disabled = false, cl
         }
     };
 
-    const handleDeleteClick = () => {
+    const handleDeleteClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
         onDelete();
-        // Reset after delete
         setTranslateX(0);
         setIsRevealed(false);
     };
 
-    const resetSwipe = () => {
-        setTranslateX(0);
-        setIsRevealed(false);
+    // Intercept clicks to prevent navigation if we just swiped
+    const handleClickCapture = (e: React.MouseEvent) => {
+        if (shouldBlockClick.current) {
+            e.stopPropagation();
+            e.preventDefault();
+            shouldBlockClick.current = false; // Reset for next time
+            return;
+        }
+
+        // Also if revealed, close it on click instead of navigating
+        /* 
+           Ideally we want: click on content -> if revealed, close. else navigate.
+           But navigation happens in child onClick.
+        */
+        if (isRevealed) {
+            e.stopPropagation();
+            e.preventDefault();
+            setTranslateX(0);
+            setIsRevealed(false);
+        }
     };
 
     return (
-        <div className={`relative overflow-hidden ${className}`}>
+        <div
+            className={`relative overflow-hidden ${className}`}
+            onClickCapture={handleClickCapture}
+        >
             {/* Delete button behind */}
             <div
                 className="absolute inset-0 flex items-center justify-end pr-6 bg-red-500 rounded-2xl transition-opacity cursor-pointer active:bg-red-600"
@@ -132,10 +156,11 @@ export default function SwipeableCard({ children, onDelete, disabled = false, cl
 
             {/* Main content */}
             <div
-                className="relative transition-transform"
+                className={`relative w-full h-full ${contentClassName}`}
                 style={{
                     transform: `translateX(${translateX}px)`,
-                    transition: isDragging.current ? 'none' : 'transform 0.2s ease-out'
+                    transition: isDragging.current ? 'none' : 'transform 0.2s ease-out',
+                    touchAction: 'pan-y'
                 }}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}

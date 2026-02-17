@@ -260,7 +260,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             resetPassword,
             signOut,
             refreshProfile: async () => {
-                if (user) await loadUserProfile(user.uid);
+                if (user) {
+                    console.log("[Auth] Forcing token refresh to pick up custom claims...");
+                    await user.getIdToken(true); // Force refresh
+                    await loadUserProfile(user.uid);
+                }
             },
             isGuest: user?.isAnonymous ?? false,
             setFcmToken // Exposed for useFcmToken hook
