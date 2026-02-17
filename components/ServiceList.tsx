@@ -238,7 +238,7 @@ export default function ServiceList({
                                         disabled={!effectiveCanEdit}
                                         className="rounded-2xl h-full" // Removed shadow-sm to avoid visual height mismatch
                                         contentClassName=""
-                                        backgroundClassName="rounded-2xl" // Force rounded red background to match card
+                                        backgroundClassName="rounded-2xl my-px" // Align with content internal background (inside 1px border)
                                     >
                                         <div
                                             onClick={() => onSelectService(service)}
