@@ -237,6 +237,7 @@ export default function ServiceList({
                                         onDelete={() => setServiceToDelete(service.id)}
                                         disabled={!effectiveCanEdit}
                                         className="rounded-2xl h-full"
+                                        backgroundClassName="rounded-2xl"
                                     >
                                         <div
                                             onClick={() => onSelectService(service)}
