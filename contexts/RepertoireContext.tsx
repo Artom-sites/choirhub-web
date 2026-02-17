@@ -37,11 +37,16 @@ export function RepertoireProvider({ children }: { children: ReactNode }) {
                 const cached = localStorage.getItem(CACHE_KEY);
                 if (cached) {
                     setSongs(JSON.parse(cached));
-                    setLoading(false);
+                } else {
+                    setSongs([]); // Clear if no cache for this choir
                 }
+                setLoading(false);
             } catch (e) {
                 console.warn("[Repertoire] Failed to load cache", e);
+                setSongs([]);
             }
+        } else {
+            setSongs([]); // Clear if no choir
         }
     }, [userData?.choirId]);
 

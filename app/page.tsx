@@ -355,8 +355,21 @@ function HomePageContent() {
       return;
     }
 
+    // RESET STATE ON CHOIR ID CHANGE
+    // This prevents "leaking" old choir data while new data loads
+    const currentChoirId = userData.choirId;
+    if (choir?.id && choir.id !== currentChoirId) {
+      setChoir(null);
+      setActiveServices({ upcoming: [], recentPast: [] });
+      setPastServices([]);
+      setLastVisibleHistory(null);
+      setAllHistoryLoaded(false);
+      // Clear any other choir-specific state here
+    }
+
     // 3. Authenticated -> Load Data
     const choirId = userData.choirId;
+
 
     let servicesLoaded = false;
     let choirLoaded = false;

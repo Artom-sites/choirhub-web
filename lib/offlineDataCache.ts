@@ -26,21 +26,22 @@ function isBrowser(): boolean {
 }
 
 // Generic cache getter
-export function getCached<T>(key: string, choirId: string): T | null {
-    if (!isBrowser()) return null;
+export function getCached<T>(baseKey: string, choirId: string): T | null {
+    if (!isBrowser() || !choirId) return null;
 
     try {
-        const raw = localStorage.getItem(key);
+        const namespacedKey = `${baseKey}_${choirId}`;
+        const raw = localStorage.getItem(namespacedKey);
         if (!raw) return null;
 
         const cached: CachedData<T> = JSON.parse(raw);
 
-        // Check if same choir
+        // Double check choirId match (redundant with key but safe)
         if (cached.choirId !== choirId) return null;
 
         // Check if expired
         if (Date.now() - cached.timestamp > CACHE_MAX_AGE_MS) {
-            localStorage.removeItem(key);
+            localStorage.removeItem(namespacedKey);
             return null;
         }
 
@@ -52,16 +53,17 @@ export function getCached<T>(key: string, choirId: string): T | null {
 }
 
 // Generic cache setter
-export function setCache<T>(key: string, choirId: string, data: T): void {
-    if (!isBrowser()) return;
+export function setCache<T>(baseKey: string, choirId: string, data: T): void {
+    if (!isBrowser() || !choirId) return;
 
     try {
+        const namespacedKey = `${baseKey}_${choirId}`;
         const cached: CachedData<T> = {
             data,
             timestamp: Date.now(),
             choirId,
         };
-        localStorage.setItem(key, JSON.stringify(cached));
+        localStorage.setItem(namespacedKey, JSON.stringify(cached));
     } catch (e) {
         console.warn('[OfflineCache] Write error (possibly quota exceeded):', e);
     }
@@ -71,21 +73,21 @@ export function setCache<T>(key: string, choirId: string, data: T): void {
 export function clearCache(choirId?: string): void {
     if (!isBrowser()) return;
 
-    Object.values(CACHE_KEYS).forEach(key => {
-        if (choirId) {
-            const raw = localStorage.getItem(key);
-            if (raw) {
-                try {
-                    const cached = JSON.parse(raw);
-                    if (cached.choirId === choirId) {
-                        localStorage.removeItem(key);
-                    }
-                } catch (e) { }
+    if (choirId) {
+        // Clear specific choir data
+        Object.values(CACHE_KEYS).forEach(baseKey => {
+            const namespacedKey = `${baseKey}_${choirId}`;
+            localStorage.removeItem(namespacedKey);
+        });
+        localStorage.removeItem(CACHE_KEYS.TIMESTAMP + '_' + choirId);
+    } else {
+        // Clear EVERYTHING (legacy and new)
+        Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('offline_cache_')) {
+                localStorage.removeItem(key);
             }
-        } else {
-            localStorage.removeItem(key);
-        }
-    });
+        });
+    }
 }
 
 // Get cached songs
