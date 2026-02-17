@@ -568,7 +568,7 @@ function HomePageContent() {
     try {
       await leaveChoir(choirToLeave.id);
       // Refresh profile to update memberships
-      if (user) await refreshProfile(user);
+      if (user) await refreshProfile();
       setChoirToLeave(null);
     } catch (e) {
       console.error("Error leaving choir:", e);
