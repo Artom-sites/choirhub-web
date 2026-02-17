@@ -554,6 +554,7 @@ export default function SongList({
                                                     onDelete={() => initiateDelete(null, song.id)}
                                                     className="border-b border-border/30"
                                                     contentClassName="bg-background"
+                                                    backgroundClassName="rounded-2xl"
                                                 >
                                                     <div
                                                         onClick={() => handleSongClick(song)}
