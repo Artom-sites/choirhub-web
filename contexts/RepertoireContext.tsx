@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
 import { SimpleSong } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
-import { syncSongs } from "@/lib/db";
+import { syncSongs, auth } from "@/lib/db";
 
 interface RepertoireContextType {
     songs: SimpleSong[];
@@ -66,7 +66,26 @@ export function RepertoireProvider({ children }: { children: ReactNode }) {
         }
 
         console.log("[Repertoire] Starting Delta Sync...");
+
         try {
+            if (auth.currentUser) {
+                const token = await auth.currentUser.getIdTokenResult();
+                console.log(`[Repertoire] Syncing for Choir: ${userData.choirId}`);
+
+                // Auto-Fix: If claim is missing, force sync and refresh
+                const claims = token.claims.choirs as Record<string, unknown> | undefined;
+                if (claims && !claims[userData.choirId]) {
+                    console.error(`[CRITICAL] Claims Mismatch! Missing ${userData.choirId}. Attempting auto-fix...`);
+
+                    const { forceSyncClaims } = await import('@/lib/db');
+                    await forceSyncClaims();
+
+                    // Refresh token again
+                    await auth.currentUser.getIdToken(true);
+                    console.log("[Repertoire] Auto-fix complete. Retrying sync...");
+                }
+            }
+
             const { songs: updatedSongs, deletedIds } = await syncSongs(userData.choirId, lastSyncTime);
 
             if (updatedSongs.length > 0 || deletedIds.length > 0) {

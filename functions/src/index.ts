@@ -41,11 +41,112 @@ async function syncUserClaims(userId: string): Promise<void> {
     const claims: Record<string, any> = { choirs };
     if (isSuperAdmin) claims.superAdmin = true;
 
+    console.log(`[DEBUG] Setting claims for ${userId}:`, JSON.stringify(claims, null, 2));
     await admin.auth().setCustomUserClaims(userId, claims);
-    console.log(`Claims synced for ${userId}:`, JSON.stringify(claims));
+    console.log(`[DEBUG] Claims set successfully for ${userId}`);
 }
 
+/**
+ * forceSyncClaims
+ * Callable function to manually trigger a claims sync for the current user.
+ * Useful for self-healing permission mismatches.
+ */
+// Force Sync Claims (Self-healing)
+export const forceSyncClaims = functions.https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError("unauthenticated", "User must be logged in");
+    }
+    const userId = context.auth.uid;
+    await syncUserClaims(userId);
+    return { success: true };
+});
+
+
+
 // --- ATOMIC OPERATIONS ---
+
+/**
+ * atomicCreateChoir
+ * Creates a new choir and adds the creator as the owner/head.
+ * Syncs claims immediately to prevent permission errors.
+ */
+export const atomicCreateChoir = functions.https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError("unauthenticated", "User must be logged in");
+    }
+    const userId = context.auth.uid;
+    const { name } = data;
+
+    if (!name || typeof name !== 'string') {
+        throw new functions.https.HttpsError("invalid-argument", "Choir name is required");
+    }
+
+    const memberCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const regentCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    // Auto-generate ID or let Firestore do it? 
+    // We need the ID for the batch. Let's use a ref.
+    const choirRef = db.collection("choirs").doc();
+    const choirId = choirRef.id;
+
+    const userRef = db.collection("users").doc(userId);
+    const userSnap = await userRef.get();
+    const userData = userSnap.data() || {};
+
+    const batch = db.batch();
+
+    // 1. Create Choir Document
+    const choirData: any = {
+        name: name.trim(),
+        memberCode,
+        regentCode,
+        ownerId: userId,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        regents: [userData.name || "Head"],
+        members: [{
+            id: userId,
+            name: userData.name || "Користувач",
+            role: 'head',
+            hasAccount: true,
+            accountUid: userId
+        }]
+    };
+    batch.set(choirRef, choirData);
+
+    // 2. Create Member Subcollection Document (Crucial for Rules Fallback)
+    const memberRef = choirRef.collection("members").doc(userId);
+    batch.set(memberRef, {
+        id: userId,
+        name: userData.name || "Користувач",
+        role: 'head',
+        joinedAt: admin.firestore.FieldValue.serverTimestamp(),
+        hasAccount: true,
+        accountUid: userId
+    });
+
+    // 3. Update User Document
+    const newMembership = {
+        choirId: choirId,
+        choirName: name.trim(),
+        role: 'head'
+    };
+
+    // Updates
+    batch.set(userRef, {
+        choirId: choirId, // Set as active
+        choirName: name.trim(),
+        role: 'head',
+        memberships: admin.firestore.FieldValue.arrayUnion(newMembership),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    await batch.commit();
+
+    // 4. Sync Claims
+    await syncUserClaims(userId);
+
+    return { success: true, choirId };
+});
 
 /**
  * atomicJoinChoir
@@ -248,33 +349,38 @@ export const atomicLeaveChoir = functions.https.onCall(async (data, context) => 
     const choirRef = db.collection("choirs").doc(choirId);
 
     const result = await db.runTransaction(async (transaction) => {
+        // --- READS ---
         const choirDoc = await transaction.get(choirRef);
         if (!choirDoc.exists) throw new functions.https.HttpsError("not-found", "Choir not found");
 
+        const userDoc = await transaction.get(userRef);
+        // userDoc existence check can happen later or we assume it exists for auth user
+
+        // --- LOGIC ---
         const choirData = choirDoc.data()!;
         const members = choirData.members || [];
-
         const updatedMembers = members.filter((m: any) => m.id !== userId);
 
+        const userData = userDoc.exists ? userDoc.data()! : null;
+
+        // --- WRITES ---
+        // 1. Update Choir
         if (updatedMembers.length !== members.length) {
             transaction.update(choirRef, { members: updatedMembers });
         }
 
-        const userDoc = await transaction.get(userRef);
-        if (userDoc.exists) {
-            const userData = userDoc.data()!;
+        // 2. Update User
+        if (userData) {
             const memberships = userData.memberships || [];
             const updatedMemberships = memberships.filter((m: any) => m.choirId !== choirId);
 
             const updates: any = { memberships: updatedMemberships };
+
             // If active choir is this one, clear it
             if (userData.choirId === choirId) {
                 updates.choirId = admin.firestore.FieldValue.delete();
                 updates.choirName = admin.firestore.FieldValue.delete();
                 updates.role = admin.firestore.FieldValue.delete();
-                // We keep permissions global?
-                // Or clear them?
-                // Assuming permissions are reset if leaving main choir
                 updates.permissions = admin.firestore.FieldValue.delete();
             }
             transaction.update(userRef, updates);

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Music2, Check, ExternalLink, User, Mail, Eye, EyeOff, UserX, AlertTriangle, ArrowLeft, LogOut, Loader2, Apple } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { createUser, getChoir, updateChoirMembers, joinChoir, claimMember } from "@/lib/db";
+import { createUser, getChoir, updateChoirMembers, joinChoir, claimMember, createChoir } from "@/lib/db";
 import { Choir, UserData } from "@/types";
 import {
     collection as firestoreCollection,
@@ -214,39 +214,15 @@ function SetupPageContent() {
         setError("");
 
         try {
-            const memberCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-            const regentCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            await createChoir(choirName);
 
-            const choirData = {
-                name: choirName.trim(),
-                memberCode,
-                regentCode,
-                createdAt: new Date().toISOString(),
-                regents: [user.displayName || "Head"],
-                members: [{
-                    id: user.uid,
-                    name: user.displayName || "Користувач",
-                    role: 'head'
-                }]
-            };
+            // Safety delay to ensure Firestore SDK updates auth state before redirect
+            await new Promise(resolve => setTimeout(resolve, 500));
 
-            const choirRef = await addDoc(firestoreCollection(db, "choirs"), choirData);
+            // Do NOT call refreshProfile() here. 
+            // It risks reading Firestore before the new token is propagated.
+            // Let the Home page load fresh data naturally.
 
-            await createUser(user.uid, {
-                id: user.uid,
-                name: user.displayName || "Користувач",
-                email: user.email || undefined,
-                choirId: choirRef.id,
-                choirName: choirData.name,
-                role: 'head',
-                memberships: arrayUnion({
-                    choirId: choirRef.id,
-                    choirName: choirData.name,
-                    role: 'head'
-                }) as any
-            });
-
-            await refreshProfile();
             router.push("/");
         } catch (err: any) {
             console.error(err);

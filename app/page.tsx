@@ -1969,14 +1969,11 @@ function HomePageContent() {
       </div >
 
       {/* Global FAB */}
-      {!showAccount && !showChoirManager && !showAddSongModal && !showAddServiceModal && ((activeTab === 'home' && canEdit) || (activeTab === 'songs' && canAddSongs)) && (
+      {!showAccount && !showChoirManager && !showAddSongModal && !showAddServiceModal && (activeTab === 'home' && canEdit) && (
         <button
-          onClick={() => {
-            if (activeTab === 'home') setShowAddServiceModal(true);
-            else if (activeTab === 'songs') setShowAddSongModal(true);
-          }}
-          className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] md:bottom-24 right-6 w-14 h-14 bg-primary text-background rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60]"
-          title={activeTab === 'home' ? "Додати служіння" : "Додати пісню"}
+          onClick={() => setShowAddServiceModal(true)}
+          className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] md:bottom-24 right-6 w-[56px] h-[56px] bg-primary text-background rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60]"
+          title="Додати служіння"
         >
           <Plus className="w-7 h-7" />
         </button>

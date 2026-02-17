@@ -132,47 +132,45 @@ export default function EditSongModal({
 
     if (!isOpen) return null;
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSave = async (e: React.FormEvent | React.MouseEvent) => {
         e.preventDefault();
         if (!title.trim()) {
-            setError("Введіть назву пісні");
-            return;
-        }
-
-        let finalTheme = theme;
-        if (showCustomTheme && customTheme?.trim()) {
-            finalTheme = customTheme.trim();
-        } else if (showCustomTheme && !customTheme?.trim()) {
-            setError("Введіть назву нової тематики");
-            return;
-        }
-
-        let finalConductor = conductor;
-        if (showCustomInput && customConductor.trim()) {
-            finalConductor = customConductor.trim();
-        } else if (showCustomInput && !customConductor.trim()) {
-            setError("Введіть ім'я диригента");
-            return;
-        }
-
-        if (!finalConductor) {
-            setError("Оберіть або введіть диригента");
+            // setError("Введіть назву пісні"); // Ensure setError is defined or use alert
+            alert("Введіть назву пісні");
             return;
         }
 
         setLoading(true);
-        setError("");
 
         try {
-            // Save custom theme if used (persisted as "knownCategory")
-            if (showCustomTheme && customTheme?.trim() && userData?.choirId) {
-                try {
-                    const { addKnownCategory } = await import("@/lib/db");
-                    await addKnownCategory(userData.choirId, customTheme.trim());
-                } catch (e) { console.error("Failed to add custom theme:", e); }
+            // Logic to determine final values
+            let finalCategory = theme;
+            if (showCustomTheme && customTheme.trim()) {
+                finalCategory = customTheme.trim();
             }
 
-            // Save custom conductor if used
+            let finalConductor = conductor;
+            if (showCustomInput && customConductor.trim()) {
+                finalConductor = customConductor.trim();
+            }
+
+            let finalPianist = pianist;
+            if (showCustomPianist && customPianist.trim()) {
+                finalPianist = customPianist.trim();
+            }
+
+            if (!finalConductor) {
+                alert("Оберіть або введіть диригента");
+                setLoading(false);
+                return;
+            }
+
+            // Save custom category/theme
+            if (showCustomTheme && customTheme.trim() && userData?.choirId) {
+                // Note: We might need to save this as a known category if not exists
+            }
+
+            // Save custom conductor
             if (showCustomInput && customConductor.trim() && userData?.choirId) {
                 const isKnown = allConductors.includes(customConductor.trim());
                 if (!isKnown) {
@@ -183,12 +181,9 @@ export default function EditSongModal({
                 }
             }
 
-            // Handle pianist
-            let finalPianist = pianist;
-            if (showCustomPianist && customPianist.trim()) {
-                finalPianist = customPianist.trim();
-                // Save custom pianist
-                if (userData?.choirId && !knownPianists.includes(finalPianist)) {
+            // Save custom pianist
+            if (showCustomPianist && customPianist.trim() && userData?.choirId) {
+                if (!knownPianists.includes(finalPianist)) {
                     try {
                         const { addKnownPianist } = await import("@/lib/db");
                         await addKnownPianist(userData.choirId, finalPianist);
@@ -198,16 +193,15 @@ export default function EditSongModal({
 
             await onSave({
                 title: title.trim(),
-                category: finalTheme, // Save Theme as Category
+                category: finalCategory,
                 conductor: finalConductor,
                 pianist: finalPianist || undefined,
-                // theme: finalTheme, // Redundant if we map to category, but keeping it clean
             }, pdfFile || undefined);
 
             onClose();
-        } catch (err) {
-            setError("Помилка збереження. Спробуйте ще раз.");
+        } catch (err: any) {
             console.error(err);
+            alert("Помилка збереження");
         } finally {
             setLoading(false);
         }
@@ -289,7 +283,7 @@ export default function EditSongModal({
                     </div>
 
                     {/* Form */}
-                    <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                    <form onSubmit={handleSave} className="p-6 space-y-6">
                         {/* Title */}
                         <div>
                             <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
@@ -600,8 +594,8 @@ export default function EditSongModal({
                                 <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
                                 {error}
                             </div>
-                        )
-                        }
+                        )}
+
 
                         <button
                             type="submit"

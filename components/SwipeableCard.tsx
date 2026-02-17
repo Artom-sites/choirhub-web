@@ -18,8 +18,9 @@ export default function SwipeableCard({
     disabled = false,
     className = "",
     contentClassName = "bg-surface",
-    backgroundClassName = ""
-}: SwipeableCardProps) {
+    backgroundClassName = "",
+    disableFullSwipe = false
+}: SwipeableCardProps & { disableFullSwipe?: boolean }) {
     const [translateX, setTranslateX] = useState(0);
     const [isRevealed, setIsRevealed] = useState(false);
     const startX = useRef(0);
@@ -57,6 +58,13 @@ export default function SwipeableCard({
         // Allow dragging past DELETE_AREA_WIDTH up to TRIGGER_THRESHOLD + overshoot
         // Add resistance past TRIGGER_THRESHOLD? For now just allow it.
         newX = Math.min(0, newX);
+
+        // If full swipe is disabled, limit the drag to just a bit past the reveal width
+        if (disableFullSwipe && newX < -(DELETE_AREA_WIDTH + 50)) {
+            // Add resistance or hard stop
+            newX = -(DELETE_AREA_WIDTH + 50) + (newX + (DELETE_AREA_WIDTH + 50)) * 0.2;
+        }
+
         setTranslateX(newX);
     };
 
@@ -70,7 +78,7 @@ export default function SwipeableCard({
         isDragging.current = false;
         const absX = Math.abs(translateX);
 
-        if (absX > TRIGGER_THRESHOLD) {
+        if (!disableFullSwipe && absX > TRIGGER_THRESHOLD) {
             // Full swipe delete!
             onDelete();
             setTranslateX(-window.innerWidth);
@@ -100,6 +108,12 @@ export default function SwipeableCard({
 
         let newX = currentX.current + diff;
         newX = Math.min(0, newX);
+
+        // If full swipe is disabled, limit the drag
+        if (disableFullSwipe && newX < -(DELETE_AREA_WIDTH + 50)) {
+            newX = -(DELETE_AREA_WIDTH + 50) + (newX + (DELETE_AREA_WIDTH + 50)) * 0.2;
+        }
+
         setTranslateX(newX);
     };
 
@@ -108,7 +122,7 @@ export default function SwipeableCard({
         isDragging.current = false;
         const absX = Math.abs(translateX);
 
-        if (absX > TRIGGER_THRESHOLD) {
+        if (!disableFullSwipe && absX > TRIGGER_THRESHOLD) {
             onDelete();
             setTranslateX(-500); // Visual clear
         } else if (absX > THRESHOLD / 2) {
@@ -135,7 +149,7 @@ export default function SwipeableCard({
 
     // Calculate scale/opacity for visual feedback
     const progress = Math.min(1, Math.max(0, (Math.abs(translateX) - DELETE_AREA_WIDTH) / (TRIGGER_THRESHOLD - DELETE_AREA_WIDTH)));
-    const iconScale = 1 + progress * 0.5; // Scale from 1.0 to 1.5
+    const iconScale = disableFullSwipe ? 1 : 1 + progress * 0.5; // Scale from 1.0 to 1.5
 
     // Intercept clicks to prevent navigation if we just swiped
     const handleClickCapture = (e: React.MouseEvent) => {
@@ -144,6 +158,11 @@ export default function SwipeableCard({
             e.preventDefault();
             shouldBlockClick.current = false; // Reset for next time
             return;
+        }
+
+        // Check if we clicked the delete button
+        if ((e.target as HTMLElement).closest('[data-delete-action="true"]')) {
+            return; // Let the delete click happen!
         }
 
         // Also if revealed, close it on click instead of navigating
@@ -170,6 +189,7 @@ export default function SwipeableCard({
         >
             {/* Delete button behind */}
             <div
+                data-delete-action="true"
                 className={`absolute inset-0 flex items-center justify-end pr-6 bg-red-500 cursor-pointer active:bg-red-600 ${backgroundClassName}`}
                 style={{
                     visibility: translateX < 0 ? 'visible' : 'hidden', // Hide when not swiping to prevent bleed

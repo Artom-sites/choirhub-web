@@ -3,9 +3,20 @@
  */
 export async function uploadFileToR2(key: string, file: File | Blob): Promise<string> {
     // 1. Get Presigned URL
+    // Get auth token from current user
+    const { auth } = await import("@/lib/firebase");
+    const token = await auth.currentUser?.getIdToken();
+
+    if (!token) {
+        throw new Error("You must be logged in to upload files.");
+    }
+
     const res = await fetch("/api/upload", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({ key, contentType: file.type })
     });
 

@@ -21,6 +21,7 @@ import {
 } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { db, functions, auth } from "./firebase";
+export { db, functions, auth };
 import { httpsCallable } from "firebase/functions";
 import {
     Service, SimpleSong, Choir, UserData, ServiceSong,
@@ -719,6 +720,45 @@ export async function deleteMyAccount(): Promise<void> {
         console.log("Client-side signout complete");
     } catch (error) {
         console.error("Error deleting own account:", error);
+        throw error;
+    }
+}
+
+export async function createChoir(name: string): Promise<string> {
+    try {
+        const createFn = httpsCallable(functions, 'atomicCreateChoir');
+        const result = await createFn({ name });
+        const data = result.data as any;
+
+        // Force token refresh to pick up new claims immediately
+        if (auth.currentUser) {
+            const tokenResult = await auth.currentUser.getIdTokenResult(true);
+            console.log("[DEBUG] Refreshed Token Claims:", tokenResult.claims);
+            if (!tokenResult.claims.choirs) {
+                console.warn("[WARNING] 'choirs' claim is MISSING in new token!");
+            } else {
+                console.log("[DEBUG] 'choirs' claim content:", tokenResult.claims.choirs);
+            }
+        }
+
+        return data.choirId;
+    } catch (error) {
+        console.error("Error creating choir:", error);
+        throw error;
+    }
+}
+
+// Force Sync Claims (Self-healing)
+export async function forceSyncClaims(): Promise<void> {
+    try {
+        const syncFn = httpsCallable(functions, 'forceSyncClaims');
+        await syncFn();
+        // Force token refresh to pick up new claims immediately
+        if (auth.currentUser) {
+            await auth.currentUser.getIdToken(true);
+        }
+    } catch (error) {
+        console.error("Error forcing claims sync:", error);
         throw error;
     }
 }

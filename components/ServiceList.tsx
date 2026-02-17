@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Capacitor } from "@capacitor/core";
 import { getServices, addService, deleteService, setServiceAttendance, getChoir } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
 import { Calendar, Plus, ChevronRight, X, Trash2, Loader2, Check, Clock, Mic2 } from "lucide-react";
@@ -236,9 +237,10 @@ export default function ServiceList({
                                     <SwipeableCard
                                         onDelete={() => setServiceToDelete(service.id)}
                                         disabled={!effectiveCanEdit}
-                                        className="rounded-2xl h-full" // Removed shadow-sm to avoid visual height mismatch
+                                        className="rounded-2xl h-full"
                                         contentClassName=""
-                                        backgroundClassName="rounded-2xl my-px" // Align with content internal background (inside 1px border)
+                                        backgroundClassName="rounded-2xl my-px"
+                                        disableFullSwipe={!Capacitor.isNativePlatform()}
                                     >
                                         <div
                                             onClick={() => onSelectService(service)}

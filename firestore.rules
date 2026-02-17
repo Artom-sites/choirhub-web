@@ -3,31 +3,30 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helper Functions (Claims-Based, 0 Extra Reads) ---
+    // --- Helper Functions (Pure Claims - 0 Reads) ---
 
+    // Check if user is signed in
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    // Claims structure: { choirs: { "choirId": "role" }, superAdmin?: true }
-    // Set by syncUserClaims() in Cloud Functions after join/leave/role-change.
-
+    // Super Admin via Claims
     function isSuperAdmin() {
-      return isSignedIn() && request.auth.token.superAdmin == true;
+      return isSignedIn() && 
+             request.auth.token.keys().hasAny(['superAdmin']) &&
+             request.auth.token.superAdmin == true;
     }
 
-    // Check if user is a member of the choir (any role)
+    // Check Membership via Claims ONLY (No Database Calls)
     function isMemberOfChoir(choirId) {
-      return isSignedIn() && choirId in request.auth.token.choirs;
+      return isSignedIn() &&
+             request.auth.token.keys().hasAny(['choirs']) &&
+             choirId in request.auth.token.choirs;
     }
 
-    // Check if user has admin/regent/head role for the choir
+    // Check Admin Role via Claims ONLY (No Database Calls)
     function isChoirAdmin(choirId) {
-      return isMemberOfChoir(choirId) && 
+      return isMemberOfChoir(choirId) &&
              request.auth.token.choirs[choirId] in ['admin', 'regent', 'head'];
     }
 
@@ -35,8 +34,13 @@ service cloud.firestore {
 
     // 1. Users Collection
     match /users/{userId} {
-      // Private: Only owner or SuperAdmin can read/write
-      allow read, write: if request.auth.uid == userId || isSuperAdmin();
+      allow read: if request.auth.uid == userId || isSuperAdmin();
+      // Allow update ONLY if NOT modifying sensitive fields (memberships, choirId, role, email)
+      allow update: if (request.auth.uid == userId || isSuperAdmin()) &&
+                       (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['memberships', 'choirId', 'role', 'email']));
+      
+      // Allow create? Usually handled by auth trigger, but if client does it:
+      allow create: if request.auth.uid == userId;
     }
 
     // 2. Choirs Collection
@@ -44,7 +48,7 @@ service cloud.firestore {
       allow read: if isMemberOfChoir(choirId) || isSuperAdmin();
       allow create: if isSignedIn();
       allow update: if isChoirAdmin(choirId) || isSuperAdmin();
-      allow delete: if isSuperAdmin();
+      allow delete: if isSuperAdmin(); // Only SuperAdmin can delete choirs for now
 
       // Songs (choir repertoire)
       match /songs/{songId} {
@@ -77,7 +81,7 @@ service cloud.firestore {
         allow update: if isMemberOfChoir(choirId);
       }
       
-      // Members subcollection (if used)
+      // Members subcollection (Purely for data storage/listing, not for permission checks anymore)
       match /members/{memberId} {
         allow read: if isMemberOfChoir(choirId);
         allow write: if isChoirAdmin(choirId) || isSuperAdmin();
@@ -101,7 +105,6 @@ service cloud.firestore {
       allow create: if isSignedIn();
       // Submitter can read their own; super admin can read all
       allow read: if isSuperAdmin() || (isSignedIn() && resource.data.submittedBy == request.auth.uid);
-      allow update, delete: if isSuperAdmin();
     }
   }
 }

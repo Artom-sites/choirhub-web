@@ -480,6 +480,7 @@ export default function SongList({
                                                     onDelete={() => initiateDelete(null, song.id)}
                                                     className="border-b border-border/30"
                                                     contentClassName="bg-background"
+                                                    disableFullSwipe={true}
                                                 >
                                                     <div
                                                         className="grid grid-cols-[1fr_180px_180px_60px] gap-4 py-3 pl-0 pr-4 hover:bg-surface items-center cursor-pointer transition-colors relative z-10"
@@ -546,7 +547,7 @@ export default function SongList({
                                         initialItemCount={20}
                                         data={filteredSongs}
                                         itemContent={(index, song) => {
-                                            if (!song) return null;
+                                            if (!song) return <div style={{ height: 60 }} />; // Fallback for safety
                                             return (
                                                 <SwipeableCard
                                                     key={song.id}
@@ -555,6 +556,7 @@ export default function SongList({
                                                     className="border-b border-border/30"
                                                     contentClassName="bg-background"
                                                     backgroundClassName="rounded-2xl"
+                                                    disableFullSwipe={!Capacitor.isNativePlatform()}
                                                 >
                                                     <div
                                                         onClick={() => handleSongClick(song)}
@@ -675,6 +677,17 @@ export default function SongList({
                     />
                 )
             }
-        </div >
+            {/* Floating Add Button - Local Only */}
+            {canAddSongs && subTab === 'repertoire' && setShowAddModal && (
+                <button
+                    onClick={() => setShowAddModal(true)}
+                    className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] md:bottom-24 right-6 w-[56px] h-[56px] bg-primary text-background rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60]"
+                    title="Додати пісню"
+                >
+                    <Plus className="w-7 h-7" />
+                </button>
+            )}
+
+        </div>
     );
 }
