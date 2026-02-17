@@ -240,7 +240,7 @@ export default function ServiceList({
                                     >
                                         <div
                                             onClick={() => onSelectService(service)}
-                                            className={`relative group p-5 transition-all cursor-pointer h-full flex flex-col justify-between card-shadow ${isToday(service.date) ? 'bg-accent/10 border border-accent/20' : 'bg-surface'}`}
+                                            className={`relative group p-5 rounded-2xl transition-all cursor-pointer h-full flex flex-col justify-between card-shadow ${isToday(service.date) ? 'bg-accent/10 border border-accent/20' : 'bg-surface'}`}
                                         >
                                             <div className="flex justify-between items-start">
                                                 <div>
