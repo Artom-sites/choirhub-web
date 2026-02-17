@@ -553,10 +553,11 @@ export default function SongList({
                                                     disabled={!effectiveCanAdd}
                                                     onDelete={() => initiateDelete(null, song.id)}
                                                     className="border-b border-border/30"
+                                                    contentClassName="bg-transparent"
                                                 >
                                                     <div
                                                         onClick={() => handleSongClick(song)}
-                                                        className="flex items-center gap-3 py-3 px-2 bg-surface cursor-pointer active:bg-surface-highlight transition-colors relative z-10"
+                                                        className="flex items-center gap-3 py-3 px-0 bg-transparent cursor-pointer active:bg-surface-highlight transition-colors relative z-10"
                                                     >
                                                         <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-text-primary">
                                                             {song.hasPdf ? (
