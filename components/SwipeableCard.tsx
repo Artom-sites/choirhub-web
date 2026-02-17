@@ -145,18 +145,18 @@ export default function SwipeableCard({ children, onDelete, disabled = false, cl
         >
             {/* Delete button behind */}
             <div
-                className="absolute inset-0 flex items-center justify-end pr-6 bg-red-500 rounded-2xl transition-opacity cursor-pointer active:bg-red-600"
+                className="absolute inset-y-0 right-0 w-24 bg-red-500 flex items-center justify-center transition-opacity cursor-pointer active:bg-red-600 shadow-sm rounded-l-3xl"
                 style={{ opacity: Math.abs(translateX) / DELETE_AREA_WIDTH }}
                 onClick={handleDeleteClick}
             >
-                <div className="flex items-center justify-center text-white">
+                <div className="flex items-center justify-center text-white mr-2">
                     <Trash2 className="w-6 h-6" />
                 </div>
             </div>
 
             {/* Main content */}
             <div
-                className={`relative w-full h-full ${contentClassName}`}
+                className={`relative w-full h-full select-none ${contentClassName}`}
                 style={{
                     transform: `translateX(${translateX}px)`,
                     transition: isDragging.current ? 'none' : 'transform 0.2s ease-out',
@@ -169,6 +169,7 @@ export default function SwipeableCard({ children, onDelete, disabled = false, cl
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseLeave}
+                onDragStart={(e) => e.preventDefault()}
             >
                 {children}
             </div>
