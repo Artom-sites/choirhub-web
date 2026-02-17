@@ -140,8 +140,9 @@ export default function SwipeableCard({ children, onDelete, disabled = false, cl
 
     return (
         <div
-            className={`relative overflow-hidden ${className}`}
+            className={`relative overflow-hidden isolate ${className}`}
             onClickCapture={handleClickCapture}
+            style={{ WebkitMaskImage: '-webkit-radial-gradient(white, black)' }} // Force Safari clipping
         >
             {/* Delete button behind */}
             <div
