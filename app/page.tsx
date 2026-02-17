@@ -2240,7 +2240,16 @@ function HomePageContent() {
         onClose={() => setChoirToLeave(null)}
         onConfirm={handleLeaveChoir}
         title="Покинути хор?"
-        message={`Ви впевнені, що хочете покинути хор "${choirToLeave?.name}"? Якщо ви єдиний адміністратор, хор може залишитися без керування.`}
+        message={
+          <span>
+            Ви впевнені, що хочете покинути хор{" "}
+            <span className="font-bold text-red-500">"{choirToLeave?.name}"</span>?
+            <br className="mb-2" />
+            <span className="opacity-80 text-sm">
+              Якщо ви єдиний адміністратор, хор може залишитися без керування.
+            </span>
+          </span>
+        }
         confirmLabel="Покинути"
         isDestructive
       />

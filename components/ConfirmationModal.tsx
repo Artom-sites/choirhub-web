@@ -1,5 +1,6 @@
 "use client";
 
+import { ReactNode } from "react";
 import { AlertTriangle, Trash2 } from "lucide-react";
 
 interface ConfirmationModalProps {
@@ -7,7 +8,7 @@ interface ConfirmationModalProps {
     onClose: () => void;
     onConfirm: () => void;
     title: string;
-    message: string;
+    message: ReactNode;
     confirmLabel?: string;
     cancelLabel?: string;
     isDestructive?: boolean;
@@ -42,7 +43,7 @@ export default function ConfirmationModal({
                 )}
 
                 <h3 className="text-xl font-bold text-text-primary text-center mb-2">{title}</h3>
-                <p className="text-text-secondary text-center mb-8">{message}</p>
+                <div className="text-text-secondary text-center mb-8">{message}</div>
 
                 <div className="flex flex-col gap-3">
                     <button
