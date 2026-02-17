@@ -73,9 +73,6 @@ export default function SwipeableCard({
         if (absX > TRIGGER_THRESHOLD) {
             // Full swipe delete!
             onDelete();
-            // Keep it swiped or let it unmount? 
-            // Ideally we might want to keep it at -100% until unmount, but onDelete usually triggers removal.
-            // We'll leave it at current position or snap to full width to look nice while fading.
             setTranslateX(-window.innerWidth);
         } else if (absX > THRESHOLD / 2) {
             setTranslateX(-DELETE_AREA_WIDTH);
@@ -123,15 +120,44 @@ export default function SwipeableCard({
         }
     };
 
-    // ... existing MouseLeave, handleDeleteClick ...
+    const handleMouseLeave = () => {
+        if (isDragging.current) {
+            handleMouseUp();
+        }
+    };
+
+    const handleDeleteClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onDelete();
+        setTranslateX(0);
+        setIsRevealed(false);
+    };
 
     // Calculate scale/opacity for visual feedback
     const progress = Math.min(1, Math.max(0, (Math.abs(translateX) - DELETE_AREA_WIDTH) / (TRIGGER_THRESHOLD - DELETE_AREA_WIDTH)));
     const iconScale = 1 + progress * 0.5; // Scale from 1.0 to 1.5
-    const iconOpacity = Math.abs(translateX) > DELETE_AREA_WIDTH ? 1 : Math.min(1, Math.abs(translateX) / DELETE_AREA_WIDTH);
 
+    // Intercept clicks to prevent navigation if we just swiped
+    const handleClickCapture = (e: React.MouseEvent) => {
+        if (shouldBlockClick.current) {
+            e.stopPropagation();
+            e.preventDefault();
+            shouldBlockClick.current = false; // Reset for next time
+            return;
+        }
 
-    // ... existing handleClickCapture ...
+        // Also if revealed, close it on click instead of navigating
+        /* 
+           Ideally we want: click on content -> if revealed, close. else navigate.
+           But navigation happens in child onClick.
+        */
+        if (isRevealed) {
+            e.stopPropagation();
+            e.preventDefault();
+            setTranslateX(0);
+            setIsRevealed(false);
+        }
+    };
 
     return (
         <div
