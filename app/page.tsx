@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon, mergeMembers, updateChoir, deleteMyAccount, adminDeleteUser, deleteAdminCode, getChoirNotifications, getChoirUsers, joinChoir, updateMember, claimMember, leaveChoir } from "@/lib/db";
-import { Service, Choir, UserMembership, ChoirMember, Permission, AdminCode } from "@/types";
+import { Service, Choir, UserMembership, UserData, ChoirMember, Permission, AdminCode } from "@/types";
 import SongList from "@/components/SongList";
 import SwipeableCard from "@/components/SwipeableCard";
 import ServiceList from "@/components/ServiceList";
