@@ -147,6 +147,10 @@ export default function SwipeableCard({ children, onDelete, disabled = false, cl
             {/* Delete button behind */}
             <div
                 className="absolute inset-0 flex items-center justify-end pr-6 bg-red-500 cursor-pointer active:bg-red-600"
+                style={{
+                    visibility: translateX < 0 ? 'visible' : 'hidden', // Hide when not swiping to prevent bleed
+                    // No opacity transition to keep it "solid"
+                }}
                 onClick={handleDeleteClick}
             >
                 <div className="flex items-center justify-center text-white">
