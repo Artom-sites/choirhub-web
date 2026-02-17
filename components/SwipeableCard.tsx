@@ -150,7 +150,10 @@ export default function SwipeableCard({
         <div
             className={`relative overflow-hidden isolate ${className}`}
             onClickCapture={handleClickCapture}
-            style={{ WebkitMaskImage: '-webkit-radial-gradient(white, black)' }} // Force Safari clipping
+            style={{
+                WebkitMaskImage: '-webkit-radial-gradient(white, black)', // Force Safari clipping
+                transform: 'translateZ(0)' // Force hardware acceleration to fix border-radius clipping
+            }}
         >
             {/* Delete button behind */}
             <div
