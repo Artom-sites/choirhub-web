@@ -28,7 +28,8 @@ export default function SwipeableCard({
     const shouldBlockClick = useRef(false);
 
     const THRESHOLD = 80; // Pixels to reveal delete button
-    const DELETE_AREA_WIDTH = 80;
+    const DELETE_AREA_WIDTH = 80; // Standard reveal width
+    const TRIGGER_THRESHOLD = 180; // Distance to trigger instant delete
 
     const handleTouchStart = (e: React.TouchEvent) => {
         if (disabled) return;
@@ -53,7 +54,9 @@ export default function SwipeableCard({
         }
 
         let newX = currentX.current + diff;
-        newX = Math.min(0, Math.max(-DELETE_AREA_WIDTH, newX));
+        // Allow dragging past DELETE_AREA_WIDTH up to TRIGGER_THRESHOLD + overshoot
+        // Add resistance past TRIGGER_THRESHOLD? For now just allow it.
+        newX = Math.min(0, newX);
         setTranslateX(newX);
     };
 
@@ -65,17 +68,22 @@ export default function SwipeableCard({
         }
 
         isDragging.current = false;
+        const absX = Math.abs(translateX);
 
-        if (Math.abs(translateX) > THRESHOLD / 2) {
+        if (absX > TRIGGER_THRESHOLD) {
+            // Full swipe delete!
+            onDelete();
+            // Keep it swiped or let it unmount? 
+            // Ideally we might want to keep it at -100% until unmount, but onDelete usually triggers removal.
+            // We'll leave it at current position or snap to full width to look nice while fading.
+            setTranslateX(-window.innerWidth);
+        } else if (absX > THRESHOLD / 2) {
             setTranslateX(-DELETE_AREA_WIDTH);
             setIsRevealed(true);
             shouldBlockClick.current = true; // Keep blocked if revealed
         } else {
             setTranslateX(0);
             setIsRevealed(false);
-            // If we swiped but cancelled, we still want to block the click that comes immediately
-            // setTimeout(() => shouldBlockClick.current = false, 100); 
-            // Actually, keep it true for this event loop.
         }
     };
 
@@ -94,15 +102,19 @@ export default function SwipeableCard({
         if (Math.abs(diff) > 5) shouldBlockClick.current = true;
 
         let newX = currentX.current + diff;
-        newX = Math.min(0, Math.max(-DELETE_AREA_WIDTH, newX));
+        newX = Math.min(0, newX);
         setTranslateX(newX);
     };
 
     const handleMouseUp = () => {
         if (!isDragging.current || disabled) return;
         isDragging.current = false;
+        const absX = Math.abs(translateX);
 
-        if (Math.abs(translateX) > THRESHOLD / 2) {
+        if (absX > TRIGGER_THRESHOLD) {
+            onDelete();
+            setTranslateX(-500); // Visual clear
+        } else if (absX > THRESHOLD / 2) {
             setTranslateX(-DELETE_AREA_WIDTH);
             setIsRevealed(true);
         } else {
@@ -111,40 +123,15 @@ export default function SwipeableCard({
         }
     };
 
-    const handleMouseLeave = () => {
-        if (isDragging.current) {
-            handleMouseUp();
-        }
-    };
+    // ... existing MouseLeave, handleDeleteClick ...
 
-    const handleDeleteClick = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        onDelete();
-        setTranslateX(0);
-        setIsRevealed(false);
-    };
+    // Calculate scale/opacity for visual feedback
+    const progress = Math.min(1, Math.max(0, (Math.abs(translateX) - DELETE_AREA_WIDTH) / (TRIGGER_THRESHOLD - DELETE_AREA_WIDTH)));
+    const iconScale = 1 + progress * 0.5; // Scale from 1.0 to 1.5
+    const iconOpacity = Math.abs(translateX) > DELETE_AREA_WIDTH ? 1 : Math.min(1, Math.abs(translateX) / DELETE_AREA_WIDTH);
 
-    // Intercept clicks to prevent navigation if we just swiped
-    const handleClickCapture = (e: React.MouseEvent) => {
-        if (shouldBlockClick.current) {
-            e.stopPropagation();
-            e.preventDefault();
-            shouldBlockClick.current = false; // Reset for next time
-            return;
-        }
 
-        // Also if revealed, close it on click instead of navigating
-        /* 
-           Ideally we want: click on content -> if revealed, close. else navigate.
-           But navigation happens in child onClick.
-        */
-        if (isRevealed) {
-            e.stopPropagation();
-            e.preventDefault();
-            setTranslateX(0);
-            setIsRevealed(false);
-        }
-    };
+    // ... existing handleClickCapture ...
 
     return (
         <div
@@ -164,7 +151,13 @@ export default function SwipeableCard({
                 }}
                 onClick={handleDeleteClick}
             >
-                <div className="flex items-center justify-center text-white">
+                <div
+                    className="flex items-center justify-center text-white transition-transform duration-75"
+                    style={{
+                        transform: `scale(${iconScale})`,
+                        opacity: 1 // Always visible once background is visible
+                    }}
+                >
                     <Trash2 className="w-6 h-6" />
                 </div>
             </div>
