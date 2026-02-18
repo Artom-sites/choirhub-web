@@ -868,88 +868,122 @@ exports.registerFcmToken = functions.https.onCall(async (data, context) => {
     }
 });
 // --- R2 STORAGE UTILITY ---
-const r2Client = new client_s3_1.S3Client({
-    region: "auto",
-    endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-    credentials: {
-        accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
-        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
-    },
-});
+// r2Client initialized lazily inside function to prevent cold start crashes
+// if env vars are missing
 const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || 'msc-catalog';
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || process.env.NEXT_PUBLIC_R2_PUBLIC_URL || '';
+const cors = require('cors')({ origin: true });
 /**
  * generateUploadUrl
  * Generates a presigned URL for uploading files to R2 storage.
- * Replaces /api/upload for mobile/static compatibility.
+ * HTTP Function (onRequest) to bypass client SDK complexity and handle CORS manually.
  */
-exports.generateUploadUrl = functions.https.onCall(async (data, context) => {
-    var _a;
-    if (!context.auth) {
-        throw new functions.https.HttpsError("unauthenticated", "User must be logged in");
-    }
-    const { key, contentType } = data;
-    if (!key || !contentType) {
-        throw new functions.https.HttpsError("invalid-argument", "Missing key or contentType");
-    }
-    // Validate Key - prevent escaping directory
-    if (key.includes("..")) {
-        throw new functions.https.HttpsError("invalid-argument", "Invalid key");
-    }
-    // Authorization Rules
-    const isSuperAdmin = (context.auth.token.superAdmin === true);
-    const userId = context.auth.uid;
-    // Rule A: Choir Resources (choirs/{choirId}/...)
-    if (key.startsWith("choirs/")) {
-        const parts = key.split("/");
-        if (parts.length < 3)
-            throw new functions.https.HttpsError("invalid-argument", "Invalid key format");
-        const choirId = parts[1];
-        // Check claims first
-        const userRole = (_a = context.auth.token.choirs) === null || _a === void 0 ? void 0 : _a[choirId];
-        let canUpload = isSuperAdmin || ['admin', 'regent', 'head'].includes(userRole);
-        // Fallback to Firestore if claims missing
-        if (!canUpload && !userRole) {
-            const userDoc = await db.collection("users").doc(userId).get();
-            if (userDoc.exists) {
-                const userData = userDoc.data();
-                if (userData.choirId === choirId) {
-                    canUpload = ['admin', 'regent', 'head'].includes(userData.role);
+exports.generateUploadUrl = functions.https.onRequest((req, res) => {
+    // 1. Handle CORS (options and others)
+    cors(req, res, async () => {
+        var _a;
+        if (req.method !== 'POST') {
+            res.status(405).json({ error: "Method Not Allowed" });
+            return;
+        }
+        try {
+            console.log("[generateUploadUrl] Request started", { headers: req.headers, body: req.body });
+            // 2. Verify Authorization Header
+            const authHeader = req.headers.authorization;
+            if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                res.status(401).json({ error: "Unauthenticated" });
+                return;
+            }
+            const token = authHeader.split('Bearer ')[1];
+            let decodedToken;
+            try {
+                decodedToken = await admin.auth().verifyIdToken(token);
+            }
+            catch (e) {
+                console.error("Token verification failed:", e);
+                res.status(403).json({ error: "Invalid Token" });
+                return;
+            }
+            const userId = decodedToken.uid;
+            const { key, contentType } = req.body; // onRequest uses req.body directly
+            if (!key || !contentType) {
+                res.status(400).json({ error: "Missing key or contentType" });
+                return;
+            }
+            // Validate Key - prevent escaping directory
+            if (key.includes("..")) {
+                res.status(400).json({ error: "Invalid key" });
+                return;
+            }
+            // Authorization Rules
+            const isSuperAdmin = (decodedToken.superAdmin === true);
+            // Rule A: Choir Resources (choirs/{choirId}/...)
+            if (key.startsWith("choirs/")) {
+                const parts = key.split("/");
+                if (parts.length < 3)
+                    throw new Error("Invalid key format");
+                const choirId = parts[1];
+                // Check claims first
+                const userRole = (_a = decodedToken.choirs) === null || _a === void 0 ? void 0 : _a[choirId];
+                let canUpload = isSuperAdmin || ['admin', 'regent', 'head'].includes(userRole);
+                // Fallback to Firestore if claims missing
+                if (!canUpload && !userRole) {
+                    const userDoc = await db.collection("users").doc(userId).get();
+                    if (userDoc.exists) {
+                        const userData = userDoc.data();
+                        if (userData.choirId === choirId) {
+                            canUpload = ['admin', 'regent', 'head'].includes(userData.role);
+                        }
+                        else {
+                            canUpload = (userData.memberships || []).some((m) => m.choirId === choirId && ['admin', 'regent', 'head'].includes(m.role));
+                        }
+                    }
                 }
-                else {
-                    canUpload = (userData.memberships || []).some((m) => m.choirId === choirId && ['admin', 'regent', 'head'].includes(m.role));
+                if (!canUpload) {
+                    res.status(403).json({ error: "Insufficient permissions for this choir" });
+                    return;
                 }
             }
+            // Rule B: Pending Songs (pending/...)
+            else if (key.startsWith("pending/")) {
+                // Any authenticated user can upload pending songs
+                // token verification passed
+            }
+            // Rule C: Global Resources or checks
+            else {
+                if (!isSuperAdmin) {
+                    res.status(403).json({ error: "Root/Global access denied" });
+                    return;
+                }
+            }
+            // Lazy Init R2 Client
+            if (!process.env.R2_ACCOUNT_ID) {
+                console.error("[generateUploadUrl] Missing R2_ACCOUNT_ID env var");
+                throw new Error("Server Misconfiguration: Missing R2 Credentials");
+            }
+            const r2Client = new client_s3_1.S3Client({
+                region: "auto",
+                endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+                credentials: {
+                    accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
+                    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
+                },
+            });
+            const command = new client_s3_1.PutObjectCommand({
+                Bucket: R2_BUCKET_NAME,
+                Key: key,
+                ContentType: contentType,
+            });
+            // Generate Presigned URL (valid for 1 hour)
+            const signedUrl = await (0, s3_request_presigner_1.getSignedUrl)(r2Client, command, { expiresIn: 3600 });
+            const publicUrl = `${R2_PUBLIC_URL}/${key}`;
+            console.log("[generateUploadUrl] Success", { publicUrl });
+            res.status(200).json({ signedUrl, publicUrl });
         }
-        if (!canUpload) {
-            throw new functions.https.HttpsError("permission-denied", "Insufficient permissions for this choir");
+        catch (error) {
+            console.error("R2 Presign Error:", error);
+            res.status(500).json({ error: "Failed to generate upload URL" });
         }
-    }
-    // Rule B: Pending Songs (pending/...)
-    else if (key.startsWith("pending/")) {
-        // Any authenticated user can upload pending songs
-        // context.auth check already passed
-    }
-    // Rule C: Global Resources or checks
-    else {
-        if (!isSuperAdmin) {
-            throw new functions.https.HttpsError("permission-denied", "Root/Global access denied");
-        }
-    }
-    try {
-        const command = new client_s3_1.PutObjectCommand({
-            Bucket: R2_BUCKET_NAME,
-            Key: key,
-            ContentType: contentType,
-        });
-        // Generate Presigned URL (valid for 1 hour)
-        const signedUrl = await (0, s3_request_presigner_1.getSignedUrl)(r2Client, command, { expiresIn: 3600 });
-        const publicUrl = `${R2_PUBLIC_URL}/${key}`;
-        return { signedUrl, publicUrl };
-    }
-    catch (error) {
-        console.error("R2 Presign Error:", error);
-        throw new functions.https.HttpsError("internal", "Failed to generate upload URL");
-    }
+    });
 });
 //# sourceMappingURL=index.js.map
