@@ -37,7 +37,7 @@ service cloud.firestore {
       allow read: if request.auth.uid == userId || isSuperAdmin();
       // Allow update ONLY if NOT modifying sensitive fields (memberships, choirId, role, email)
       allow update: if (request.auth.uid == userId || isSuperAdmin()) &&
-                       (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['memberships', 'choirId', 'role', 'email']));
+                       (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['memberships', 'email']));
       
       // Allow create? Usually handled by auth trigger, but if client does it:
       allow create: if request.auth.uid == userId;
