@@ -23,6 +23,7 @@ import { ConfirmModal, AlertModal, InputModal } from "./ui/Modal";
 
 interface GlobalArchiveProps {
     onAddSong?: (song: GlobalSong) => void;
+    isOverlayOpen?: boolean;
 }
 
 const CATEGORIES = [
@@ -84,7 +85,7 @@ const fuseOptions = {
     minMatchCharLength: 2,
 };
 
-export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
+export default function GlobalArchive({ onAddSong, isOverlayOpen }: GlobalArchiveProps) {
     const { user, userData } = useAuth();
     const [songs, setSongs] = useState<GlobalSong[]>([]);
     const [filteredSongs, setFilteredSongs] = useState<GlobalSong[]>([]);
@@ -1198,7 +1199,7 @@ export default function GlobalArchive({ onAddSong }: GlobalArchiveProps) {
             }
             {/* Floating Add Button */}
             {
-                canSubmit && !isModerationMode && (
+                canSubmit && !isModerationMode && !showSubmitModal && !isOverlayOpen && (
                     <button
                         onClick={() => setShowSubmitModal(true)}
                         className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] md:bottom-24 right-6 w-[56px] h-[56px] bg-primary text-background rounded-full shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40"

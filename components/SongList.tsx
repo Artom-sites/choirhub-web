@@ -31,6 +31,7 @@ interface SongListProps {
     onRefresh?: () => void;
     showAddModal?: boolean;
     setShowAddModal?: (show: boolean) => void;
+    isOverlayOpen?: boolean;
 }
 
 export default function SongList({
@@ -38,6 +39,8 @@ export default function SongList({
     regents,
     knownConductors,
     knownCategories,
+    // ...
+    isOverlayOpen,
     knownPianists,
     onRefresh,
     showAddModal: propsShowAddModal,
@@ -277,6 +280,7 @@ export default function SongList({
             {/* Catalog View */}
             <div className={subTab === 'catalog' ? 'block h-full' : 'hidden'}>
                 <GlobalArchive
+                    isOverlayOpen={isOverlayOpen}
                     onAddSong={async (globalSong) => {
                         // Add song from global archive to choir repertoire
                         if (!userData?.choirId) return;
@@ -678,7 +682,7 @@ export default function SongList({
                 )
             }
             {/* Floating Add Button - Local Only */}
-            {canAddSongs && subTab === 'repertoire' && setShowAddModal && (
+            {canAddSongs && subTab === 'repertoire' && setShowAddModal && !showAddModal && !isOverlayOpen && (
                 <button
                     onClick={() => setShowAddModal(true)}
                     className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] md:bottom-24 right-6 w-[56px] h-[56px] bg-primary text-background rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60]"

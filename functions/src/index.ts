@@ -1,5 +1,7 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -987,5 +989,103 @@ export const registerFcmToken = functions.https.onCall(async (data, context) => 
     } catch (error) {
         console.error("[TokenEnforcement] Error registering token:", error);
         throw new functions.https.HttpsError("internal", "Failed to register token");
+    }
+});
+
+// --- R2 STORAGE UTILITY ---
+
+const r2Client = new S3Client({
+    region: "auto",
+    endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    credentials: {
+        accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
+    },
+});
+
+const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || 'msc-catalog';
+const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || process.env.NEXT_PUBLIC_R2_PUBLIC_URL || '';
+
+/**
+ * generateUploadUrl
+ * Generates a presigned URL for uploading files to R2 storage.
+ * Replaces /api/upload for mobile/static compatibility.
+ */
+export const generateUploadUrl = functions.https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError("unauthenticated", "User must be logged in");
+    }
+
+    const { key, contentType } = data;
+
+    if (!key || !contentType) {
+        throw new functions.https.HttpsError("invalid-argument", "Missing key or contentType");
+    }
+
+    // Validate Key - prevent escaping directory
+    if (key.includes("..")) {
+        throw new functions.https.HttpsError("invalid-argument", "Invalid key");
+    }
+
+    // Authorization Rules
+    const isSuperAdmin = (context.auth.token.superAdmin === true);
+    const userId = context.auth.uid;
+
+    // Rule A: Choir Resources (choirs/{choirId}/...)
+    if (key.startsWith("choirs/")) {
+        const parts = key.split("/");
+        if (parts.length < 3) throw new functions.https.HttpsError("invalid-argument", "Invalid key format");
+        const choirId = parts[1];
+
+        // Check claims first
+        const userRole = (context.auth.token.choirs as any)?.[choirId];
+        let canUpload = isSuperAdmin || ['admin', 'regent', 'head'].includes(userRole);
+
+        // Fallback to Firestore if claims missing
+        if (!canUpload && !userRole) {
+            const userDoc = await db.collection("users").doc(userId).get();
+            if (userDoc.exists) {
+                const userData = userDoc.data()!;
+                if (userData.choirId === choirId) {
+                    canUpload = ['admin', 'regent', 'head'].includes(userData.role);
+                } else {
+                    canUpload = (userData.memberships || []).some((m: any) =>
+                        m.choirId === choirId && ['admin', 'regent', 'head'].includes(m.role)
+                    );
+                }
+            }
+        }
+
+        if (!canUpload) {
+            throw new functions.https.HttpsError("permission-denied", "Insufficient permissions for this choir");
+        }
+    }
+    // Rule B: Pending Songs (pending/...)
+    else if (key.startsWith("pending/")) {
+        // Any authenticated user can upload pending songs
+        // context.auth check already passed
+    }
+    // Rule C: Global Resources or checks
+    else {
+        if (!isSuperAdmin) {
+            throw new functions.https.HttpsError("permission-denied", "Root/Global access denied");
+        }
+    }
+
+    try {
+        const command = new PutObjectCommand({
+            Bucket: R2_BUCKET_NAME,
+            Key: key,
+            ContentType: contentType,
+        });
+
+        // Generate Presigned URL (valid for 1 hour)
+        const signedUrl = await getSignedUrl(r2Client, command, { expiresIn: 3600 });
+        const publicUrl = `${R2_PUBLIC_URL}/${key}`;
+
+        return { signedUrl, publicUrl };
+    } catch (error: any) {
+        console.error("R2 Presign Error:", error);
+        throw new functions.https.HttpsError("internal", "Failed to generate upload URL");
     }
 });

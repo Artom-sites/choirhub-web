@@ -1785,6 +1785,7 @@ function HomePageContent() {
             knownPianists={choir?.knownPianists || []}
             showAddModal={showAddSongModal}
             setShowAddModal={setShowAddSongModal}
+            isOverlayOpen={showAccount || showChoirManager || showAddServiceModal}
           />
         )}
 

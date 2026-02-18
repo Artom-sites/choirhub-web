@@ -2,41 +2,30 @@
  * Upload a file to R2 via the API (using Presigned URL)
  */
 export async function uploadFileToR2(key: string, file: File | Blob): Promise<string> {
-    // 1. Get Presigned URL
-    // Get auth token from current user
-    const { auth } = await import("@/lib/firebase");
-    const token = await auth.currentUser?.getIdToken();
+    // 1. Get Presigned URL via Callable Function (Works on Mobile & Web)
+    const { functions } = await import("@/lib/firebase");
+    const { httpsCallable } = await import("firebase/functions");
 
-    if (!token) {
-        throw new Error("You must be logged in to upload files.");
+    const generateUploadUrl = httpsCallable(functions, 'generateUploadUrl');
+
+    try {
+        const result = await generateUploadUrl({ key, contentType: file.type });
+        const { signedUrl, publicUrl } = result.data as { signedUrl: string, publicUrl: string };
+
+        // 2. Upload to R2 directly (CORS is handled by R2 bucket settings)
+        const uploadRes = await fetch(signedUrl, {
+            method: "PUT",
+            headers: { "Content-Type": file.type },
+            body: file
+        });
+
+        if (!uploadRes.ok) throw new Error("Failed to upload file to R2");
+
+        return publicUrl;
+    } catch (error: any) {
+        console.error("Upload failed:", error);
+        throw new Error(error.message || "Failed to upload file");
     }
-
-    const res = await fetch("/api/upload", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ key, contentType: file.type })
-    });
-
-    if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to get upload URL");
-    }
-
-    const { signedUrl, publicUrl } = await res.json();
-
-    // 2. Upload to R2
-    const uploadRes = await fetch(signedUrl, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file
-    });
-
-    if (!uploadRes.ok) throw new Error("Failed to upload file to R2");
-
-    return publicUrl;
 }
 
 export async function uploadPdf(choirId: string, songId: string, file: File | Blob): Promise<string> {
