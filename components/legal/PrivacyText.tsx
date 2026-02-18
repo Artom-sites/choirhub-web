@@ -25,8 +25,8 @@ export default function PrivacyText() {
                 <ul className="list-none space-y-1 text-sm text-text-secondary">
                     <li><strong>Оператор:</strong> Фізична особа — Дуля Артьом</li>
                     <li><strong>Юрисдикція:</strong> Україна</li>
-                    <li><strong>Email для питань конфіденційності:</strong> artom.devv@gmail.com</li>
-                    <li><strong>Telegram:</strong> <a href="https://t.me/artom_dev" className="text-primary hover:underline">@artom_dev</a></li>
+                    <li><strong>Email для питань конфіденційності:</strong> <a href="mailto:artom.devv@gmail.com" className="text-teal-400 hover:text-teal-300 hover:underline">artom.devv@gmail.com</a></li>
+                    <li><strong>Telegram:</strong> <a href="https://t.me/artom_dev" className="text-teal-400 hover:text-teal-300 hover:underline">@artom_dev</a></li>
                 </ul>
             </section>
 
@@ -55,7 +55,7 @@ export default function PrivacyText() {
                 <h4 className="text-sm font-semibold text-text-primary mt-2">3.3. Контент</h4>
                 <ul className="list-disc pl-5 space-y-1 text-sm text-text-secondary">
                     <li>Пісні: назва, композитор, категорія, тональність</li>
-                    <li>Файли нот (PDF) та аудіозаписи партій</li>
+                    <li>Файли нот (PDF)</li>
                     <li>Плани служінь: дата, час, список пісень</li>
                     <li>Анотації до нот (зберігаються локально на пристрої)</li>
                 </ul>
@@ -119,7 +119,7 @@ export default function PrivacyText() {
                         пісень, служіння, відвідуваність, push-токени.
                     </li>
                     <li>
-                        <strong>Cloudflare R2:</strong> PDF-файли нот та аудіозаписи.
+                        <strong>Cloudflare R2:</strong> PDF-файли нот.
                     </li>
                     <li>
                         <strong>Vercel:</strong> хостинг веб-додатку (дані користувачів не зберігаються).
@@ -281,9 +281,9 @@ export default function PrivacyText() {
                     З питань щодо конфіденційності ваших даних зв&apos;яжіться з нами:
                 </p>
                 <ul className="list-none space-y-1 text-sm text-text-secondary">
-                    <li><strong>Email:</strong> artom.devv@gmail.com</li>
-                    <li><strong>Telegram:</strong> <a href="https://t.me/artom_dev" className="text-primary hover:underline">@artom_dev</a></li>
-                    <li><strong>Сайт:</strong> <a href="https://artom.dev" className="text-primary hover:underline">artom.dev</a></li>
+                    <li><strong>Email:</strong> <a href="mailto:artom.devv@gmail.com" className="text-teal-400 hover:text-teal-300 hover:underline">artom.devv@gmail.com</a></li>
+                    <li><strong>Telegram:</strong> <a href="https://t.me/artom_dev" className="text-teal-400 hover:text-teal-300 hover:underline">@artom_dev</a></li>
+                    <li><strong>Сайт:</strong> <a href="https://artom.dev" className="text-teal-400 hover:text-teal-300 hover:underline">artom.dev</a></li>
                 </ul>
             </section>
 

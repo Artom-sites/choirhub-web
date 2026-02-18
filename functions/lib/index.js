@@ -428,10 +428,21 @@ exports.atomicDeleteSelf = functions.https.onCall(async (_data, context) => {
         console.log("atomicDeleteSelf: batch committed");
         try {
             await admin.auth().deleteUser(userId);
-            console.log("atomicDeleteSelf: auth deleted");
+            // Explicitly clear claims (though deleteUser technically invalidates them, this is safer for edge cases)
+            // Note: Cannot set claims for deleted user, but if delete fails, we ensure they have no power.
+            // If user is deleted, claims are gone. If we want to be paranoid, clear claims BEFORE delete.
         }
         catch (e) {
             console.log("Error deleting auth:", e);
+        }
+        // Ensure no claims remain if auth deletion failed weirdly or if account is restored
+        try {
+            // We can't set claims on a deleted user. 
+            // But if deleteUser threw, user might exist.
+            await admin.auth().setCustomUserClaims(userId, { choirs: {} });
+        }
+        catch (e) {
+            // Ignore if user not found
         }
         return { success: true };
     }
@@ -887,7 +898,6 @@ exports.generateUploadUrl = functions.https.onRequest((req, res) => {
             return;
         }
         try {
-            console.log("[generateUploadUrl] Request started", { headers: req.headers, body: req.body });
             // 2. Verify Authorization Header
             const authHeader = req.headers.authorization;
             if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -905,14 +915,32 @@ exports.generateUploadUrl = functions.https.onRequest((req, res) => {
                 return;
             }
             const userId = decodedToken.uid;
-            const { key, contentType } = req.body; // onRequest uses req.body directly
+            const { key, contentType, size } = req.body; // onRequest uses req.body directly
+            // --- SECURITY VALIDATION ---
+            // A. Basic Presence
             if (!key || !contentType) {
                 res.status(400).json({ error: "Missing key or contentType" });
                 return;
             }
-            // Validate Key - prevent escaping directory
+            // B. Directory Traversal
             if (key.includes("..")) {
+                console.warn(`[Security] Directory traversal attempt by ${userId}: ${key}`);
                 res.status(400).json({ error: "Invalid key" });
+                return;
+            }
+            // C. Content-Type Whitelist
+            const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
+            if (!ALLOWED_TYPES.includes(contentType)) {
+                console.warn(`[Security] Invalid content-type attempt by ${userId}: ${contentType}`);
+                res.status(400).json({ error: "Invalid file type. Only PDF, JPEG, and PNG are allowed." });
+                return;
+            }
+            // D. Max Size (10MB)
+            // Note: This relies on client honesty unless using signed POST policies.
+            // But strict clients (like ours) will send it and respect the rejection.
+            const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+            if (size && typeof size === 'number' && size > MAX_SIZE) {
+                res.status(400).json({ error: "File too large. Max 10MB." });
                 return;
             }
             // Authorization Rules
@@ -973,6 +1001,8 @@ exports.generateUploadUrl = functions.https.onRequest((req, res) => {
                 Bucket: R2_BUCKET_NAME,
                 Key: key,
                 ContentType: contentType,
+                // Optional: Pass ContentLength to constrain the signed URL if supported by S3/R2 implementation
+                // ContentLength: size 
             });
             // Generate Presigned URL (valid for 1 hour)
             const signedUrl = await (0, s3_request_presigner_1.getSignedUrl)(r2Client, command, { expiresIn: 3600 });

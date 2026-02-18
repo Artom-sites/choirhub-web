@@ -152,7 +152,7 @@ function MainContent({ openExternal, onOpenPrivacy, onOpenTerms }: { openExterna
                 </div>
                 <div className="p-4 bg-surface-highlight rounded-2xl border border-border space-y-3">
                     <p className="text-sm text-text-secondary leading-relaxed">
-                        Користувачі можуть додавати власні матеріали (ноти, тексти, PDF-файли, аудіо)
+                        Користувачі можуть додавати власні матеріали (ноти, тексти, PDF-файли)
                         для використання в межах свого хору або церковної спільноти.
                     </p>
                     <p className="text-sm text-text-secondary leading-relaxed">
@@ -209,21 +209,22 @@ function MainContent({ openExternal, onOpenPrivacy, onOpenTerms }: { openExterna
                         Детальну інформацію про обробку персональних даних
                         можна знайти в нашій Політиці конфіденційності.
                     </p>
-                    <button
-                        onClick={onOpenPrivacy}
-                        className="inline-flex items-center gap-2 text-xs font-bold text-rose-400 hover:text-rose-300 transition-colors uppercase tracking-wider"
-                    >
-                        Політика конфіденційності
-                        <ArrowLeft className="w-3 h-3 rotate-180" />
-                    </button>
-                    <div className="h-2" />
-                    <button
-                        onClick={onOpenTerms}
-                        className="inline-flex items-center gap-2 text-xs font-bold text-primary hover:opacity-80 transition-colors uppercase tracking-wider"
-                    >
-                        Умови використання
-                        <ArrowLeft className="w-3 h-3 rotate-180" />
-                    </button>
+                    <div className="flex flex-col gap-2 items-start">
+                        <button
+                            onClick={onOpenPrivacy}
+                            className="inline-flex items-center gap-2 text-xs font-bold text-rose-400 hover:text-rose-300 transition-colors uppercase tracking-wider"
+                        >
+                            Політика конфіденційності
+                            <ArrowLeft className="w-3 h-3 rotate-180" />
+                        </button>
+                        <button
+                            onClick={onOpenTerms}
+                            className="inline-flex items-center gap-2 text-xs font-bold text-primary hover:opacity-80 transition-colors uppercase tracking-wider"
+                        >
+                            Умови використання
+                            <ArrowLeft className="w-3 h-3 rotate-180" />
+                        </button>
+                    </div>
                 </div>
             </section>
         </>

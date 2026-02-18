@@ -3,15 +3,15 @@ import React from 'react';
 export default function TermsText() {
     return (
         <>
-            <p className="text-xs text-text-secondary">Останнє оновлення: 13 лютого 2026</p>
+            <p className="text-xs text-text-secondary">Останнє оновлення: 18 лютого 2026</p>
 
             {/* 1. General */}
             <section className="space-y-3">
                 <h3 className="text-base font-semibold text-text-primary">1. Загальні положення</h3>
                 <p className="text-sm text-text-secondary leading-relaxed">
                     Ці Умови використання (далі — &quot;Умови&quot;) регулюють доступ та використання
-                    додатку &quot;MyChoir&quot; (далі — &quot;Додаток&quot;), доступного як веб-додаток (PWA)
-                    та мобільний додаток для платформ iOS та Android.
+                    додатку &quot;MyChoir&quot; (далі — &quot;Додаток&quot;), доступного на мобільних пристроях
+                    та через веб-інтерфейс.
                 </p>
                 <p className="text-sm text-text-secondary leading-relaxed">
                     Використовуючи Додаток, ви підтверджуєте, що ознайомились та погоджуєтесь із цими Умовами.
@@ -25,7 +25,7 @@ export default function TermsText() {
                 <ul className="list-none space-y-1 text-sm text-text-secondary">
                     <li><strong>Оператор:</strong> Фізична особа — Дуля Артьом</li>
                     <li><strong>Юрисдикція:</strong> Україна</li>
-                    <li><strong>Email:</strong> artom.devv@gmail.com</li>
+                    <li><strong>Email:</strong> <a href="mailto:artom.devv@gmail.com" className="text-teal-400 hover:text-teal-300 hover:underline">artom.devv@gmail.com</a></li>
                 </ul>
             </section>
 
@@ -36,7 +36,7 @@ export default function TermsText() {
                     MyChoir — це некомерційна платформа для організації хорового служіння, яка надає:
                 </p>
                 <ul className="list-disc pl-5 space-y-1 text-sm text-text-secondary">
-                    <li>Управління репертуаром (пісні, ноти, аудіо)</li>
+                    <li>Управління репертуаром (пісні, ноти)</li>
                     <li>Планування служінь та розкладу</li>
                     <li>Облік присутності хористів</li>
                     <li>Обмін інформацією через push-сповіщення</li>
@@ -186,9 +186,9 @@ export default function TermsText() {
                     З питань щодо цих Умов зв&apos;яжіться з нами:
                 </p>
                 <ul className="list-none space-y-1 text-sm text-text-secondary">
-                    <li><strong>Email:</strong> artom.devv@gmail.com</li>
-                    <li><strong>Telegram:</strong> <a href="https://t.me/artom_dev" className="text-primary hover:underline">@artom_dev</a></li>
-                    <li><strong>Сайт:</strong> <a href="https://artom.dev" className="text-primary hover:underline">artom.dev</a></li>
+                    <li><strong>Email:</strong> <a href="mailto:artom.devv@gmail.com" className="text-teal-400 hover:text-teal-300 hover:underline">artom.devv@gmail.com</a></li>
+                    <li><strong>Telegram:</strong> <a href="https://t.me/artom_dev" className="text-teal-400 hover:text-teal-300 hover:underline">@artom_dev</a></li>
+                    <li><strong>Сайт:</strong> <a href="https://artom.dev" className="text-teal-400 hover:text-teal-300 hover:underline">artom.dev</a></li>
                 </ul>
             </section>
 

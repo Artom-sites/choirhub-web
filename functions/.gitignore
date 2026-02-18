@@ -1,0 +1,8 @@
+# Dependencies
+/node_modules
+/lib
+*.log
+
+# Environment
+.env
+.env.*

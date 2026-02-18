@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const isProd = process.env.NODE_ENV === 'production';
 
 const nextConfig: NextConfig = {
-  // output: isProd ? 'export' : undefined,
+  output: process.env.CAPACITOR ? 'export' : undefined,
   images: {
     unoptimized: true,
   },

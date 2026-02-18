@@ -106,7 +106,7 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                                     <div className="bg-surface-highlight p-4 rounded-2xl border border-border">
                                         <Music2 className="w-6 h-6 text-purple-400 mb-3" />
                                         <h4 className="font-bold text-text-primary mb-1">Репертуар</h4>
-                                        <p className="text-xs text-text-secondary">База пісень хору з нотами, партіями та аудіо.</p>
+                                        <p className="text-xs text-text-secondary">База пісень хору з нотами та партіями.</p>
                                     </div>
                                     <div className="bg-surface-highlight p-4 rounded-2xl border border-border">
                                         <Calendar className="w-6 h-6 text-blue-400 mb-3" />
@@ -184,7 +184,7 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                                         <ul className="text-sm text-text-secondary space-y-2 list-disc pl-5">
                                             <li>Перегляд репертуару та партій 👀</li>
                                             <li>Перегляд розкладу служінь</li>
-                                            <li>Завантаження PDF та аудіо</li>
+                                            <li>Завантаження PDF файлів</li>
                                             <li>Синхронізація (офлайн режим)</li>
                                         </ul>
                                     </div>
@@ -224,6 +224,17 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                                             <span className="text-[10px] px-2 py-1 bg-background text-text-secondary rounded-lg">Пасха</span>
                                             <span className="text-[10px] px-2 py-1 bg-background text-text-secondary rounded-lg">Свято Жнив</span>
                                         </div>
+                                    </div>
+
+                                    <div className="bg-surface-highlight p-5 rounded-2xl border border-border">
+                                        <h4 className="font-bold text-text-primary mb-2 flex items-center gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+                                            Анотації та нотатки
+                                        </h4>
+                                        <p className="text-sm text-text-secondary">
+                                            Відкрийте ноти на весь екран та натисніть олівець, щоб малювати,
+                                            підкреслювати або писати нотатки. Ваші помітки особисті і зберігаються на пристрої.
+                                        </p>
                                     </div>
 
                                     <div className="bg-surface-highlight p-5 rounded-2xl border border-border">

@@ -69,6 +69,30 @@ function HomePageContent() {
 
   // App Readiness
   const [isAppReady, setIsAppReady] = useState(false);
+  const [showPreloader, setShowPreloader] = useState(true);
+  const [preloaderFading, setPreloaderFading] = useState(false);
+  const preloaderMinReady = useRef(false);
+  const preloaderStartTime = useRef(Date.now());
+
+  // Min/Max Timing: hide preloader only when BOTH conditions are met
+  useEffect(() => {
+    if (!isAppReady) return;
+
+    const elapsed = Date.now() - preloaderStartTime.current;
+    const remaining = Math.max(0, 1200 - elapsed); // Min 1200ms
+
+    const hide = () => {
+      setPreloaderFading(true); // Start fade-out
+      setTimeout(() => setShowPreloader(false), 400); // Remove after fade
+    };
+
+    if (remaining > 0) {
+      const timer = setTimeout(hide, remaining);
+      return () => clearTimeout(timer);
+    } else {
+      hide();
+    }
+  }, [isAppReady]);
 
   // Tab Animation Variants
   const tabVariants = {
@@ -607,7 +631,7 @@ function HomePageContent() {
       window.location.reload(); // Force reload to ensure all contexts pick up the new choir
     } catch (e: any) {
       console.error("Error creating choir:", e);
-      alert("Помилка створення хору: " + (e.message || "Невідома помилка"));
+      setManagerError("Помилка створення хору: " + (e.message || "Невідома помилка"));
     } finally {
       setManagerLoading(false);
     }
@@ -976,11 +1000,20 @@ function HomePageContent() {
   // ------------------------------------------------------------------
   //  APP READY CHECK
   // ------------------------------------------------------------------
-  // This is the SINGLE barrier that prevents flash of default state.
-  // We only render the Dashboard if isAppReady is true.
-  // Otherwise, we show the splash screen.
+  // Preloader overlay (renders on top, fades out when ready)
+  // This replaces the old early-return pattern for smoother transition.
+  const preloaderOverlay = showPreloader ? (
+    <div
+      className={`fixed inset-0 z-[9999] transition-opacity duration-400 ${preloaderFading ? 'opacity-0 pointer-events-none' : 'opacity-100'
+        }`}
+    >
+      <Preloader />
+    </div>
+  ) : null;
+
+  // If data isn't ready yet, show preloader as full-screen (no content behind)
   if (!isAppReady) {
-    return <Preloader />;
+    return <>{preloaderOverlay || <Preloader />}</>;
   }
 
 

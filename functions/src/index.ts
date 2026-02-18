@@ -108,6 +108,7 @@ export const atomicCreateChoir = functions.https.onCall(async (data, context) =>
         members: [{
             id: userId,
             name: userData.name || "Користувач",
+            photoURL: userData.photoURL || null,
             role: 'head',
             hasAccount: true,
             accountUid: userId
@@ -120,6 +121,7 @@ export const atomicCreateChoir = functions.https.onCall(async (data, context) =>
     batch.set(memberRef, {
         id: userId,
         name: userData.name || "Користувач",
+        photoURL: userData.photoURL || null,
         role: 'head',
         joinedAt: admin.firestore.FieldValue.serverTimestamp(),
         hasAccount: true,
@@ -846,7 +848,17 @@ export const atomicUpdateMember = functions.https.onCall(async (data, context) =
         if (memberIndex === -1) throw new functions.https.HttpsError("not-found", "Member not found");
 
         const oldMember = members[memberIndex];
-        const newMember = { ...oldMember, ...updates }; // Apply updates
+        // If updates contains photoURL (from client) use it, otherwise keep old
+        // Actually, client might not send it. Let's fetch latest from user doc if possible?
+        // For now, assume client sends it OR we just keep old.
+        // But better: when admin updates role, they don't change photo.
+        // The real fix for photo sync is: when User updates profile, they should trigger a sync to all choirs.
+        // BUT here: just ensure we don't lose it if it exists.
+        const newMember = {
+            ...oldMember,
+            ...updates,
+            photoURL: updates.photoURL !== undefined ? updates.photoURL : (oldMember.photoURL || null)
+        }; // Apply updates
 
         // --- ALL READS FIRST (Firestore requirement) ---
         let targetUserDoc: FirebaseFirestore.DocumentSnapshot | null = null;
