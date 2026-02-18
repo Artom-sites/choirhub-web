@@ -74,7 +74,9 @@ export function RepertoireProvider({ children }: { children: ReactNode }) {
 
                 // Auto-Fix: If claim is missing, force sync and refresh
                 const claims = token.claims.choirs as Record<string, unknown> | undefined;
-                if (claims && !claims[userData.choirId]) {
+
+                // If claims object is missing OR specific choir claim is missing
+                if (!claims || !claims[userData.choirId]) {
                     console.error(`[CRITICAL] Claims Mismatch! Missing ${userData.choirId}. Attempting auto-fix...`);
 
                     const { forceSyncClaims } = await import('@/lib/db');
@@ -83,6 +85,9 @@ export function RepertoireProvider({ children }: { children: ReactNode }) {
                     // Refresh token again
                     await auth.currentUser.getIdToken(true);
                     console.log("[Repertoire] Auto-fix complete. Retrying sync...");
+
+                    // Recursive retry with strict force=true to bypass debounce
+                    return performSync(true);
                 }
             }
 
