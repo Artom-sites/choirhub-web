@@ -20,7 +20,7 @@ export async function uploadFileToR2(key: string, file: File | Blob): Promise<st
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${token}`
             },
-            body: JSON.stringify({ key, contentType: file.type })
+            body: JSON.stringify({ key, contentType: file.type, size: file.size })
         });
 
         if (!res.ok) {
