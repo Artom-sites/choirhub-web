@@ -281,7 +281,7 @@ export default function SongList({
             <div className={subTab === 'catalog' ? 'block h-full' : 'hidden'}>
                 <GlobalArchive
                     isOverlayOpen={isOverlayOpen}
-                    onAddSong={async (globalSong) => {
+                    onAddSong={canAddSongs ? async (globalSong) => {
                         // Add song from global archive to choir repertoire
                         if (!userData?.choirId) return;
                         try {
@@ -303,7 +303,7 @@ export default function SongList({
                         } catch (e) {
                             console.error(e);
                         }
-                    }}
+                    } : undefined}
                 />
             </div>
 

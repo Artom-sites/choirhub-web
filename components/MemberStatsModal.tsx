@@ -1,13 +1,14 @@
 "use client";
 
-import { X, Calendar, TrendingDown, Check, AlertCircle } from "lucide-react";
+import { X, Calendar, TrendingDown, Check, AlertCircle, Loader2 } from "lucide-react";
 import { ChoirMember, Service } from "@/types";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getAttendanceStats, getCachedServiceCount, updateAttendanceCache } from "@/lib/attendanceCache";
+import { getServices } from "@/lib/db";
 
 interface Props {
     member: ChoirMember;
-    services: Service[];       // still passed for fallback + live cache update
+    services: Service[];       // still passed for live cache update
     choirId: string;
     onClose: () => void;
 }
@@ -35,8 +36,13 @@ function getPeriodStart(period: Period): Date | undefined {
     }
 }
 
+// Key to track if we've already done the full fetch for this choir
+const BOOTSTRAP_KEY = (choirId: string) => `attendance_bootstrapped_v1_${choirId}`;
+
 export default function MemberStatsModal({ member, services, choirId, onClose }: Props) {
     const [period, setPeriod] = useState<Period>('all');
+    const [isBootstrapping, setIsBootstrapping] = useState(false);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     // Ensure current services are in cache (live merge)
     useMemo(() => {
@@ -45,13 +51,39 @@ export default function MemberStatsModal({ member, services, choirId, onClose }:
         }
     }, [choirId, services]);
 
+    // One-time full history load — only runs once per choir, then flag is saved in localStorage
+    useEffect(() => {
+        if (!choirId) return;
+
+        const alreadyBootstrapped = localStorage.getItem(BOOTSTRAP_KEY(choirId));
+        if (alreadyBootstrapped) return;
+
+        const bootstrap = async () => {
+            setIsBootstrapping(true);
+            try {
+                const allServices = await getServices(choirId);
+                updateAttendanceCache(choirId, allServices);
+                localStorage.setItem(BOOTSTRAP_KEY(choirId), new Date().toISOString());
+                setRefreshTrigger(t => t + 1); // trigger re-read of stats
+                console.log(`[MemberStatsModal] Bootstrapped ${allServices.length} services into attendance cache`);
+            } catch (e) {
+                console.error("[MemberStatsModal] Bootstrap failed:", e);
+            } finally {
+                setIsBootstrapping(false);
+            }
+        };
+
+        bootstrap();
+    }, [choirId]);
+
     // Read stats from persistent cache
     const stats = useMemo(() => {
         const periodStart = getPeriodStart(period);
         return getAttendanceStats(choirId, member.id, periodStart);
-    }, [choirId, member.id, period, services]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [choirId, member.id, period, services, refreshTrigger]);
 
-    const cachedTotal = useMemo(() => getCachedServiceCount(choirId), [choirId, services]);
+    const cachedTotal = useMemo(() => getCachedServiceCount(choirId), [choirId, services, refreshTrigger]);
 
     const formatDate = (dateStr: string) => {
         const date = new Date(dateStr);
@@ -107,6 +139,14 @@ export default function MemberStatsModal({ member, services, choirId, onClose }:
                         </button>
                     ))}
                 </div>
+
+                {/* Loading indicator for bootstrap */}
+                {isBootstrapping && (
+                    <div className="flex items-center gap-2 text-xs text-text-secondary mb-3 px-1">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        <span>Завантаження повної історії...</span>
+                    </div>
+                )}
 
                 {/* Stats Cards */}
                 <div className="grid grid-cols-3 gap-2 mb-6">
@@ -166,9 +206,6 @@ export default function MemberStatsModal({ member, services, choirId, onClose }:
                         ? `${stats.servicesWithRecord} з ${stats.totalServices} служінь з відміткою`
                         : 'Немає даних за обраний період'
                     }
-                    {cachedTotal > 0 && period === 'all' && (
-                        <span> • Всього в кеші: {cachedTotal}</span>
-                    )}
                 </div>
             </div>
         </div>

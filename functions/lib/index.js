@@ -34,7 +34,7 @@ var __rest = (this && this.__rest) || function (s, e) {
     return t;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateUploadUrl = exports.registerFcmToken = exports.migrateAllClaims = exports.atomicUpdateMember = exports.claimMember = exports.atomicMergeMembers = exports.adminDeleteUser = exports.atomicDeleteSelf = exports.atomicLeaveChoir = exports.atomicJoinChoir = exports.atomicCreateChoir = exports.forceSyncClaims = void 0;
+exports.cleanupOldNotifications = exports.generateUploadUrl = exports.registerFcmToken = exports.migrateAllClaims = exports.atomicUpdateMember = exports.claimMember = exports.atomicMergeMembers = exports.adminDeleteUser = exports.atomicDeleteSelf = exports.atomicLeaveChoir = exports.atomicJoinChoir = exports.atomicCreateChoir = exports.forceSyncClaims = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const client_s3_1 = require("@aws-sdk/client-s3");
@@ -125,6 +125,7 @@ exports.atomicCreateChoir = functions.https.onCall(async (data, context) => {
         members: [{
                 id: userId,
                 name: userData.name || "Користувач",
+                photoURL: userData.photoURL || null,
                 role: 'head',
                 hasAccount: true,
                 accountUid: userId
@@ -136,6 +137,7 @@ exports.atomicCreateChoir = functions.https.onCall(async (data, context) => {
     batch.set(memberRef, {
         id: userId,
         name: userData.name || "Користувач",
+        photoURL: userData.photoURL || null,
         role: 'head',
         joinedAt: admin.firestore.FieldValue.serverTimestamp(),
         hasAccount: true,
@@ -747,7 +749,13 @@ exports.atomicUpdateMember = functions.https.onCall(async (data, context) => {
         if (memberIndex === -1)
             throw new functions.https.HttpsError("not-found", "Member not found");
         const oldMember = members[memberIndex];
-        const newMember = Object.assign(Object.assign({}, oldMember), updates); // Apply updates
+        // If updates contains photoURL (from client) use it, otherwise keep old
+        // Actually, client might not send it. Let's fetch latest from user doc if possible?
+        // For now, assume client sends it OR we just keep old.
+        // But better: when admin updates role, they don't change photo.
+        // The real fix for photo sync is: when User updates profile, they should trigger a sync to all choirs.
+        // BUT here: just ensure we don't lose it if it exists.
+        const newMember = Object.assign(Object.assign(Object.assign({}, oldMember), updates), { photoURL: updates.photoURL !== undefined ? updates.photoURL : (oldMember.photoURL || null) }); // Apply updates
         // --- ALL READS FIRST (Firestore requirement) ---
         let targetUserDoc = null;
         const targetUserRef = db.collection("users").doc(memberId);
@@ -1015,5 +1023,38 @@ exports.generateUploadUrl = functions.https.onRequest((req, res) => {
             res.status(500).json({ error: "Failed to generate upload URL" });
         }
     });
+});
+// --- AUTO-CLEANUP: Delete old notifications (30+ days) ---
+// Runs daily at 3:00 AM UTC
+exports.cleanupOldNotifications = functions.pubsub
+    .schedule("0 3 * * *")
+    .timeZone("UTC")
+    .onRun(async () => {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const cutoff = thirtyDaysAgo.toISOString();
+    console.log(`[cleanupOldNotifications] Deleting notifications older than ${cutoff}`);
+    try {
+        const choirsSnapshot = await db.collection("choirs").get();
+        let totalDeleted = 0;
+        for (const choirDoc of choirsSnapshot.docs) {
+            const notificationsRef = choirDoc.ref.collection("notifications");
+            const oldNotifs = await notificationsRef
+                .where("createdAt", "<", cutoff)
+                .limit(500)
+                .get();
+            if (oldNotifs.empty)
+                continue;
+            const batch = db.batch();
+            oldNotifs.docs.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+            totalDeleted += oldNotifs.size;
+            console.log(`[cleanupOldNotifications] Deleted ${oldNotifs.size} from choir ${choirDoc.id}`);
+        }
+        console.log(`[cleanupOldNotifications] Total deleted: ${totalDeleted}`);
+    }
+    catch (error) {
+        console.error("[cleanupOldNotifications] Error:", error);
+    }
 });
 //# sourceMappingURL=index.js.map
