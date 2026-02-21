@@ -114,8 +114,14 @@ function SongContent() {
             setToast({ message: "PDF успішно прикріплено", type: "success" });
             setShowArchiveModal(false);
 
-            // Reload page to refresh data
-            window.location.reload();
+            // Update song state directly instead of reloading page
+            setSong(prev => prev ? {
+                ...prev,
+                hasPdf: true,
+                pdfUrl: pdfUrl,
+                composer: prev.composer || globalSong.composer,
+                parts: globalSong.parts,
+            } : null);
         } catch (error) {
             console.error(error);
             setToast({ message: "Помилка при оновленні", type: "error" });
@@ -792,7 +798,7 @@ function SongContent() {
                             <X className="w-6 h-6" />
                         </button>
                     </div>
-                    <div className="flex-1 overflow-hidden">
+                    <div className="flex-1 overflow-hidden px-4">
                         <GlobalArchive onAddSong={handleLinkArchive} />
                     </div>
                 </div>
