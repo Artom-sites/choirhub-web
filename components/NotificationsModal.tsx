@@ -1,16 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, BellOff, Loader2, X, Settings } from "lucide-react";
+import { Bell, BellOff, Loader2, X, Settings, Trash2 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { useAuth } from "@/contexts/AuthContext";
-import { getChoirNotifications, markNotificationAsRead } from "@/lib/db";
+import { getChoirNotifications, markNotificationAsRead, deleteNotification } from "@/lib/db";
 import { ChoirNotification } from "@/types";
-import { useFcmToken } from "@/hooks/useFcmToken";
 
 interface NotificationsModalProps {
     isOpen: boolean;
     onClose: () => void;
+    canDelete?: boolean;
     // FCM Props passed from parent (Single Source of Truth)
     permissionStatus: NotificationPermission | "unsupported" | "default";
     requestPermission: (caller?: string) => Promise<string | null>;
@@ -24,6 +24,7 @@ interface NotificationsModalProps {
 export default function NotificationsModal({
     isOpen,
     onClose,
+    canDelete = false,
     permissionStatus,
     requestPermission,
     unsubscribe,
@@ -36,13 +37,15 @@ export default function NotificationsModal({
     const [notifications, setNotifications] = useState<ChoirNotification[]>([]);
     const [loading, setLoading] = useState(true);
     const [showSettings, setShowSettings] = useState(false);
-
-    // useFcmToken REMOVED internally to prevent re-render loops.
-    // Props are used instead.
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
     useEffect(() => {
         if (isOpen && userData?.choirId) {
             loadNotifications();
+        }
+        if (!isOpen) {
+            setConfirmDeleteId(null);
         }
     }, [isOpen, userData?.choirId]);
 
@@ -64,6 +67,21 @@ export default function NotificationsModal({
             console.error(error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDelete = async (notificationId: string) => {
+        if (!userData?.choirId) return;
+        setDeletingId(notificationId);
+        try {
+            await deleteNotification(userData.choirId, notificationId);
+            setNotifications(prev => prev.filter(n => n.id !== notificationId));
+            setConfirmDeleteId(null);
+        } catch (error) {
+            console.error("Failed to delete notification:", error);
+            alert("Не вдалося видалити повідомлення");
+        } finally {
+            setDeletingId(null);
         }
     };
 
@@ -147,12 +165,52 @@ export default function NotificationsModal({
                         ) : (
                             <div className="space-y-3">
                                 {notifications.map(n => (
-                                    <div key={n.id} className="p-4 bg-surface-highlight rounded-2xl">
+                                    <div key={n.id} className="p-4 bg-surface-highlight rounded-2xl relative">
+                                        {/* Delete confirmation overlay */}
+                                        {confirmDeleteId === n.id && (
+                                            <div className="absolute inset-0 bg-surface-highlight/95 backdrop-blur-sm rounded-2xl flex items-center justify-center gap-3 z-10 p-4">
+                                                <span className="text-sm text-text-primary font-medium">Видалити?</span>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDelete(n.id);
+                                                    }}
+                                                    disabled={deletingId === n.id}
+                                                    className="px-4 py-2 bg-red-500 text-white text-sm font-bold rounded-xl hover:bg-red-600 transition-colors active:scale-95 min-w-[60px] flex items-center justify-center"
+                                                >
+                                                    {deletingId === n.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Так"}
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setConfirmDeleteId(null);
+                                                    }}
+                                                    className="px-4 py-2 bg-surface border border-border text-text-primary text-sm font-medium rounded-xl hover:bg-surface/80 transition-colors active:scale-95"
+                                                >
+                                                    Ні
+                                                </button>
+                                            </div>
+                                        )}
+
                                         <div className="flex items-start justify-between mb-1">
-                                            <h4 className="font-bold text-text-primary">{n.title}</h4>
-                                            <span className="text-[10px] text-text-secondary">
-                                                {new Date(n.createdAt).toLocaleDateString()}
-                                            </span>
+                                            <h4 className="font-bold text-text-primary flex-1">{n.title}</h4>
+                                            <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                                                <span className="text-[10px] text-text-secondary">
+                                                    {new Date(n.createdAt).toLocaleDateString()}
+                                                </span>
+                                                {canDelete && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            e.preventDefault();
+                                                            setConfirmDeleteId(n.id);
+                                                        }}
+                                                        className="p-1.5 rounded-lg hover:bg-red-500/10 text-text-secondary hover:text-red-400 transition-colors active:scale-90 -mr-1"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                         <p className="text-sm text-text-secondary leading-relaxed bg-surface/50 p-2 rounded-lg">
                                             {n.body}

@@ -79,6 +79,7 @@ service cloud.firestore {
         allow create: if isChoirAdmin(choirId) || isSuperAdmin();
         // Members can mark notifications as read (readBy field)
         allow update: if isMemberOfChoir(choirId);
+        allow delete: if isChoirAdmin(choirId) || isSuperAdmin();
       }
       
       // Members subcollection (Purely for data storage/listing, not for permission checks anymore)

@@ -142,9 +142,11 @@ export default function SwipeableCard({
 
     const handleDeleteClick = (e: React.MouseEvent) => {
         e.stopPropagation();
+        e.preventDefault();
         onDelete();
         setTranslateX(0);
         setIsRevealed(false);
+        shouldBlockClick.current = false;
     };
 
     // Calculate scale/opacity for visual feedback
@@ -153,23 +155,20 @@ export default function SwipeableCard({
 
     // Intercept clicks to prevent navigation if we just swiped
     const handleClickCapture = (e: React.MouseEvent) => {
-        if (shouldBlockClick.current) {
-            e.stopPropagation();
-            e.preventDefault();
-            shouldBlockClick.current = false; // Reset for next time
-            return;
-        }
-
-        // Check if we clicked the delete button
+        // ALWAYS let delete button clicks through first
         if ((e.target as HTMLElement).closest('[data-delete-action="true"]')) {
+            shouldBlockClick.current = false;
             return; // Let the delete click happen!
         }
 
-        // Also if revealed, close it on click instead of navigating
-        /* 
-           Ideally we want: click on content -> if revealed, close. else navigate.
-           But navigation happens in child onClick.
-        */
+        if (shouldBlockClick.current) {
+            e.stopPropagation();
+            e.preventDefault();
+            shouldBlockClick.current = false;
+            return;
+        }
+
+        // If revealed, close it on click instead of navigating
         if (isRevealed) {
             e.stopPropagation();
             e.preventDefault();
@@ -192,16 +191,26 @@ export default function SwipeableCard({
                 data-delete-action="true"
                 className={`absolute inset-0 flex items-center justify-end pr-6 bg-red-500 cursor-pointer active:bg-red-600 ${backgroundClassName}`}
                 style={{
-                    visibility: translateX < 0 ? 'visible' : 'hidden', // Hide when not swiping to prevent bleed
-                    // No opacity transition to keep it "solid"
+                    visibility: translateX < 0 ? 'visible' : 'hidden',
+                    touchAction: 'manipulation', // Eliminate 300ms tap delay
                 }}
                 onClick={handleDeleteClick}
+                onTouchEnd={(e) => {
+                    // Direct touch handler for reliability on mobile
+                    if (isRevealed) {
+                        e.stopPropagation();
+                        onDelete();
+                        setTranslateX(0);
+                        setIsRevealed(false);
+                        shouldBlockClick.current = false;
+                    }
+                }}
             >
                 <div
                     className="flex items-center justify-center text-white transition-transform duration-75"
                     style={{
                         transform: `scale(${iconScale})`,
-                        opacity: 1 // Always visible once background is visible
+                        opacity: 1
                     }}
                 >
                     <Trash2 className="w-6 h-6" />

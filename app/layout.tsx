@@ -68,11 +68,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="uk">
+    <html lang="uk" suppressHydrationWarning>
       <head>
         <style dangerouslySetInnerHTML={{ __html: `html { background: #09090b; }` }} />
       </head>
       <body
+        suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-text-primary`}
       >
         <ClientErrorBoundary>

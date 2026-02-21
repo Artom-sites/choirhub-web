@@ -683,6 +683,16 @@ export async function markNotificationAsRead(choirId: string, notificationId: st
     }
 }
 
+export async function deleteNotification(choirId: string, notificationId: string): Promise<void> {
+    try {
+        const docRef = doc(db, `choirs/${choirId}/notifications`, notificationId);
+        await deleteDoc(docRef);
+    } catch (error) {
+        console.error("Error deleting notification:", error);
+        throw error;
+    }
+}
+
 // ============ USER ============
 
 export async function createUser(userId: string, data: Partial<UserData>): Promise<void> {

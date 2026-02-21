@@ -2,38 +2,56 @@
 
 import { X, Calendar, TrendingDown, Check, AlertCircle } from "lucide-react";
 import { ChoirMember, Service } from "@/types";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { getAttendanceStats, getCachedServiceCount, updateAttendanceCache } from "@/lib/attendanceCache";
 
 interface Props {
     member: ChoirMember;
-    services: Service[];
+    services: Service[];       // still passed for fallback + live cache update
+    choirId: string;
     onClose: () => void;
 }
 
-export default function MemberStatsModal({ member, services, onClose }: Props) {
-    // Calculate stats
+type Period = 'month' | 'quarter' | 'year' | 'all';
+
+const PERIOD_LABELS: Record<Period, string> = {
+    month: 'Місяць',
+    quarter: 'Квартал',
+    year: 'Рік',
+    all: 'Все',
+};
+
+function getPeriodStart(period: Period): Date | undefined {
+    const now = new Date();
+    switch (period) {
+        case 'month':
+            return new Date(now.getFullYear(), now.getMonth(), 1);
+        case 'quarter':
+            return new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+        case 'year':
+            return new Date(now.getFullYear(), 0, 1);
+        case 'all':
+            return undefined;
+    }
+}
+
+export default function MemberStatsModal({ member, services, choirId, onClose }: Props) {
+    const [period, setPeriod] = useState<Period>('all');
+
+    // Ensure current services are in cache (live merge)
+    useMemo(() => {
+        if (choirId && services.length) {
+            updateAttendanceCache(choirId, services);
+        }
+    }, [choirId, services]);
+
+    // Read stats from persistent cache
     const stats = useMemo(() => {
-        const sortedServices = [...services]
-            .filter(s => !s.deletedAt)
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        const periodStart = getPeriodStart(period);
+        return getAttendanceStats(choirId, member.id, periodStart);
+    }, [choirId, member.id, period, services]);
 
-        const absences = sortedServices.filter(s => s.absentMembers?.includes(member.id));
-        const confirmations = sortedServices.filter(s => s.confirmedMembers?.includes(member.id));
-
-        // Calculate attendance rate
-        const totalWithRecord = absences.length + confirmations.length;
-        const attendanceRate = totalWithRecord > 0
-            ? Math.round((confirmations.length / totalWithRecord) * 100)
-            : 100;
-
-        return {
-            totalServices: sortedServices.length,
-            absences,
-            confirmations,
-            attendanceRate,
-            totalWithRecord
-        };
-    }, [member.id, services]);
+    const cachedTotal = useMemo(() => getCachedServiceCount(choirId), [choirId, services]);
 
     const formatDate = (dateStr: string) => {
         const date = new Date(dateStr);
@@ -54,7 +72,7 @@ export default function MemberStatsModal({ member, services, onClose }: Props) {
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-full bg-surface-highlight flex items-center justify-center text-text-primary font-bold text-lg">
                             {member.name?.[0]?.toUpperCase() || "?"}
@@ -74,15 +92,35 @@ export default function MemberStatsModal({ member, services, onClose }: Props) {
                     </button>
                 </div>
 
+                {/* Period Filter Tabs */}
+                <div className="flex gap-1 p-1 bg-surface-highlight rounded-xl mb-4">
+                    {(Object.keys(PERIOD_LABELS) as Period[]).map(p => (
+                        <button
+                            key={p}
+                            onClick={() => setPeriod(p)}
+                            className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${period === p
+                                    ? 'bg-surface text-text-primary shadow-sm'
+                                    : 'text-text-secondary hover:text-text-primary'
+                                }`}
+                        >
+                            {PERIOD_LABELS[p]}
+                        </button>
+                    ))}
+                </div>
+
                 {/* Stats Cards */}
-                <div className="grid grid-cols-2 gap-3 mb-6">
-                    <div className="p-4 bg-surface-highlight rounded-2xl text-center">
-                        <div className="text-3xl font-bold text-primary mb-1">{stats.attendanceRate}%</div>
-                        <div className="text-xs text-text-secondary uppercase tracking-wider">Відвідуваність</div>
+                <div className="grid grid-cols-3 gap-2 mb-6">
+                    <div className="p-3 bg-surface-highlight rounded-2xl text-center">
+                        <div className="text-2xl font-bold text-primary mb-1">{stats.attendanceRate}%</div>
+                        <div className="text-[10px] text-text-secondary uppercase tracking-wider">Явка</div>
                     </div>
-                    <div className="p-4 bg-surface-highlight rounded-2xl text-center">
-                        <div className="text-3xl font-bold text-orange-400 mb-1">{stats.absences.length}</div>
-                        <div className="text-xs text-text-secondary uppercase tracking-wider">Пропусків</div>
+                    <div className="p-3 bg-surface-highlight rounded-2xl text-center">
+                        <div className="text-2xl font-bold text-green-400 mb-1">{stats.presentCount}</div>
+                        <div className="text-[10px] text-text-secondary uppercase tracking-wider">Присутній</div>
+                    </div>
+                    <div className="p-3 bg-surface-highlight rounded-2xl text-center">
+                        <div className="text-2xl font-bold text-orange-400 mb-1">{stats.absentCount}</div>
+                        <div className="text-[10px] text-text-secondary uppercase tracking-wider">Пропусків</div>
                     </div>
                 </div>
 
@@ -101,20 +139,19 @@ export default function MemberStatsModal({ member, services, onClose }: Props) {
                         </div>
                     ) : (
                         <div className="space-y-2">
-                            {stats.absences.map(service => (
+                            {stats.absences.map(absence => (
                                 <div
-                                    key={service.id}
+                                    key={absence.serviceId}
                                     className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-xl flex items-center gap-3"
                                 >
                                     <div className="w-8 h-8 bg-orange-500/20 rounded-full flex items-center justify-center">
                                         <AlertCircle className="w-4 h-4 text-orange-400" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-text-primary font-medium truncate">{service.title}</p>
+                                        <p className="text-text-primary font-medium truncate">{absence.title}</p>
                                         <p className="text-xs text-text-secondary flex items-center gap-1">
                                             <Calendar className="w-3 h-3" />
-                                            {formatDate(service.date)}
-                                            {service.time && ` • ${service.time}`}
+                                            {formatDate(absence.date)}
                                         </p>
                                     </div>
                                 </div>
@@ -125,10 +162,13 @@ export default function MemberStatsModal({ member, services, onClose }: Props) {
 
                 {/* Footer info */}
                 <div className="mt-4 pt-4 border-t border-border text-center text-xs text-text-secondary">
-                    {stats.totalWithRecord > 0
-                        ? `Статистика за ${stats.totalWithRecord} ${stats.totalWithRecord === 1 ? 'служіння' : stats.totalWithRecord < 5 ? 'служіння' : 'служінь'}`
-                        : 'Статистика ще не доступна'
+                    {stats.servicesWithRecord > 0
+                        ? `${stats.servicesWithRecord} з ${stats.totalServices} служінь з відміткою`
+                        : 'Немає даних за обраний період'
                     }
+                    {cachedTotal > 0 && period === 'all' && (
+                        <span> • Всього в кеші: {cachedTotal}</span>
+                    )}
                 </div>
             </div>
         </div>

@@ -1173,3 +1173,42 @@ export const generateUploadUrl = functions.https.onRequest((req, res) => {
         }
     });
 });
+
+// --- AUTO-CLEANUP: Delete old notifications (30+ days) ---
+// Runs daily at 3:00 AM UTC
+export const cleanupOldNotifications = functions.pubsub
+    .schedule("0 3 * * *")
+    .timeZone("UTC")
+    .onRun(async () => {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const cutoff = thirtyDaysAgo.toISOString();
+
+        console.log(`[cleanupOldNotifications] Deleting notifications older than ${cutoff}`);
+
+        try {
+            const choirsSnapshot = await db.collection("choirs").get();
+            let totalDeleted = 0;
+
+            for (const choirDoc of choirsSnapshot.docs) {
+                const notificationsRef = choirDoc.ref.collection("notifications");
+                const oldNotifs = await notificationsRef
+                    .where("createdAt", "<", cutoff)
+                    .limit(500)
+                    .get();
+
+                if (oldNotifs.empty) continue;
+
+                const batch = db.batch();
+                oldNotifs.docs.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+
+                totalDeleted += oldNotifs.size;
+                console.log(`[cleanupOldNotifications] Deleted ${oldNotifs.size} from choir ${choirDoc.id}`);
+            }
+
+            console.log(`[cleanupOldNotifications] Total deleted: ${totalDeleted}`);
+        } catch (error) {
+            console.error("[cleanupOldNotifications] Error:", error);
+        }
+    });

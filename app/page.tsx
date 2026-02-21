@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon, mergeMembers, updateChoir, deleteMyAccount, adminDeleteUser, deleteAdminCode, getChoirNotifications, getChoirUsers, joinChoir, updateMember, claimMember, leaveChoir } from "@/lib/db";
+import { updateAttendanceCache } from "@/lib/attendanceCache";
 import { Service, Choir, UserMembership, UserData, ChoirMember, Permission, AdminCode } from "@/types";
 import SongList from "@/components/SongList";
 import SwipeableCard from "@/components/SwipeableCard";
@@ -130,6 +131,8 @@ function HomePageContent() {
 
       if (!snapshot.empty) {
         const newServices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Service));
+        // Persist attendance data to cache
+        if (userData?.choirId) updateAttendanceCache(userData.choirId, newServices);
         setPastServices(prev => {
           // Deduplicate just in case
           const existingIds = new Set(prev.map(s => s.id));
@@ -464,6 +467,9 @@ function HomePageContent() {
 
       servicesLoaded = true;
       checkReady();
+
+      // Persist attendance data to cache
+      if (choirId) updateAttendanceCache(choirId, fetchedActiveServices);
     }, (error) => {
       console.error("Error fetching services:", error);
       servicesLoaded = true;
@@ -1377,6 +1383,7 @@ function HomePageContent() {
         <MemberStatsModal
           member={viewingMemberStats}
           services={services}
+          choirId={userData?.choirId || ''}
           onClose={() => setViewingMemberStats(null)}
         />
       )}
@@ -2214,6 +2221,7 @@ function HomePageContent() {
       <NotificationsModal
         isOpen={showNotificationModal}
         onClose={() => setShowNotificationModal(false)}
+        canDelete={canEdit || (userData?.permissions?.includes('notify_members') ?? false)}
         permissionStatus={permissionStatus}
         requestPermission={() => requestPermission("NotificationsModal")}
         unsubscribe={() => unsubscribe("NotificationsModal")}

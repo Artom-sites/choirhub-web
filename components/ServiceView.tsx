@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Service, ServiceSong, SimpleSong, Choir, ChoirMember } from "@/types";
 import { addSongToService, removeSongFromService, getChoir, updateService, setServiceAttendance, addKnownConductor, addKnownPianist } from "@/lib/db";
+import { updateAttendanceCache } from "@/lib/attendanceCache";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRepertoire } from "@/contexts/RepertoireContext";
 import { ChevronLeft, Eye, X, Plus, Users, UserX, Check, Calendar, Music, UserCheck, AlertCircle, Trash2, User as UserIcon, CloudDownload, CheckCircle, Loader, ChevronDown, Mic2 } from "lucide-react";
@@ -479,7 +480,10 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                 absentMembers,
                 confirmedMembers
             });
-            setCurrentService({ ...currentService, absentMembers, confirmedMembers });
+            const updatedService = { ...currentService, absentMembers, confirmedMembers };
+            setCurrentService(updatedService);
+            // Persist to attendance cache immediately
+            updateAttendanceCache(userData.choirId, [updatedService]);
             setShowAttendance(false);
         } catch (error) {
             console.error('Failed to save attendance:', error);

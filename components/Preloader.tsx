@@ -89,7 +89,7 @@ function StorytellingPreloader() {
     const bg: CSSProperties = {
         position: "absolute",
         inset: 0,
-        background: "radial-gradient(ellipse at 50% 40%, rgba(20,184,166,0.06) 0%, transparent 70%)",
+        background: "radial-gradient(ellipse at 50% 40%, rgba(255,255,255,0.04) 0%, transparent 70%)",
         animation: "pl-bgPulse 3s ease-in-out infinite",
     };
 
@@ -125,8 +125,8 @@ function StorytellingPreloader() {
         width: 72,
         height: 72,
         borderRadius: 20,
-        background: "rgba(20,184,166,0.08)",
-        border: "1px solid rgba(20,184,166,0.15)",
+        background: "rgba(255,255,255,0.06)",
+        border: "1px solid rgba(255,255,255,0.12)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -155,7 +155,7 @@ function StorytellingPreloader() {
                         key={i}
                         style={{
                             height: 1,
-                            background: "linear-gradient(90deg, transparent, #14b8a6, transparent)",
+                            background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent)",
                             animation: `pl-drawLine 600ms ease-out ${i * 80}ms forwards`,
                             transform: "scaleX(0)",
                         }}
@@ -174,7 +174,7 @@ function StorytellingPreloader() {
                             left: note.x,
                             fontSize: 18,
                             opacity: 0,
-                            color: "rgba(20,184,166,0.25)",
+                            color: "rgba(255,255,255,0.15)",
                             animation: `pl-floatUp ${note.duration}ms ease-out ${note.delay}ms infinite`,
                         }}
                     >
@@ -186,7 +186,7 @@ function StorytellingPreloader() {
             {/* Logo */}
             <div style={logoContainer}>
                 <div style={iconBox}>
-                    <span style={{ fontSize: 44, color: "#14b8a6", lineHeight: 1, fontFamily: "serif" }}>
+                    <span style={{ fontSize: 44, color: "rgba(255,255,255,0.8)", lineHeight: 1, fontFamily: "serif" }}>
                         𝄞
                     </span>
                 </div>
@@ -203,7 +203,7 @@ function StorytellingPreloader() {
                 <svg viewBox="0 0 1200 120" preserveAspectRatio="none" style={{ width: "100%", height: "100%" }}>
                     <path
                         d="M0,60 C200,120 400,0 600,60 C800,120 1000,0 1200,60 L1200,120 L0,120 Z"
-                        fill="rgba(20,184,166,0.05)"
+                        fill="rgba(255,255,255,0.03)"
                     />
                 </svg>
             </div>
