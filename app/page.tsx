@@ -1930,9 +1930,9 @@ function HomePageContent() {
                 <button
                   key={filter.key}
                   onClick={() => setMemberFilter(filter.key)}
-                  className={`flex-shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${memberFilter === filter.key
-                    ? 'bg-primary text-background'
-                    : 'bg-surface text-text-secondary border border-border'
+                  className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${memberFilter === filter.key
+                    ? 'bg-primary text-background border-primary'
+                    : 'bg-surface text-text-secondary border-border'
                     }`}
                 >
                   {filter.label}
