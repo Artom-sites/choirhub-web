@@ -81,11 +81,11 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
             { name: 'Альт', key: 'Alto', value: counts.Alto, color: '#c084fc' },
             { name: 'Тенор', key: 'Tenor', value: counts.Tenor, color: '#60a5fa' },
             { name: 'Бас', key: 'Bass', value: counts.Bass, color: '#4ade80' },
-            { name: 'Не вказано', key: 'Unassigned', value: counts.Unassigned, color: '#64748b' }
         ].filter(d => d.value > 0);
     }, [choir.members]);
 
     const totalMembers = (choir.members || []).length;
+    const voicedMembers = voiceData.reduce((sum, d) => sum + d.value, 0);
 
     const attendanceData = useMemo(() => {
         if (!stats?.attendanceTrend) return [];
@@ -207,7 +207,7 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                                     ) : (
                                         <>
                                             <span className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">Всього</span>
-                                            <span className="text-2xl font-bold text-text-primary leading-none mt-0.5">{totalMembers}</span>
+                                            <span className="text-2xl font-bold text-text-primary leading-none mt-0.5">{voicedMembers}</span>
                                         </>
                                     )}
                                 </div>
@@ -228,7 +228,7 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                                         <span className="text-sm text-text-primary group-hover:text-text-primary/80 flex-1">{entry.name}</span>
                                         <span className="text-sm font-bold text-text-primary tabular-nums">{entry.value}</span>
                                         <span className="text-xs text-text-secondary tabular-nums w-10 text-right">
-                                            {totalMembers > 0 ? Math.round((entry.value / totalMembers) * 100) : 0}%
+                                            {voicedMembers > 0 ? Math.round((entry.value / voicedMembers) * 100) : 0}%
                                         </span>
                                     </div>
                                 ))}
