@@ -6,27 +6,30 @@ import { useFcmToken } from "@/hooks/useFcmToken";
 import { AnimatePresence, motion } from "framer-motion";
 
 export default function NotificationPrompt() {
-    const { permissionStatus, requestPermission, loading, isSupported } = useFcmToken();
+    const { permissionStatus, requestPermission, loading, isSupported, isPreferenceEnabled } = useFcmToken();
     const [isVisible, setIsVisible] = useState(false);
-
-    console.log("[NotificationPrompt] Render. Status:", permissionStatus);
 
     useEffect(() => {
         // 1. Check if supported
         if (!isSupported) return;
 
-        // 2. Check if already granted or denied
+        // 2. If user already enabled notifications (FCM registered), never show
+        if (isPreferenceEnabled) return;
+
+        // 3. Check if already granted or denied at browser level
         if (permissionStatus !== 'default') return;
 
-        // 3. Check if dismissed recently
+        // 4. Check if FCM token was already registered (survives permission resets on iOS)
+        const fcmCache = localStorage.getItem('fcm_reg_cache');
+        if (fcmCache) return;
+
+        // 5. Check if dismissed recently (show again after 7 days, not 3)
         const dismissedAt = localStorage.getItem('notification_prompt_dismissed');
         if (dismissedAt) {
             const date = new Date(parseInt(dismissedAt));
             const now = new Date();
             const diffDays = (now.getTime() - date.getTime()) / (1000 * 3600 * 24);
-
-            // Show again after 3 days
-            if (diffDays < 3) return;
+            if (diffDays < 7) return;
         }
 
         // Show prompt after a small delay
@@ -35,7 +38,7 @@ export default function NotificationPrompt() {
         }, 3000);
 
         return () => clearTimeout(timer);
-    }, [permissionStatus, isSupported]);
+    }, [permissionStatus, isSupported, isPreferenceEnabled]);
 
     const handleEnable = async () => {
         await requestPermission("NotificationPrompt");
