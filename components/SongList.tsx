@@ -69,6 +69,7 @@ export default function SongList({
     const [subTab, setSubTab] = useState<'repertoire' | 'catalog'>('repertoire');
     const [viewingSong, setViewingSong] = useState<SimpleSong | null>(null);
     const [pendingArchiveQuery, setPendingArchiveQuery] = useState("");
+    const [showArchiveModal, setShowArchiveModal] = useState(false);
 
     const [isMobile, setIsMobile] = useState<boolean>(() => {
         if (typeof window !== 'undefined') return window.innerWidth < 768;
@@ -121,6 +122,29 @@ export default function SongList({
         await refreshRepertoire();
         if (onRefresh) onRefresh();
         setShowAddModal(false);
+        setShowArchiveModal(false);
+    };
+
+    const handleLinkArchive = async (globalSong: any) => {
+        if (!userData?.choirId) return;
+        try {
+            await addSong(userData.choirId, {
+                title: globalSong.title,
+                category: 'Інші' as Category,
+                conductor: '',
+                addedAt: new Date().toISOString(),
+                hasPdf: !!globalSong.pdfUrl,
+                pdfUrl: globalSong.pdfUrl,
+                parts: globalSong.parts,
+            });
+            await refreshRepertoire();
+            if (onRefresh) onRefresh();
+            setShowArchiveModal(false);
+            setToast({ message: "Пісню успішно додано з архіву", type: "success" });
+        } catch (e) {
+            console.error(e);
+            alert("Помилка додавання з архіву");
+        }
     };
 
     const handleEditClick = (e: React.MouseEvent, song: SimpleSong) => {
@@ -401,8 +425,27 @@ export default function SongList({
 
             {/* Modals */}
             {showAddModal && (
-                <AddSongModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} onAdd={handleAddSong} regents={regents} knownConductors={knownConductors} knownCategories={knownCategories} knownPianists={knownPianists} onSearchArchive={(query) => { setPendingArchiveQuery(query); setShowAddModal(false); setSubTab('catalog'); }} />
+                <AddSongModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} onAdd={handleAddSong} regents={regents} knownConductors={knownConductors} knownCategories={knownCategories} knownPianists={knownPianists} onSearchArchive={(query) => { setPendingArchiveQuery(query); setShowAddModal(false); setShowArchiveModal(true); }} />
             )}
+
+            {/* Archive Search Modal from Add Song */}
+            {showArchiveModal && (
+                <div className="fixed inset-0 z-[200] bg-background flex flex-col">
+                    <div className="flex items-center justify-between p-4 pt-[calc(1rem+env(safe-area-inset-top))] border-b border-white/10 bg-background/80 backdrop-blur-md sticky top-0 z-10">
+                        <h2 className="text-lg font-bold text-text-primary">Знайти в архіві</h2>
+                        <button
+                            onClick={() => setShowArchiveModal(false)}
+                            className="p-2 hover:bg-surface-highlight rounded-full text-text-secondary hover:text-text-primary transition-colors"
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-8">
+                        <GlobalArchive onAddSong={handleLinkArchive} initialSearchQuery={pendingArchiveQuery} isOverlayOpen={true} />
+                    </div>
+                </div>
+            )}
+
             {editingSong && (
                 <EditSongModal key={editingSong.id} isOpen={!!editingSong} onClose={() => setEditingSong(null)} onSave={handleEditSave} initialData={editingSong} regents={regents} knownConductors={knownConductors} knownCategories={knownCategories} knownPianists={knownPianists} />
             )}
