@@ -29,7 +29,7 @@ import ConfirmationModal from "@/components/ConfirmationModal";
 import {
   Music2, Loader2, Copy, Check, HelpCircle, Mail, Shield,
   LogOut, ChevronLeft, ChevronRight, Home, User, Users, Repeat,
-  PlusCircle, Plus, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor, Scale, Smartphone, RefreshCw
+  PlusCircle, Plus, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor, Scale, Smartphone, RefreshCw, Search, ArrowUpDown
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import NotificationPrompt from "@/components/NotificationPrompt";
@@ -287,85 +287,86 @@ function HomePageContent() {
   }, [showAccount]);
 
   // Member Card Renderer
+  const [memberSearch, setMemberSearch] = useState('');
+  const [memberSort, setMemberSort] = useState<'name' | 'absences'>('name');
+
+  const voiceColors: Record<string, { bg: string; text: string; border: string; dot: string }> = {
+    Soprano: { bg: 'bg-pink-500/15', text: 'text-pink-400', border: 'border-pink-500/25', dot: '#f472b6' },
+    Alto: { bg: 'bg-purple-500/15', text: 'text-purple-400', border: 'border-purple-500/25', dot: '#c084fc' },
+    Tenor: { bg: 'bg-blue-500/15', text: 'text-blue-400', border: 'border-blue-500/25', dot: '#60a5fa' },
+    Bass: { bg: 'bg-green-500/15', text: 'text-green-400', border: 'border-green-500/25', dot: '#4ade80' },
+  };
+
   const renderMemberCard = (member: ChoirMember, index: number = 0) => {
     const absences = getAbsenceCount(member.id);
+    const memberStat = globalStats?.memberStats?.[member.id];
+    const attendanceRate = memberStat?.attendanceRate ?? 100;
+    const vc = voiceColors[member.voice || ''];
+
     return (
       <motion.div
         layout
         key={member.id}
-        initial={{ opacity: 0, scale: 0.95, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        transition={{ duration: 0.2 }}
-        className="p-4 bg-surface card-shadow rounded-2xl flex items-center justify-between group hover:bg-surface-highlight transition-colors"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.97 }}
+        transition={{ duration: 0.15, delay: index * 0.02 }}
+        className="flex items-center gap-3 px-3 py-2.5 bg-surface rounded-xl hover:bg-surface-highlight transition-colors group cursor-pointer"
+        onClick={() => setViewingMemberStats(member)}
       >
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setViewingMemberStats(member)}
-            className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm relative hover:ring-2 hover:ring-primary/50 transition-all active:scale-95 ${!member.photoURL && member.voice === 'Soprano' ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30' :
-              !member.photoURL && member.voice === 'Alto' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
-                !member.photoURL && member.voice === 'Tenor' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
-                  !member.photoURL && member.voice === 'Bass' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
-                    'bg-surface-highlight text-text-primary'
-              }`}
-          >
-            {member.photoURL ? (
-              <img src={member.photoURL} alt={member.name} className="w-full h-full object-cover rounded-full" />
-            ) : (
-              member.voice ? member.voice[0] : (member.name?.[0]?.toUpperCase() || "?")
-            )}
-
-            {absences > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-surface z-10">
-                {absences}
-              </span>
-            )}
-          </button>
-
-          <div
-            onClick={() => {
-              if (canEdit) {
-                setEditingMember(member);
-                setShowEditMemberModal(true);
-              }
-            }}
-            className={canEdit ? 'cursor-pointer' : ''}
-          >
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-text-primary font-bold">{member.name}</span>
-              {member.hasAccount && (
-                <div title="Зареєстрований користувач" className="text-blue-400">
-                  <Smartphone className="w-4 h-4" />
-                </div>
-              )}
-              {member.photoURL && getVoiceBadge(member.voice)}
-            </div>
-            <div className="flex items-center gap-2">
-              {getRoleBadge(member.role)}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setViewingMemberStats(member)}
-            className="text-text-secondary/50 hover:text-primary transition-colors p-2 hover:bg-surface rounded-lg"
-          >
-            <BarChart2 className="w-4 h-4" />
-          </button>
-
-          {canEdit && (
-            <button
-              onClick={() => {
-                setEditingMember(member);
-                setShowEditMemberModal(true);
-              }}
-              className="text-text-secondary/50 group-hover:text-text-primary transition-colors p-2 hover:bg-surface rounded-lg"
-            >
-              <Pencil className="w-4 h-4" />
-            </button>
+        {/* Avatar */}
+        <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs relative flex-shrink-0 ${vc ? `${vc.bg} ${vc.text}` : 'bg-surface-highlight text-text-secondary'
+          }`}>
+          {member.photoURL ? (
+            <img src={member.photoURL} alt={member.name} className="w-full h-full object-cover rounded-full" />
+          ) : (
+            member.voice ? member.voice[0] : (member.name?.[0]?.toUpperCase() || '?')
           )}
         </div>
+
+        {/* Name & info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[13px] font-semibold text-text-primary truncate">{member.name}</span>
+            {member.hasAccount && <Smartphone className="w-3 h-3 text-blue-400 flex-shrink-0" />}
+          </div>
+          {/* Mini attendance bar */}
+          {memberStat && memberStat.servicesWithRecord > 0 && (
+            <div className="flex items-center gap-2 mt-1">
+              <div className="flex-1 h-1 bg-surface-highlight rounded-full overflow-hidden max-w-[80px]">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${attendanceRate}%`,
+                    backgroundColor: attendanceRate >= 80 ? '#4ade80' : attendanceRate >= 50 ? '#fbbf24' : '#f87171'
+                  }}
+                />
+              </div>
+              <span className="text-[10px] tabular-nums text-text-secondary">{attendanceRate}%</span>
+            </div>
+          )}
+        </div>
+
+        {/* Absences badge */}
+        {absences > 0 && (
+          <div className="flex items-center gap-1 px-2 py-0.5 bg-orange-500/10 rounded-lg flex-shrink-0">
+            <span className="text-[11px] font-bold text-orange-400 tabular-nums">{absences}</span>
+          </div>
+        )}
+
+        {/* Edit button - only for admins */}
+        {canEdit && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditingMember(member);
+              setShowEditMemberModal(true);
+            }}
+            className="text-text-secondary/30 group-hover:text-text-secondary transition-colors p-1.5 hover:bg-surface rounded-lg flex-shrink-0"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+        )}
       </motion.div>
     );
   };
@@ -1852,61 +1853,95 @@ function HomePageContent() {
 
         {activeTab === 'members' && (
           <div className="max-w-5xl mx-auto p-4 pb-32">
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center gap-3">
+            {/* Header */}
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-2">
                 <h2 className="text-xl font-bold text-text-primary">Учасники</h2>
-                <button
-                  onClick={() => setShowStats(true)}
-                  className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-text-secondary hover:text-white hover:bg-white/10 transition-colors"
-                >
-                  <BarChart2 className="w-5 h-5" />
-                </button>
+                <span className="text-xs text-text-secondary bg-surface-highlight px-2 py-0.5 rounded-lg font-semibold tabular-nums">
+                  {(choir?.members || []).length}
+                </span>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setShowStats(true)}
+                  className="w-9 h-9 bg-surface border border-border rounded-xl flex items-center justify-center text-text-secondary hover:text-primary transition-colors"
+                >
+                  <BarChart2 className="w-4 h-4" />
+                </button>
                 {(canEdit || userData?.permissions?.includes('notify_members')) && (
                   <button
                     onClick={() => setShowSendNotificationModal(true)}
-                    className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-text-secondary hover:text-white hover:bg-white/10 transition-colors"
+                    className="w-9 h-9 bg-surface border border-border rounded-xl flex items-center justify-center text-text-secondary hover:text-primary transition-colors"
                     title="Надіслати сповіщення"
                   >
-                    <Bell className="w-5 h-5" />
+                    <Bell className="w-4 h-4" />
                   </button>
                 )}
-
                 {canEdit && (
                   <button
                     onClick={() => { setEditingMember(null); setShowEditMemberModal(true); }}
-                    className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-2 bg-primary text-background rounded-xl text-xs font-bold hover:opacity-90 transition-colors"
                   >
-                    <UserPlus className="w-4 h-4" />
+                    <UserPlus className="w-3.5 h-3.5" />
                     Додати
                   </button>
                 )}
               </div>
             </div>
 
-            {/* Filters */}
-            <div className="flex overflow-x-auto gap-2 scrollbar-hide -mx-4 px-4 pb-1 mb-6">
-              {['Всі', 'Soprano', 'Alto', 'Tenor', 'Bass', ...(canEdit ? ['Real Users'] : [])].map(filter => {
-                return (
-                  <button
-                    key={filter}
-                    onClick={() => setMemberFilter(filter === 'Всі' ? '' : filter === 'Real Users' ? 'real' : filter)}
-                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${(memberFilter === (filter === 'Всі' ? '' : filter === 'Real Users' ? 'real' : filter))
-                      ? 'bg-primary text-background'
-                      : 'bg-surface text-text-secondary shadow-sm border border-border'
-                      }`}
-                  >
-                    {filter === 'Real Users' ? '📱 App Users' : filter}
+            {/* Search + Sort */}
+            <div className="flex gap-2 mb-3">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
+                <input
+                  type="text"
+                  placeholder="Пошук..."
+                  value={memberSearch}
+                  onChange={e => setMemberSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 bg-surface border border-border rounded-xl text-sm text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-primary/50 transition-colors"
+                />
+                {memberSearch && (
+                  <button onClick={() => setMemberSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-text-secondary hover:text-text-primary">
+                    <X className="w-3.5 h-3.5" />
                   </button>
-                );
-              })}
+                )}
+              </div>
+              <button
+                onClick={() => setMemberSort(s => s === 'name' ? 'absences' : 'name')}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-colors flex-shrink-0 ${memberSort === 'absences' ? 'bg-orange-500/10 border-orange-500/30 text-orange-400' : 'bg-surface border-border text-text-secondary'
+                  }`}
+              >
+                <ArrowUpDown className="w-3.5 h-3.5" />
+                {memberSort === 'absences' ? 'Пропуски' : 'А-Я'}
+              </button>
             </div>
 
-            <div className="space-y-6">
+            {/* Voice Filters */}
+            <div className="flex overflow-x-auto gap-1.5 scrollbar-hide -mx-4 px-4 pb-1 mb-4">
+              {[
+                { key: '', label: 'Всі' },
+                { key: 'Soprano', label: 'Сопрано' },
+                { key: 'Alto', label: 'Альт' },
+                { key: 'Tenor', label: 'Тенор' },
+                { key: 'Bass', label: 'Бас' },
+                ...(canEdit ? [{ key: 'real', label: '📱 Додаток' }] : []),
+              ].map(filter => (
+                <button
+                  key={filter.key}
+                  onClick={() => setMemberFilter(filter.key)}
+                  className={`flex-shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${memberFilter === filter.key
+                    ? 'bg-primary text-background'
+                    : 'bg-surface text-text-secondary border border-border'
+                    }`}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+
+            <div>
               {memberFilter === 'real' ? (
-                // Show registered app users from Firebase
                 loadingRegisteredUsers ? (
                   <div className="text-center py-12 text-text-secondary">
                     <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin opacity-50" />
@@ -1919,22 +1954,22 @@ function HomePageContent() {
                     <p className="text-sm mt-2">Користувачі з'являться тут після входу через Google або email</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
                     {registeredUsers.map(appUser => (
                       <div
                         key={appUser.id}
-                        className="p-4 bg-surface card-shadow rounded-2xl flex items-center justify-between group hover:bg-surface-highlight transition-colors"
+                        className="px-3 py-2.5 bg-surface rounded-xl flex items-center justify-between group hover:bg-surface-highlight transition-colors"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-sm">
+                          <div className="w-9 h-9 rounded-full bg-blue-500/15 flex items-center justify-center text-blue-400 font-bold text-xs">
                             {appUser.name?.[0]?.toUpperCase() || appUser.email?.[0]?.toUpperCase() || "?"}
                           </div>
                           <div>
-                            <div className="text-text-primary font-bold flex items-center gap-2 mb-1">
+                            <div className="text-text-primary text-[13px] font-semibold flex items-center gap-1.5">
                               {appUser.name || 'Без імені'}
-                              <span title="App User" className="text-xs">📱</span>
+                              <Smartphone className="w-3 h-3 text-blue-400" />
                             </div>
-                            <div className="text-text-secondary text-xs">
+                            <div className="text-text-secondary text-[11px]">
                               {canEdit && appUser.email}
                               {appUser.voice && <span className="ml-2 text-primary">{appUser.voice}</span>}
                             </div>
@@ -1943,7 +1978,6 @@ function HomePageContent() {
 
                         {canEdit && (
                           <div className="flex items-center gap-1">
-                            {/* Show link button if user is NOT linked as secondary AND NOT an established member with a voice */}
                             {(() => {
                               const isLinkedSecondary = (choir?.members || []).some(m => (m.linkedUserIds || []).includes(appUser.id));
                               const isEstablishedMain = (choir?.members || []).some(m => m.id === appUser.id && !!m.voice);
@@ -1951,19 +1985,19 @@ function HomePageContent() {
                             })() && (
                                 <button
                                   onClick={() => setLinkingAppUser(appUser)}
-                                  className="text-text-secondary/50 hover:text-accent transition-colors p-2 hover:bg-accent/10 rounded-lg"
+                                  className="text-text-secondary/50 hover:text-accent transition-colors p-1.5 hover:bg-accent/10 rounded-lg"
                                   title="Прив'язати до учасника зі списку"
                                 >
-                                  <Link2 className="w-4 h-4" />
+                                  <Link2 className="w-3.5 h-3.5" />
                                 </button>
                               )}
                             {user?.uid !== appUser.id && (
                               <button
                                 onClick={() => setUserToDelete(appUser)}
-                                className="text-text-secondary/50 hover:text-danger transition-colors p-2 hover:bg-danger/10 rounded-lg"
+                                className="text-text-secondary/50 hover:text-danger transition-colors p-1.5 hover:bg-danger/10 rounded-lg"
                                 title="Видалити користувача"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             )}
                           </div>
@@ -1979,26 +2013,23 @@ function HomePageContent() {
                   {canEdit && <p className="text-sm mt-2">Додайте учасників, щоб відстежувати відвідуваність</p>}
                 </div>
               ) : (
-                (() => {
+                ((() => {
+                  const searchLower = memberSearch.toLowerCase();
                   const filtered = (choir?.members || []).filter(m => {
-                    // Hide duplicate entries created by claim flow
                     if ((m as any).isDuplicate) return false;
-                    if (!memberFilter) return true;
-                    return m.voice === memberFilter;
+                    if (memberFilter && m.voice !== memberFilter) return false;
+                    if (searchLower && !(m.name || '').toLowerCase().includes(searchLower)) return false;
+                    return true;
                   });
 
-                  // User requested flat list for "All" (no grouping)
-                  // Sorting: 
-                  // 1. Members with Voice (top)
-                  // 2. Members without Voice (bottom)
-                  // 3. Alphabetical within groups
                   const sortedMembers = [...filtered].sort((a, b) => {
+                    if (memberSort === 'absences') {
+                      return getAbsenceCount(b.id) - getAbsenceCount(a.id);
+                    }
                     const aHasVoice = !!a.voice;
                     const bHasVoice = !!b.voice;
-
                     if (aHasVoice && !bHasVoice) return -1;
                     if (!aHasVoice && bHasVoice) return 1;
-
                     return (a.name || '').localeCompare(b.name || '', 'uk');
                   });
 
@@ -2007,25 +2038,15 @@ function HomePageContent() {
                   }
 
                   return (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
                       <AnimatePresence mode="popLayout">
                         {sortedMembers.map((member, index) => renderMemberCard(member, index))}
                       </AnimatePresence>
                     </div>
                   );
-                })()
+                })())
               )}
             </div>
-
-            {/* Stats summary */}
-            {services.length > 0 && (choir?.members || []).length > 0 && !memberFilter && (
-              <div className="mt-8 p-4 bg-surface card-shadow rounded-2xl">
-                <p className="text-text-primary text-sm font-bold mb-2">📊 Статистика</p>
-                <p className="text-text-secondary text-sm">
-                  Всього служінь: {services.length} • Учасників: {choir?.members?.length || 0}
-                </p>
-              </div>
-            )}
           </div>
         )}
       </div >
