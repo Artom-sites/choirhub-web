@@ -73,6 +73,12 @@ service cloud.firestore {
         );
       }
 
+      // Stats (pre-calculated summaries, written by Cloud Functions only)
+      match /stats/{statId} {
+        allow read: if isMemberOfChoir(choirId);
+        // No client write — only admin SDK / Cloud Functions write stats
+      }
+
       // Notifications
       match /notifications/{notificationId} {
         allow read: if isMemberOfChoir(choirId);
