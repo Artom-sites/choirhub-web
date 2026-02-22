@@ -1890,31 +1890,21 @@ function HomePageContent() {
               </div>
             </div>
 
-            {/* Search + Sort */}
-            <div className="flex gap-2 mb-3">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
-                <input
-                  type="text"
-                  placeholder="Пошук..."
-                  value={memberSearch}
-                  onChange={e => setMemberSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-surface border border-border rounded-xl text-sm text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-primary/50 transition-colors"
-                />
-                {memberSearch && (
-                  <button onClick={() => setMemberSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-text-secondary hover:text-text-primary">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-              <button
-                onClick={() => setMemberSort(s => s === 'name' ? 'absences' : 'name')}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-colors flex-shrink-0 ${memberSort === 'absences' ? 'bg-orange-500/10 border-orange-500/30 text-orange-400' : 'bg-surface border-border text-text-secondary'
-                  }`}
-              >
-                <ArrowUpDown className="w-3.5 h-3.5" />
-                {memberSort === 'absences' ? 'Пропуски' : 'А-Я'}
-              </button>
+            {/* Search */}
+            <div className="relative mb-3">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Пошук по імені..."
+                value={memberSearch}
+                onChange={e => setMemberSearch(e.target.value)}
+                className="w-full pl-10 pr-8 py-2.5 bg-surface border border-border rounded-xl text-sm text-text-primary placeholder:text-text-secondary/40 focus:outline-none focus:border-primary/50 transition-colors"
+              />
+              {memberSearch && (
+                <button onClick={() => setMemberSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-text-secondary hover:text-text-primary">
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
             {/* Voice Filters */}
