@@ -68,6 +68,7 @@ export default function SongList({
 
     const [subTab, setSubTab] = useState<'repertoire' | 'catalog'>('repertoire');
     const [viewingSong, setViewingSong] = useState<SimpleSong | null>(null);
+    const [pendingArchiveQuery, setPendingArchiveQuery] = useState("");
 
     const [isMobile, setIsMobile] = useState<boolean>(() => {
         if (typeof window !== 'undefined') return window.innerWidth < 768;
@@ -388,6 +389,11 @@ export default function SongList({
                                     />
                                 </div>
                             )}
+                            {subTab === 'catalog' && (
+                                <div className="absolute inset-0 bg-background overflow-hidden">
+                                    <GlobalArchive onAddSong={handleAddSong} isOverlayOpen={isOverlayOpen} initialSearchQuery={pendingArchiveQuery} />
+                                </div>
+                            )}
                         </>
                     )}
                 </div>
@@ -395,7 +401,7 @@ export default function SongList({
 
             {/* Modals */}
             {showAddModal && (
-                <AddSongModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} onAdd={handleAddSong} regents={regents} knownConductors={knownConductors} knownCategories={knownCategories} knownPianists={knownPianists} onSearchArchive={() => { setShowAddModal(false); setSubTab('catalog'); }} />
+                <AddSongModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} onAdd={handleAddSong} regents={regents} knownConductors={knownConductors} knownCategories={knownCategories} knownPianists={knownPianists} onSearchArchive={(query) => { setPendingArchiveQuery(query); setShowAddModal(false); setSubTab('catalog'); }} />
             )}
             {editingSong && (
                 <EditSongModal key={editingSong.id} isOpen={!!editingSong} onClose={() => setEditingSong(null)} onSave={handleEditSave} initialData={editingSong} regents={regents} knownConductors={knownConductors} knownCategories={knownCategories} knownPianists={knownPianists} />

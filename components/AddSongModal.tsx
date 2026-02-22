@@ -21,7 +21,7 @@ interface AddSongModalProps {
     knownConductors: string[];
     knownCategories: string[];
     knownPianists: string[];
-    onSearchArchive?: () => void;
+    onSearchArchive?: (query: string) => void;
 }
 
 export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownConductors, knownCategories, knownPianists, onSearchArchive }: AddSongModalProps) {
@@ -559,7 +559,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                                             type="button"
                                             onClick={() => {
                                                 handleClose();
-                                                onSearchArchive();
+                                                onSearchArchive(title);
                                             }}
                                             className="w-16 h-16 flex-shrink-0 bg-surface-highlight border border-border rounded-xl flex items-center justify-center text-text-secondary hover:text-primary hover:border-primary/30 hover:bg-surface transition-all"
                                             title="Знайти в Архіві МХО"
