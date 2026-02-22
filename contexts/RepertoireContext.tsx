@@ -3,7 +3,8 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
 import { SimpleSong } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
-import { syncSongs, auth } from "@/lib/db";
+import { syncSongs } from "@/lib/db";
+import { auth } from "@/lib/firebase";
 
 interface RepertoireContextType {
     songs: SimpleSong[];

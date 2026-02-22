@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { Service, ServiceSong, SimpleSong, Choir, ChoirMember } from "@/types";
-import { addSongToService, removeSongFromService, getChoir, updateService, setServiceAttendance, addKnownConductor, addKnownPianist } from "@/lib/db";
+import { addSongToService, removeSongFromService, getChoir, updateService, setServiceAttendance, addKnownConductor, addKnownPianist, finalizeService } from "@/lib/db";
 import { updateAttendanceCache } from "@/lib/attendanceCache";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRepertoire } from "@/contexts/RepertoireContext";
@@ -480,10 +480,20 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                 absentMembers,
                 confirmedMembers
             });
-            const updatedService = { ...currentService, absentMembers, confirmedMembers };
-            setCurrentService(updatedService);
+
+            let finalUpdate = { ...currentService, absentMembers, confirmedMembers };
+            // Auto finalize when attendance is specifically saved for a past service
+            const isFutureNow = isUpcoming(currentService.date, currentService.time);
+            if (!isFutureNow && userData?.id) {
+                await finalizeService(userData.choirId, currentService.id, userData.id);
+                finalUpdate.isFinalized = true;
+                finalUpdate.finalizedAt = new Date().toISOString();
+                finalUpdate.finalizedBy = userData.id;
+            }
+
+            setCurrentService(finalUpdate);
             // Persist to attendance cache immediately
-            updateAttendanceCache(userData.choirId, [updatedService]);
+            updateAttendanceCache(userData.choirId, [finalUpdate]);
             setShowAttendance(false);
         } catch (error) {
             console.error('Failed to save attendance:', error);

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { getServices, addService, deleteService, setServiceAttendance, getChoir } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
-import { Calendar, Plus, ChevronRight, X, Trash2, Loader2, Check, Clock, Mic2 } from "lucide-react";
+import { Calendar, Plus, ChevronRight, X, Trash2, Loader2, Check, Clock, Mic2, CheckCircle2, Circle } from "lucide-react";
 import { collection, query, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Service } from "@/types";
@@ -282,6 +282,7 @@ export default function ServiceList({
                                                             )}
                                                         </div>
                                                     )}
+
                                                 </div>
 
                                                 <ChevronRight className="w-5 h-5 text-text-secondary group-hover:text-text-primary transition-colors" />

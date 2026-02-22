@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Capacitor } from "@capacitor/core";
-import { Search, FileText, Music2, ChevronRight, Filter, Plus, Eye, User, Loader2, Trash2, Pencil, MoreVertical, Library, X } from "lucide-react";
+import { Search, FileText, Music2, ChevronRight, Filter, Plus, Eye, User, Loader2, Trash2, MoreVertical, Library, X } from "lucide-react";
 import { SimpleSong } from "@/types";
 import { CATEGORIES, Category } from "@/lib/themes";
 import { AnimatePresence, motion } from "framer-motion";
@@ -179,25 +179,17 @@ export default function SongList({
     };
 
     const handleEditClick = (e: React.MouseEvent, song: SimpleSong) => {
+        e.preventDefault();
         e.stopPropagation();
-        setEditingSong(song);
+        router.push(`/song?id=${song.id}&edit=1`);
     };
 
-    const handleEditSave = async (updates: Partial<SimpleSong>, pdfFile?: File) => {
+    const handleEditSave = async (updates: Partial<SimpleSong>) => {
         if (!userData?.choirId || !editingSong) return;
+
         try {
             await updateSong(userData.choirId, editingSong.id, updates);
-
-            if (pdfFile) {
-                try {
-                    await uploadSongPdf(userData.choirId, editingSong.id, pdfFile);
-                } catch (e) {
-                    console.error("Failed to upload new PDF:", e);
-                    alert("Дані оновлено, але не вдалося замінити файл.");
-                }
-            }
-
-            // Optimistic update
+            setToast({ message: "Зміни збережено", type: "success" });
             setEditingSong(null);
             await refreshRepertoire();
             if (onRefresh) onRefresh();
@@ -381,6 +373,10 @@ export default function SongList({
                                 initial={{ height: 0, opacity: 0 }}
                                 animate={{ height: "auto", opacity: 1 }}
                                 exit={{ height: 0, opacity: 0 }}
+                                transition={{
+                                    height: { duration: 0.3, ease: [0.25, 0.1, 0.25, 1] },
+                                    opacity: { duration: 0.2, delay: 0.05 }
+                                }}
                                 className="overflow-hidden mt-2"
                             >
                                 <div className="bg-surface rounded-2xl p-4 space-y-4 border border-border/50 shadow-sm">
@@ -529,9 +525,9 @@ export default function SongList({
                                                                         handleEditClick(e, song);
                                                                     }}
                                                                     className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface transition-colors"
-                                                                    title="Редагувати"
+                                                                    title="Детальніше"
                                                                 >
-                                                                    <Pencil className="w-4 h-4" />
+                                                                    <MoreVertical className="w-5 h-5" />
                                                                 </button>
                                                             )}
                                                         </div>
@@ -564,7 +560,7 @@ export default function SongList({
                                                 >
                                                     <div
                                                         onClick={() => handleSongClick(song)}
-                                                        className="flex items-center gap-3 py-3 px-0 bg-background cursor-pointer active:bg-surface-highlight transition-colors relative z-10"
+                                                        className="flex items-center gap-3 py-3 px-0 bg-background cursor-pointer relative z-10"
                                                     >
                                                         <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-text-primary">
                                                             {song.hasPdf ? (
@@ -594,9 +590,9 @@ export default function SongList({
                                                                     handleEditClick(e, song);
                                                                 }}
                                                                 className="p-2 rounded-lg text-text-secondary hover:text-text-primary active:scale-95 transition-transform"
-                                                                title="Редагувати"
+                                                                title="Детальніше"
                                                             >
-                                                                <Pencil className="w-4 h-4" />
+                                                                <MoreVertical className="w-5 h-5" />
                                                             </button>
                                                         )}
                                                     </div>

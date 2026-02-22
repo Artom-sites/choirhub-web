@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon, mergeMembers, updateChoir, deleteMyAccount, adminDeleteUser, deleteAdminCode, getChoirNotifications, getChoirUsers, joinChoir, updateMember, claimMember, leaveChoir } from "@/lib/db";
 import { updateAttendanceCache } from "@/lib/attendanceCache";
-import { Service, Choir, UserMembership, UserData, ChoirMember, Permission, AdminCode } from "@/types";
+import { Service, Choir, UserMembership, UserData, ChoirMember, Permission, AdminCode, StatsSummary } from "@/types";
 import SongList from "@/components/SongList";
 import SwipeableCard from "@/components/SwipeableCard";
 import ServiceList from "@/components/ServiceList";
@@ -156,6 +156,7 @@ function HomePageContent() {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [lastVisibleHistory, setLastVisibleHistory] = useState<QueryDocumentSnapshot | null>(null);
   const [allHistoryLoaded, setAllHistoryLoaded] = useState(false);
+  const [globalStats, setGlobalStats] = useState<StatsSummary | null>(null);
 
   // Derived Services List (Active + Loaded History)
   // Combine all services and sort descending (newest first) for History view, 
@@ -489,9 +490,19 @@ function HomePageContent() {
       checkReady();
     });
 
+    // Subscribe to pre-calculated stats summary for O(1) performance
+    const unsubStats = onSnapshot(doc(db, `choirs/${choirId}/stats/summary`), (docSnap) => {
+      if (docSnap.exists()) {
+        setGlobalStats(docSnap.data() as StatsSummary);
+      }
+    }, (error) => {
+      console.error("Error fetching global stats:", error);
+    });
+
     return () => {
       unsubServices();
       unsubChoir();
+      unsubStats();
     };
 
   }, [authLoading, user, userData?.choirId, router]);
@@ -971,8 +982,13 @@ function HomePageContent() {
     }
   };
 
-  // Count absences for a member across all services
+  // Count absences for a member across all services using new O(1) stats summary
   const getAbsenceCount = (memberId: string): number => {
+    // If stats are available from backend, use them for accurate historical data
+    if (globalStats?.memberStats?.[memberId]) {
+      return globalStats.memberStats[memberId].absentCount;
+    }
+    // Fallback to active services if stats aren't generated yet
     return services.filter(s => s.absentMembers?.includes(memberId)).length;
   };
 
@@ -1028,7 +1044,6 @@ function HomePageContent() {
     return (
       <StatisticsView
         choir={choir}
-        services={services}
         onBack={() => setShowStats(false)}
       />
     );
@@ -1382,8 +1397,9 @@ function HomePageContent() {
       {viewingMemberStats && (
         <MemberStatsModal
           member={viewingMemberStats}
-          services={services}
+          services={services} // Legacy, but kept for compatibility
           choirId={userData?.choirId || ''}
+          globalStats={globalStats} // Pass new generic stats structure
           onClose={() => setViewingMemberStats(null)}
         />
       )}

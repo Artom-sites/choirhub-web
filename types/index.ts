@@ -77,6 +77,9 @@ export interface Service {
     confirmedMembers?: string[]; // Array of member IDs
     warmupConductor?: string; // Who conducts the warm-up (Rozspivanka)
     deletedAt?: string; // ISO timestamp for soft-delete (trash bin)
+    isFinalized?: boolean; // When true, stats include this service's attendance
+    finalizedAt?: string; // ISO timestamp of finalization
+    finalizedBy?: string; // UID of who finalized
 }
 
 export interface SimpleSong {
@@ -206,4 +209,34 @@ export interface ChoirNotification {
     senderName: string;
     createdAt: string;
     readBy: string[]; // Array of user IDs who have read this
+}
+
+export interface AttendanceTrendEntry {
+    date: string;
+    percentage: number;
+    present: number;
+    total: number;
+}
+
+export interface SongEntry {
+    title: string;
+    songId: string;
+    count: number;
+}
+
+export interface MemberStatEntry {
+    presentCount: number;
+    absentCount: number;
+    servicesWithRecord: number;
+    attendanceRate: number;
+}
+
+export interface StatsSummary {
+    totalServices: number;
+    averageAttendance: number;
+    attendanceTrend: AttendanceTrendEntry[];
+    topSongs: SongEntry[];
+    allSongs: SongEntry[];
+    memberStats: Record<string, MemberStatEntry>;
+    updatedAt: any; // Firebase server timestamp
 }

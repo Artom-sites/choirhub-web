@@ -34,7 +34,7 @@ var __rest = (this && this.__rest) || function (s, e) {
     return t;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cleanupOldNotifications = exports.generateUploadUrl = exports.registerFcmToken = exports.migrateAllClaims = exports.atomicUpdateMember = exports.claimMember = exports.atomicMergeMembers = exports.adminDeleteUser = exports.atomicDeleteSelf = exports.atomicLeaveChoir = exports.atomicJoinChoir = exports.atomicCreateChoir = exports.forceSyncClaims = void 0;
+exports.backfillStats = exports.onServiceWrite = exports.cleanupOldNotifications = exports.generateUploadUrl = exports.registerFcmToken = exports.migrateAllClaims = exports.atomicUpdateMember = exports.claimMember = exports.atomicMergeMembers = exports.adminDeleteUser = exports.atomicDeleteSelf = exports.atomicLeaveChoir = exports.atomicJoinChoir = exports.atomicCreateChoir = exports.forceSyncClaims = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const client_s3_1 = require("@aws-sdk/client-s3");
@@ -1057,4 +1057,9 @@ exports.cleanupOldNotifications = functions.pubsub
         console.error("[cleanupOldNotifications] Error:", error);
     }
 });
+// --- STATISTICS AGGREGATION ---
+var statsAggregator_1 = require("./statsAggregator");
+Object.defineProperty(exports, "onServiceWrite", { enumerable: true, get: function () { return statsAggregator_1.onServiceWrite; } });
+var backfillStats_1 = require("./backfillStats");
+Object.defineProperty(exports, "backfillStats", { enumerable: true, get: function () { return backfillStats_1.backfillStats; } });
 //# sourceMappingURL=index.js.map

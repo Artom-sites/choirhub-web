@@ -385,9 +385,12 @@ export async function getServices(choirId: string): Promise<Service[]> {
     }
 }
 
+
+
 export async function addService(choirId: string, service: Omit<Service, "id">): Promise<string> {
     try {
         const docRef = await addDoc(collection(db, `choirs/${choirId}/services`), service);
+
         return docRef.id;
     } catch (error) {
         console.error("Error adding service:", error);
@@ -399,6 +402,7 @@ export async function updateService(choirId: string, serviceId: string, updates:
     try {
         const docRef = doc(db, `choirs/${choirId}/services`, serviceId);
         await updateDoc(docRef, updates);
+
     } catch (error) {
         console.error("Error updating service:", error);
         throw error;
@@ -412,6 +416,7 @@ export async function deleteService(choirId: string, serviceId: string): Promise
         await updateDoc(docRef, {
             deletedAt: new Date().toISOString()
         });
+
     } catch (error) {
         console.error("Error soft-deleting service:", error);
         throw error;
@@ -422,6 +427,7 @@ export async function deleteService(choirId: string, serviceId: string): Promise
 export async function permanentlyDeleteService(choirId: string, serviceId: string): Promise<void> {
     try {
         await deleteDoc(doc(db, `choirs/${choirId}/services`, serviceId));
+
     } catch (error) {
         console.error("Error permanently deleting service:", error);
         throw error;
@@ -435,8 +441,39 @@ export async function restoreService(choirId: string, serviceId: string): Promis
         await updateDoc(docRef, {
             deletedAt: deleteField()
         });
+
     } catch (error) {
         console.error("Error restoring service:", error);
+        throw error;
+    }
+}
+
+// Finalize service (locks attendance, triggers stats recalculation)
+export async function finalizeService(choirId: string, serviceId: string, userId: string): Promise<void> {
+    try {
+        const docRef = doc(db, `choirs/${choirId}/services`, serviceId);
+        await updateDoc(docRef, {
+            isFinalized: true,
+            finalizedAt: new Date().toISOString(),
+            finalizedBy: userId,
+        });
+    } catch (error) {
+        console.error("Error finalizing service:", error);
+        throw error;
+    }
+}
+
+// Un-finalize service (unlocks for editing, triggers stats recalculation)
+export async function unfinalizeService(choirId: string, serviceId: string): Promise<void> {
+    try {
+        const docRef = doc(db, `choirs/${choirId}/services`, serviceId);
+        await updateDoc(docRef, {
+            isFinalized: deleteField(),
+            finalizedAt: deleteField(),
+            finalizedBy: deleteField(),
+        });
+    } catch (error) {
+        console.error("Error unfinalizing service:", error);
         throw error;
     }
 }
@@ -467,6 +504,7 @@ export async function addSongToService(
         await updateDoc(docRef, {
             songs: arrayUnion(serviceSong)
         });
+
     } catch (error) {
         console.error("Error adding song to service:", error);
         throw error;
@@ -483,6 +521,7 @@ export async function removeSongFromService(
         await updateDoc(docRef, {
             songs: updatedSongs
         });
+
     } catch (error) {
         console.error("Error updating service songs:", error);
     }
@@ -516,6 +555,7 @@ export async function setServiceAttendance(
         }
 
         await updateDoc(docRef, updates);
+
     } catch (error) {
         console.error("Error setting attendance:", error);
         throw error;
@@ -1320,6 +1360,22 @@ export async function getDeletedLocalSongs(choirId: string): Promise<LocalSong[]
         } as LocalSong));
     } catch (error) {
         console.error("Error fetching deleted local songs:", error);
+        return [];
+    }
+}
+
+export async function getMemberAbsences(choirId: string, memberId: string, maxResults: number = 20): Promise<Service[]> {
+    try {
+        const q = query(
+            collection(db, `choirs/${choirId}/services`),
+            where("absentMembers", "array-contains", memberId),
+            orderBy("date", "desc"),
+            limit(maxResults)
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Service));
+    } catch (e) {
+        console.error("Error fetching member absences:", e);
         return [];
     }
 }

@@ -4,8 +4,6 @@ import { createContext, useContext, useEffect, useState, ReactNode, useRef } fro
 import {
     getAuth,
     onAuthStateChanged,
-    signInWithRedirect,
-    getRedirectResult,
     signInWithPopup,
     signInAnonymously,
     GoogleAuthProvider,
@@ -20,7 +18,7 @@ import {
 } from "firebase/auth";
 import { Capacitor } from "@capacitor/core";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
-import { app } from "@/lib/firebase";
+import { app, auth } from "@/lib/firebase";
 import { getUserProfile, createUser, getChoir } from "@/lib/db";
 import { UserData } from "@/types";
 
@@ -41,7 +39,6 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-const auth = getAuth(app);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -52,19 +49,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [fcmToken, setFcmToken] = useState<string | null>(null);
 
     useEffect(() => {
-        // Handle Redirect Result explicitly
-        const handleRedirect = async () => {
-            try {
-                const result = await getRedirectResult(auth);
-                if (result?.user) {
-                    console.log("Redirect login successful:", result.user.email);
-                    // onAuthStateChanged will pick this up, but we can verify here
-                }
-            } catch (error) {
-                console.error("Redirect auth error:", error);
-            }
-        };
-        handleRedirect();
 
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             console.log("Auth State Changed:", firebaseUser ? `User ${firebaseUser.uid}` : "No User");

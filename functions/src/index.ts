@@ -1212,3 +1212,7 @@ export const cleanupOldNotifications = functions.pubsub
             console.error("[cleanupOldNotifications] Error:", error);
         }
     });
+
+// --- STATISTICS AGGREGATION ---
+export { onServiceWrite } from "./statsAggregator";
+export { backfillStats } from "./backfillStats";

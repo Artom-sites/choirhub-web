@@ -1,89 +1,39 @@
 "use client";
 
 import { X, Calendar, TrendingDown, Check, AlertCircle, Loader2 } from "lucide-react";
-import { ChoirMember, Service } from "@/types";
-import { useEffect, useMemo, useState } from "react";
-import { getAttendanceStats, getCachedServiceCount, updateAttendanceCache } from "@/lib/attendanceCache";
-import { getServices } from "@/lib/db";
+import { ChoirMember, Service, StatsSummary } from "@/types";
+import { useEffect, useState } from "react";
+import { getMemberAbsences } from "@/lib/db";
 
 interface Props {
     member: ChoirMember;
-    services: Service[];       // still passed for live cache update
+    services: Service[];       // Legacy, kept for compatibility if needed elsewhere
     choirId: string;
     onClose: () => void;
+    globalStats?: StatsSummary | null;
 }
 
-type Period = 'month' | 'quarter' | 'year' | 'all';
+export default function MemberStatsModal({ member, choirId, onClose, globalStats }: Props) {
+    const [absences, setAbsences] = useState<Service[]>([]);
+    const [loadingAbsences, setLoadingAbsences] = useState(true);
 
-const PERIOD_LABELS: Record<Period, string> = {
-    month: 'Місяць',
-    quarter: 'Квартал',
-    year: 'Рік',
-    all: 'Все',
-};
-
-function getPeriodStart(period: Period): Date | undefined {
-    const now = new Date();
-    switch (period) {
-        case 'month':
-            return new Date(now.getFullYear(), now.getMonth(), 1);
-        case 'quarter':
-            return new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
-        case 'year':
-            return new Date(now.getFullYear(), 0, 1);
-        case 'all':
-            return undefined;
-    }
-}
-
-// Key to track if we've already done the full fetch for this choir
-const BOOTSTRAP_KEY = (choirId: string) => `attendance_bootstrapped_v1_${choirId}`;
-
-export default function MemberStatsModal({ member, services, choirId, onClose }: Props) {
-    const [period, setPeriod] = useState<Period>('all');
-    const [isBootstrapping, setIsBootstrapping] = useState(false);
-    const [refreshTrigger, setRefreshTrigger] = useState(0);
-
-    // Ensure current services are in cache (live merge)
-    useMemo(() => {
-        if (choirId && services.length) {
-            updateAttendanceCache(choirId, services);
-        }
-    }, [choirId, services]);
-
-    // One-time full history load — only runs once per choir, then flag is saved in localStorage
     useEffect(() => {
-        if (!choirId) return;
+        if (!choirId || !member.id) return;
+        setLoadingAbsences(true);
+        // Fetch only 20 most recent missed services optimally
+        getMemberAbsences(choirId, member.id).then(data => {
+            setAbsences(data);
+            setLoadingAbsences(false);
+        });
+    }, [choirId, member.id]);
 
-        const alreadyBootstrapped = localStorage.getItem(BOOTSTRAP_KEY(choirId));
-        if (alreadyBootstrapped) return;
-
-        const bootstrap = async () => {
-            setIsBootstrapping(true);
-            try {
-                const allServices = await getServices(choirId);
-                updateAttendanceCache(choirId, allServices);
-                localStorage.setItem(BOOTSTRAP_KEY(choirId), new Date().toISOString());
-                setRefreshTrigger(t => t + 1); // trigger re-read of stats
-                console.log(`[MemberStatsModal] Bootstrapped ${allServices.length} services into attendance cache`);
-            } catch (e) {
-                console.error("[MemberStatsModal] Bootstrap failed:", e);
-            } finally {
-                setIsBootstrapping(false);
-            }
-        };
-
-        bootstrap();
-    }, [choirId]);
-
-    // Read stats from persistent cache
-    const stats = useMemo(() => {
-        const periodStart = getPeriodStart(period);
-        return getAttendanceStats(choirId, member.id, periodStart);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [choirId, member.id, period, services, refreshTrigger]);
-
-    const cachedTotal = useMemo(() => getCachedServiceCount(choirId), [choirId, services, refreshTrigger]);
+    // O(1) lookup from the new backend-generated summary document
+    const stats = globalStats?.memberStats?.[member.id] || {
+        attendanceRate: 100,
+        presentCount: 0,
+        absentCount: 0,
+        servicesWithRecord: 0
+    };
 
     const formatDate = (dateStr: string) => {
         const date = new Date(dateStr);
@@ -104,7 +54,7 @@ export default function MemberStatsModal({ member, services, choirId, onClose }:
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-full bg-surface-highlight flex items-center justify-center text-text-primary font-bold text-lg">
                             {member.name?.[0]?.toUpperCase() || "?"}
@@ -124,35 +74,11 @@ export default function MemberStatsModal({ member, services, choirId, onClose }:
                     </button>
                 </div>
 
-                {/* Period Filter Tabs */}
-                <div className="flex gap-1 p-1 bg-surface-highlight rounded-xl mb-4">
-                    {(Object.keys(PERIOD_LABELS) as Period[]).map(p => (
-                        <button
-                            key={p}
-                            onClick={() => setPeriod(p)}
-                            className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${period === p
-                                    ? 'bg-surface text-text-primary shadow-sm'
-                                    : 'text-text-secondary hover:text-text-primary'
-                                }`}
-                        >
-                            {PERIOD_LABELS[p]}
-                        </button>
-                    ))}
-                </div>
-
-                {/* Loading indicator for bootstrap */}
-                {isBootstrapping && (
-                    <div className="flex items-center gap-2 text-xs text-text-secondary mb-3 px-1">
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        <span>Завантаження повної історії...</span>
-                    </div>
-                )}
-
                 {/* Stats Cards */}
                 <div className="grid grid-cols-3 gap-2 mb-6">
                     <div className="p-3 bg-surface-highlight rounded-2xl text-center">
                         <div className="text-2xl font-bold text-primary mb-1">{stats.attendanceRate}%</div>
-                        <div className="text-[10px] text-text-secondary uppercase tracking-wider">Явка</div>
+                        <div className="text-[10px] text-text-secondary uppercase tracking-wider">Явка за весь час</div>
                     </div>
                     <div className="p-3 bg-surface-highlight rounded-2xl text-center">
                         <div className="text-2xl font-bold text-green-400 mb-1">{stats.presentCount}</div>
@@ -168,10 +94,14 @@ export default function MemberStatsModal({ member, services, choirId, onClose }:
                 <div className="flex-1 overflow-y-auto">
                     <h4 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-3 flex items-center gap-2">
                         <TrendingDown className="w-4 h-4" />
-                        Історія пропусків
+                        Останні пропуски
                     </h4>
 
-                    {stats.absences.length === 0 ? (
+                    {loadingAbsences ? (
+                        <div className="flex justify-center py-8">
+                            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                        </div>
+                    ) : absences.length === 0 ? (
                         <div className="text-center py-8 text-text-secondary">
                             <Check className="w-12 h-12 mx-auto mb-3 text-primary opacity-50" />
                             <p className="font-medium">Чудова відвідуваність!</p>
@@ -179,9 +109,9 @@ export default function MemberStatsModal({ member, services, choirId, onClose }:
                         </div>
                     ) : (
                         <div className="space-y-2">
-                            {stats.absences.map(absence => (
+                            {absences.map(absence => (
                                 <div
-                                    key={absence.serviceId}
+                                    key={absence.id}
                                     className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-xl flex items-center gap-3"
                                 >
                                     <div className="w-8 h-8 bg-orange-500/20 rounded-full flex items-center justify-center">
@@ -203,7 +133,7 @@ export default function MemberStatsModal({ member, services, choirId, onClose }:
                 {/* Footer info */}
                 <div className="mt-4 pt-4 border-t border-border text-center text-xs text-text-secondary">
                     {stats.servicesWithRecord > 0
-                        ? `${stats.servicesWithRecord} з ${stats.totalServices} служінь з відміткою`
+                        ? `${stats.servicesWithRecord} з ${globalStats?.totalServices || 0} служінь з відміткою`
                         : 'Немає даних за обраний період'
                     }
                 </div>
