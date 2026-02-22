@@ -54,15 +54,19 @@ function calculateStatsForBackfill(
     totalMembers: number
 ) {
     const active = services.filter(s => !s.data.deletedAt);
-    active.sort((a, b) => a.data.date.localeCompare(b.data.date));
+    // Only count services where attendance was actually saved
+    const withAttendance = active.filter(s =>
+        (s.data.confirmedMembers || []).length > 0 || (s.data.absentMembers || []).length > 0
+    );
+    withAttendance.sort((a, b) => a.data.date.localeCompare(b.data.date));
 
-    const totalServices = active.length;
+    const totalServices = withAttendance.length;
 
-    // For backfill: ALL services contribute to attendance (historical data)
+    // For backfill: only services with saved attendance contribute
     let totalAttendancePercent = 0;
     const attendanceEntries: AttendanceTrendEntry[] = [];
 
-    for (const s of active) {
+    for (const s of withAttendance) {
         const absentCount = (s.data.absentMembers || []).length;
         const present = Math.max(0, totalMembers - absentCount);
         const percentage = totalMembers > 0
@@ -78,10 +82,10 @@ function calculateStatsForBackfill(
 
     const attendanceTrend = attendanceEntries.slice(-10);
 
-    // ── Individual Member Stats (For backfill: from ALL active services) ──
+    // ── Individual Member Stats (only from services with saved attendance) ──
     const memberStats: Record<string, MemberStatEntry> = {};
 
-    for (const s of active) {
+    for (const s of withAttendance) {
         const present = s.data.confirmedMembers || [];
         const absent = s.data.absentMembers || [];
 
@@ -107,7 +111,7 @@ function calculateStatsForBackfill(
     }
 
     const songCounts: Record<string, SongEntry> = {};
-    for (const s of active) {
+    for (const s of withAttendance) {
         for (const song of (s.data.songs || [])) {
             const id = song.songId;
             if (!songCounts[id]) {
