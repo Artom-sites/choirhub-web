@@ -800,8 +800,8 @@ function SongContent() {
                             <X className="w-6 h-6" />
                         </button>
                     </div>
-                    <div className="flex-1 overflow-hidden px-4">
-                        <GlobalArchive onAddSong={handleLinkArchive} initialSearchQuery={song?.title || ""} />
+                    <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-8">
+                        <GlobalArchive onAddSong={handleLinkArchive} initialSearchQuery={song?.title || ""} isOverlayOpen={true} />
                     </div>
                 </div>
             )}
