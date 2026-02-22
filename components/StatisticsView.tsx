@@ -76,12 +76,23 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                 counts.Unassigned++;
             }
         });
-        return [
+        const raw = [
             { name: 'Сопрано', key: 'Soprano', value: counts.Soprano, color: '#f472b6' },
             { name: 'Альт', key: 'Alto', value: counts.Alto, color: '#c084fc' },
             { name: 'Тенор', key: 'Tenor', value: counts.Tenor, color: '#60a5fa' },
             { name: 'Бас', key: 'Bass', value: counts.Bass, color: '#4ade80' },
         ].filter(d => d.value > 0);
+
+        // Largest-remainder method so percentages sum to exactly 100
+        const total = raw.reduce((s, d) => s + d.value, 0);
+        if (total === 0) return raw.map(d => ({ ...d, pct: 0 }));
+        const exact = raw.map(d => (d.value / total) * 100);
+        const floored = exact.map(v => Math.floor(v));
+        let remainder = 100 - floored.reduce((s, v) => s + v, 0);
+        const remainders = exact.map((v, i) => ({ i, r: v - floored[i] }));
+        remainders.sort((a, b) => b.r - a.r);
+        for (let j = 0; j < remainder; j++) floored[remainders[j].i]++;
+        return raw.map((d, i) => ({ ...d, pct: floored[i] }));
     }, [choir.members]);
 
     const totalMembers = (choir.members || []).length;
@@ -228,7 +239,7 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                                         <span className="text-sm text-text-primary group-hover:text-text-primary/80 flex-1">{entry.name}</span>
                                         <span className="text-sm font-bold text-text-primary tabular-nums">{entry.value}</span>
                                         <span className="text-xs text-text-secondary tabular-nums w-10 text-right">
-                                            {voicedMembers > 0 ? Math.round((entry.value / voicedMembers) * 100) : 0}%
+                                            {entry.pct}%
                                         </span>
                                     </div>
                                 ))}
