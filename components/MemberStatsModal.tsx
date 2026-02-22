@@ -101,13 +101,7 @@ export default function MemberStatsModal({ member, choirId, onClose, globalStats
                         <div className="flex justify-center py-8">
                             <Loader2 className="w-8 h-8 text-primary animate-spin" />
                         </div>
-                    ) : absences.length === 0 ? (
-                        <div className="text-center py-8 text-text-secondary">
-                            <Check className="w-12 h-12 mx-auto mb-3 text-primary opacity-50" />
-                            <p className="font-medium">Чудова відвідуваність!</p>
-                            <p className="text-sm mt-1 opacity-70">Немає жодних пропусків</p>
-                        </div>
-                    ) : (
+                    ) : absences.length > 0 ? (
                         <div className="space-y-2">
                             {absences.map(absence => (
                                 <div
@@ -126,6 +120,18 @@ export default function MemberStatsModal({ member, choirId, onClose, globalStats
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    ) : stats.absentCount === 0 ? (
+                        <div className="text-center py-8 text-text-secondary">
+                            <Check className="w-12 h-12 mx-auto mb-3 text-primary opacity-50" />
+                            <p className="font-medium">Чудова відвідуваність!</p>
+                            <p className="text-sm mt-1 opacity-70">Немає жодних пропусків</p>
+                        </div>
+                    ) : (
+                        <div className="text-center py-8 text-text-secondary">
+                            <AlertCircle className="w-12 h-12 mx-auto mb-3 text-orange-400 opacity-50" />
+                            <p className="font-medium">{stats.absentCount} пропусків зафіксовано</p>
+                            <p className="text-sm mt-1 opacity-70">Деталі завантажуються...</p>
                         </div>
                     )}
                 </div>
