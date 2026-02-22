@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { getServices, addService, deleteService, setServiceAttendance, getChoir } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
-import { Calendar, Plus, ChevronRight, X, Trash2, Loader2, Check, Clock, Mic2, CheckCircle2, Circle } from "lucide-react";
+import { Calendar, Plus, ChevronRight, X, Trash2, Loader2, Check, Clock, Mic2, CheckCircle2, Circle, Music } from "lucide-react";
 import { collection, query, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Service } from "@/types";
@@ -43,7 +43,21 @@ export default function ServiceList({
     const setShowCreateModal = propsSetShowCreateModal ?? setLocalShowCreateModal;
     const [votingLoading, setVotingLoading] = useState<string | null>(null);
     const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
-    const [showArchive, setShowArchive] = useState(false);
+
+    // Persist archive tab state so returning from a service doesn't reset it
+    const [showArchive, setShowArchive] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return sessionStorage.getItem('showArchive') === 'true';
+        }
+        return false;
+    });
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            sessionStorage.setItem('showArchive', showArchive.toString());
+        }
+    }, [showArchive]);
+
     const [showTrashBin, setShowTrashBin] = useState(false);
 
     // Create form
@@ -160,10 +174,10 @@ export default function ServiceList({
     };
 
     return (
-        <div className="max-w-5xl mx-auto px-4 py-4 space-y-6">
+        <div className="max-w-5xl mx-auto px-4 pb-4 space-y-6">
 
             {/* Header with Archive Toggle - Spacious & Clean */}
-            <div className="flex items-center justify-between px-2 mb-4 relative z-10">
+            <div className="sticky top-[calc(4rem_+_env(safe-area-inset-top))] bg-background/95 backdrop-blur-md pt-3 pb-3 -mx-4 px-4 mb-4 z-40 flex items-center justify-between border-b border-border">
                 <h2 className="text-lg font-bold text-text-primary">
                     {showArchive ? 'Архів служінь' : 'Найближчі служіння'}
                 </h2>
@@ -244,48 +258,56 @@ export default function ServiceList({
                                     >
                                         <div
                                             onClick={() => onSelectService(service)}
-                                            className={`relative group p-5 rounded-2xl transition-all cursor-pointer h-full flex flex-col justify-between card-shadow ${isToday(service.date) ? 'bg-accent/10 border border-accent/20' : 'bg-surface'}`}
+                                            className={`relative group rounded-2xl transition-all cursor-pointer h-full flex flex-col card-shadow ${isToday(service.date) ? 'bg-surface ring-1 ring-primary/30' : 'bg-surface'}`}
                                         >
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${isToday(service.date) ? 'text-accent' : 'text-text-secondary'}`}>
-                                                        {isToday(service.date) ? 'Сьогодні' : formatDate(service.date)}
-                                                    </p>
-                                                    <h3 className="text-xl font-bold text-text-primary mb-2">{service.title}</h3>
 
-                                                    <div className="flex items-center gap-2 mb-3">
-                                                        <div className={`px-2.5 py-1 rounded-full text-xs font-medium border ${isToday(service.date) ? 'bg-accent/10 border-accent/30 text-accent' : 'bg-surface-highlight border-border text-text-primary'}`}>
-                                                            {service.songs.length} пісень
-                                                        </div>
+                                            <div className="p-5 flex-1 flex flex-col">
+                                                <div className="flex justify-between items-start">
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className={`text-[11px] font-bold uppercase tracking-widest mb-1.5 ${isToday(service.date) ? 'text-primary' : 'text-text-secondary'}`}>
+                                                            {isToday(service.date) ? 'Сьогодні' : formatDate(service.date)}
+                                                        </p>
+                                                        <h3 className="text-lg font-bold text-text-primary leading-tight">{service.title}</h3>
                                                     </div>
-
-                                                    {isFuture && (
-                                                        <div className="flex gap-2 mt-3" onClick={e => e.stopPropagation()}>
-                                                            {(status === 'unknown' || status === 'present') && (
-                                                                <button
-                                                                    onClick={(e) => handleVote(e, service.id, 'present')}
-                                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${status === 'present' ? 'bg-success text-white ring-2 ring-success/50' : 'bg-background text-text-secondary hover:bg-surface-highlight'}`}
-                                                                >
-                                                                    <Check className="w-3.5 h-3.5" />
-                                                                    {status === 'present' ? 'Я буду' : 'Буду'}
-                                                                </button>
-                                                            )}
-
-                                                            {(status === 'unknown' || status === 'absent') && (
-                                                                <button
-                                                                    onClick={(e) => handleVote(e, service.id, 'absent')}
-                                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${status === 'absent' ? 'bg-danger/20 text-danger ring-1 ring-danger/50' : 'bg-background text-text-secondary hover:bg-surface-highlight'}`}
-                                                                >
-                                                                    <X className="w-3.5 h-3.5" />
-                                                                    {status === 'absent' ? 'Не буду' : 'Не буду'}
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    )}
-
+                                                    <ChevronRight className="w-5 h-5 text-text-secondary/50 group-hover:text-text-primary transition-colors flex-shrink-0 mt-1" />
                                                 </div>
 
-                                                <ChevronRight className="w-5 h-5 text-text-secondary group-hover:text-text-primary transition-colors" />
+                                                <div className="flex items-center gap-3 mt-3">
+                                                    <div className="flex items-center gap-1.5 text-xs text-text-secondary">
+                                                        <Music className="w-3.5 h-3.5" />
+                                                        <span>{service.songs.length} пісень</span>
+                                                    </div>
+                                                    {service.time && (
+                                                        <div className="flex items-center gap-1.5 text-xs text-text-secondary">
+                                                            <Clock className="w-3.5 h-3.5" />
+                                                            <span>{service.time}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {isFuture && (
+                                                    <div className="flex gap-2 mt-4 pt-3 border-t border-border" onClick={e => e.stopPropagation()}>
+                                                        {(status === 'unknown' || status === 'present') && (
+                                                            <button
+                                                                onClick={(e) => handleVote(e, service.id, 'present')}
+                                                                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${status === 'present' ? 'bg-success text-white ring-2 ring-success/50' : 'bg-background text-text-secondary hover:bg-surface-highlight'}`}
+                                                            >
+                                                                <Check className="w-3.5 h-3.5" />
+                                                                {status === 'present' ? 'Я буду' : 'Буду'}
+                                                            </button>
+                                                        )}
+
+                                                        {(status === 'unknown' || status === 'absent') && (
+                                                            <button
+                                                                onClick={(e) => handleVote(e, service.id, 'absent')}
+                                                                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${status === 'absent' ? 'bg-danger/20 text-danger ring-1 ring-danger/50' : 'bg-background text-text-secondary hover:bg-surface-highlight'}`}
+                                                            >
+                                                                <X className="w-3.5 h-3.5" />
+                                                                Не буду
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </SwipeableCard>

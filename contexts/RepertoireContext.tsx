@@ -26,28 +26,56 @@ export function useRepertoire() {
 
 export function RepertoireProvider({ children }: { children: ReactNode }) {
     const { userData } = useAuth();
-    const [songs, setSongs] = useState<SimpleSong[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [songs, setSongs] = useState<SimpleSong[]>(() => {
+        // Eagerly try to load from cache on first render (before auth is ready)
+        if (typeof window !== 'undefined') {
+            try {
+                const storedChoirId = localStorage.getItem('choir_last_choirId');
+                if (storedChoirId) {
+                    const cached = localStorage.getItem(`choir_songs_v2_${storedChoirId}`);
+                    if (cached) {
+                        return JSON.parse(cached);
+                    }
+                }
+            } catch (e) { /* ignore */ }
+        }
+        return [];
+    });
+    const [loading, setLoading] = useState(() => {
+        // If we got songs from eager cache, don't show loading
+        if (typeof window !== 'undefined') {
+            try {
+                const storedChoirId = localStorage.getItem('choir_last_choirId');
+                if (storedChoirId) {
+                    const cached = localStorage.getItem(`choir_songs_v2_${storedChoirId}`);
+                    if (cached && JSON.parse(cached).length > 0) return false;
+                }
+            } catch (e) { /* ignore */ }
+        }
+        return true;
+    });
     const [hasSynced, setHasSynced] = useState(false);
 
-    // Initialize from localStorage immediately
+    // Sync cache when choirId becomes available, and persist choirId for eager loading
     useEffect(() => {
         if (typeof window !== 'undefined' && userData?.choirId) {
+            localStorage.setItem('choir_last_choirId', userData.choirId);
+
             const CACHE_KEY = `choir_songs_v2_${userData.choirId}`;
             try {
                 const cached = localStorage.getItem(CACHE_KEY);
                 if (cached) {
                     setSongs(JSON.parse(cached));
                 } else {
-                    setSongs([]); // Clear if no cache for this choir
+                    setSongs([]);
                 }
                 setLoading(false);
             } catch (e) {
                 console.warn("[Repertoire] Failed to load cache", e);
                 setSongs([]);
             }
-        } else {
-            setSongs([]); // Clear if no choir
+        } else if (!userData?.choirId && userData !== undefined) {
+            setSongs([]);
         }
     }, [userData?.choirId]);
 

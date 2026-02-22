@@ -511,7 +511,12 @@ function HomePageContent() {
   }, [authLoading, user, userData?.choirId, router]);
 
   // URL Sync Effect (Service ID, Join Code)
+  const isNavigatingRef = useRef(false);
+
   useEffect(() => {
+    // Skip URL sync while we're in the middle of a programmatic navigation
+    if (isNavigatingRef.current) return;
+
     // Only run if app is ready OR we have data (for service ID syncing)
     if (services.length > 0) {
       const serviceIdParam = searchParams.get('serviceId');
@@ -577,15 +582,16 @@ function HomePageContent() {
     // Eagerly set state first to make UI feel instant
     setSelectedService(service);
 
+    // Prevent URL sync effect from interfering during navigation
+    isNavigatingRef.current = true;
+
     try {
       if (service) {
         newParams.set('serviceId', service.id);
         const url = `/?${newParams.toString()}`;
-        // router.push might fail/stuck if offline in some Next.js versions, but we don't want it to block UI
         router.push(url, { scroll: false });
       } else {
         newParams.delete('serviceId');
-        // Check if we can safely go back
         if (searchParams.get('serviceId')) {
           router.back();
         }
@@ -593,6 +599,11 @@ function HomePageContent() {
     } catch (error) {
       console.error("[Navigation] Push failed (likely offline):", error);
     }
+
+    // Allow URL sync to resume after a short delay for the navigation to settle
+    setTimeout(() => {
+      isNavigatingRef.current = false;
+    }, 300);
   };
 
   const copyCode = async (code: string) => {
@@ -1496,7 +1507,7 @@ function HomePageContent() {
             className="fixed inset-0 z-[60] flex flex-col bg-background"
             style={{ background: 'var(--background)' }}
           >
-            <div className="p-4 border-b border-border pt-[calc(1rem+env(safe-area-inset-top))]" style={{ background: 'var(--surface)' }}>
+            <div className="p-4 border-b border-border pt-[calc(1rem_+_env(safe-area-inset-top))]" style={{ background: 'var(--surface)' }}>
               <button
                 onClick={() => setShowAccount(false)}
                 className="flex items-center gap-2 text-text-primary font-medium hover:text-text-secondary transition-colors py-1"
@@ -1802,7 +1813,7 @@ function HomePageContent() {
       </header>
 
       {/* Tab Content */}
-      <div className="relative pt-[calc(4rem+env(safe-area-inset-top))] pb-32 md:pb-24">
+      <div className="relative pt-[calc(4rem_+_env(safe-area-inset-top))] pb-32 md:pb-24">
         {activeTab === 'home' && (
           <ServiceList
             onSelectService={handleSelectService}
@@ -1816,7 +1827,7 @@ function HomePageContent() {
           />
         )}
 
-        {activeTab === 'songs' && (
+        <div style={{ display: activeTab === 'songs' ? 'block' : 'none' }}>
           <SongList
             canAddSongs={canAddSongs}
             regents={choir?.regents || []}
@@ -1827,72 +1838,73 @@ function HomePageContent() {
             setShowAddModal={setShowAddSongModal}
             isOverlayOpen={showAccount || showChoirManager || showAddServiceModal}
           />
-        )}
+        </div>
 
         {activeTab === 'members' && (
-          <div className="max-w-5xl mx-auto p-4 pb-32">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-bold text-text-primary">Учасники</h2>
-                <span className="text-xs text-text-secondary bg-surface-highlight px-2 py-0.5 rounded-lg font-semibold tabular-nums">
-                  {(choir?.members || []).length}
-                </span>
-              </div>
+          <div className="max-w-5xl mx-auto px-4 pb-32">
+            {/* Header + Filters — sticky */}
+            <div className="sticky top-[calc(4rem_+_env(safe-area-inset-top))] z-40 bg-background/95 backdrop-blur-md -mx-4 px-4 pt-3 pb-1 border-b border-border">
+              <div className="flex justify-between items-center mb-3">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-bold text-text-primary">Учасники</h2>
+                  <span className="text-xs text-text-secondary bg-surface-highlight px-2 py-0.5 rounded-lg font-semibold tabular-nums">
+                    {(choir?.members || []).length}
+                  </span>
+                </div>
 
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => setShowStats(true)}
-                  className="w-9 h-9 bg-surface border border-border rounded-xl flex items-center justify-center text-text-secondary hover:text-primary transition-colors"
-                >
-                  <BarChart2 className="w-4 h-4" />
-                </button>
-                {(canEdit || userData?.permissions?.includes('notify_members')) && (
+                <div className="flex items-center gap-1.5">
                   <button
-                    onClick={() => setShowSendNotificationModal(true)}
+                    onClick={() => setShowStats(true)}
                     className="w-9 h-9 bg-surface border border-border rounded-xl flex items-center justify-center text-text-secondary hover:text-primary transition-colors"
-                    title="Надіслати сповіщення"
                   >
-                    <Bell className="w-4 h-4" />
+                    <BarChart2 className="w-4 h-4" />
                   </button>
-                )}
-                {canEdit && (
+                  {(canEdit || userData?.permissions?.includes('notify_members')) && (
+                    <button
+                      onClick={() => setShowSendNotificationModal(true)}
+                      className="w-9 h-9 bg-surface border border-border rounded-xl flex items-center justify-center text-text-secondary hover:text-primary transition-colors"
+                      title="Надіслати сповіщення"
+                    >
+                      <Bell className="w-4 h-4" />
+                    </button>
+                  )}
+                  {canEdit && (
+                    <button
+                      onClick={() => { setEditingMember(null); setShowEditMemberModal(true); }}
+                      className="flex items-center gap-1.5 px-3 py-2 bg-primary text-background rounded-xl text-xs font-bold hover:opacity-90 transition-colors"
+                    >
+                      <UserPlus className="w-3.5 h-3.5" />
+                      Додати
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Voice Filters */}
+              <div className="flex overflow-x-auto gap-1.5 scrollbar-hide -mx-4 px-4 pb-2">
+                {[
+                  { key: '', label: 'Всі' },
+                  { key: 'Soprano', label: 'Сопрано' },
+                  { key: 'Alto', label: 'Альт' },
+                  { key: 'Tenor', label: 'Тенор' },
+                  { key: 'Bass', label: 'Бас' },
+                  ...(canEdit ? [{ key: 'real', label: '📱 Додаток' }] : []),
+                ].map(filter => (
                   <button
-                    onClick={() => { setEditingMember(null); setShowEditMemberModal(true); }}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-primary text-background rounded-xl text-xs font-bold hover:opacity-90 transition-colors"
+                    key={filter.key}
+                    onClick={() => setMemberFilter(filter.key)}
+                    className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${memberFilter === filter.key
+                      ? 'bg-primary text-background border-primary'
+                      : 'bg-surface text-text-secondary border-border'
+                      }`}
                   >
-                    <UserPlus className="w-3.5 h-3.5" />
-                    Додати
+                    {filter.label}
                   </button>
-                )}
+                ))}
               </div>
             </div>
 
-
-            {/* Voice Filters */}
-            <div className="flex overflow-x-auto gap-1.5 scrollbar-hide -mx-4 px-4 pb-1 mb-4">
-              {[
-                { key: '', label: 'Всі' },
-                { key: 'Soprano', label: 'Сопрано' },
-                { key: 'Alto', label: 'Альт' },
-                { key: 'Tenor', label: 'Тенор' },
-                { key: 'Bass', label: 'Бас' },
-                ...(canEdit ? [{ key: 'real', label: '📱 Додаток' }] : []),
-              ].map(filter => (
-                <button
-                  key={filter.key}
-                  onClick={() => setMemberFilter(filter.key)}
-                  className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${memberFilter === filter.key
-                    ? 'bg-primary text-background border-primary'
-                    : 'bg-surface text-text-secondary border-border'
-                    }`}
-                >
-                  {filter.label}
-                </button>
-              ))}
-            </div>
-
-            <div>
+            <div className="mt-4">
               {memberFilter === 'real' ? (
                 loadingRegisteredUsers ? (
                   <div className="text-center py-12 text-text-secondary">
@@ -2019,7 +2031,7 @@ function HomePageContent() {
       {!showAccount && !showChoirManager && !showAddSongModal && !showAddServiceModal && (activeTab === 'home' && canEdit) && (
         <button
           onClick={() => setShowAddServiceModal(true)}
-          className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] md:bottom-24 right-6 w-[56px] h-[56px] bg-primary text-background rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60]"
+          className="fixed bottom-[calc(5.5rem_+_env(safe-area-inset-bottom))] md:bottom-24 right-6 w-[56px] h-[56px] bg-primary text-background rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60]"
           title="Додати служіння"
         >
           <Plus className="w-7 h-7" />

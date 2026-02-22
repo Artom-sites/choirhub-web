@@ -104,11 +104,21 @@ function isStatsRelevantChange(
     // Soft-delete or restore
     if ((before.deletedAt || null) !== (after.deletedAt || null)) return true;
 
-    // Songs changed on a FINALIZED service (historical correction)
+    // Song or Attendance changed on a FINALIZED service (historical correction)
     if (after.isFinalized) {
+        // Check songs
         const beforeSongs = (before.songs || []).map(s => s.songId).sort().join(",");
         const afterSongs = (after.songs || []).map(s => s.songId).sort().join(",");
         if (beforeSongs !== afterSongs) return true;
+
+        // Check attendance
+        const beforeAbsent = (before.absentMembers || []).sort().join(",");
+        const afterAbsent = (after.absentMembers || []).sort().join(",");
+        if (beforeAbsent !== afterAbsent) return true;
+
+        const beforeConfirmed = (before.confirmedMembers || []).sort().join(",");
+        const afterConfirmed = (after.confirmedMembers || []).sort().join(",");
+        if (beforeConfirmed !== afterConfirmed) return true;
     }
 
     // Everything else → SKIP
@@ -143,10 +153,15 @@ function calculateStats(
     const attendanceEntries: AttendanceTrendEntry[] = [];
 
     for (const s of finalized) {
-        const absentCount = (s.data.absentMembers || []).length;
-        const present = Math.max(0, totalMembers - absentCount);
+        // Strict attendance: Only count those explicitly marked present
+        const presentCount = (s.data.confirmedMembers || []).length;
+
+        // The total possible attendees for this specific service is 
+        // everyone who explicitly voted (present + absent).
+        // If they want percentage against the ENTIRE choir, then it's totalMembers.
+        // Let's stick to percentage against ENTIRE choir, but count ONLY confirmed.
         const percentage = totalMembers > 0
-            ? Math.round((present / totalMembers) * 100)
+            ? Math.round((presentCount / totalMembers) * 100)
             : 0;
 
         totalAttendancePercent += percentage;
@@ -154,7 +169,7 @@ function calculateStats(
         attendanceEntries.push({
             date: s.data.date,
             percentage,
-            present,
+            present: presentCount,
             total: totalMembers,
         });
     }
@@ -163,23 +178,29 @@ function calculateStats(
         ? Math.round(totalAttendancePercent / finalized.length)
         : 0;
 
-    // Last 10 finalized for trend chart
-    const attendanceTrend = attendanceEntries.slice(-10);
+    // Provide the entire attendance trend history instead of just the last 10
+    // This allows the frontend chart to scroll horizontally through the entire year
+    const attendanceTrend = attendanceEntries;
 
     // ── Individual Member Stats (only from FINALIZED services) ──
     const memberStats: Record<string, MemberStatEntry> = {};
 
     for (const s of finalized) {
         const present = s.data.confirmedMembers || [];
-        const absent = s.data.absentMembers || [];
 
+        // Those not explicitly marked present are implicitly absent
         for (const pid of present) {
             if (!memberStats[pid]) memberStats[pid] = { presentCount: 0, absentCount: 0, servicesWithRecord: 0, attendanceRate: 100 };
             memberStats[pid].presentCount++;
             memberStats[pid].servicesWithRecord++;
         }
 
-        for (const aid of absent) {
+        // To calculate who was absent, we assume totalMembers is tracked elsewhere,
+        // but since we don't have the full roster here, we only add "absent" stats
+        // for people who explicitly clicked "Absent" or who already exist in the 
+        // memberStats array from other services.
+        const explicitAbsent = s.data.absentMembers || [];
+        for (const aid of explicitAbsent) {
             if (!memberStats[aid]) memberStats[aid] = { presentCount: 0, absentCount: 0, servicesWithRecord: 0, attendanceRate: 100 };
             memberStats[aid].absentCount++;
             memberStats[aid].servicesWithRecord++;
@@ -262,7 +283,18 @@ export const onServiceWrite = onDocumentWritten(
                 return;
             }
             const choirData = choirDoc.data()!;
-            const totalMembers = (choirData.members || []).length;
+
+            // Determine the true roster count by excluding unlinked app users
+            // An unlinked app user is someone with hasAccount=true but no voice assigned
+            // (unless they are a regent or head)
+            const members = choirData.members || [];
+            const realMembers = members.filter((m: any) => {
+                if (!m.hasAccount) return true; // Admin-created dummy profile
+                if (m.voice && m.voice.trim() !== "") return true; // Assigned a voice
+                if (['regent', 'head', 'admin'].includes(m.role)) return true; // Leadership
+                return false; // Unlinked app user
+            });
+            const totalMembers = realMembers.length;
 
             // Read ALL services (inside transaction for consistency)
             const servicesSnap = await tx.get(

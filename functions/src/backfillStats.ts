@@ -67,35 +67,42 @@ function calculateStatsForBackfill(
     const attendanceEntries: AttendanceTrendEntry[] = [];
 
     for (const s of withAttendance) {
-        const absentCount = (s.data.absentMembers || []).length;
-        const present = Math.max(0, totalMembers - absentCount);
+        // Strict attendance: Only count those explicitly marked present
+        const presentCount = (s.data.confirmedMembers || []).length;
+
         const percentage = totalMembers > 0
-            ? Math.round((present / totalMembers) * 100)
+            ? Math.round((presentCount / totalMembers) * 100)
             : 0;
+
         totalAttendancePercent += percentage;
-        attendanceEntries.push({ date: s.data.date, percentage, present, total: totalMembers });
+        attendanceEntries.push({ date: s.data.date, percentage, present: presentCount, total: totalMembers });
     }
 
     const averageAttendance = totalServices > 0
         ? Math.round(totalAttendancePercent / totalServices)
         : 0;
 
-    const attendanceTrend = attendanceEntries.slice(-10);
+    const attendanceTrend = attendanceEntries;
 
     // ── Individual Member Stats (only from services with saved attendance) ──
     const memberStats: Record<string, MemberStatEntry> = {};
 
     for (const s of withAttendance) {
         const present = s.data.confirmedMembers || [];
-        const absent = s.data.absentMembers || [];
 
+        // Those not explicitly marked present are implicitly absent
         for (const pid of present) {
             if (!memberStats[pid]) memberStats[pid] = { presentCount: 0, absentCount: 0, servicesWithRecord: 0, attendanceRate: 100 };
             memberStats[pid].presentCount++;
             memberStats[pid].servicesWithRecord++;
         }
 
-        for (const aid of absent) {
+        // To calculate who was absent, we assume totalMembers is tracked elsewhere,
+        // but since we don't have the full roster here, we only add "absent" stats
+        // for people who explicitly clicked "Absent" or who already exist in the 
+        // memberStats array from other services.
+        const explicitAbsent = s.data.absentMembers || [];
+        for (const aid of explicitAbsent) {
             if (!memberStats[aid]) memberStats[aid] = { presentCount: 0, absentCount: 0, servicesWithRecord: 0, attendanceRate: 100 };
             memberStats[aid].absentCount++;
             memberStats[aid].servicesWithRecord++;
@@ -160,7 +167,16 @@ export const backfillStats = functions.https.onCall(async (_data, context) => {
         try {
             const choirId = choirDoc.id;
             const choirData = choirDoc.data();
-            const totalMembers = (choirData.members || []).length;
+
+            // Determine the true roster count by excluding unlinked app users
+            const members = choirData.members || [];
+            const realMembers = members.filter((m: any) => {
+                if (!m.hasAccount) return true; // Admin-created dummy profile
+                if (m.voice && m.voice.trim() !== "") return true; // Assigned a voice
+                if (['regent', 'head', 'admin'].includes(m.role)) return true; // Leadership
+                return false; // Unlinked app user
+            });
+            const totalMembers = realMembers.length;
 
             // Read all services
             const servicesSnap = await db

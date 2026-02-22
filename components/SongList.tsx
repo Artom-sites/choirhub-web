@@ -39,7 +39,6 @@ export default function SongList({
     regents,
     knownConductors,
     knownCategories,
-    // ...
     isOverlayOpen,
     knownPianists,
     onRefresh,
@@ -56,7 +55,6 @@ export default function SongList({
     const [selectedCategory, setSelectedCategory] = useState<Category | "All">("All");
     const [selectedConductor, setSelectedConductor] = useState<string | "All">("All");
 
-    // Local-to-prop state mapping
     const [localShowAddModal, setLocalShowAddModal] = useState(false);
     const showAddModal = propsShowAddModal ?? localShowAddModal;
     const setShowAddModal = propsSetShowAddModal ?? setLocalShowAddModal;
@@ -68,34 +66,25 @@ export default function SongList({
 
     const effectiveCanAdd = canAddSongs;
 
-    // Sub-tab state: 'repertoire' or 'catalog'
     const [subTab, setSubTab] = useState<'repertoire' | 'catalog'>('repertoire');
-
-    // PDF Viewer state
     const [viewingSong, setViewingSong] = useState<SimpleSong | null>(null);
 
-    // Screen size detection for Virtuoso
-    const [isMobile, setIsMobile] = useState<boolean | null>(null);
+    const [isMobile, setIsMobile] = useState<boolean>(() => {
+        if (typeof window !== 'undefined') return window.innerWidth < 768;
+        return true;
+    });
 
     useEffect(() => {
-        const checkMobile = () => {
-            setIsMobile(window.innerWidth < 768);
-        };
-        checkMobile(); // Initial check
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
         window.addEventListener('resize', checkMobile);
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
-
     useEffect(() => {
-        // Refresh on focus
         const onFocus = () => refreshRepertoire();
         window.addEventListener('focus', onFocus);
         return () => window.removeEventListener('focus', onFocus);
     }, [refreshRepertoire]);
-
-    // Close menu on click outside
-
 
     const filteredSongs = songs.filter(song => {
         const matchesSearch = song.title.toLowerCase().includes(search.toLowerCase());
@@ -105,98 +94,48 @@ export default function SongList({
     });
 
     const uniqueConductors = Array.from(new Set(songs.map(s => s.conductor).filter(Boolean))).sort();
-
     const songsWithPdf = songs.filter(s => s.hasPdf).length;
 
     const handleSongClick = (song: SimpleSong) => {
-        // For now, assuming PDF is handled via direct viewing or logic simplification
-        // In Firestore, we might store PDF URL. For now, let's just open standard view or PDF Viewer.
-        if (song.hasPdf) { // Logic simplified: if hasPdf flag is true, we should have a way to get it
-            // In new DB, we might store PDF Base64 in a subcollection or Storage. 
-            // For this migration, let's assume we view it via ID if we migrate successfully.
-            // However, since we don't have getPdf sync anymore...
-            // We might need to fetch the full song details including PDF if it's large.
-            // For this MVP, let's assume we simply open the song page for now.
+        if (song.hasPdf || effectiveCanAdd) {
             router.push(`/song?id=${song.id}`);
-        } else if (effectiveCanAdd) {
-            router.push(`/song?id=${song.id}`);
-        } else {
-            // Nothing for member to do if no PDF
         }
     };
 
     const handleAddSong = async (song: Omit<SimpleSong, 'id' | 'addedBy' | 'addedAt'>, pdfFile?: File): Promise<void> => {
         if (!userData?.choirId) return;
-
-        // Check for duplicate title
-        // Check for duplicate title
         const normalizedTitle = song.title.trim().toLowerCase();
         const duplicate = songs.find((s: SimpleSong) => s.title.trim().toLowerCase() === normalizedTitle);
-        if (duplicate) {
-            throw new Error(`Пісня "${duplicate.title}" вже існує в репертуарі`);
-        }
+        if (duplicate) throw new Error(`Пісня "${duplicate.title}" вже існує в репертуарі`);
 
-        // Save new conductor if not already known
         const allKnown = [...regents, ...knownConductors];
         if (song.conductor && !allKnown.includes(song.conductor)) {
-            try {
-                await addKnownConductor(userData.choirId, song.conductor);
-            } catch (e) {
-                console.error("Failed to save conductor:", e);
-            }
+            try { await addKnownConductor(userData.choirId, song.conductor); } catch (e) { console.error(e); }
         }
 
-        // 1. Create song first
-        const newSongId = await addSong(userData.choirId, {
-            ...song,
-            addedAt: new Date().toISOString(),
-        });
-
-        // 2. Upload PDF (Blocking)
+        const newSongId = await addSong(userData.choirId, { ...song, addedAt: new Date().toISOString() });
         if (pdfFile) {
-            try {
-                const downloadUrl = await uploadSongPdf(userData.choirId, newSongId, pdfFile);
-                if (downloadUrl) {
-                    // Update song with PDF URL
-                    // Db function addSong doesn't allow updating immediately? 
-                    // Actually addSong creates it. We need updateSong or just trust it.
-                    // uploadSongPdf inside it updates the doc usually? 
-                    // Let's check db.ts if needed, but assuming standard flow.
-                    // Actually uploadSongPdf DOES update the doc with pdfUrl.
-                }
-            } catch (e) {
-                console.error("Failed to upload PDF:", e);
-                alert("Пісню створено, але PDF не завантажився.");
-            }
+            try { await uploadSongPdf(userData.choirId, newSongId, pdfFile); } catch (e) { console.error(e); alert("Пісню створено, але PDF не завантажився."); }
         }
-
-        // 3. Refresh list
         await refreshRepertoire();
         if (onRefresh) onRefresh();
-
-        // Just close modal, the listener handles the UI
         setShowAddModal(false);
     };
 
     const handleEditClick = (e: React.MouseEvent, song: SimpleSong) => {
-        e.preventDefault();
-        e.stopPropagation();
+        e.preventDefault(); e.stopPropagation();
         router.push(`/song?id=${song.id}&edit=1`);
     };
 
     const handleEditSave = async (updates: Partial<SimpleSong>) => {
         if (!userData?.choirId || !editingSong) return;
-
         try {
             await updateSong(userData.choirId, editingSong.id, updates);
             setToast({ message: "Зміни збережено", type: "success" });
             setEditingSong(null);
             await refreshRepertoire();
             if (onRefresh) onRefresh();
-        } catch (e) {
-            console.error("Failed to update song:", e);
-            alert("Помилка оновлення");
-        }
+        } catch (e) { console.error(e); alert("Помилка оновлення"); }
     };
 
     const initiateDelete = (e: React.MouseEvent | null, id: string) => {
@@ -206,104 +145,74 @@ export default function SongList({
 
     const confirmDelete = async () => {
         if (!userData?.choirId || !deletingSongId) return;
-
         try {
-            // Optimistic - listener will handle it technically, but local optimistic update is fine too
-            // setSongsState(prev => prev.filter(s => s.id !== deletingSongId));
             await softDeleteLocalSong(userData.choirId, deletingSongId, userData.id || "unknown");
             setToast({ message: "Пісню видалено", type: "success" });
             await refreshRepertoire();
             if (onRefresh) onRefresh();
         } catch (e) {
-            console.error("Failed to delete song", e);
+            console.error(e);
             setToast({ message: "Помилка при видаленні", type: "error" });
-        } finally {
-            setDeletingSongId(null);
-        }
+        } finally { setDeletingSongId(null); }
     };
-
 
     if (loading) {
         return <div className="flex justify-center py-20"><Loader2 className="animate-spin w-8 h-8 text-white/20" /></div>;
     }
 
     return (
-        <div className="max-w-5xl mx-auto px-4 pt-4 space-y-5">
+        <div className="max-w-5xl mx-auto px-4 pb-32 pt-4 space-y-5">
             {/* Sub-Tab Switcher */}
-            {/* Sub-Tab Switcher */}
-            <div className="flex bg-surface rounded-xl p-1 card-shadow relative isolate">
+            <div className="flex bg-surface rounded-xl p-0.5 border border-border">
                 <button
                     onClick={() => setSubTab('repertoire')}
-                    className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2 relative z-10 ${subTab === 'repertoire'
-                        ? 'text-background'
-                        : 'text-text-secondary hover:text-text-primary'
+                    className={`flex-1 py-2.5 rounded-[10px] text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${subTab === 'repertoire'
+                        ? 'bg-primary text-background'
+                        : 'text-text-secondary'
                         }`}
                 >
-                    {subTab === 'repertoire' && (
-                        <motion.div
-                            layoutId="subtab-pill"
-                            className="absolute inset-0 bg-primary rounded-xl -z-10"
-                            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                        />
-                    )}
                     <Music2 className="w-4 h-4" />
                     Репертуар
                 </button>
                 <button
                     onClick={() => setSubTab('catalog')}
-                    className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2 relative z-10 ${subTab === 'catalog'
-                        ? 'text-background'
-                        : 'text-text-secondary hover:text-text-primary'
+                    className={`flex-1 py-2.5 rounded-[10px] text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${subTab === 'catalog'
+                        ? 'bg-primary text-background'
+                        : 'text-text-secondary'
                         }`}
                 >
-                    {subTab === 'catalog' && (
-                        <motion.div
-                            layoutId="subtab-pill"
-                            className="absolute inset-0 bg-primary rounded-xl -z-10"
-                            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                        />
-                    )}
                     <Library className="w-4 h-4" />
                     Архів МХО
                 </button>
             </div>
-
 
             {/* Catalog View */}
             <div className={subTab === 'catalog' ? 'block h-full' : 'hidden'}>
                 <GlobalArchive
                     isOverlayOpen={isOverlayOpen}
                     onAddSong={canAddSongs ? async (globalSong) => {
-                        // Add song from global archive to choir repertoire
                         if (!userData?.choirId) return;
                         try {
-                            // Get PDF URL from first part if available
                             const pdfUrl = globalSong.parts?.[0]?.pdfUrl || '';
-
                             await addSong(userData.choirId, {
                                 title: globalSong.title,
                                 category: 'Інші' as Category,
-                                conductor: '', // Don't use composer as conductor
+                                conductor: '',
                                 addedAt: new Date().toISOString(),
                                 pdfUrl: pdfUrl,
                                 hasPdf: !!pdfUrl,
-                                parts: globalSong.parts, // Save all parts
+                                parts: globalSong.parts,
                             });
-                            // Refresh songs list
                             await refreshRepertoire();
                             if (onRefresh) onRefresh();
-                        } catch (e) {
-                            console.error(e);
-                        }
+                        } catch (e) { console.error(e); }
                     } : undefined}
                 />
             </div>
 
-            <div
-                className={subTab === 'repertoire' ? 'block' : 'hidden'}
-            >
-                {/* Stats Card - iOS Style */}
-                {/* Stats Header - Reverted to Card Style */}
+            {/* Repertoire Content */}
+            <div className={subTab === 'repertoire' ? 'block' : 'hidden'}>
+                {/* Stats Card */}
                 <div className="bg-surface rounded-2xl p-5 card-shadow">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
@@ -331,10 +240,10 @@ export default function SongList({
                         )}
                     </div>
                 </div>
-                {/* Search & Filter - iOS Style */}
+
+                {/* Search & Filter - Sticky */}
                 <div className="sticky z-20 -mx-4 px-4 pt-3 pb-3 mt-2 bg-background/95 backdrop-blur-xl border-b border-border" style={{ top: 'calc(env(safe-area-inset-top) + 64px)' }}>
                     <div className="flex gap-2">
-                        {/* Search Bar */}
                         <div className="relative flex-1 group">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
                             <input
@@ -353,8 +262,6 @@ export default function SongList({
                                 </button>
                             )}
                         </div>
-
-                        {/* Filter Toggle Button */}
                         <button
                             onClick={() => setShowFilters(!showFilters)}
                             className={`px-4 rounded-xl flex items-center gap-2 transition-all border ${showFilters
@@ -366,7 +273,6 @@ export default function SongList({
                         </button>
                     </div>
 
-                    {/* Filter Panel */}
                     <AnimatePresence>
                         {showFilters && (
                             <motion.div
@@ -380,60 +286,22 @@ export default function SongList({
                                 className="overflow-hidden mt-2"
                             >
                                 <div className="bg-surface rounded-2xl p-4 space-y-4 border border-border/50 shadow-sm">
-
-                                    {/* Categories */}
                                     <div>
                                         <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Тематика</p>
                                         <div className="flex flex-wrap gap-2">
-                                            <button
-                                                onClick={() => setSelectedCategory("All")}
-                                                className={`px-3 py-1.5 rounded-lg text-sm transition-all border ${selectedCategory === "All"
-                                                    ? "bg-primary text-background border-primary"
-                                                    : "bg-surface-highlight text-text-secondary border-transparent hover:border-border"
-                                                    }`}
-                                            >
-                                                Всі
-                                            </button>
+                                            <button onClick={() => setSelectedCategory("All")} className={`px-3 py-1.5 rounded-lg text-sm transition-all border ${selectedCategory === "All" ? "bg-primary text-background border-primary" : "bg-surface-highlight text-text-secondary border-transparent hover:border-border"}`}>Всі</button>
                                             {Array.from(new Set([...CATEGORIES, ...(knownCategories || [])])).map(cat => (
-                                                <button
-                                                    key={cat}
-                                                    onClick={() => setSelectedCategory(cat)}
-                                                    className={`px-3 py-1.5 rounded-lg text-sm transition-all border ${selectedCategory === cat
-                                                        ? "bg-primary text-background border-primary"
-                                                        : "bg-surface-highlight text-text-secondary border-transparent hover:border-border"
-                                                        }`}
-                                                >
-                                                    {cat}
-                                                </button>
+                                                <button key={cat} onClick={() => setSelectedCategory(cat)} className={`px-3 py-1.5 rounded-lg text-sm transition-all border ${selectedCategory === cat ? "bg-primary text-background border-primary" : "bg-surface-highlight text-text-secondary border-transparent hover:border-border"}`}>{cat}</button>
                                             ))}
                                         </div>
                                     </div>
-
-                                    {/* Conductors */}
                                     {uniqueConductors.length > 0 && (
                                         <div>
                                             <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Регент</p>
                                             <div className="flex flex-wrap gap-2">
-                                                <button
-                                                    onClick={() => setSelectedConductor("All")}
-                                                    className={`px-3 py-1.5 rounded-lg text-sm transition-all border ${selectedConductor === "All"
-                                                        ? "bg-primary text-background border-primary"
-                                                        : "bg-surface-highlight text-text-secondary border-transparent hover:border-border"
-                                                        }`}
-                                                >
-                                                    Всі
-                                                </button>
+                                                <button onClick={() => setSelectedConductor("All")} className={`px-3 py-1.5 rounded-lg text-sm transition-all border ${selectedConductor === "All" ? "bg-primary text-background border-primary" : "bg-surface-highlight text-text-secondary border-transparent hover:border-border"}`}>Всі</button>
                                                 {uniqueConductors.map(c => (
-                                                    <button
-                                                        key={c}
-                                                        onClick={() => setSelectedConductor(c || "")}
-                                                        className={`px-3 py-1.5 rounded-lg text-sm transition-all border ${selectedConductor === c
-                                                            ? "bg-primary text-background border-primary"
-                                                            : "bg-surface-highlight text-text-secondary border-transparent hover:border-border"
-                                                            }`}
-                                                    >
-                                                        {c}
-                                                    </button>
+                                                    <button key={c} onClick={() => setSelectedConductor(c || "")} className={`px-3 py-1.5 rounded-lg text-sm transition-all border ${selectedConductor === c ? "bg-primary text-background border-primary" : "bg-surface-highlight text-text-secondary border-transparent hover:border-border"}`}>{c}</button>
                                                 ))}
                                             </div>
                                         </div>
@@ -444,29 +312,22 @@ export default function SongList({
                     </AnimatePresence>
                 </div>
 
-                {/* List View */}
+                {/* Song List */}
                 <div>
                     {filteredSongs.length === 0 ? (
                         <div className="text-center py-24 opacity-40">
-                            <div className="w-16 h-16 bg-surface rounded-full flex items-center justify-center mx-auto mb-4 card-shadow">
+                            <div className="w-16 h-16 bg-surface rounded-full flex items-center justify-center mx-auto mb-4">
                                 <Music2 className="w-8 h-8 text-text-secondary" />
                             </div>
                             <p className="text-text-secondary">Пісень не знайдено</p>
                         </div>
                     ) : (
                         <>
-                            {/* Desktop/Tablet: Swipeable Grid View */}
                             {isMobile === false && (
                                 <div className="flex flex-col h-full">
-                                    {/* Header */}
                                     <div className="grid grid-cols-[1fr_180px_180px_60px] gap-4 py-3 pl-0 pr-4 border-b border-border bg-background text-xs font-bold text-text-secondary uppercase tracking-wider">
-                                        <div>Назва</div>
-                                        <div>Категорія</div>
-                                        <div>Диригент</div>
-                                        <div></div>
+                                        <div>Назва</div><div>Категорія</div><div>Диригент</div><div></div>
                                     </div>
-
-                                    {/* List */}
                                     <Virtuoso
                                         useWindowScroll
                                         initialItemCount={20}
@@ -474,62 +335,20 @@ export default function SongList({
                                         itemContent={(index, song) => {
                                             if (!song) return null;
                                             return (
-                                                <SwipeableCard
-                                                    key={song.id}
-                                                    disabled={!effectiveCanAdd}
-                                                    onDelete={() => initiateDelete(null, song.id)}
-                                                    className="border-b border-border/30"
-                                                    contentClassName="bg-background"
-                                                    disableFullSwipe={true}
-                                                >
-                                                    <div
-                                                        className="grid grid-cols-[1fr_180px_180px_60px] gap-4 py-3 pl-0 pr-4 hover:bg-surface items-center cursor-pointer transition-colors relative z-10"
-                                                        onClick={() => handleSongClick(song)}
-                                                    >
-                                                        {/* Title Column */}
+                                                <SwipeableCard key={song.id} disabled={!effectiveCanAdd} onDelete={() => initiateDelete(null, song.id)} className="border-b border-border/30" contentClassName="bg-background" disableFullSwipe={true}>
+                                                    <div className="grid grid-cols-[1fr_180px_180px_60px] gap-4 py-3 pl-0 pr-4 hover:bg-surface items-center cursor-pointer transition-colors relative z-10" onClick={() => handleSongClick(song)}>
                                                         <div className="flex items-center gap-3 min-w-0">
                                                             <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-text-primary">
-                                                                {song.hasPdf ? (
-                                                                    <Eye className="w-4 h-4 text-background" />
-                                                                ) : (
-                                                                    <FileText className="w-4 h-4 text-background" />
-                                                                )}
+                                                                {song.hasPdf ? <Eye className="w-4 h-4 text-background" /> : <FileText className="w-4 h-4 text-background" />}
                                                             </div>
                                                             <p className="font-semibold text-text-primary truncate">{song.title}</p>
                                                         </div>
-
-                                                        {/* Category Column */}
+                                                        <div className="truncate"><span className="text-sm text-text-secondary">{song.category}</span></div>
                                                         <div className="truncate">
-                                                            <span className="text-sm text-text-secondary">{song.category}</span>
+                                                            {song.conductor ? <div className="flex items-center gap-1.5 text-sm text-primary font-medium"><User className="w-3.5 h-3.5" /><span>{song.conductor}</span></div> : <span className="text-sm text-text-secondary/50">—</span>}
                                                         </div>
-
-                                                        {/* Conductor Column */}
-                                                        <div className="truncate">
-                                                            {song.conductor ? (
-                                                                <div className="flex items-center gap-1.5 text-sm text-primary font-medium">
-                                                                    <User className="w-3.5 h-3.5" />
-                                                                    <span>{song.conductor}</span>
-                                                                </div>
-                                                            ) : (
-                                                                <span className="text-sm text-text-secondary/50">—</span>
-                                                            )}
-                                                        </div>
-
-                                                        {/* Actions Column */}
                                                         <div className="flex justify-end">
-                                                            {effectiveCanAdd && (
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.preventDefault();
-                                                                        e.stopPropagation();
-                                                                        handleEditClick(e, song);
-                                                                    }}
-                                                                    className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface transition-colors"
-                                                                    title="Детальніше"
-                                                                >
-                                                                    <MoreVertical className="w-5 h-5" />
-                                                                </button>
-                                                            )}
+                                                            {effectiveCanAdd && <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleEditClick(e, song); }} className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface transition-colors" title="Детальніше"><MoreVertical className="w-5 h-5" /></button>}
                                                         </div>
                                                     </div>
                                                 </SwipeableCard>
@@ -539,7 +358,6 @@ export default function SongList({
                                 </div>
                             )}
 
-                            {/* Mobile: Simple List View */}
                             {isMobile === true && (
                                 <div>
                                     <Virtuoso
@@ -547,54 +365,22 @@ export default function SongList({
                                         initialItemCount={20}
                                         data={filteredSongs}
                                         itemContent={(index, song) => {
-                                            if (!song) return <div style={{ height: 60 }} />; // Fallback for safety
+                                            if (!song) return <div style={{ height: 60 }} />;
                                             return (
-                                                <SwipeableCard
-                                                    key={song.id}
-                                                    disabled={!effectiveCanAdd}
-                                                    onDelete={() => initiateDelete(null, song.id)}
-                                                    className="border-b border-border/30"
-                                                    contentClassName="bg-background"
-                                                    backgroundClassName="rounded-2xl"
-                                                    disableFullSwipe={!Capacitor.isNativePlatform()}
-                                                >
-                                                    <div
-                                                        onClick={() => handleSongClick(song)}
-                                                        className="flex items-center gap-3 py-3 px-0 bg-background cursor-pointer relative z-10"
-                                                    >
+                                                <SwipeableCard key={song.id} disabled={!effectiveCanAdd} onDelete={() => initiateDelete(null, song.id)} className="border-b border-border/30" contentClassName="bg-background" backgroundClassName="rounded-2xl" disableFullSwipe={!Capacitor.isNativePlatform()}>
+                                                    <div onClick={() => handleSongClick(song)} className="flex items-center gap-3 py-3 px-0 bg-background cursor-pointer relative z-10">
                                                         <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-text-primary">
-                                                            {song.hasPdf ? (
-                                                                <Eye className="w-5 h-5 text-background" />
-                                                            ) : (
-                                                                <FileText className="w-5 h-5 text-background" />
-                                                            )}
+                                                            {song.hasPdf ? <Eye className="w-5 h-5 text-background" /> : <FileText className="w-5 h-5 text-background" />}
                                                         </div>
                                                         <div className="flex-1 min-w-0">
                                                             <p className="font-semibold text-text-primary truncate">{song.title}</p>
                                                             <div className="flex items-center gap-1.5 mt-0.5">
-                                                                {song.conductor && (
-                                                                    <span className="text-xs text-primary font-medium flex items-center gap-1">
-                                                                        <User className="w-3 h-3" />
-                                                                        {song.conductor}
-                                                                    </span>
-                                                                )}
+                                                                {song.conductor && <span className="text-xs text-primary font-medium flex items-center gap-1"><User className="w-3 h-3" />{song.conductor}</span>}
                                                                 {song.conductor && <span className="text-xs text-text-secondary">•</span>}
                                                                 <span className="text-xs text-text-secondary">{song.category}</span>
                                                             </div>
                                                         </div>
-                                                        {effectiveCanAdd && (
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.preventDefault();
-                                                                    e.stopPropagation();
-                                                                    handleEditClick(e, song);
-                                                                }}
-                                                                className="p-2 rounded-lg text-text-secondary hover:text-text-primary active:scale-95 transition-transform"
-                                                                title="Детальніше"
-                                                            >
-                                                                <MoreVertical className="w-5 h-5" />
-                                                            </button>
-                                                        )}
+                                                        {effectiveCanAdd && <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleEditClick(e, song); }} className="p-2 rounded-lg text-text-secondary hover:text-text-primary active:scale-95 transition-transform" title="Детальніше"><MoreVertical className="w-5 h-5" /></button>}
                                                     </div>
                                                 </SwipeableCard>
                                             )
@@ -605,89 +391,27 @@ export default function SongList({
                         </>
                     )}
                 </div>
-
-
-                {/* Add Song Modal */}
-                {
-                    showAddModal && (
-                        <AddSongModal
-                            isOpen={showAddModal}
-                            onClose={() => setShowAddModal(false)}
-                            onAdd={handleAddSong}
-                            regents={regents}
-                            knownConductors={knownConductors}
-                            knownCategories={knownCategories}
-                            knownPianists={knownPianists}
-                        />
-                    )
-                }
-
-                {/* Edit Song Modal */}
-                {
-                    editingSong && (
-                        <EditSongModal
-                            key={editingSong.id}
-                            isOpen={!!editingSong}
-                            onClose={() => setEditingSong(null)}
-                            onSave={handleEditSave}
-                            initialData={editingSong}
-                            regents={regents}
-                            knownConductors={knownConductors}
-                            knownCategories={knownCategories}
-                            knownPianists={knownPianists}
-                        />
-                    )
-                }
-
-                {/* Trash Bin Modal */}
-                {
-                    showTrashBin && (
-                        <>
-                            <TrashBin
-                                choirId={userData?.choirId || ""}
-                                onClose={() => setShowTrashBin(false)}
-                                initialFilter="song"
-                                onRestore={() => {
-                                    refreshRepertoire();
-                                }}
-                            />
-                        </>
-                    )
-                }
-
-                {/* Confirmation Modal */}
-                <ConfirmationModal
-                    isOpen={!!deletingSongId}
-                    onClose={() => setDeletingSongId(null)}
-                    onConfirm={confirmDelete}
-                    title="Видалити пісню?"
-                    message="Цю пісню буде видалено з репертуару назавжди."
-                    confirmLabel="Видалити"
-                    isDestructive
-                />
             </div>
 
+            {/* Modals */}
+            {showAddModal && (
+                <AddSongModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} onAdd={handleAddSong} regents={regents} knownConductors={knownConductors} knownCategories={knownCategories} knownPianists={knownPianists} onSearchArchive={() => { setShowAddModal(false); setSubTab('catalog'); }} />
+            )}
+            {editingSong && (
+                <EditSongModal key={editingSong.id} isOpen={!!editingSong} onClose={() => setEditingSong(null)} onSave={handleEditSave} initialData={editingSong} regents={regents} knownConductors={knownConductors} knownCategories={knownCategories} knownPianists={knownPianists} />
+            )}
+            {showTrashBin && (
+                <TrashBin choirId={userData?.choirId || ""} onClose={() => setShowTrashBin(false)} initialFilter="song" onRestore={() => refreshRepertoire()} />
+            )}
+            <ConfirmationModal isOpen={!!deletingSongId} onClose={() => setDeletingSongId(null)} onConfirm={confirmDelete} title="Видалити пісню?" message="Цю пісню буде видалено з репертуару назавжди." confirmLabel="Видалити" isDestructive />
+            {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-            {
-                toast && (
-                    <Toast
-                        message={toast.message}
-                        type={toast.type}
-                        onClose={() => setToast(null)}
-                    />
-                )
-            }
-            {/* Floating Add Button - Local Only */}
+            {/* Floating Add Button */}
             {canAddSongs && subTab === 'repertoire' && setShowAddModal && !showAddModal && !isOverlayOpen && (
-                <button
-                    onClick={() => setShowAddModal(true)}
-                    className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] md:bottom-24 right-6 w-[56px] h-[56px] bg-primary text-background rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60]"
-                    title="Додати пісню"
-                >
+                <button onClick={() => setShowAddModal(true)} className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] md:bottom-24 right-6 w-[56px] h-[56px] bg-primary text-background rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60]" title="Додати пісню">
                     <Plus className="w-7 h-7" />
                 </button>
             )}
-
         </div>
     );
 }

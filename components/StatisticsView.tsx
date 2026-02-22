@@ -6,6 +6,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { ArrowLeft, Users, Mic2, Calendar, TrendingUp, Music, X, ChevronRight, Loader2, AlertCircle } from "lucide-react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import DetailedStatisticsModal from "./DetailedStatisticsModal";
 
 // ─── Types matching the summary document from Cloud Function ───
 
@@ -22,12 +23,20 @@ interface SongEntry {
     count: number;
 }
 
+interface MemberStatEntry {
+    presentCount: number;
+    absentCount: number;
+    servicesWithRecord: number;
+    attendanceRate: number;
+}
+
 interface StatsSummary {
     totalServices: number;
     averageAttendance: number;
     attendanceTrend: AttendanceTrendEntry[];
     topSongs: SongEntry[];
     allSongs: SongEntry[];
+    memberStats: Record<string, MemberStatEntry>;
     updatedAt: any;
 }
 
@@ -108,13 +117,14 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
 
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
     const [showAllSongs, setShowAllSongs] = useState(false);
+    const [showDetailedStats, setShowDetailedStats] = useState(false);
     const onPieEnter = (_: any, index: number) => setActiveIndex(index);
     const onPieLeave = () => setActiveIndex(null);
 
     return (
         <div className="min-h-screen bg-background text-text-primary">
             {/* Header */}
-            <div className="sticky top-0 z-30 bg-surface/80 backdrop-blur-xl border-b border-border px-4 py-3 pt-[calc(0.75rem+env(safe-area-inset-top))] flex items-center gap-3">
+            <div className="sticky top-0 z-30 bg-surface/80 backdrop-blur-xl border-b border-border px-4 py-3 pt-[calc(0.75rem_+_env(safe-area-inset-top))] flex items-center gap-3">
                 <button
                     onClick={onBack}
                     className="p-2 hover:bg-surface-highlight rounded-xl transition-colors"
@@ -250,56 +260,64 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                                 </div>
                                 Динаміка відвідуваності
                             </h3>
-                            <div className="h-56 w-full -ml-4">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={attendanceData}>
-                                        <defs>
-                                            <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.25} />
-                                                <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                                        <XAxis
-                                            dataKey="date"
-                                            stroke="var(--text-secondary)"
-                                            tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
-                                            tickLine={false}
-                                            axisLine={false}
-                                        />
-                                        <YAxis
-                                            stroke="var(--text-secondary)"
-                                            tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
-                                            tickLine={false}
-                                            axisLine={false}
-                                            unit="%"
-                                            domain={[0, 100]}
-                                        />
-                                        <Tooltip
-                                            contentStyle={{
-                                                backgroundColor: 'var(--surface)',
-                                                borderColor: 'var(--border)',
-                                                borderRadius: '12px',
-                                                color: 'var(--text-primary)',
-                                                fontSize: '13px',
-                                                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
-                                            }}
-                                            formatter={(value: any) => [`${value}%`, 'Явка']}
-                                        />
-                                        <Area
-                                            type="monotone"
-                                            dataKey="percentage"
-                                            stroke="var(--primary)"
-                                            strokeWidth={2.5}
-                                            fillOpacity={1}
-                                            fill="url(#colorPv)"
-                                            dot={{ r: 3, fill: 'var(--primary)', strokeWidth: 0 }}
-                                            activeDot={{ r: 5, fill: 'var(--primary)', strokeWidth: 2, stroke: 'var(--surface)' }}
-                                        />
-                                    </AreaChart>
-                                </ResponsiveContainer>
+                            {/* Make chart scrollable horizontally so it doesn't get compressed */}
+                            <div className="h-56 w-full -ml-4 overflow-x-auto overflow-y-hidden scrollbar-hide">
+                                <div style={{ minWidth: `${Math.max(100, attendanceData.length * 9)}%`, height: '100%' }}>
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart data={attendanceData}>
+                                            <defs>
+                                                <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.25} />
+                                                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                                            <XAxis
+                                                dataKey="date"
+                                                stroke="var(--text-secondary)"
+                                                tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
+                                                tickLine={false}
+                                                axisLine={false}
+                                            />
+                                            <YAxis
+                                                stroke="var(--text-secondary)"
+                                                tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
+                                                tickLine={false}
+                                                axisLine={false}
+                                                unit="%"
+                                                domain={[0, 100]}
+                                            />
+                                            <Tooltip
+                                                contentStyle={{
+                                                    backgroundColor: 'var(--surface)',
+                                                    borderColor: 'var(--border)',
+                                                    borderRadius: '12px',
+                                                    color: 'var(--text-primary)',
+                                                    fontSize: '13px',
+                                                    boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+                                                }}
+                                                formatter={(value: any) => [`${value}%`, 'Явка']}
+                                            />
+                                            <Area
+                                                type="monotone"
+                                                dataKey="percentage"
+                                                stroke="var(--primary)"
+                                                strokeWidth={2.5}
+                                                fillOpacity={1}
+                                                fill="url(#colorPv)"
+                                                dot={{ r: 3, fill: 'var(--primary)', strokeWidth: 0 }}
+                                                activeDot={{ r: 5, fill: 'var(--primary)', strokeWidth: 2, stroke: 'var(--surface)' }}
+                                            />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                </div>
                             </div>
-                            <p className="text-[11px] text-text-secondary text-center mt-1">Останні 10 служінь</p>
+                            <button
+                                onClick={() => setShowDetailedStats(true)}
+                                className="w-full mt-3 py-2.5 bg-surface-highlight/60 hover:bg-surface-highlight rounded-xl text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors flex items-center justify-center gap-1.5"
+                            >
+                                Детальніше
+                            </button>
                         </div>
                     )}
 
@@ -357,7 +375,7 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
             {/* Show All Songs Modal */}
             {showAllSongs && stats && (
                 <div className="fixed inset-0 z-[70] bg-background flex flex-col animate-in slide-in-from-bottom duration-300">
-                    <div className="sticky top-0 z-10 bg-surface/80 backdrop-blur-xl border-b border-border px-4 py-3 pt-[calc(0.75rem+env(safe-area-inset-top))] flex items-center gap-3">
+                    <div className="sticky top-0 z-10 bg-surface/80 backdrop-blur-xl border-b border-border px-4 py-3 pt-[calc(0.75rem_+_env(safe-area-inset-top))] flex items-center gap-3">
                         <button onClick={() => setShowAllSongs(false)} className="p-2 hover:bg-surface-highlight rounded-xl">
                             <X className="w-5 h-5" />
                         </button>
@@ -388,6 +406,16 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {showDetailedStats && stats && (
+                <DetailedStatisticsModal
+                    isOpen={showDetailedStats}
+                    onClose={() => setShowDetailedStats(false)}
+                    choir={choir}
+                    attendanceTrend={stats.attendanceTrend}
+                    memberStats={stats.memberStats || {}}
+                />
             )}
         </div>
     );

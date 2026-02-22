@@ -588,7 +588,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
         (selectedSubCategory ? 1 : 0);
 
     return (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full mt-4">
             {/* Stats Header Card - Matching Repertoire Style */}
             <div className="bg-surface rounded-2xl p-5 card-shadow">
                 <div className="flex items-center justify-between">
@@ -969,7 +969,18 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                         </div>
                                     </div>
 
-                                    {/* Removed + button layout completely for mobile UI cleaner look */}
+                                    {/* Add to repertoire button */}
+                                    {onAddSong && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleAddSongWrapper(song);
+                                            }}
+                                            className="p-2 rounded-lg text-text-secondary hover:text-primary transition-colors flex-shrink-0"
+                                        >
+                                            <Plus className="w-5 h-5" />
+                                        </button>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -1059,7 +1070,15 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                         className="bg-surface rounded-2xl p-5 mx-4 max-w-md w-full shadow-2xl border border-white/10"
                                         onClick={(e) => e.stopPropagation()}
                                     >
-                                        <h3 className="text-lg font-bold text-white mb-2">Додати до репертуару</h3>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <h3 className="text-lg font-bold text-white">Додати до репертуару</h3>
+                                            <button
+                                                onClick={() => setShowAddOptions(false)}
+                                                className="p-1 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-highlight transition-colors"
+                                            >
+                                                <X className="w-5 h-5" />
+                                            </button>
+                                        </div>
                                         <p className="text-text-secondary text-sm mb-5">Оберіть що додати:</p>
                                         <div className="flex flex-col gap-3">
                                             <button onClick={() => handleAddPart(previewSong, previewPartIndex)} className="w-full py-4 px-4 bg-accent/20 border border-accent text-white font-semibold rounded-xl hover:bg-accent/30 transition-colors text-left">
