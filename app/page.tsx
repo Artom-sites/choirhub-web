@@ -29,13 +29,14 @@ import ConfirmationModal from "@/components/ConfirmationModal";
 import {
   Music2, Loader2, Copy, Check, HelpCircle, Mail, Shield,
   LogOut, ChevronLeft, ChevronRight, Home, User, Users, Repeat,
-  PlusCircle, Plus, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor, Scale, Smartphone
+  PlusCircle, Plus, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor, Scale, Smartphone, RefreshCw
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import NotificationPrompt from "@/components/NotificationPrompt";
 import SendNotificationModal from "@/components/SendNotificationModal";
 import { collection as firestoreCollection, addDoc, getDocs, getDoc, where, query, doc, updateDoc, arrayUnion, onSnapshot, orderBy, limit, startAfter, QueryDocumentSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { httpsCallable } from "firebase/functions";
+import { db, functions } from "@/lib/firebase";
 import { useFcmToken } from "@/hooks/useFcmToken";
 import { useServiceWorker } from "@/hooks/useServiceWorker";
 import { useBackgroundCache } from "@/hooks/useBackgroundCache";
@@ -1643,6 +1644,31 @@ function HomePageContent() {
                           </div>
                         ))}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Temporary Backfill Stats Button for SuperAdmin/Admin */}
+                  {(userData?.role === 'head' || userData?.role === 'regent') && choir && (
+                    <div className="pt-4 border-t border-border mt-4">
+                      <button
+                        onClick={async () => {
+                          if (confirm("Перерахувати всю історичну статистику хору? Це може зайняти хвилину.")) {
+                            try {
+                              const backfill = httpsCallable(functions, 'backfillStats');
+                              alert("Запущено перерахунок. Зачекайте...");
+                              const res = await backfill({ choirId: choir.id });
+                              alert("Успішно оновлено! Оновіть сторінку. " + JSON.stringify(res.data));
+                            } catch (e: any) {
+                              alert("Помилка: " + e.message);
+                              console.error(e);
+                            }
+                          }
+                        }}
+                        className="w-full py-3 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 font-bold rounded-xl transition-colors shadow-none text-sm border border-amber-500/20 flex items-center justify-center gap-2"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        Оновити загальну статистику
+                      </button>
                     </div>
                   )}
                 </div>
