@@ -312,28 +312,32 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                                 </div>
                                 Найпопулярніші пісні
                             </h3>
-                            <div className="space-y-2.5">
+                            <div className="space-y-1.5">
                                 {stats.topSongs.slice(0, 10).map((song, idx) => {
                                     const barWidth = (song.count / stats.topSongs[0].count) * 100;
+                                    const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : null;
                                     return (
-                                        <div key={song.songId} className="flex items-center gap-2.5">
-                                            <span className={`text-xs w-5 text-center font-bold tabular-nums ${idx < 3 ? 'text-pink-400' : 'text-text-secondary'}`}>
-                                                {idx + 1}
-                                            </span>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between mb-1">
-                                                    <span className="text-sm font-medium text-text-primary truncate">{song.title}</span>
-                                                    <span className="text-xs font-bold text-text-secondary ml-2 tabular-nums">{song.count}×</span>
-                                                </div>
-                                                <div className="h-1 bg-surface-highlight rounded-full overflow-hidden">
-                                                    <div
-                                                        className="h-full rounded-full transition-all duration-500"
-                                                        style={{
-                                                            width: `${barWidth}%`,
-                                                            background: `linear-gradient(90deg, #ec4899 0%, #a855f7 ${100 - barWidth}%, #a855f7 100%)`
-                                                        }}
-                                                    />
-                                                </div>
+                                        <div key={song.songId} className="relative rounded-xl overflow-hidden">
+                                            {/* Background bar */}
+                                            <div
+                                                className="absolute inset-y-0 left-0 rounded-xl"
+                                                style={{
+                                                    width: `${barWidth}%`,
+                                                    background: idx < 3
+                                                        ? 'linear-gradient(90deg, rgba(236,72,153,0.12), rgba(168,85,247,0.12))'
+                                                        : 'var(--surface-highlight)',
+                                                }}
+                                            />
+                                            <div className="relative flex items-center gap-2 px-3 py-2.5">
+                                                {medal ? (
+                                                    <span className="text-sm w-6 text-center">{medal}</span>
+                                                ) : (
+                                                    <span className="text-xs w-6 text-center font-bold tabular-nums text-text-secondary">
+                                                        {idx + 1}
+                                                    </span>
+                                                )}
+                                                <span className="text-[13px] font-medium text-text-primary truncate flex-1">{song.title}</span>
+                                                <span className={`text-xs font-bold tabular-nums ml-2 ${idx < 3 ? 'text-pink-400' : 'text-text-secondary'}`}>{song.count}×</span>
                                             </div>
                                         </div>
                                     );
