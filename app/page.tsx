@@ -288,7 +288,8 @@ function HomePageContent() {
 
   // Member Card Renderer
   const [memberSearch, setMemberSearch] = useState('');
-  const [memberSort, setMemberSort] = useState<'name' | 'absences'>('name');
+  const [activeLetter, setActiveLetter] = useState<string | null>(null);
+  const membersContainerRef = useRef<HTMLDivElement>(null);
 
   const voiceColors: Record<string, { bg: string; text: string; border: string; dot: string }> = {
     Soprano: { bg: 'bg-pink-500/15', text: 'text-pink-400', border: 'border-pink-500/25', dot: '#f472b6' },
@@ -1890,22 +1891,6 @@ function HomePageContent() {
               </div>
             </div>
 
-            {/* Search */}
-            <div className="relative mb-3">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Пошук по імені..."
-                value={memberSearch}
-                onChange={e => setMemberSearch(e.target.value)}
-                className="w-full pl-10 pr-8 py-2.5 bg-surface border border-border rounded-xl text-sm text-text-primary placeholder:text-text-secondary/40 focus:outline-none focus:border-primary/50 transition-colors"
-              />
-              {memberSearch && (
-                <button onClick={() => setMemberSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-text-secondary hover:text-text-primary">
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
 
             {/* Voice Filters */}
             <div className="flex overflow-x-auto gap-1.5 scrollbar-hide -mx-4 px-4 pb-1 mb-4">
@@ -2004,18 +1989,13 @@ function HomePageContent() {
                 </div>
               ) : (
                 ((() => {
-                  const searchLower = memberSearch.toLowerCase();
                   const filtered = (choir?.members || []).filter(m => {
                     if ((m as any).isDuplicate) return false;
                     if (memberFilter && m.voice !== memberFilter) return false;
-                    if (searchLower && !(m.name || '').toLowerCase().includes(searchLower)) return false;
                     return true;
                   });
 
                   const sortedMembers = [...filtered].sort((a, b) => {
-                    if (memberSort === 'absences') {
-                      return getAbsenceCount(b.id) - getAbsenceCount(a.id);
-                    }
                     const aHasVoice = !!a.voice;
                     const bHasVoice = !!b.voice;
                     if (aHasVoice && !bHasVoice) return -1;
@@ -2027,11 +2007,77 @@ function HomePageContent() {
                     return <div className="text-center py-8 text-text-secondary">Нікого не знайдено</div>;
                   }
 
+                  // Build alphabet from actual member names
+                  const usedLetters = new Set(sortedMembers.map(m => (m.name || '?')[0].toUpperCase()));
+                  const alphabet = Array.from(usedLetters).sort((a, b) => a.localeCompare(b, 'uk'));
+
+                  const scrollToLetter = (letter: string) => {
+                    setActiveLetter(letter);
+                    const el = membersContainerRef.current?.querySelector(`[data-letter="${letter}"]`);
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  };
+
+                  const handleAlphabetTouch = (e: React.TouchEvent) => {
+                    const touch = e.touches[0];
+                    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+                    const letter = el?.getAttribute('data-alpha');
+                    if (letter) scrollToLetter(letter);
+                  };
+
+                  // Group members by first letter
+                  let lastLetter = '';
+
                   return (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
-                      <AnimatePresence mode="popLayout">
-                        {sortedMembers.map((member, index) => renderMemberCard(member, index))}
-                      </AnimatePresence>
+                    <div className="relative">
+                      <div ref={membersContainerRef} className="pr-5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
+                          <AnimatePresence mode="popLayout">
+                            {sortedMembers.map((member, index) => {
+                              const letter = (member.name || '?')[0].toUpperCase();
+                              const showHeader = letter !== lastLetter;
+                              lastLetter = letter;
+                              return (
+                                <div key={member.id} data-letter={showHeader ? letter : undefined} className="contents">
+                                  {showHeader && (
+                                    <div className="col-span-full pt-2 pb-1 first:pt-0">
+                                      <span className="text-[11px] font-bold text-text-secondary/60 uppercase">{letter}</span>
+                                    </div>
+                                  )}
+                                  {renderMemberCard(member, index)}
+                                </div>
+                              );
+                            })}
+                          </AnimatePresence>
+                        </div>
+                      </div>
+
+                      {/* Alphabet sidebar */}
+                      {alphabet.length > 3 && (
+                        <div
+                          className="fixed right-1 top-1/2 -translate-y-1/2 flex flex-col items-center z-40 select-none touch-none"
+                          onTouchMove={handleAlphabetTouch}
+                          onTouchEnd={() => setActiveLetter(null)}
+                        >
+                          {alphabet.map(letter => (
+                            <button
+                              key={letter}
+                              data-alpha={letter}
+                              onClick={() => scrollToLetter(letter)}
+                              className={`w-5 h-[15px] flex items-center justify-center text-[9px] font-bold transition-colors ${activeLetter === letter ? 'text-primary scale-125' : 'text-text-secondary/60'
+                                }`}
+                            >
+                              {letter}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Active letter popup */}
+                      {activeLetter && (
+                        <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-surface-highlight/90 backdrop-blur-xl rounded-2xl flex items-center justify-center z-50 pointer-events-none">
+                          <span className="text-3xl font-bold text-text-primary">{activeLetter}</span>
+                        </div>
+                      )}
                     </div>
                   );
                 })())
