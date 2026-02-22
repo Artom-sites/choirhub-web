@@ -1649,30 +1649,7 @@ function HomePageContent() {
                     </div>
                   )}
 
-                  {/* Temporary Backfill Stats Button for SuperAdmin/Admin */}
-                  {(userData?.role === 'head' || userData?.role === 'regent') && choir && (
-                    <div className="pt-4 border-t border-border mt-4">
-                      <button
-                        onClick={async () => {
-                          if (confirm("Перерахувати всю історичну статистику хору? Це може зайняти хвилину.")) {
-                            try {
-                              const backfill = httpsCallable(functions, 'backfillStats');
-                              alert("Запущено перерахунок. Зачекайте...");
-                              const res = await backfill({ choirId: choir.id });
-                              alert("Успішно оновлено! Оновіть сторінку. " + JSON.stringify(res.data));
-                            } catch (e: any) {
-                              alert("Помилка: " + e.message);
-                              console.error(e);
-                            }
-                          }
-                        }}
-                        className="w-full py-3 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 font-bold rounded-xl transition-colors shadow-none text-sm border border-amber-500/20 flex items-center justify-center gap-2"
-                      >
-                        <RefreshCw className="w-4 h-4" />
-                        Оновити загальну статистику
-                      </button>
-                    </div>
-                  )}
+
                 </div>
               </div>
 
