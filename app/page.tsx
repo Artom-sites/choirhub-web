@@ -2028,56 +2028,26 @@ function HomePageContent() {
                   let lastLetter = '';
 
                   return (
-                    <div className="relative">
-                      <div ref={membersContainerRef} className="pr-5">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
-                          <AnimatePresence mode="popLayout">
-                            {sortedMembers.map((member, index) => {
-                              const letter = (member.name || '?')[0].toUpperCase();
-                              const showHeader = letter !== lastLetter;
-                              lastLetter = letter;
-                              return (
-                                <div key={member.id} data-letter={showHeader ? letter : undefined} className="contents">
-                                  {showHeader && (
-                                    <div className="col-span-full pt-2 pb-1 first:pt-0">
-                                      <span className="text-[11px] font-bold text-text-secondary/60 uppercase">{letter}</span>
-                                    </div>
-                                  )}
-                                  {renderMemberCard(member, index)}
-                                </div>
-                              );
-                            })}
-                          </AnimatePresence>
-                        </div>
+                    <div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
+                        <AnimatePresence mode="popLayout">
+                          {sortedMembers.map((member, index) => {
+                            const letter = (member.name || '?')[0].toUpperCase();
+                            const showHeader = letter !== lastLetter;
+                            lastLetter = letter;
+                            return (
+                              <div key={member.id} className="contents">
+                                {showHeader && (
+                                  <div className="col-span-full pt-2 pb-1 first:pt-0">
+                                    <span className="text-[11px] font-bold text-text-secondary/60 uppercase">{letter}</span>
+                                  </div>
+                                )}
+                                {renderMemberCard(member, index)}
+                              </div>
+                            );
+                          })}
+                        </AnimatePresence>
                       </div>
-
-                      {/* Alphabet sidebar */}
-                      {alphabet.length > 3 && (
-                        <div
-                          className="fixed right-1 top-1/2 -translate-y-1/2 flex flex-col items-center z-40 select-none touch-none"
-                          onTouchMove={handleAlphabetTouch}
-                          onTouchEnd={() => setActiveLetter(null)}
-                        >
-                          {alphabet.map(letter => (
-                            <button
-                              key={letter}
-                              data-alpha={letter}
-                              onClick={() => scrollToLetter(letter)}
-                              className={`w-5 h-[15px] flex items-center justify-center text-[9px] font-bold transition-colors ${activeLetter === letter ? 'text-primary scale-125' : 'text-text-secondary/60'
-                                }`}
-                            >
-                              {letter}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Active letter popup */}
-                      {activeLetter && (
-                        <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-surface-highlight/90 backdrop-blur-xl rounded-2xl flex items-center justify-center z-50 pointer-events-none">
-                          <span className="text-3xl font-bold text-text-primary">{activeLetter}</span>
-                        </div>
-                      )}
                     </div>
                   );
                 })())
