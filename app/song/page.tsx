@@ -801,7 +801,7 @@ function SongContent() {
                         </button>
                     </div>
                     <div className="flex-1 overflow-hidden px-4">
-                        <GlobalArchive onAddSong={handleLinkArchive} />
+                        <GlobalArchive onAddSong={handleLinkArchive} initialSearchQuery={song?.title || ""} />
                     </div>
                 </div>
             )}
