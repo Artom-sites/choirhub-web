@@ -2024,30 +2024,11 @@ function HomePageContent() {
                     if (letter) scrollToLetter(letter);
                   };
 
-                  // Group members by first letter
-                  let lastLetter = '';
-
                   return (
-                    <div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
-                        <AnimatePresence mode="popLayout">
-                          {sortedMembers.map((member, index) => {
-                            const letter = (member.name || '?')[0].toUpperCase();
-                            const showHeader = letter !== lastLetter;
-                            lastLetter = letter;
-                            return (
-                              <div key={member.id} className="contents">
-                                {showHeader && (
-                                  <div className="col-span-full pt-2 pb-1 first:pt-0">
-                                    <span className="text-[11px] font-bold text-text-secondary/60 uppercase">{letter}</span>
-                                  </div>
-                                )}
-                                {renderMemberCard(member, index)}
-                              </div>
-                            );
-                          })}
-                        </AnimatePresence>
-                      </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
+                      <AnimatePresence mode="popLayout">
+                        {sortedMembers.map((member, index) => renderMemberCard(member, index))}
+                      </AnimatePresence>
                     </div>
                   );
                 })())
