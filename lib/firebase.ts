@@ -2,7 +2,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, connectFirestoreEmulator } from "firebase/firestore";
-import { initializeAuth, getAuth, indexedDBLocalPersistence, browserLocalPersistence } from "firebase/auth";
+import { initializeAuth, getAuth, indexedDBLocalPersistence, browserLocalPersistence, Auth } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 import { getMessaging, getToken, onMessage, isSupported as isMessagingSupported, Messaging } from "firebase/messaging";
 import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check"; // App Check Import
@@ -29,7 +29,7 @@ const db = initializeFirestore(app, {
 });
 // Initialize Auth with explicit persistence for iOS Safari reliability
 // indexedDBLocalPersistence = primary (best multi-tab), browserLocalPersistence = fallback (survives Safari ITP)
-let auth;
+let auth: Auth;
 try {
     auth = initializeAuth(app, {
         persistence: [indexedDBLocalPersistence, browserLocalPersistence]
