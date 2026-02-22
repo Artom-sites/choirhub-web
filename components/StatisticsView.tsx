@@ -209,17 +209,11 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                                     </PieChart>
                                 </ResponsiveContainer>
                                 {/* Center */}
-                                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                     {activeIndex !== null && voiceData[activeIndex] ? (
-                                        <>
-                                            <span className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">{voiceData[activeIndex].name}</span>
-                                            <span className="text-2xl font-bold text-text-primary leading-none mt-0.5">{voiceData[activeIndex].value}</span>
-                                        </>
+                                        <span className="text-2xl font-bold text-text-primary">{voiceData[activeIndex].value}</span>
                                     ) : (
-                                        <>
-                                            <span className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">Всього</span>
-                                            <span className="text-2xl font-bold text-text-primary leading-none mt-0.5">{voicedMembers}</span>
-                                        </>
+                                        <span className="text-2xl font-bold text-text-primary">{voicedMembers}</span>
                                     )}
                                 </div>
                             </div>
