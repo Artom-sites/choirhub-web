@@ -638,7 +638,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
 
             {!isModerationMode ? (
                 <>
-                    <div className="sticky z-10 -mx-4 px-4 pb-3 mt-2 bg-background/95 backdrop-blur-lg border-b border-border" style={{ top: 'calc(env(safe-area-inset-top) + 64px)' }}>
+                    <div className="sticky z-10 -mx-4 px-4 pt-3 pb-3 mt-2 bg-background/95 backdrop-blur-lg border-b border-border" style={{ top: isOverlayOpen ? '0px' : 'calc(env(safe-area-inset-top) + 64px)' }}>
                         <div className="flex gap-2">
                             <div className="relative flex-1 group">
                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
@@ -971,21 +971,20 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
 
                                     {/* Removed + button layout completely for mobile UI cleaner look */}
                                 </div>
-                                </div>
                             ))}
-                    </div>
+                        </div>
 
-                {/* Infinite Scroll Trigger */}
-                {filteredSongs.length > displayedCount && (
-                    <div ref={loaderRef} className="py-8 flex justify-center">
-                        <Loader2 className="w-6 h-6 animate-spin text-text-secondary" />
-                    </div>
+                        {/* Infinite Scroll Trigger */}
+                        {filteredSongs.length > displayedCount && (
+                            <div ref={loaderRef} className="py-8 flex justify-center">
+                                <Loader2 className="w-6 h-6 animate-spin text-text-secondary" />
+                            </div>
+                        )}
+                    </>
                 )}
-            </>
-                )}
-        </div>
+            </div>
 
-            {/* Modals and Overlays */ }
+            {/* Modals and Overlays */}
             <AnimatePresence>
                 {previewSong && (
                     <motion.div
@@ -1090,26 +1089,26 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                 cancelLabel="Скасувати"
             />
 
-    {
-        showSubmitModal && (
-            <SubmitSongModal
-                onClose={() => setShowSubmitModal(false)}
-                onSuccess={() => {
-                    // Clear cache so new songs appear on next visit
-                    localStorage.removeItem('global_songs_cache');
-                    localStorage.removeItem('global_songs_cache_time');
-                    setAlertModal({
-                        isOpen: true,
-                        title: 'Успішно!',
-                        message: 'Заявка надіслана! Дякуємо за внесок.',
-                        variant: 'success'
-                    });
-                }}
-            />
-        )
-    }
+            {
+                showSubmitModal && (
+                    <SubmitSongModal
+                        onClose={() => setShowSubmitModal(false)}
+                        onSuccess={() => {
+                            // Clear cache so new songs appear on next visit
+                            localStorage.removeItem('global_songs_cache');
+                            localStorage.removeItem('global_songs_cache_time');
+                            setAlertModal({
+                                isOpen: true,
+                                title: 'Успішно!',
+                                message: 'Заявка надіслана! Дякуємо за внесок.',
+                                variant: 'success'
+                            });
+                        }}
+                    />
+                )
+            }
 
-    {/* Moderation Modals */ }
+            {/* Moderation Modals */}
             <ConfirmModal
                 isOpen={approveModal.isOpen}
                 onClose={() => setApproveModal({ ...approveModal, isOpen: false })}
@@ -1172,33 +1171,33 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                 loading={rebuildIndexModal.loading}
             />
 
-    {
-        toastMessage && (
-            <motion.div
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 50 }}
-                className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[60] bg-zinc-900/90 backdrop-blur-md text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/10 max-w-[90vw]"
-            >
-                <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
-                    <Check className="w-5 h-5 text-green-400" />
-                </div>
-                <span className="font-medium text-sm leading-snug">{toastMessage}</span>
-            </motion.div>
-        )
-    }
-    {/* Floating Add Button */ }
-    {
-        canSubmit && !isModerationMode && !showSubmitModal && !isOverlayOpen && (
-            <button
-                onClick={() => setShowSubmitModal(true)}
-                className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] md:bottom-24 right-6 w-[56px] h-[56px] bg-primary text-background rounded-full shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40"
-                title="Запропонувати пісню"
-            >
-                <Plus className="w-7 h-7" />
-            </button>
-        )
-    }
+            {
+                toastMessage && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 50 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 50 }}
+                        className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[60] bg-zinc-900/90 backdrop-blur-md text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/10 max-w-[90vw]"
+                    >
+                        <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                            <Check className="w-5 h-5 text-green-400" />
+                        </div>
+                        <span className="font-medium text-sm leading-snug">{toastMessage}</span>
+                    </motion.div>
+                )
+            }
+            {/* Floating Add Button */}
+            {
+                canSubmit && !isModerationMode && !showSubmitModal && !isOverlayOpen && (
+                    <button
+                        onClick={() => setShowSubmitModal(true)}
+                        className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] md:bottom-24 right-6 w-[56px] h-[56px] bg-primary text-background rounded-full shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40"
+                        title="Запропонувати пісню"
+                    >
+                        <Plus className="w-7 h-7" />
+                    </button>
+                )
+            }
         </div >
     );
 }
