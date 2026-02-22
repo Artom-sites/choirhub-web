@@ -1,15 +1,26 @@
 "use client";
 
-import { X, Calendar, TrendingDown, Check, AlertCircle, Loader2 } from "lucide-react";
+import { X, Calendar, Check, AlertCircle, Loader2 } from "lucide-react";
 import { ChoirMember, Service, StatsSummary } from "@/types";
 import { useEffect, useState, useMemo } from "react";
 import { getMemberAbsences } from "@/lib/db";
 
 type Period = '30' | '90' | 'all';
 
+const voiceLabels: Record<string, string> = {
+    Soprano: 'Сопрано', Alto: 'Альт', Tenor: 'Тенор', Bass: 'Бас',
+};
+
+const voiceColors: Record<string, { bg: string; text: string }> = {
+    Soprano: { bg: 'bg-pink-500/15', text: 'text-pink-400' },
+    Alto: { bg: 'bg-purple-500/15', text: 'text-purple-400' },
+    Tenor: { bg: 'bg-blue-500/15', text: 'text-blue-400' },
+    Bass: { bg: 'bg-green-500/15', text: 'text-green-400' },
+};
+
 interface Props {
     member: ChoirMember;
-    services: Service[];       // Legacy, kept for compatibility if needed elsewhere
+    services: Service[];
     choirId: string;
     onClose: () => void;
     globalStats?: StatsSummary | null;
@@ -31,15 +42,10 @@ export default function MemberStatsModal({ member, choirId, onClose, globalStats
         });
     }, [choirId, member.id]);
 
-    // O(1) lookup from the new backend-generated summary document
     const stats = globalStats?.memberStats?.[member.id] || {
-        attendanceRate: 100,
-        presentCount: 0,
-        absentCount: 0,
-        servicesWithRecord: 0
+        attendanceRate: 100, presentCount: 0, absentCount: 0, servicesWithRecord: 0
     };
 
-    // Filter absences by period
     const filteredAbsences = useMemo(() => {
         if (period === 'all') return absences;
         const days = parseInt(period);
@@ -58,67 +64,90 @@ export default function MemberStatsModal({ member, choirId, onClose, globalStats
         });
     };
 
-    const periodLabels: Record<Period, string> = {
-        '30': '30 днів',
-        '90': '90 днів',
-        'all': 'Весь час',
-    };
+    const periodLabels: Record<Period, string> = { '30': '30 дн', '90': '90 дн', 'all': 'Весь час' };
+    const vc = voiceColors[member.voice || ''];
+    const attendanceColor = stats.attendanceRate >= 80 ? '#4ade80' : stats.attendanceRate >= 50 ? '#fbbf24' : '#f87171';
 
     return (
         <div
-            className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+            className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in duration-200"
             onClick={onClose}
         >
             <div
-                className="bg-surface w-full max-w-sm rounded-3xl border border-border p-6 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[80vh] overflow-hidden flex flex-col"
+                className="bg-surface w-full max-w-sm rounded-t-3xl sm:rounded-3xl border border-border border-b-0 sm:border-b p-5 shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200 max-h-[85vh] overflow-hidden flex flex-col"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-5">
                     <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-full bg-surface-highlight flex items-center justify-center text-text-primary font-bold text-lg">
-                            {member.name?.[0]?.toUpperCase() || "?"}
+                        <div className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm ${vc ? `${vc.bg} ${vc.text}` : 'bg-surface-highlight text-text-primary'
+                            }`}>
+                            {member.photoURL ? (
+                                <img src={member.photoURL} alt={member.name} className="w-full h-full object-cover rounded-full" />
+                            ) : (
+                                member.voice ? member.voice[0] : (member.name?.[0]?.toUpperCase() || '?')
+                            )}
                         </div>
                         <div>
-                            <h3 className="text-lg font-bold text-text-primary">{member.name}</h3>
-                            <p className="text-sm text-text-secondary">
-                                {member.voice || 'Без голосу'} • {member.role === 'regent' ? 'Регент' : member.role === 'head' ? 'Керівник' : 'Хорист'}
+                            <h3 className="text-base font-bold text-text-primary">{member.name}</h3>
+                            <p className="text-xs text-text-secondary">
+                                {voiceLabels[member.voice || ''] || 'Без голосу'} • {member.role === 'regent' ? 'Регент' : member.role === 'head' ? 'Керівник' : 'Хорист'}
                             </p>
                         </div>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="p-2 hover:bg-surface-highlight rounded-full transition-colors"
-                    >
+                    <button onClick={onClose} className="p-2 hover:bg-surface-highlight rounded-full transition-colors -mr-1">
                         <X className="w-5 h-5 text-text-secondary" />
                     </button>
                 </div>
 
-                {/* Stats Cards */}
-                <div className="grid grid-cols-3 gap-2 mb-4">
-                    <div className="p-3 bg-surface-highlight rounded-2xl text-center">
-                        <div className="text-2xl font-bold text-primary mb-1">{stats.attendanceRate}%</div>
-                        <div className="text-[10px] text-text-secondary uppercase tracking-wider">Явка за весь час</div>
+                {/* Attendance Ring + Stats */}
+                <div className="flex items-center gap-4 mb-4 p-3 bg-surface-highlight/50 rounded-2xl">
+                    {/* Ring */}
+                    <div className="relative w-16 h-16 flex-shrink-0">
+                        <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                            <circle cx="18" cy="18" r="15" fill="none" stroke="var(--surface-highlight)" strokeWidth="3" />
+                            <circle
+                                cx="18" cy="18" r="15" fill="none"
+                                stroke={attendanceColor}
+                                strokeWidth="3"
+                                strokeLinecap="round"
+                                strokeDasharray={`${stats.attendanceRate * 0.942} 100`}
+                            />
+                        </svg>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-sm font-bold text-text-primary">{stats.attendanceRate}%</span>
+                        </div>
                     </div>
-                    <div className="p-3 bg-surface-highlight rounded-2xl text-center">
-                        <div className="text-2xl font-bold text-green-400 mb-1">{stats.presentCount}</div>
-                        <div className="text-[10px] text-text-secondary uppercase tracking-wider">Присутній</div>
-                    </div>
-                    <div className="p-3 bg-surface-highlight rounded-2xl text-center">
-                        <div className="text-2xl font-bold text-orange-400 mb-1">{stats.absentCount}</div>
-                        <div className="text-[10px] text-text-secondary uppercase tracking-wider">Пропусків</div>
+                    {/* Numbers */}
+                    <div className="flex-1 grid grid-cols-2 gap-x-4 gap-y-1">
+                        <div>
+                            <span className="text-lg font-bold text-green-400">{stats.presentCount}</span>
+                            <p className="text-[10px] text-text-secondary uppercase tracking-wider">Присутній</p>
+                        </div>
+                        <div>
+                            <span className="text-lg font-bold text-orange-400">{stats.absentCount}</span>
+                            <p className="text-[10px] text-text-secondary uppercase tracking-wider">Пропусків</p>
+                        </div>
+                        <div className="col-span-2">
+                            <span className="text-[11px] text-text-secondary">
+                                {stats.servicesWithRecord > 0
+                                    ? `${stats.servicesWithRecord} з ${globalStats?.totalServices || 0} служінь`
+                                    : 'Немає даних'
+                                }
+                            </span>
+                        </div>
                     </div>
                 </div>
 
                 {/* Period Filter */}
-                <div className="flex gap-1 p-1 bg-surface-highlight rounded-xl mb-4">
+                <div className="flex gap-1 p-0.5 bg-surface-highlight rounded-lg mb-3">
                     {(['30', '90', 'all'] as Period[]).map(p => (
                         <button
                             key={p}
                             onClick={() => setPeriod(p)}
-                            className={`flex-1 py-2 px-2 rounded-lg text-xs font-bold transition-all ${period === p
-                                    ? 'bg-primary text-background shadow-sm'
-                                    : 'text-text-secondary hover:text-text-primary'
+                            className={`flex-1 py-1.5 rounded-md text-[11px] font-bold transition-all ${period === p
+                                ? 'bg-primary text-background shadow-sm'
+                                : 'text-text-secondary hover:text-text-primary'
                                 }`}
                         >
                             {periodLabels[p]}
@@ -127,29 +156,22 @@ export default function MemberStatsModal({ member, choirId, onClose, globalStats
                 </div>
 
                 {/* Absences List */}
-                <div className="flex-1 overflow-y-auto">
-                    <h4 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-3 flex items-center gap-2">
-                        <TrendingDown className="w-4 h-4" />
-                        Пропуски {period !== 'all' && `за ${periodLabels[period]}`}
-                    </h4>
-
+                <div className="flex-1 overflow-y-auto -mx-1 px-1">
                     {loadingAbsences ? (
                         <div className="flex justify-center py-8">
-                            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                            <Loader2 className="w-6 h-6 text-primary animate-spin" />
                         </div>
                     ) : filteredAbsences.length > 0 ? (
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                             {filteredAbsences.map(absence => (
                                 <div
                                     key={absence.id}
-                                    className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-xl flex items-center gap-3"
+                                    className="flex items-center gap-3 py-2 px-2.5 rounded-xl hover:bg-surface-highlight/50 transition-colors"
                                 >
-                                    <div className="w-8 h-8 bg-orange-500/20 rounded-full flex items-center justify-center">
-                                        <AlertCircle className="w-4 h-4 text-orange-400" />
-                                    </div>
+                                    <div className="w-1 h-8 bg-orange-400/40 rounded-full flex-shrink-0" />
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-text-primary font-medium truncate">{absence.title}</p>
-                                        <p className="text-xs text-text-secondary flex items-center gap-1">
+                                        <p className="text-[13px] text-text-primary font-medium truncate">{absence.title}</p>
+                                        <p className="text-[11px] text-text-secondary flex items-center gap-1">
                                             <Calendar className="w-3 h-3" />
                                             {formatDate(absence.date)}
                                         </p>
@@ -158,32 +180,27 @@ export default function MemberStatsModal({ member, choirId, onClose, globalStats
                             ))}
                         </div>
                     ) : stats.absentCount === 0 ? (
-                        <div className="text-center py-8 text-text-secondary">
-                            <Check className="w-12 h-12 mx-auto mb-3 text-primary opacity-50" />
-                            <p className="font-medium">Чудова відвідуваність!</p>
-                            <p className="text-sm mt-1 opacity-70">Немає жодних пропусків</p>
+                        <div className="text-center py-6 text-text-secondary">
+                            <Check className="w-10 h-10 mx-auto mb-2 text-green-400/50" />
+                            <p className="text-sm font-medium">Чудова відвідуваність!</p>
+                            <p className="text-xs mt-0.5 opacity-60">Немає жодних пропусків</p>
                         </div>
                     ) : absences.length > 0 && filteredAbsences.length === 0 ? (
-                        <div className="text-center py-8 text-text-secondary">
-                            <Check className="w-12 h-12 mx-auto mb-3 text-primary opacity-50" />
-                            <p className="font-medium">Немає пропусків за цей період</p>
+                        <div className="text-center py-6 text-text-secondary">
+                            <Check className="w-10 h-10 mx-auto mb-2 text-primary/50" />
+                            <p className="text-sm font-medium">Немає пропусків за цей період</p>
                         </div>
                     ) : (
-                        <div className="text-center py-8 text-text-secondary">
-                            <AlertCircle className="w-12 h-12 mx-auto mb-3 text-orange-400 opacity-50" />
-                            <p className="font-medium">{stats.absentCount} пропусків зафіксовано</p>
-                            <p className="text-sm mt-1 opacity-70">Деталі завантажуються...</p>
+                        <div className="text-center py-6 text-text-secondary">
+                            <AlertCircle className="w-10 h-10 mx-auto mb-2 text-orange-400/50" />
+                            <p className="text-sm font-medium">{stats.absentCount} пропусків зафіксовано</p>
+                            <p className="text-xs mt-0.5 opacity-60">Деталі завантажуються...</p>
                         </div>
                     )}
                 </div>
 
-                {/* Footer info */}
-                <div className="mt-4 pt-4 border-t border-border text-center text-xs text-text-secondary">
-                    {stats.servicesWithRecord > 0
-                        ? `${stats.servicesWithRecord} з ${globalStats?.totalServices || 0} служінь з відміткою`
-                        : 'Немає даних за обраний період'
-                    }
-                </div>
+                {/* Safe area spacer for mobile bottom sheet */}
+                <div className="h-2 sm:h-0 flex-shrink-0" />
             </div>
         </div>
     );
