@@ -29,7 +29,7 @@ import ConfirmationModal from "@/components/ConfirmationModal";
 import {
   Music2, Loader2, Copy, Check, HelpCircle, Mail, Shield,
   LogOut, ChevronLeft, ChevronRight, Home, User, Users, Repeat,
-  PlusCircle, Plus, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor, Scale, Smartphone, RefreshCw, Search, ArrowUpDown
+  PlusCircle, Plus, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor, Scale, Smartphone, RefreshCw, Search, ArrowUpDown, Palette
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import NotificationPrompt from "@/components/NotificationPrompt";
@@ -1554,21 +1554,30 @@ function HomePageContent() {
             <div className="max-w-xl mx-auto w-full h-full flex flex-col p-6 overflow-y-auto">
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-3xl font-bold text-text-primary tracking-tight">Акаунт</h2>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setShowNotificationModal(true)}
-                    className="p-2 rounded-full hover:bg-surface-highlight transition-colors relative"
-                    title="Сповіщення"
-                  >
-                    {unreadNotifications > 0 ? (
-                      <>
-                        <Bell className="w-5 h-5 text-text-secondary" />
-                        <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-green-500 border-2 border-background rounded-full" />
-                      </>
-                    ) : (
-                      <Bell className="w-5 h-5 text-text-secondary" />
-                    )}
-                  </button>
+
+                {/* Compact Theme Toggle */}
+                <div className="flex items-center bg-surface border border-border rounded-full p-0.5 shadow-sm mt-[-4px]">
+                  {[
+                    { id: 'light', icon: Sun, label: 'Світла' },
+                    { id: 'dark', icon: Moon, label: 'Темна' },
+                    { id: 'system', icon: Monitor, label: 'Авто' },
+                  ].map((t) => {
+                    const isActive = theme === t.id;
+                    const Icon = t.icon;
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => setTheme(t.id as 'light' | 'dark' | 'system')}
+                        className={`p-2 rounded-full transition-all duration-200 ${isActive
+                            ? 'bg-primary text-background shadow-sm'
+                            : 'text-text-secondary hover:text-text-primary hover:bg-surface-highlight'
+                          }`}
+                        title={t.label}
+                      >
+                        <Icon className="w-4 h-4" />
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1597,8 +1606,6 @@ function HomePageContent() {
                     <div className="mt-2">{getRoleBadge(userData?.role || 'member')}</div>
                   </div>
                 </div>
-
-
 
                 {/* Management Block (Choir & Codes) */}
                 <div className="bg-surface rounded-2xl p-4 card-shadow">
@@ -1807,42 +1814,36 @@ function HomePageContent() {
             </div>
           </div>
 
-          {/* Center: Theme Toggle (flex centered) */}
-          <div className="flex-1 flex justify-center">
-            <div className="flex items-center bg-surface-highlight border border-border rounded-full p-0.5">
-              <button
-                onClick={() => setTheme('light')}
-                className={`p-2 rounded-full transition-all duration-200 ${theme === 'light' ? 'bg-primary text-background shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
-                title="Світла тема"
-              >
-                <Sun className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setTheme('dark')}
-                className={`p-2 rounded-full transition-all duration-200 ${theme === 'dark' ? 'bg-primary text-background shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
-                title="Темна тема"
-              >
-                <Moon className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setTheme('system')}
-                className={`p-2 rounded-full transition-all duration-200 ${theme === 'system' ? 'bg-primary text-background shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
-                title="Як на пристрої"
-              >
-                <Monitor className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+          <div className="flex-1"></div>
 
-          {/* Right: Account Button */}
-          <button
-            onClick={() => setShowAccount(true)}
-            className="w-10 h-10 shrink-0 rounded-full border border-border hover:border-accent/50 transition-colors overflow-hidden"
-          >
-            <div className="w-full h-full bg-primary text-background flex items-center justify-center font-bold text-sm">
-              <span>{userData?.name?.[0]?.toUpperCase() || "U"}</span>
-            </div>
-          </button>
+          {/* Right: Actions */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Notification Bell */}
+            <button
+              onClick={() => setShowNotificationModal(true)}
+              className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-surface-highlight transition-colors relative"
+              title="Сповіщення"
+            >
+              {unreadNotifications > 0 ? (
+                <>
+                  <Bell className="w-5 h-5 text-text-primary" />
+                  <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-green-500 border-2 border-background rounded-full" />
+                </>
+              ) : (
+                <Bell className="w-5 h-5 text-text-secondary hover:text-text-primary" />
+              )}
+            </button>
+
+            {/* Account Button */}
+            <button
+              onClick={() => setShowAccount(true)}
+              className="w-10 h-10 shrink-0 rounded-full border border-border hover:border-accent/50 transition-colors overflow-hidden"
+            >
+              <div className="w-full h-full bg-primary text-background flex items-center justify-center font-bold text-sm">
+                <span>{userData?.name?.[0]?.toUpperCase() || "U"}</span>
+              </div>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -2327,6 +2328,7 @@ function HomePageContent() {
         isOpen={showNotificationModal}
         onClose={() => setShowNotificationModal(false)}
         canDelete={canEdit || (userData?.permissions?.includes('notify_members') ?? false)}
+        services={services}
         permissionStatus={permissionStatus}
         requestPermission={() => requestPermission("NotificationsModal")}
         unsubscribe={() => unsubscribe("NotificationsModal")}

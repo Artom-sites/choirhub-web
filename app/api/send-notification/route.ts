@@ -6,7 +6,7 @@ import { getMessaging } from "firebase-admin/messaging";
 
 export async function POST(req: NextRequest) {
     try {
-        const { title, body, choirId } = await req.json();
+        const { title = "", body, choirId, serviceId, serviceName, enableVoting } = await req.json();
         const authHeader = req.headers.get("Authorization");
 
         if (!authHeader?.startsWith("Bearer ")) {
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
         console.log(`[Notification] Sent! Success: ${response.successCount}, Failed: ${response.failureCount}`);
 
         // 5. Save Notification to Firestore (for history/unread status)
-        await db.collection(`choirs/${choirId}/notifications`).add({
+        const notificationData: any = {
             title,
             body,
             choirId,
@@ -112,7 +112,15 @@ export async function POST(req: NextRequest) {
             senderName: userData?.name || "Regent",
             createdAt: new Date().toISOString(),
             readBy: [uid]
-        });
+        };
+
+        if (enableVoting && serviceId && serviceName) {
+            notificationData.serviceId = serviceId;
+            notificationData.serviceName = serviceName;
+            notificationData.enableVoting = enableVoting;
+        }
+
+        await db.collection(`choirs/${choirId}/notifications`).add(notificationData);
 
         if (response.failureCount > 0) {
             const failedTokens: string[] = [];

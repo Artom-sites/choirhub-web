@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2, Send } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { getServices } from "@/lib/db";
+import { Service } from "@/types";
 import Toast from "./Toast";
 
 interface SendNotificationModalProps {
@@ -15,25 +17,59 @@ export default function SendNotificationModal({ isOpen, onClose }: SendNotificat
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
+    const [services, setServices] = useState<Service[]>([]);
+    const [selectedServiceId, setSelectedServiceId] = useState<string>("");
+    const [enableVoting, setEnableVoting] = useState(false);
+    const [loadingServices, setLoadingServices] = useState(false);
+
+    useEffect(() => {
+        if (isOpen && userData?.choirId) {
+            setLoadingServices(true);
+            getServices(userData.choirId).then((allServices) => {
+                const activeServices = allServices.filter(s => !s.isFinalized);
+                activeServices.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                setServices(activeServices);
+                setLoadingServices(false);
+            }).catch(e => {
+                console.error("Failed to load services for notification:", e);
+                setLoadingServices(false);
+            });
+        } else {
+            setTitle("");
+            setBody("");
+            setSelectedServiceId("");
+            setEnableVoting(false);
+        }
+    }, [isOpen, userData?.choirId]);
+
     if (!isOpen) return null;
 
     const handleSend = async () => {
-        if (!title.trim() || !body.trim() || !user || !userData?.choirId) return;
+        if (!body.trim() || !user || !userData?.choirId) return;
 
         setLoading(true);
         try {
             const token = await user.getIdToken();
+            const selectedService = services.find(s => s.id === selectedServiceId);
+            const payload: any = {
+                title: title.trim(),
+                body: body.trim(),
+                choirId: userData.choirId
+            };
+
+            if (selectedServiceId && selectedService && enableVoting) {
+                payload.serviceId = selectedServiceId;
+                payload.serviceName = selectedService.title;
+                payload.enableVoting = true;
+            }
+
             const response = await fetch("/api/send-notification", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${token}`
                 },
-                body: JSON.stringify({
-                    title: title.trim(),
-                    body: body.trim(),
-                    choirId: userData.choirId
-                })
+                body: JSON.stringify(payload)
             });
 
             const text = await response.text();
@@ -48,8 +84,6 @@ export default function SendNotificationModal({ isOpen, onClose }: SendNotificat
 
             setTimeout(() => {
                 onClose();
-                setTitle("");
-                setBody("");
                 setToast(null);
             }, 2000);
 
@@ -69,10 +103,10 @@ export default function SendNotificationModal({ isOpen, onClose }: SendNotificat
                     Сповіщення хору
                 </h3>
 
-                <div className="space-y-4">
+                <div className="space-y-4 max-h-[70vh] overflow-y-auto no-scrollbar pb-6 pr-2">
                     <div>
                         <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                            Заголовок
+                            Заголовок <span className="text-[10px] lowercase text-text-secondary/70 font-normal">(необов'язково)</span>
                         </label>
                         <input
                             type="text"
@@ -96,7 +130,50 @@ export default function SendNotificationModal({ isOpen, onClose }: SendNotificat
                         />
                     </div>
 
-                    <div className="flex gap-3 mt-6">
+                    <div>
+                        <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                            Прив'язати до служіння (Опитування)
+                        </label>
+                        {loadingServices ? (
+                            <div className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl text-text-secondary flex items-center gap-2">
+                                <Loader2 className="w-4 h-4 animate-spin" /> Завантаження...
+                            </div>
+                        ) : (
+                            <select
+                                value={selectedServiceId}
+                                onChange={(e) => {
+                                    setSelectedServiceId(e.target.value);
+                                    if (!e.target.value) setEnableVoting(false);
+                                }}
+                                className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl text-text-primary focus:outline-none focus:border-accent/30 appearance-none"
+                            >
+                                <option value="">Без прив'язки</option>
+                                {services.map(s => (
+                                    <option key={s.id} value={s.id}>
+                                        {new Date(s.date).toLocaleDateString()} - {s.title}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
+                    </div>
+
+                    {selectedServiceId && (
+                        <div className="flex items-center gap-3 p-3 bg-surface-highlight rounded-xl border border-border/50">
+                            <input
+                                type="checkbox"
+                                id="enableVotingToggle"
+                                checked={enableVoting}
+                                onChange={(e) => setEnableVoting(e.target.checked)}
+                                className="w-5 h-5 rounded border-border text-primary focus:ring-primary focus:ring-offset-surface bg-background"
+                            />
+                            <label htmlFor="enableVotingToggle" className="text-sm font-medium text-text-primary cursor-pointer select-none">
+                                Додати кнопки голосування <br />
+                                <span className="text-xs text-text-secondary font-normal">("Буду" / "Не буду")</span>
+                            </label>
+                        </div>
+                    )}
+
+                    <div className="flex gap-3 mt-6 border-t border-border/10 pt-4">
                         <button
                             onClick={onClose}
                             className="flex-1 py-3 bg-surface-highlight text-text-primary font-medium rounded-xl hover:bg-surface transition-colors"
@@ -105,7 +182,7 @@ export default function SendNotificationModal({ isOpen, onClose }: SendNotificat
                         </button>
                         <button
                             onClick={handleSend}
-                            disabled={loading || !title.trim() || !body.trim()}
+                            disabled={loading || !body.trim()}
                             className="flex-1 py-3 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Надіслати"}

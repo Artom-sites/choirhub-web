@@ -4,13 +4,14 @@ import { useEffect, useState } from "react";
 import { Bell, BellOff, Loader2, X, Settings, Trash2 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { useAuth } from "@/contexts/AuthContext";
-import { getChoirNotifications, markNotificationAsRead, deleteNotification } from "@/lib/db";
-import { ChoirNotification } from "@/types";
+import { getChoirNotifications, markNotificationAsRead, deleteNotification, setServiceAttendance } from "@/lib/db";
+import { ChoirNotification, Service } from "@/types";
 
 interface NotificationsModalProps {
     isOpen: boolean;
     onClose: () => void;
     canDelete?: boolean;
+    services?: Service[];
     // FCM Props passed from parent (Single Source of Truth)
     permissionStatus: NotificationPermission | "unsupported" | "default";
     requestPermission: (caller?: string) => Promise<string | null>;
@@ -25,6 +26,7 @@ export default function NotificationsModal({
     isOpen,
     onClose,
     canDelete = false,
+    services = [],
     permissionStatus,
     requestPermission,
     unsubscribe,
@@ -39,6 +41,7 @@ export default function NotificationsModal({
     const [showSettings, setShowSettings] = useState(false);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+    const [votingServiceId, setVotingServiceId] = useState<string | null>(null);
 
     useEffect(() => {
         if (isOpen && userData?.choirId) {
@@ -82,6 +85,19 @@ export default function NotificationsModal({
             alert("Не вдалося видалити повідомлення");
         } finally {
             setDeletingId(null);
+        }
+    };
+
+    const handleVote = async (serviceId: string, status: 'present' | 'absent') => {
+        if (!userData?.choirId || !userData?.id) return;
+        setVotingServiceId(serviceId);
+        try {
+            await setServiceAttendance(userData.choirId, serviceId, userData.id, status);
+        } catch (error) {
+            console.error("Voting failed:", error);
+            alert("Помилка при збереженні відповіді");
+        } finally {
+            setVotingServiceId(null);
         }
     };
 
@@ -215,7 +231,57 @@ export default function NotificationsModal({
                                         <p className="text-sm text-text-secondary leading-relaxed bg-surface/50 p-2 rounded-lg">
                                             {n.body}
                                         </p>
-                                        <div className="mt-2 flex items-center justify-between">
+
+                                        {/* Voting Buttons */}
+                                        {n.enableVoting && n.serviceId && (
+                                            <div className="mt-3">
+                                                {(() => {
+                                                    const service = services.find(s => s.id === n.serviceId);
+                                                    if (!service) {
+                                                        return <p className="text-xs text-text-secondary/60 italic">Служіння видалено або не знайдено</p>;
+                                                    }
+                                                    if (service.isFinalized) {
+                                                        return <p className="text-xs text-text-secondary/60 italic">Служіння закрито (статистика збережена)</p>;
+                                                    }
+
+                                                    const isPresent = userData?.id ? service.confirmedMembers?.includes(userData.id) : false;
+                                                    const isAbsent = userData?.id ? service.absentMembers?.includes(userData.id) : false;
+
+                                                    return (
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    if (!isPresent) handleVote(n.serviceId!, 'present');
+                                                                }}
+                                                                disabled={votingServiceId === n.serviceId || isPresent}
+                                                                className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors ${isPresent
+                                                                    ? 'bg-primary text-background cursor-default'
+                                                                    : 'bg-surface border border-accent/20 text-accent hover:bg-accent/10 active:scale-95'
+                                                                    }`}
+                                                            >
+                                                                {votingServiceId === n.serviceId && !isPresent && !isAbsent ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Буду"}
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    if (!isAbsent) handleVote(n.serviceId!, 'absent');
+                                                                }}
+                                                                disabled={votingServiceId === n.serviceId || isAbsent}
+                                                                className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors ${isAbsent
+                                                                    ? 'bg-red-500 text-white cursor-default'
+                                                                    : 'bg-surface border border-red-500/20 text-red-500 hover:bg-red-500/10 active:scale-95'
+                                                                    }`}
+                                                            >
+                                                                {votingServiceId === n.serviceId && !isPresent && !isAbsent ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Не буду"}
+                                                            </button>
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </div>
+                                        )}
+
+                                        <div className="mt-3 flex items-center justify-between">
                                             <span className="text-[10px] text-text-secondary/50">
                                                 Від: {n.senderName}
                                             </span>
