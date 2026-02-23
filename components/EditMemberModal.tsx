@@ -81,11 +81,11 @@ export default function EditMemberModal({ isOpen, onClose, member, onSave, onDel
                     <form onSubmit={handleSubmit} className="space-y-5">
                         {/* Name */}
                         <div>
-                            <label className="text-xs text-text-secondary uppercase font-bold mb-2 block">Ім'я</label>
+                            <label className="text-xs text-text-secondary uppercase font-bold mb-2 block">Ім'я та Прізвище</label>
                             <input
                                 value={name}
                                 onChange={e => setName(e.target.value)}
-                                placeholder="Ім'я..."
+                                placeholder="Ім'я та Прізвище..."
                                 className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl focus:border-text-secondary/50 focus:bg-surface outline-none transition-all"
                             />
                         </div>

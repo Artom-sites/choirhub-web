@@ -20,6 +20,7 @@ import SubmitSongModal from "./SubmitSongModal";
 import { getPendingSongs, approveSong, rejectSong, getGlobalSong } from "@/lib/db";
 import { PendingSong } from "@/types";
 import { ConfirmModal, AlertModal, InputModal } from "./ui/Modal";
+import { hapticLight, hapticSuccess } from "../hooks/useHaptics";
 
 interface GlobalArchiveProps {
     onAddSong?: (song: GlobalSong) => void;
@@ -487,7 +488,10 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
     const visibleSongs = filteredSongs.slice(0, displayedCount);
 
     const handleAddSongWrapper = (song: GlobalSong) => {
-        if (onAddSong) setSongToAdd(song);
+        if (onAddSong) {
+            hapticLight();
+            setSongToAdd(song);
+        }
     };
 
     const confirmAddSong = async () => {

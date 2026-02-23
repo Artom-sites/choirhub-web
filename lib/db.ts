@@ -848,8 +848,9 @@ export async function getChoirUsers(choirId: string): Promise<UserData[]> {
         const choir = await getChoir(choirId);
         if (!choir?.members) return [];
 
-        // Filter for members who have an account
-        return choir.members
+        // Filter for members who have an account and deduplicate by ID
+        const dedupedMembers = Array.from(new Map(choir.members.map(m => [m.id, m])).values());
+        return dedupedMembers
             .filter(m => m.hasAccount)
             .map(m => ({
                 id: m.id,

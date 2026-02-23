@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Capacitor } from "@capacitor/core";
 import { Search, FileText, Music2, ChevronRight, Filter, Plus, Eye, User, Loader2, Trash2, MoreVertical, Library, X } from "lucide-react";
@@ -8,6 +8,7 @@ import { SimpleSong } from "@/types";
 import { CATEGORIES, Category } from "@/lib/themes";
 import { AnimatePresence, motion } from "framer-motion";
 import { Virtuoso, TableVirtuoso } from 'react-virtuoso';
+import Fuse from 'fuse.js';
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { addSong, uploadSongPdf, deleteSong, addKnownConductor, updateSong, softDeleteLocalSong } from "@/lib/db";
@@ -21,6 +22,8 @@ import GlobalArchive from "./GlobalArchive";
 import TrashBin from "./TrashBin";
 import Toast from "./Toast";
 import SwipeableCard from "./SwipeableCard";
+import SongSkeleton from "./SongSkeleton";
+import { hapticLight, hapticSuccess } from "../hooks/useHaptics";
 
 interface SongListProps {
     canAddSongs: boolean;
@@ -70,6 +73,8 @@ export default function SongList({
     const [viewingSong, setViewingSong] = useState<SimpleSong | null>(null);
     const [pendingArchiveQuery, setPendingArchiveQuery] = useState("");
     const [showArchiveModal, setShowArchiveModal] = useState(false);
+    const [lastAddedSongId, setLastAddedSongId] = useState<string | null>(null);
+    const [showOpenSongConfirm, setShowOpenSongConfirm] = useState(false);
 
     const [isMobile, setIsMobile] = useState<boolean>(() => {
         if (typeof window !== 'undefined') return window.innerWidth < 768;
@@ -88,12 +93,27 @@ export default function SongList({
         return () => window.removeEventListener('focus', onFocus);
     }, [refreshRepertoire]);
 
-    const filteredSongs = songs.filter(song => {
-        const matchesSearch = song.title.toLowerCase().includes(search.toLowerCase());
-        const matchesCategory = selectedCategory === "All" || song.category === selectedCategory;
-        const matchesConductor = selectedConductor === "All" || song.conductor === selectedConductor;
-        return matchesSearch && matchesCategory && matchesConductor;
-    });
+    const fuse = useMemo(() => new Fuse(songs, {
+        keys: ['title', 'conductor'],
+        threshold: 0.3,
+        distance: 100,
+        ignoreLocation: true,
+        minMatchCharLength: 2,
+    }), [songs]);
+
+    const filteredSongs = useMemo(() => {
+        let results = songs;
+        if (search.trim()) {
+            results = fuse.search(search).map(r => r.item);
+        }
+        if (selectedCategory !== "All") {
+            results = results.filter(s => s.category === selectedCategory);
+        }
+        if (selectedConductor !== "All") {
+            results = results.filter(s => s.conductor === selectedConductor);
+        }
+        return results;
+    }, [songs, search, selectedCategory, selectedConductor, fuse]);
 
     const uniqueConductors = Array.from(new Set(songs.map(s => s.conductor).filter(Boolean))).sort();
     const songsWithPdf = songs.filter(s => s.hasPdf).length;
@@ -127,8 +147,17 @@ export default function SongList({
 
     const handleLinkArchive = async (globalSong: any) => {
         if (!userData?.choirId) return;
+
+        // Duplicate detection
+        const normalizedTitle = globalSong.title.trim().toLowerCase();
+        const duplicate = songs.find(s => s.title.trim().toLowerCase() === normalizedTitle);
+        if (duplicate) {
+            setToast({ message: `"${duplicate.title}" вже є в репертуарі`, type: "error" });
+            return;
+        }
+
         try {
-            await addSong(userData.choirId, {
+            const newId = await addSong(userData.choirId, {
                 title: globalSong.title,
                 category: 'Інші' as Category,
                 conductor: '',
@@ -139,11 +168,13 @@ export default function SongList({
             });
             await refreshRepertoire();
             if (onRefresh) onRefresh();
+            hapticSuccess();
             setShowArchiveModal(false);
-            setToast({ message: "Пісню успішно додано з архіву", type: "success" });
+            setLastAddedSongId(newId);
+            setShowOpenSongConfirm(true);
         } catch (e) {
             console.error(e);
-            alert("Помилка додавання з архіву");
+            setToast({ message: "Помилка додавання з архіву", type: "error" });
         }
     };
 
@@ -339,7 +370,11 @@ export default function SongList({
 
                 {/* Song List */}
                 <div>
-                    {filteredSongs.length === 0 ? (
+                    {loading ? (
+                        <div className="mt-2">
+                            <SongSkeleton count={8} />
+                        </div>
+                    ) : filteredSongs.length === 0 ? (
                         <div className="text-center py-24 opacity-40">
                             <div className="w-16 h-16 bg-surface rounded-full flex items-center justify-center mx-auto mb-4">
                                 <Music2 className="w-8 h-8 text-text-secondary" />
@@ -453,6 +488,20 @@ export default function SongList({
                 <TrashBin choirId={userData?.choirId || ""} onClose={() => setShowTrashBin(false)} initialFilter="song" onRestore={() => refreshRepertoire()} />
             )}
             <ConfirmationModal isOpen={!!deletingSongId} onClose={() => setDeletingSongId(null)} onConfirm={confirmDelete} title="Видалити пісню?" message="Цю пісню буде видалено з репертуару назавжди." confirmLabel="Видалити" isDestructive />
+            <ConfirmationModal
+                isOpen={showOpenSongConfirm}
+                onClose={() => { setShowOpenSongConfirm(false); setLastAddedSongId(null); }}
+                onConfirm={() => {
+                    setShowOpenSongConfirm(false);
+                    if (lastAddedSongId) {
+                        router.push(`/song?id=${lastAddedSongId}`);
+                        setLastAddedSongId(null);
+                    }
+                }}
+                title="Пісню додано!"
+                message="Пісню успішно додано до репертуару. Відкрити її зараз?"
+                confirmLabel="Відкрити"
+            />
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
             {/* Floating Add Button */}

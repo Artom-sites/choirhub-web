@@ -236,6 +236,39 @@ function HomePageContent() {
   ];
 
   // ------------------------------------------------------------------
+  //  SELF-SERVICE PROFILE CLAIMING
+  // ------------------------------------------------------------------
+  // Detect if the current user's auto-created member entry has not been
+  // claimed/linked to a real choir member profile yet.
+  const isUserUnlinked = (() => {
+    if (!user || !choir?.members) return false;
+    // Check if the user's UID is linked to ANY member via accountUid or linkedUserIds
+    const isLinkedAnywhere = choir.members.some((m: any) =>
+      m.accountUid === user.uid || (m.linkedUserIds || []).includes(user.uid)
+    );
+    if (isLinkedAnywhere) return false;
+    // If not linked anywhere, check if they have an auto-created stub entry
+    const myEntry = choir.members.find((m: any) => m.id === user.uid);
+    if (!myEntry) return false;
+    if (myEntry.hasAccount && !myEntry.voice) return true;
+    return false;
+  })();
+
+  const openClaimFromBanner = () => {
+    if (!choir?.members || !userData?.choirId) return;
+    // Show ALL real choir members (not just unclaimed), so someone who
+    // lost their previous account can re-claim their profile.
+    const claimable = choir.members
+      .filter((m: any) => !(m as any).isDuplicate && m.id !== user?.uid)
+      .filter((m: any) => m.name && m.name.trim() !== '' && m.name.trim().toLowerCase() !== 'unknown')
+      .map((m: any) => ({ id: m.id, name: m.name, voice: m.voice || '', hasAccount: !!m.hasAccount }));
+    setClaimMembers(claimable);
+    setClaimChoirId(userData.choirId);
+    setSelectedClaimId(null);
+    setShowClaimModal(true);
+  };
+
+  // ------------------------------------------------------------------
   //  EFFECTS & NAVIGATION
   // ------------------------------------------------------------------
 
@@ -563,7 +596,11 @@ function HomePageContent() {
           const timeB = new Date(b.createdAt?.seconds ? b.createdAt.seconds * 1000 : b.createdAt || 0).getTime();
           return timeB - timeA;
         });
-        setRegisteredUsers(sorted);
+
+        // Deduplicate by ID to prevent UI crashes if DB has duplicated records
+        const deduped = Array.from(new Map(sorted.map(u => [u.id, u])).values());
+
+        setRegisteredUsers(deduped);
         setLoadingRegisteredUsers(false);
       }).catch((err) => {
         console.error("Error fetching users:", err);
@@ -719,7 +756,14 @@ function HomePageContent() {
       setClaimChoirId(null);
     } catch (e: any) {
       console.error("Claim error:", e);
-      setManagerError(e.message || "Помилка прив'язки");
+      const msg = e.message || "";
+      if (msg.includes("already has an account") || msg.includes("already claimed")) {
+        alert("Цей профіль вже прив'язаний до іншого акаунту. Зверніться до регента для переприв'язки.");
+      } else if (msg.includes("already linked")) {
+        alert("Ваш акаунт вже прив'язаний до іншого учасника.");
+      } else {
+        alert("Помилка прив'язки: " + msg);
+      }
     } finally {
       setClaimLoading(false);
     }
@@ -824,57 +868,21 @@ function HomePageContent() {
         // permissions? EditMemberModal doesn't seem to edit permissions yet, just role.
       };
 
-      await updateMember(userData.choirId, member.id, updates);
+      // Generate a deduplicated list of current members (just in case)
+      const dedupedCurrent = Array.from(new Map((choir.members || []).map(m => [m.id, m])).values());
+      const existingIndex = dedupedCurrent.findIndex(m => m.id === member.id);
 
-      // Update local state optimistic (or reload)
-      const existingIndex = (choir.members || []).findIndex(m => m.id === member.id);
-      const updatedMembers = [...(choir.members || [])];
-
-      const updatedMemberObj = {
-        ...(existingIndex >= 0 ? updatedMembers[existingIndex] : {}),
-        ...member
-      };
+      let updatedMembers = [...dedupedCurrent];
 
       if (existingIndex >= 0) {
-        updatedMembers[existingIndex] = updatedMemberObj;
-      } else {
-        // This case (adding new member manually) might fail if memberId is not real userId?
-        // atomicUpdateMember requires memberId to exist in choir.members?
-        // atomicUpdateMember: "const memberIndex = members.findIndex... if -1 throw not-found"
-        // So atomicUpdateMember ONLY supports updating EXISTING members.
-        // EditMemberModal supports "New Member"?
-        // Line 74: {isEditing ? "Редагувати учасника" : "Новий учасник"}
-        // If "New Member", we need atomicAddMember?
-        // Or we use updateChoirMembers (if it's just a dummy member)?
-        // If it's a "New Member" (manual), they don't have an account.
-        // So atomicUpdateMember handles account sync.
-        // If we add a manual member, we can just use updateChoirMembers (admin right).
-        // But atomicUpdateMember FAILS if member not found.
-
-        // Let's check if member exists.
-        if (existingIndex === -1) {
-          // Adding NEW manual member.
-          // We can fall back to updateChoirMembers for this specific case?
-          // Or create atomicAddMember.
-          // Manual members don't have User docs, so simple updateChoirMembers IS safe-ish (permissions irrelevant).
-          // But we should be consistent.
-          updatedMembers.push(member);
-          await updateChoirMembers(userData.choirId, updatedMembers);
-        } else {
-          updatedMembers[existingIndex] = updatedMemberObj;
-          // Use our new function for existing members (to sync roles)
-          setChoir({ ...choir, members: updatedMembers }); // Optimistic
-          // We re-call updateMember for the sync side-effects.
-          // But valid memberId?
-          // If member is manual (id="manual_..."), atomicUpdateMember will find it in choir, but won't find User doc.
-          // Logic: "if (oldMember.hasAccount || newMember.hasAccount) ... sync"
-          // So it handles manual members gracefully (skips sync).
-        }
-      }
-
-      // Wait, if I use updateMember for existing, I don't need updateChoirMembers call.
-      if (existingIndex >= 0) {
+        // Updating existing member
+        updatedMembers[existingIndex] = { ...updatedMembers[existingIndex], ...member };
         await updateMember(userData.choirId, member.id, updates);
+        setChoir({ ...choir, members: updatedMembers });
+      } else {
+        // Adding new manual member
+        updatedMembers.push(member);
+        await updateChoirMembers(userData.choirId, updatedMembers);
         setChoir({ ...choir, members: updatedMembers });
       }
 
@@ -966,6 +974,21 @@ function HomePageContent() {
       console.error(e);
       alert("Не вдалося прив'язати користувача");
     }
+  };
+
+  const handleLinkAsNewMember = async (sourceMember: ChoirMember) => {
+    if (!choir || !userData?.choirId || !linkingAppUser) return;
+
+    // By opening EditMemberModal, we force the user to type Name & Surname.
+    // When saved, handleSaveMember natively prevents duplicates and pushes cleanly.
+    setEditingMember({
+      id: linkingAppUser.id,
+      name: linkingAppUser.name || "",
+      role: 'member',
+      hasAccount: true
+    });
+    setLinkingAppUser(null);
+    setShowEditMemberModal(true);
   };
 
   const handleRemoveMember = async (memberId: string) => {
@@ -1403,6 +1426,7 @@ function HomePageContent() {
           sourceMember={{ id: linkingAppUser.id, name: linkingAppUser.name || 'App User', role: 'member' } as ChoirMember}
           allMembers={choir.members}
           onMerge={handleLinkAppUser}
+          onCreateNew={handleLinkAsNewMember}
           mode="link"
         />
       )}
@@ -1439,7 +1463,7 @@ function HomePageContent() {
               </p>
 
               <div className="max-h-64 overflow-y-auto space-y-2 mb-4 pr-1 custom-scrollbar">
-                {claimMembers.map((m) => (
+                {claimMembers.map((m: any) => (
                   <button
                     key={m.id}
                     onClick={() => setSelectedClaimId(m.id)}
@@ -1454,6 +1478,9 @@ function HomePageContent() {
                       {m.voice && (
                         <span className="ml-2 text-xs text-text-secondary">({m.voice})</span>
                       )}
+                      {m.hasAccount && (
+                        <span className="ml-2 text-[10px] text-yellow-500 bg-yellow-500/10 px-1.5 py-0.5 rounded-md">вже має акаунт</span>
+                      )}
                     </div>
                     <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${selectedClaimId === m.id ? 'bg-primary text-background' : 'bg-white/10'
                       }`}>
@@ -1462,6 +1489,13 @@ function HomePageContent() {
                   </button>
                 ))}
               </div>
+
+              {/* Note about already-claimed members */}
+              {claimMembers.some((m: any) => m.hasAccount) && (
+                <p className="text-[11px] text-text-secondary mb-3 px-1 leading-relaxed">
+                  Якщо ваше ім'я позначене «вже має акаунт», зверніться до регента для переприв'язки.
+                </p>
+              )}
 
               <div className="space-y-3">
                 <button
@@ -1486,7 +1520,7 @@ function HomePageContent() {
                     setShowEditName(true);
                   }}
                   disabled={claimLoading}
-                  className="w-full py-2 text-sm text-text-secondary hover:text-white transition-colors"
+                  className="w-full py-3 text-sm text-text-secondary hover:text-text-primary border border-border rounded-xl hover:bg-surface-highlight transition-colors font-medium"
                 >
                   Мене нема в списку (Створити нове)
                 </button>
@@ -1814,6 +1848,25 @@ function HomePageContent() {
 
       {/* Tab Content */}
       <div className="relative pt-[calc(4rem_+_env(safe-area-inset-top))] pb-32 md:pb-24">
+        {/* Self-service claim banner for unlinked users */}
+        {isUserUnlinked && (
+          <div className="mx-4 mt-3 mb-2">
+            <button
+              onClick={openClaimFromBanner}
+              className="w-full p-4 bg-primary/10 border border-primary/30 rounded-2xl flex items-center gap-3 text-left hover:bg-primary/15 transition-colors active:scale-[0.99]"
+            >
+              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                <User className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-text-primary">Оберіть себе зі списку</p>
+                <p className="text-xs text-text-secondary mt-0.5">Щоб бачити вашу статистику, прив’яжіть ваш профіль до списку хору</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-text-secondary flex-shrink-0" />
+            </button>
+          </div>
+        )}
+
         {activeTab === 'home' && (
           <ServiceList
             onSelectService={handleSelectService}
@@ -1943,7 +1996,7 @@ function HomePageContent() {
                         {canEdit && (
                           <div className="flex items-center gap-1">
                             {(() => {
-                              const isLinkedSecondary = (choir?.members || []).some(m => (m.linkedUserIds || []).includes(appUser.id));
+                              const isLinkedSecondary = (choir?.members || []).some(m => (m.linkedUserIds || []).includes(appUser.id) || (m as any).accountUid === appUser.id);
                               const isEstablishedMain = (choir?.members || []).some(m => m.id === appUser.id && !!m.voice);
                               return !isLinkedSecondary && !isEstablishedMain;
                             })() && (
@@ -1978,8 +2031,21 @@ function HomePageContent() {
                 </div>
               ) : (
                 ((() => {
-                  const filtered = (choir?.members || []).filter(m => {
+                  // Deduplicate by ID to prevent React key errors from corrupted DB state
+                  const dedupedMembers = Array.from(new Map((choir?.members || []).map(m => [m.id, m])).values());
+                  const filtered = dedupedMembers.filter(m => {
                     if ((m as any).isDuplicate) return false;
+                    // Hide auto-created stub: if this entry is the user's UID-based auto-entry
+                    // AND the user is already linked to a real member, hide it
+                    if (user && m.id === user.uid && !m.voice && !(m as any).accountUid) {
+                      const linkedElsewhere = dedupedMembers.some((other: any) =>
+                        other.id !== user.uid && (
+                          other.accountUid === user.uid ||
+                          (other.linkedUserIds || []).includes(user.uid)
+                        )
+                      );
+                      if (linkedElsewhere) return false;
+                    }
                     if (memberFilter && m.voice !== memberFilter) return false;
                     return true;
                   });

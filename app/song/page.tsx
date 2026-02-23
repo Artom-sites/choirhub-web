@@ -718,23 +718,6 @@ function SongContent() {
                                         Максимальний розмір: 50 MB
                                     </p>
 
-                                    <div className="relative my-6">
-                                        <div className="absolute inset-0 flex items-center">
-                                            <div className="w-full border-t border-border"></div>
-                                        </div>
-                                        <div className="relative flex justify-center text-xs uppercase">
-                                            <span className="bg-background px-2 text-text-secondary">Або</span>
-                                        </div>
-                                    </div>
-
-                                    <button
-                                        onClick={() => setShowArchiveModal(true)}
-                                        disabled={uploading}
-                                        className="w-full py-4 bg-surface-highlight border border-border rounded-xl text-text-primary font-bold hover:bg-surface transition-all flex items-center justify-center gap-3"
-                                    >
-                                        <Search className="w-5 h-5 text-accent" />
-                                        Знайти в архіві
-                                    </button>
 
                                     {uploadStatus === 'success' && (
                                         <div className="mt-6 p-4 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center gap-3 text-green-400">

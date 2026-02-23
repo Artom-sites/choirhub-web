@@ -739,17 +739,13 @@ export const claimMember = functions.https.onCall(async (data, context) => {
         const choirData = choirDoc.data()!;
         const members: any[] = choirData.members || [];
 
-        // ── GUARD 1: Prevent double-link ──
-        // Abort if ANY member in this choir already has accountUid === callerUid
-        const alreadyLinked = members.find((m: any) => m.accountUid === callerUid);
-        if (alreadyLinked) {
-            throw new functions.https.HttpsError(
-                "already-exists",
-                `You are already linked to member "${alreadyLinked.name}"`
-            );
-        }
+        // ── STEP 1: Unlink caller from any previous member entry ──
+        // If the caller was already linked to a different member, remove from their linkedUserIds
+        const previouslyLinkedIndex = members.findIndex((m: any) =>
+            m.accountUid === callerUid || (m.linkedUserIds || []).includes(callerUid)
+        );
 
-        // ── GUARD 2: Find and validate target member ──
+        // ── STEP 2: Find and validate target member ──
         const targetIndex = members.findIndex((m: any) => m.id === targetMemberId);
         if (targetIndex === -1) {
             throw new functions.https.HttpsError("not-found", "Target member not found");
@@ -757,25 +753,40 @@ export const claimMember = functions.https.onCall(async (data, context) => {
 
         const target = members[targetIndex];
 
-        // Race-safe re-check: target must still be unclaimed
-        if (target.hasAccount) {
-            throw new functions.https.HttpsError("failed-precondition", "This member already has an account linked");
-        }
-        if (target.accountUid) {
-            throw new functions.https.HttpsError("failed-precondition", "This member is already claimed by another user");
+        // Check if caller is already linked to this exact target — no-op
+        const existingLinked = target.linkedUserIds || [];
+        if (existingLinked.includes(callerUid) || target.accountUid === callerUid) {
+            return { success: true, claimedMember: target.name, alreadyLinked: true };
         }
 
         // ── BUILD UPDATED MEMBERS ARRAY ──
         const updatedMembers = [...members];
 
-        // Link target: set accountUid, mark hasAccount
+        // Unlink caller from previous member (if any, and if different from target)
+        if (previouslyLinkedIndex >= 0 && previouslyLinkedIndex !== targetIndex) {
+            const prev = updatedMembers[previouslyLinkedIndex];
+            const prevLinked = (prev.linkedUserIds || []).filter((uid: string) => uid !== callerUid);
+            updatedMembers[previouslyLinkedIndex] = {
+                ...prev,
+                accountUid: prev.accountUid === callerUid ? null : prev.accountUid,
+                linkedUserIds: prevLinked,
+                hasAccount: prevLinked.length > 0 || (prev.accountUid && prev.accountUid !== callerUid)
+            };
+        }
+
+        // Link target: add callerUid to linkedUserIds, set accountUid if empty
+        const targetLinked = [...(target.linkedUserIds || [])];
+        if (!targetLinked.includes(callerUid)) {
+            targetLinked.push(callerUid);
+        }
         updatedMembers[targetIndex] = {
             ...target,
-            accountUid: callerUid,
+            accountUid: target.accountUid || callerUid,
+            linkedUserIds: targetLinked,
             hasAccount: true
         };
 
-        // ── GUARD 3: Find auto-created duplicate safely ──
+        // ── STEP 3: Find auto-created duplicate safely ──
         // Match by: id === callerUid AND no accountUid (auto-created by atomicJoinChoir)
         const dupeIndex = updatedMembers.findIndex(
             (m: any) => m.id === callerUid && !m.accountUid
