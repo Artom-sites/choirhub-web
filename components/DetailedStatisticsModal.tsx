@@ -244,7 +244,7 @@ export default function DetailedStatisticsModal({
                                     <div ref={chartContainerRef} className="flex-1 overflow-x-auto overflow-y-hidden scrollbar-hide -ml-2">
                                         <div style={{ minWidth: `${Math.max(100, filteredAttendanceData.length * 15)}%`, height: '100%' }}>
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <AreaChart data={filteredAttendanceData} margin={{ top: 10, right: 15, left: 15, bottom: 0 }}>
+                                                <AreaChart data={filteredAttendanceData} margin={{ top: 10, right: 5, left: 5, bottom: 0 }}>
                                                     <defs>
                                                         <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
                                                             <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.25} />
