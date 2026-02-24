@@ -259,7 +259,7 @@ export default function DetailedStatisticsModal({
                                                         tickLine={false}
                                                         axisLine={false}
                                                         interval={0}
-                                                        padding={{ right: 20 }}
+                                                        padding={{ left: 15, right: 20 }}
                                                     />
                                                     <YAxis hide={true} domain={[0, 100]} />
                                                     <Tooltip
