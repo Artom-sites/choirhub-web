@@ -282,7 +282,7 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                                         />
                                         <YAxis
                                             stroke="var(--text-secondary)"
-                                            tick={{ fill: 'var(--text-secondary)', fontSize: 11, dx: -18 }}
+                                            tick={{ fill: 'var(--text-secondary)', fontSize: 11, dx: -5 }}
                                             tickLine={false}
                                             axisLine={false}
                                             unit="%"
