@@ -109,8 +109,8 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
 
     const attendanceData = useMemo(() => {
         if (!stats?.attendanceTrend) return [];
-        // Only show the last 6 services on the main screen to avoid scrolling
-        return stats.attendanceTrend.slice(-6).map(entry => ({
+        // Only show the last 5 services on the main screen to avoid scrolling and clipping
+        return stats.attendanceTrend.slice(-5).map(entry => ({
             ...entry,
             date: new Date(entry.date).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' }),
         }));
@@ -263,7 +263,7 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                             </h3>
                             <div className="h-56 w-full -ml-4 mt-2">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={attendanceData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                                    <AreaChart data={attendanceData}>
                                         <defs>
                                             <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
                                                 <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.25} />
