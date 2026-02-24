@@ -261,18 +261,18 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                                 </div>
                                 Динаміка відвідуваності
                             </h3>
-                            <div className="relative h-56 w-full mt-2">
-                                {/* Fixed Y-Axis — plain HTML labels under the icon */}
-                                <div className="absolute left-0 w-8 z-10 bg-surface flex flex-col justify-between text-right pr-1" style={{ top: 10, bottom: 22 }}>
+                            <div className="relative w-full mt-2">
+                                {/* Fixed Y-Axis — plain HTML labels over the chart */}
+                                <div className="absolute top-0 left-0 w-8 h-56 z-10 bg-surface flex flex-col justify-between text-right pr-1 pb-[26px] pt-3">
                                     {[100, 75, 50, 25, 0].map(v => (
                                         <span key={v} className="text-[11px] text-text-secondary leading-none">{v}%</span>
                                     ))}
                                 </div>
 
-                                {/* Chart area — starts after Y labels */}
-                                <div className="absolute inset-y-0 left-8 right-0">
+                                {/* Chart area - offset by padding left safely */}
+                                <div className="h-56 w-full pl-8">
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <AreaChart data={attendanceData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                        <AreaChart data={attendanceData} margin={{ top: 12, right: 10, left: -20, bottom: 0 }}>
                                             <defs>
                                                 <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
                                                     <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.25} />

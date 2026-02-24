@@ -232,19 +232,19 @@ export default function DetailedStatisticsModal({
                                     </div>
                                 </div>
                                 {/* Fixed Y-Axis Labels + Scrollable Chart */}
-                                <div className="relative h-56 w-full mt-2">
-                                    {/* Fixed Y-Axis — plain HTML labels, never scroll */}
-                                    <div className="absolute left-0 w-8 z-10 bg-surface flex flex-col justify-between text-right pr-1" style={{ top: 10, bottom: 22 }}>
+                                <div className="relative w-full mt-2">
+                                    {/* Fixed Y-Axis — plain HTML labels over the chart */}
+                                    <div className="absolute top-0 left-0 w-8 h-56 z-10 bg-surface flex flex-col justify-between text-right pr-1 pb-[26px] pt-3">
                                         {[100, 75, 50, 25, 0].map(v => (
                                             <span key={v} className="text-[11px] text-text-secondary leading-none">{v}%</span>
                                         ))}
                                     </div>
 
-                                    {/* Scrollable Chart — starts after the Y labels */}
-                                    <div ref={chartContainerRef} className="absolute inset-y-0 left-8 right-0 overflow-x-auto overflow-y-hidden scrollbar-hide">
-                                        <div style={{ minWidth: `${Math.max(100, filteredAttendanceData.length * 15)}%`, height: '100%' }}>
+                                    {/* Scrollable Chart */}
+                                    <div ref={chartContainerRef} className="h-56 w-full overflow-x-auto overflow-y-hidden scrollbar-hide">
+                                        <div className="pl-8" style={{ minWidth: `${Math.max(100, filteredAttendanceData.length * 15)}%`, height: '100%' }}>
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <AreaChart data={filteredAttendanceData} margin={{ top: 10, right: 20, left: -20, bottom: 0 }}>
+                                                <AreaChart data={filteredAttendanceData} margin={{ top: 12, right: 20, left: -20, bottom: 0 }}>
                                                     <defs>
                                                         <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
                                                             <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.25} />
