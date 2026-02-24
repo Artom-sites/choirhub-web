@@ -244,7 +244,7 @@ export default function DetailedStatisticsModal({
                                     <div ref={chartContainerRef} className="flex-1 overflow-x-auto overflow-y-hidden scrollbar-hide -ml-2">
                                         <div style={{ minWidth: `${Math.max(100, filteredAttendanceData.length * 15)}%`, height: '100%' }}>
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <AreaChart data={filteredAttendanceData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
+                                                <AreaChart data={filteredAttendanceData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                                                     <defs>
                                                         <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
                                                             <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.25} />
@@ -255,27 +255,18 @@ export default function DetailedStatisticsModal({
                                                     <XAxis
                                                         dataKey="date"
                                                         stroke="var(--text-secondary)"
-                                                        tick={({ x, y, payload, index }) => {
-                                                            const isFirst = index === 0;
-                                                            const isLast = index === filteredAttendanceData.length - 1;
-                                                            let dx = 0;
-                                                            if (isFirst) dx = 12;
-                                                            if (isLast) dx = -12;
-
-                                                            return (
-                                                                <text
-                                                                    x={x}
-                                                                    y={y}
-                                                                    dx={dx}
-                                                                    dy={10}
-                                                                    fill="var(--text-secondary)"
-                                                                    fontSize={11}
-                                                                    textAnchor="middle"
-                                                                >
-                                                                    {payload.value}
-                                                                </text>
-                                                            );
-                                                        }}
+                                                        tick={({ x, y, payload }) => (
+                                                            <text
+                                                                x={x}
+                                                                y={y}
+                                                                dy={10}
+                                                                fill="var(--text-secondary)"
+                                                                fontSize={11}
+                                                                textAnchor="middle"
+                                                            >
+                                                                {payload.value}
+                                                            </text>
+                                                        )}
                                                         tickLine={false}
                                                         axisLine={false}
                                                         interval={0}
