@@ -273,7 +273,7 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                                 {/* Chart Container */}
                                 <div className="flex-1 overflow-visible">
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <AreaChart data={attendanceData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                        <AreaChart data={attendanceData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
                                             <defs>
                                                 <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
                                                     <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.25} />
@@ -288,7 +288,6 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                                                 tickLine={false}
                                                 axisLine={false}
                                                 interval={0}
-                                                padding={{ left: 15, right: 20 }}
                                             />
                                             <YAxis hide={true} domain={[0, 100]} />
                                             <Tooltip
