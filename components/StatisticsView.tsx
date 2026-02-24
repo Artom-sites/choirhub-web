@@ -263,17 +263,17 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                             </h3>
                             {/* Dedicated Layout Row for Chart and YAxis matching Detailed Stats */}
                             <div className="flex h-56 w-full mt-2">
-                                {/* Completely Decoupled HTML Y-Axis Column (Perfectly aligned with w-8 icon) */}
-                                <div className="w-8 h-full flex flex-col justify-between text-center pb-[24px] pt-[2px] shrink-0">
+                                {/* Completely Decoupled HTML Y-Axis Column with gap */}
+                                <div className="w-[36px] h-full flex flex-col justify-between text-right pr-2 pb-[24px] pt-[2px] shrink-0">
                                     {[100, 75, 50, 25, 0].map(v => (
                                         <span key={v} className="text-[11px] text-text-secondary leading-none">{v}%</span>
                                     ))}
                                 </div>
 
                                 {/* Chart Container */}
-                                <div className="flex-1 overflow-visible -ml-2">
+                                <div className="flex-1 overflow-visible">
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <AreaChart data={attendanceData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                        <AreaChart data={attendanceData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                             <defs>
                                                 <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
                                                     <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.25} />

@@ -233,8 +233,8 @@ export default function DetailedStatisticsModal({
                                 </div>
                                 {/* Dedicated Layout Row for Chart and YAxis */}
                                 <div className="flex h-56 w-full mt-2">
-                                    {/* Completely Decoupled HTML Y-Axis Column (Perfectly aligned with w-10 icon) */}
-                                    <div className="w-10 h-full flex flex-col justify-between text-center pb-[24px] pt-[2px] shrink-0">
+                                    {/* Completely Decoupled HTML Y-Axis Column */}
+                                    <div className="w-[36px] h-full flex flex-col justify-between text-right pr-2 pb-[24px] pt-[2px] shrink-0">
                                         {[100, 75, 50, 25, 0].map(v => (
                                             <span key={v} className="text-[11px] text-text-secondary leading-none">{v}%</span>
                                         ))}
