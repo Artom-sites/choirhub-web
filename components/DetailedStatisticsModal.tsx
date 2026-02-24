@@ -231,17 +231,17 @@ export default function DetailedStatisticsModal({
                                         ))}
                                     </div>
                                 </div>
-                                {/* Fixed Y-Axis Labels + Scrollable Chart */}
-                                <div className="relative h-56 w-full mt-2">
-                                    {/* Fixed Y-Axis HTML Layer spanning edge-to-edge */}
-                                    <div className="absolute top-0 left-0 w-[40px] h-full z-10 bg-surface flex flex-col justify-between text-right pr-2 pb-[24px] pt-1" style={{ pointerEvents: 'none' }}>
+                                {/* Dedicated Layout Row for Chart and YAxis */}
+                                <div className="flex h-56 w-full mt-2">
+                                    {/* Completely Decoupled Y-Axis Labels Column */}
+                                    <div className="w-[36px] h-full flex flex-col justify-between text-right pr-2 pb-[24px] pt-1 shrink-0">
                                         {[100, 75, 50, 25, 0].map(v => (
                                             <span key={v} className="text-[11px] text-text-secondary leading-none">{v}%</span>
                                         ))}
                                     </div>
 
-                                    {/* Scrollable Chart */}
-                                    <div ref={chartContainerRef} className="h-full w-full overflow-x-auto overflow-y-hidden scrollbar-hide">
+                                    {/* Independent Scrollable Chart Container */}
+                                    <div ref={chartContainerRef} className="flex-1 overflow-x-auto overflow-y-hidden scrollbar-hide -ml-2">
                                         <div style={{ minWidth: `${Math.max(100, filteredAttendanceData.length * 15)}%`, height: '100%' }}>
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <AreaChart data={filteredAttendanceData}>
@@ -259,9 +259,9 @@ export default function DetailedStatisticsModal({
                                                         tickLine={false}
                                                         axisLine={false}
                                                         interval={0}
-                                                        padding={{ right: 35 }}
+                                                        padding={{ right: 20 }}
                                                     />
-                                                    <YAxis tick={false} axisLine={false} tickLine={false} width={40} domain={[0, 100]} />
+                                                    <YAxis hide={true} domain={[0, 100]} />
                                                     <Tooltip
                                                         contentStyle={{
                                                             backgroundColor: 'var(--surface)',
