@@ -241,7 +241,7 @@ export default function DetailedStatisticsModal({
                                     </div>
 
                                     {/* Independent Scrollable Chart Container */}
-                                    <div ref={chartContainerRef} className="flex-1 overflow-x-auto overflow-y-hidden scrollbar-hide -ml-2">
+                                    <div ref={chartContainerRef} className="flex-1 overflow-x-auto overflow-y-hidden scrollbar-hide ml-2">
                                         <div style={{ minWidth: `${Math.max(100, filteredAttendanceData.length * 15)}%`, height: '100%' }}>
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <AreaChart data={filteredAttendanceData} margin={{ top: 10, right: 5, left: 5, bottom: 0 }}>
