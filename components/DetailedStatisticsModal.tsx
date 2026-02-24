@@ -234,9 +234,9 @@ export default function DetailedStatisticsModal({
                                 {/* Container for fixed YAxis + scrollable chart */}
                                 <div className="relative h-56 w-full mt-2">
                                     {/* Fixed Y-Axis Layer */}
-                                    <div className="absolute inset-y-0 left-0 w-10 pointer-events-none z-10 bg-surface flex flex-col justify-end pb-8">
+                                    <div className="absolute inset-y-0 left-0 w-12 pointer-events-none z-10 bg-surface">
                                         <ResponsiveContainer width="100%" height="100%">
-                                            <AreaChart data={filteredAttendanceData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+                                            <AreaChart data={filteredAttendanceData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
                                                 <YAxis
                                                     stroke="var(--text-secondary)"
                                                     tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
@@ -253,7 +253,7 @@ export default function DetailedStatisticsModal({
                                     <div ref={chartContainerRef} className="absolute inset-y-0 left-10 right-0 overflow-x-auto overflow-y-hidden scrollbar-hide">
                                         <div style={{ minWidth: `${Math.max(100, filteredAttendanceData.length * 15)}%`, height: '100%' }}>
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <AreaChart data={filteredAttendanceData} margin={{ top: 5, right: 0, left: -25, bottom: 0 }}>
+                                                <AreaChart data={filteredAttendanceData} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
                                                     <defs>
                                                         <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
                                                             <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.25} />
@@ -268,7 +268,6 @@ export default function DetailedStatisticsModal({
                                                         tickLine={false}
                                                         axisLine={false}
                                                         interval={0}
-                                                        padding={{ right: 15 }}
                                                     />
                                                     {/* Hide duplicated YAxis but keep spacing identical to overlay */}
                                                     <YAxis hide={true} domain={[0, 100]} />
