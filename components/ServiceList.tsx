@@ -290,12 +290,12 @@ export default function ServiceList({
                                                     service.isFinalized ? (
                                                         <div className="flex items-center gap-1.5 mt-2 text-xs text-green-400">
                                                             <CheckCircle2 className="w-3.5 h-3.5" />
-                                                            <span>Присутність збережено</span>
+                                                            <span>Присутніх збережено</span>
                                                         </div>
                                                     ) : (
                                                         <div className="flex items-center gap-1.5 mt-2 text-xs text-amber-400">
                                                             <Clock className="w-3.5 h-3.5" />
-                                                            <span>Відкрийте, щоб зберегти присутність</span>
+                                                            <span>Відкрийте, щоб зберегти присутніх</span>
                                                         </div>
                                                     )
                                                 )}
