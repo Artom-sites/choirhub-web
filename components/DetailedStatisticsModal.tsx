@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { X, Calendar, Users, TrendingUp, TrendingDown, Filter, Mic2, Trophy, AlertTriangle, ArrowUpRight, ArrowDownRight, Minus } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 import { Choir } from "@/types";
@@ -60,6 +60,17 @@ export default function DetailedStatisticsModal({
     }, [choir.members, memberStats]);
 
     const [timeFilter, setTimeFilter] = useState<'1m' | '3m' | '6m' | 'all'>('6m');
+
+    const chartContainerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (chartContainerRef.current) {
+                chartContainerRef.current.scrollLeft = chartContainerRef.current.scrollWidth;
+            }
+        }, 50);
+        return () => clearTimeout(timer);
+    }, [attendanceTrend, timeFilter, activeTab]);
 
     const filteredAttendanceData = useMemo(() => {
         if (!attendanceTrend) return [];
@@ -220,7 +231,7 @@ export default function DetailedStatisticsModal({
                                     </div>
                                 </div>
                                 {/* Make chart scrollable horizontally so it doesn't get compressed */}
-                                <div className="h-56 w-full -ml-4 overflow-x-auto overflow-y-hidden scrollbar-hide">
+                                <div ref={chartContainerRef} className="h-56 w-full -ml-4 overflow-x-auto overflow-y-hidden scrollbar-hide">
                                     <div style={{ minWidth: `${Math.max(100, filteredAttendanceData.length * 15)}%`, height: '100%' }}>
                                         <ResponsiveContainer width="100%" height="100%">
                                             <AreaChart data={filteredAttendanceData}>
@@ -238,6 +249,7 @@ export default function DetailedStatisticsModal({
                                                     tickLine={false}
                                                     axisLine={false}
                                                     interval={0}
+                                                    padding={{ left: 15, right: 15 }}
                                                 />
                                                 <YAxis
                                                     stroke="var(--text-secondary)"

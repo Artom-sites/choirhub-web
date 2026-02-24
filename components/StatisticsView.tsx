@@ -109,7 +109,8 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
 
     const attendanceData = useMemo(() => {
         if (!stats?.attendanceTrend) return [];
-        return stats.attendanceTrend.map(entry => ({
+        // Only show the last 6 services on the main screen to avoid scrolling
+        return stats.attendanceTrend.slice(-6).map(entry => ({
             ...entry,
             date: new Date(entry.date).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' }),
         }));
@@ -260,58 +261,56 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                                 </div>
                                 Динаміка відвідуваності
                             </h3>
-                            {/* Make chart scrollable horizontally so it doesn't get compressed */}
-                            <div className="h-56 w-full -ml-4 overflow-x-auto overflow-y-hidden scrollbar-hide">
-                                <div style={{ minWidth: `${Math.max(100, attendanceData.length * 15)}%`, height: '100%' }}>
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <AreaChart data={attendanceData}>
-                                            <defs>
-                                                <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.25} />
-                                                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
-                                                </linearGradient>
-                                            </defs>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                                            <XAxis
-                                                dataKey="date"
-                                                stroke="var(--text-secondary)"
-                                                tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
-                                                tickLine={false}
-                                                axisLine={false}
-                                                interval={0}
-                                            />
-                                            <YAxis
-                                                stroke="var(--text-secondary)"
-                                                tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
-                                                tickLine={false}
-                                                axisLine={false}
-                                                unit="%"
-                                                domain={[0, 100]}
-                                            />
-                                            <Tooltip
-                                                contentStyle={{
-                                                    backgroundColor: 'var(--surface)',
-                                                    borderColor: 'var(--border)',
-                                                    borderRadius: '12px',
-                                                    color: 'var(--text-primary)',
-                                                    fontSize: '13px',
-                                                    boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
-                                                }}
-                                                formatter={(value: any) => [`${value}%`, 'Явка']}
-                                            />
-                                            <Area
-                                                type="monotone"
-                                                dataKey="percentage"
-                                                stroke="var(--primary)"
-                                                strokeWidth={2.5}
-                                                fillOpacity={1}
-                                                fill="url(#colorPv)"
-                                                dot={{ r: 3, fill: 'var(--primary)', strokeWidth: 0 }}
-                                                activeDot={{ r: 5, fill: 'var(--primary)', strokeWidth: 2, stroke: 'var(--surface)' }}
-                                            />
-                                        </AreaChart>
-                                    </ResponsiveContainer>
-                                </div>
+                            <div className="h-56 w-full -ml-4 mt-2">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={attendanceData}>
+                                        <defs>
+                                            <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.25} />
+                                                <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                                        <XAxis
+                                            dataKey="date"
+                                            stroke="var(--text-secondary)"
+                                            tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
+                                            tickLine={false}
+                                            axisLine={false}
+                                            interval={0}
+                                            padding={{ left: 10, right: 10 }}
+                                        />
+                                        <YAxis
+                                            stroke="var(--text-secondary)"
+                                            tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
+                                            tickLine={false}
+                                            axisLine={false}
+                                            unit="%"
+                                            domain={[0, 100]}
+                                        />
+                                        <Tooltip
+                                            contentStyle={{
+                                                backgroundColor: 'var(--surface)',
+                                                borderColor: 'var(--border)',
+                                                borderRadius: '12px',
+                                                color: 'var(--text-primary)',
+                                                fontSize: '13px',
+                                                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+                                            }}
+                                            formatter={(value: any) => [`${value}%`, 'Явка']}
+                                        />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="percentage"
+                                            stroke="var(--primary)"
+                                            strokeWidth={2.5}
+                                            fillOpacity={1}
+                                            fill="url(#colorPv)"
+                                            dot={{ r: 3, fill: 'var(--primary)', strokeWidth: 0 }}
+                                            activeDot={{ r: 5, fill: 'var(--primary)', strokeWidth: 2, stroke: 'var(--surface)' }}
+                                        />
+                                    </AreaChart>
+                                </ResponsiveContainer>
                             </div>
                             <button
                                 onClick={() => setShowDetailedStats(true)}
@@ -371,53 +370,58 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                         </div>
                     )}
                 </div>
-            )}
+            )
+            }
 
             {/* Show All Songs Modal */}
-            {showAllSongs && stats && (
-                <div className="fixed inset-0 z-[70] bg-background flex flex-col animate-in slide-in-from-bottom duration-300">
-                    <div className="sticky top-0 z-10 bg-surface/80 backdrop-blur-xl border-b border-border px-4 py-3 pt-[calc(0.75rem_+_env(safe-area-inset-top))] flex items-center gap-3">
-                        <button onClick={() => setShowAllSongs(false)} className="p-2 hover:bg-surface-highlight rounded-xl">
-                            <X className="w-5 h-5" />
-                        </button>
-                        <h2 className="font-bold text-lg">Статистика по пісням ({stats.allSongs.length})</h2>
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-4 pb-safe">
-                        <div className="space-y-2 max-w-lg mx-auto">
-                            {stats.allSongs.map((song, idx) => (
-                                <div key={song.songId} className="flex items-center gap-3 bg-surface border border-border p-3 rounded-xl">
-                                    <span className={`text-xs w-6 text-center font-bold tabular-nums ${idx < 3 ? 'text-pink-400' : 'text-text-secondary'}`}>{idx + 1}</span>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm font-medium text-text-primary truncate">{song.title}</span>
-                                            <span className="text-sm text-pink-400 font-bold ml-2 tabular-nums">{song.count}×</span>
-                                        </div>
-                                        <div className="h-1 bg-white/5 rounded-full overflow-hidden mt-1.5">
-                                            <div
-                                                className="h-full rounded-full"
-                                                style={{
-                                                    width: `${(song.count / stats.allSongs[0].count) * 100}%`,
-                                                    background: 'linear-gradient(90deg, #ec4899, #a855f7)'
-                                                }}
-                                            />
+            {
+                showAllSongs && stats && (
+                    <div className="fixed inset-0 z-[70] bg-background flex flex-col animate-in slide-in-from-bottom duration-300">
+                        <div className="sticky top-0 z-10 bg-surface/80 backdrop-blur-xl border-b border-border px-4 py-3 pt-[calc(0.75rem_+_env(safe-area-inset-top))] flex items-center gap-3">
+                            <button onClick={() => setShowAllSongs(false)} className="p-2 hover:bg-surface-highlight rounded-xl">
+                                <X className="w-5 h-5" />
+                            </button>
+                            <h2 className="font-bold text-lg">Статистика по пісням ({stats.allSongs.length})</h2>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-4 pb-safe">
+                            <div className="space-y-2 max-w-lg mx-auto">
+                                {stats.allSongs.map((song, idx) => (
+                                    <div key={song.songId} className="flex items-center gap-3 bg-surface border border-border p-3 rounded-xl">
+                                        <span className={`text-xs w-6 text-center font-bold tabular-nums ${idx < 3 ? 'text-pink-400' : 'text-text-secondary'}`}>{idx + 1}</span>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-sm font-medium text-text-primary truncate">{song.title}</span>
+                                                <span className="text-sm text-pink-400 font-bold ml-2 tabular-nums">{song.count}×</span>
+                                            </div>
+                                            <div className="h-1 bg-white/5 rounded-full overflow-hidden mt-1.5">
+                                                <div
+                                                    className="h-full rounded-full"
+                                                    style={{
+                                                        width: `${(song.count / stats.allSongs[0].count) * 100}%`,
+                                                        background: 'linear-gradient(90deg, #ec4899, #a855f7)'
+                                                    }}
+                                                />
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
-            {showDetailedStats && stats && (
-                <DetailedStatisticsModal
-                    isOpen={showDetailedStats}
-                    onClose={() => setShowDetailedStats(false)}
-                    choir={choir}
-                    attendanceTrend={stats.attendanceTrend}
-                    memberStats={stats.memberStats || {}}
-                />
-            )}
-        </div>
+            {
+                showDetailedStats && stats && (
+                    <DetailedStatisticsModal
+                        isOpen={showDetailedStats}
+                        onClose={() => setShowDetailedStats(false)}
+                        choir={choir}
+                        attendanceTrend={stats.attendanceTrend}
+                        memberStats={stats.memberStats || {}}
+                    />
+                )
+            }
+        </div >
     );
 }
