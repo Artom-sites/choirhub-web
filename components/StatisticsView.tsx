@@ -284,18 +284,27 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                                             <XAxis
                                                 dataKey="date"
                                                 stroke="var(--text-secondary)"
-                                                tick={({ x, y, payload }) => (
-                                                    <text
-                                                        x={x}
-                                                        y={y}
-                                                        dy={10}
-                                                        fill="var(--text-secondary)"
-                                                        fontSize={11}
-                                                        textAnchor="middle"
-                                                    >
-                                                        {payload.value}
-                                                    </text>
-                                                )}
+                                                tick={({ x, y, payload, index }) => {
+                                                    const isFirst = index === 0;
+                                                    const isLast = index === attendanceData.length - 1;
+                                                    let dx = 0;
+                                                    if (isFirst) dx = 10;
+                                                    if (isLast) dx = -10;
+
+                                                    return (
+                                                        <text
+                                                            x={x}
+                                                            y={y}
+                                                            dx={dx}
+                                                            dy={10}
+                                                            fill="var(--text-secondary)"
+                                                            fontSize={11}
+                                                            textAnchor="middle"
+                                                        >
+                                                            {payload.value}
+                                                        </text>
+                                                    );
+                                                }}
                                                 tickLine={false}
                                                 axisLine={false}
                                                 interval={0}
