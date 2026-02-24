@@ -244,7 +244,7 @@ export default function SongList({
                     <Music2 className="w-4 h-4" />
                     Репертуар
                 </button>
-                {choirType === 'msc' && (
+                {choirType !== 'standard' && (
                     <button
                         onClick={() => setSubTab('catalog')}
                         className={`flex-1 py-2.5 rounded-[10px] text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${subTab === 'catalog'
@@ -259,7 +259,7 @@ export default function SongList({
             </div>
 
             {/* Catalog View */}
-            {choirType === 'msc' && (
+            {choirType !== 'standard' && (
                 <div className={subTab === 'catalog' ? 'block h-full' : 'hidden'}>
                     <GlobalArchive
                         isOverlayOpen={isOverlayOpen}
@@ -466,7 +466,7 @@ export default function SongList({
                                     />
                                 </div>
                             )}
-                            {choirType === 'msc' && subTab === 'catalog' && (
+                            {choirType !== 'standard' && subTab === 'catalog' && (
                                 <div className="absolute inset-0 bg-background overflow-hidden">
                                     <GlobalArchive onAddSong={handleAddSong} isOverlayOpen={isOverlayOpen} initialSearchQuery={pendingArchiveQuery} />
                                 </div>
@@ -478,11 +478,11 @@ export default function SongList({
 
             {/* Modals */}
             {showAddModal && (
-                <AddSongModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} onAdd={handleAddSong} regents={regents} knownConductors={knownConductors} knownCategories={knownCategories} knownPianists={knownPianists} onSearchArchive={choirType === 'msc' ? (query) => { setPendingArchiveQuery(query); setShowAddModal(false); setShowArchiveModal(true); } : undefined} />
+                <AddSongModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} onAdd={handleAddSong} regents={regents} knownConductors={knownConductors} knownCategories={knownCategories} knownPianists={knownPianists} onSearchArchive={choirType !== 'standard' ? (query) => { setPendingArchiveQuery(query); setShowAddModal(false); setShowArchiveModal(true); } : undefined} />
             )}
 
             {/* Archive Search Modal from Add Song */}
-            {choirType === 'msc' && showArchiveModal && (
+            {choirType !== 'standard' && showArchiveModal && (
                 <div className="fixed inset-0 z-[200] bg-background flex flex-col">
                     <div className="flex items-center justify-between p-4 pt-[calc(1rem+env(safe-area-inset-top))] border-b border-white/10 bg-background/80 backdrop-blur-md sticky top-0 z-10">
                         <h2 className="text-lg font-bold text-text-primary">Знайти в архіві</h2>

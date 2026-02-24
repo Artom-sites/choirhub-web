@@ -661,7 +661,7 @@ function SongContent() {
                                         >
                                             {uploading ? "Завантаження..." : "Завантажити інший PDF"}
                                         </button>
-                                        {choirData.choirType === 'msc' && (
+                                        {choirData.choirType !== 'standard' && (
                                             <button
                                                 onClick={() => setShowArchiveModal(true)}
                                                 className="w-12 h-[50px] shrink-0 border border-border rounded-xl flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-highlight transition-colors"
@@ -709,7 +709,7 @@ function SongContent() {
                                             )}
                                             Завантажити PDF
                                         </button>
-                                        {choirData.choirType === 'msc' && (
+                                        {choirData.choirType !== 'standard' && (
                                             <button
                                                 onClick={() => setShowArchiveModal(true)}
                                                 className="w-14 h-[56px] shrink-0 border-2 border-primary/20 rounded-xl flex items-center justify-center text-primary hover:bg-primary/10 transition-colors"
@@ -778,7 +778,7 @@ function SongContent() {
                 />
             )}
             {/* Archive Search Modal */}
-            {choirData.choirType === 'msc' && showArchiveModal && (
+            {choirData.choirType !== 'standard' && showArchiveModal && (
                 <div className="fixed inset-0 z-[200] bg-background flex flex-col">
                     <div className="flex items-center justify-between p-4 border-b border-white/10 bg-background/80 backdrop-blur-md sticky top-0 z-10">
                         <h2 className="text-lg font-bold">Знайти в архіві</h2>
