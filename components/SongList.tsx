@@ -27,6 +27,7 @@ import { hapticLight, hapticSuccess } from "../hooks/useHaptics";
 
 interface SongListProps {
     canAddSongs: boolean;
+    choirType?: 'msc' | 'standard';
     regents: string[];
     knownConductors: string[];
     knownCategories: string[];
@@ -39,6 +40,7 @@ interface SongListProps {
 
 export default function SongList({
     canAddSongs,
+    choirType,
     regents,
     knownConductors,
     knownCategories,
@@ -230,41 +232,45 @@ export default function SongList({
                     <Music2 className="w-4 h-4" />
                     Репертуар
                 </button>
-                <button
-                    onClick={() => setSubTab('catalog')}
-                    className={`flex-1 py-2.5 rounded-[10px] text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${subTab === 'catalog'
-                        ? 'bg-primary text-background'
-                        : 'text-text-secondary'
-                        }`}
-                >
-                    <Library className="w-4 h-4" />
-                    Архів МХО
-                </button>
+                {choirType === 'msc' && (
+                    <button
+                        onClick={() => setSubTab('catalog')}
+                        className={`flex-1 py-2.5 rounded-[10px] text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${subTab === 'catalog'
+                            ? 'bg-primary text-background'
+                            : 'text-text-secondary'
+                            }`}
+                    >
+                        <Library className="w-4 h-4" />
+                        Архів МХО
+                    </button>
+                )}
             </div>
 
             {/* Catalog View */}
-            <div className={subTab === 'catalog' ? 'block h-full' : 'hidden'}>
-                <GlobalArchive
-                    isOverlayOpen={isOverlayOpen}
-                    onAddSong={canAddSongs ? async (globalSong) => {
-                        if (!userData?.choirId) return;
-                        try {
-                            const pdfUrl = globalSong.parts?.[0]?.pdfUrl || '';
-                            await addSong(userData.choirId, {
-                                title: globalSong.title,
-                                category: 'Інші' as Category,
-                                conductor: '',
-                                addedAt: new Date().toISOString(),
-                                pdfUrl: pdfUrl,
-                                hasPdf: !!pdfUrl,
-                                parts: globalSong.parts,
-                            });
-                            await refreshRepertoire();
-                            if (onRefresh) onRefresh();
-                        } catch (e) { console.error(e); }
-                    } : undefined}
-                />
-            </div>
+            {choirType === 'msc' && (
+                <div className={subTab === 'catalog' ? 'block h-full' : 'hidden'}>
+                    <GlobalArchive
+                        isOverlayOpen={isOverlayOpen}
+                        onAddSong={canAddSongs ? async (globalSong) => {
+                            if (!userData?.choirId) return;
+                            try {
+                                const pdfUrl = globalSong.parts?.[0]?.pdfUrl || '';
+                                await addSong(userData.choirId, {
+                                    title: globalSong.title,
+                                    category: 'Інші' as Category,
+                                    conductor: '',
+                                    addedAt: new Date().toISOString(),
+                                    pdfUrl: pdfUrl,
+                                    hasPdf: !!pdfUrl,
+                                    parts: globalSong.parts,
+                                });
+                                await refreshRepertoire();
+                                if (onRefresh) onRefresh();
+                            } catch (e) { console.error(e); }
+                        } : undefined}
+                    />
+                </div>
+            )}
 
             {/* Repertoire Content */}
             <div className={subTab === 'repertoire' ? 'block' : 'hidden'}>
@@ -448,7 +454,7 @@ export default function SongList({
                                     />
                                 </div>
                             )}
-                            {subTab === 'catalog' && (
+                            {choirType === 'msc' && subTab === 'catalog' && (
                                 <div className="absolute inset-0 bg-background overflow-hidden">
                                     <GlobalArchive onAddSong={handleAddSong} isOverlayOpen={isOverlayOpen} initialSearchQuery={pendingArchiveQuery} />
                                 </div>
@@ -460,11 +466,11 @@ export default function SongList({
 
             {/* Modals */}
             {showAddModal && (
-                <AddSongModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} onAdd={handleAddSong} regents={regents} knownConductors={knownConductors} knownCategories={knownCategories} knownPianists={knownPianists} onSearchArchive={(query) => { setPendingArchiveQuery(query); setShowAddModal(false); setShowArchiveModal(true); }} />
+                <AddSongModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} onAdd={handleAddSong} regents={regents} knownConductors={knownConductors} knownCategories={knownCategories} knownPianists={knownPianists} onSearchArchive={choirType === 'msc' ? (query) => { setPendingArchiveQuery(query); setShowAddModal(false); setShowArchiveModal(true); } : undefined} />
             )}
 
             {/* Archive Search Modal from Add Song */}
-            {showArchiveModal && (
+            {choirType === 'msc' && showArchiveModal && (
                 <div className="fixed inset-0 z-[200] bg-background flex flex-col">
                     <div className="flex items-center justify-between p-4 pt-[calc(1rem+env(safe-area-inset-top))] border-b border-white/10 bg-background/80 backdrop-blur-md sticky top-0 z-10">
                         <h2 className="text-lg font-bold text-text-primary">Знайти в архіві</h2>

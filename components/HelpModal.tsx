@@ -121,7 +121,7 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                                     <div className="bg-surface-highlight p-4 rounded-2xl border border-border">
                                         <Archive className="w-6 h-6 text-amber-400 mb-3" />
                                         <h4 className="font-bold text-text-primary mb-1">Архів МХО</h4>
-                                        <p className="text-xs text-text-secondary">Тисячі пісень з каталогу МСЦ ЄХБ.</p>
+                                        <p className="text-xs text-text-secondary">Тисячі пісень з каталогу МСЦ ЄХБ (для хорів МСЦ).</p>
                                     </div>
                                 </div>
 
@@ -245,6 +245,9 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                                         <p className="text-sm text-text-secondary">
                                             Глобальний каталог з тисячами пісень від МСЦ ЄХБ. Шукайте пісні,
                                             переглядайте ноти та додавайте до репертуару свого хору одним натиском.
+                                        </p>
+                                        <p className="text-xs text-text-secondary/60 mt-2 italic">
+                                            Доступний тільки для хорів типу «Хор МСЦ ЄХБ».
                                         </p>
                                     </div>
 
@@ -437,15 +440,17 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                                         <h4 className="font-bold text-text-primary mb-2">Як створити свій хор?</h4>
                                         <p className="text-sm text-text-secondary">
                                             На екрані входу виберіть &quot;Створити новий хор&quot;.
-                                            Введіть назву — і ви автоматично станете регентом.
+                                            Введіть назву та оберіть тип хору: «Хор МСЦ ЄХБ» (з доступом до Архіву МХО)
+                                            або «Звичайний хор» (тільки власний репертуар).
+                                            Ви автоматично станете регентом.
                                         </p>
                                     </div>
 
                                     <div className="bg-surface-highlight p-5 rounded-2xl border border-border">
                                         <h4 className="font-bold text-text-primary mb-2">Як додати пісню до репертуару?</h4>
                                         <p className="text-sm text-text-secondary">
-                                            Натисніть &quot;+&quot; в розділі &quot;Пісні&quot; → оберіть з Архіву МХО або
-                                            створіть власну пісню з завантаженням PDF.
+                                            Натисніть &quot;+&quot; в розділі &quot;Пісні&quot;. Для хорів МСЦ також
+                                            доступний пошук у Архіві МХО. Або створіть власну пісню з завантаженням PDF.
                                         </p>
                                     </div>
 

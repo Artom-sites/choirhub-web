@@ -50,6 +50,7 @@ function SongContent() {
         knownConductors: string[];
         knownCategories: string[];
         knownPianists: string[];
+        choirType?: 'msc' | 'standard';
     }>({ regents: [], knownConductors: [], knownCategories: [], knownPianists: [] });
 
     // Archive Modal State
@@ -250,7 +251,8 @@ function SongContent() {
                             regents: choir.regents || [],
                             knownConductors: choir.knownConductors || [],
                             knownCategories: choir.knownCategories || [],
-                            knownPianists: choir.knownPianists || []
+                            knownPianists: choir.knownPianists || [],
+                            choirType: choir.choirType
                         });
                     }
                 }
@@ -659,13 +661,15 @@ function SongContent() {
                                         >
                                             {uploading ? "Завантаження..." : "Завантажити інший PDF"}
                                         </button>
-                                        <button
-                                            onClick={() => setShowArchiveModal(true)}
-                                            className="w-12 h-[50px] shrink-0 border border-border rounded-xl flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-highlight transition-colors"
-                                            title="Знайти в архіві"
-                                        >
-                                            <Search className="w-5 h-5" />
-                                        </button>
+                                        {choirData.choirType === 'msc' && (
+                                            <button
+                                                onClick={() => setShowArchiveModal(true)}
+                                                className="w-12 h-[50px] shrink-0 border border-border rounded-xl flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-highlight transition-colors"
+                                                title="Знайти в архіві"
+                                            >
+                                                <Search className="w-5 h-5" />
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -705,13 +709,15 @@ function SongContent() {
                                             )}
                                             Завантажити PDF
                                         </button>
-                                        <button
-                                            onClick={() => setShowArchiveModal(true)}
-                                            className="w-14 h-[56px] shrink-0 border-2 border-primary/20 rounded-xl flex items-center justify-center text-primary hover:bg-primary/10 transition-colors"
-                                            title="Знайти в архіві"
-                                        >
-                                            <Search className="w-6 h-6" />
-                                        </button>
+                                        {choirData.choirType === 'msc' && (
+                                            <button
+                                                onClick={() => setShowArchiveModal(true)}
+                                                className="w-14 h-[56px] shrink-0 border-2 border-primary/20 rounded-xl flex items-center justify-center text-primary hover:bg-primary/10 transition-colors"
+                                                title="Знайти в архіві"
+                                            >
+                                                <Search className="w-6 h-6" />
+                                            </button>
+                                        )}
                                     </div>
 
                                     <p className="text-xs text-text-secondary/50 mt-4 mb-4">
@@ -772,7 +778,7 @@ function SongContent() {
                 />
             )}
             {/* Archive Search Modal */}
-            {showArchiveModal && (
+            {choirData.choirType === 'msc' && showArchiveModal && (
                 <div className="fixed inset-0 z-[200] bg-background flex flex-col">
                     <div className="flex items-center justify-between p-4 border-b border-white/10 bg-background/80 backdrop-blur-md sticky top-0 z-10">
                         <h2 className="text-lg font-bold">Знайти в архіві</h2>

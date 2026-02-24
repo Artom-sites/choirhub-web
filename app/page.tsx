@@ -202,6 +202,7 @@ function HomePageContent() {
   // Manager/Admin States
   const [managerMode, setManagerMode] = useState<'list' | 'create' | 'join'>('list');
   const [newChoirName, setNewChoirName] = useState("");
+  const [newChoirType, setNewChoirType] = useState<'msc' | 'standard' | null>(null);
   const [joinCode, setJoinCode] = useState("");
   const [managerLoading, setManagerLoading] = useState(false);
   const [managerError, setManagerError] = useState("");
@@ -684,12 +685,12 @@ function HomePageContent() {
   };
 
   const handleCreateChoir = async () => {
-    if (!user || !newChoirName.trim()) return;
+    if (!user || !newChoirName.trim() || !newChoirType) return;
     setManagerLoading(true);
     try {
       // Use Atomic Cloud Function (same as Setup Page)
       const { createChoir } = await import("@/lib/db");
-      await createChoir(newChoirName.trim());
+      await createChoir(newChoirName.trim(), newChoirType);
 
       // Safety delay for auth claim propagation
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -1354,9 +1355,42 @@ function HomePageContent() {
                     placeholder="Назва хору"
                     className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl placeholder:text-text-secondary"
                   />
+                  <div className="space-y-2">
+                    <p className="text-xs text-text-secondary uppercase font-bold tracking-wider">Тип хору</p>
+                    <button
+                      type="button"
+                      onClick={() => setNewChoirType('msc')}
+                      className={`w-full p-3 rounded-xl text-left transition-all border text-sm ${newChoirType === 'msc' ? 'bg-primary/10 border-primary' : 'bg-surface-highlight border-border'}`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${newChoirType === 'msc' ? 'border-primary' : 'border-text-secondary/40'}`}>
+                          {newChoirType === 'msc' && <div className="w-2 h-2 rounded-full bg-primary" />}
+                        </div>
+                        <div>
+                          <p className="font-bold text-text-primary">Хор МСЦ ЄХБ</p>
+                          <p className="text-xs text-text-secondary">Має доступ до Архіву МХО</p>
+                        </div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewChoirType('standard')}
+                      className={`w-full p-3 rounded-xl text-left transition-all border text-sm ${newChoirType === 'standard' ? 'bg-primary/10 border-primary' : 'bg-surface-highlight border-border'}`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${newChoirType === 'standard' ? 'border-primary' : 'border-text-secondary/40'}`}>
+                          {newChoirType === 'standard' && <div className="w-2 h-2 rounded-full bg-primary" />}
+                        </div>
+                        <div>
+                          <p className="font-bold text-text-primary">Звичайний хор</p>
+                          <p className="text-xs text-text-secondary">Тільки власний репертуар</p>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
                   <button
                     onClick={handleCreateChoir}
-                    disabled={managerLoading}
+                    disabled={managerLoading || !newChoirName.trim() || !newChoirType}
                     className="w-full p-3 bg-primary text-background rounded-xl font-bold hover:opacity-90 disabled:opacity-50"
                   >
                     {managerLoading ? <Loader2 className="animate-spin mx-auto" /> : "Створити"}
@@ -1569,8 +1603,8 @@ function HomePageContent() {
                         key={t.id}
                         onClick={() => setTheme(t.id as 'light' | 'dark' | 'system')}
                         className={`p-2 rounded-full transition-all duration-200 ${isActive
-                            ? 'bg-primary text-background shadow-sm'
-                            : 'text-text-secondary hover:text-text-primary hover:bg-surface-highlight'
+                          ? 'bg-primary text-background shadow-sm'
+                          : 'text-text-secondary hover:text-text-primary hover:bg-surface-highlight'
                           }`}
                         title={t.label}
                       >
@@ -1884,6 +1918,7 @@ function HomePageContent() {
         <div style={{ display: activeTab === 'songs' ? 'block' : 'none' }}>
           <SongList
             canAddSongs={canAddSongs}
+            choirType={choir?.choirType}
             regents={choir?.regents || []}
             knownConductors={choir?.knownConductors || []}
             knownCategories={choir?.knownCategories || []}

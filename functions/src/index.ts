@@ -77,10 +77,14 @@ export const atomicCreateChoir = functions.https.onCall(async (data, context) =>
         throw new functions.https.HttpsError("unauthenticated", "User must be logged in");
     }
     const userId = context.auth.uid;
-    const { name } = data;
+    const { name, choirType } = data;
 
     if (!name || typeof name !== 'string') {
         throw new functions.https.HttpsError("invalid-argument", "Choir name is required");
+    }
+
+    if (!choirType || !['msc', 'standard'].includes(choirType)) {
+        throw new functions.https.HttpsError("invalid-argument", "Valid choirType is required ('msc' or 'standard')");
     }
 
     const memberCode = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -100,6 +104,7 @@ export const atomicCreateChoir = functions.https.onCall(async (data, context) =>
     // 1. Create Choir Document
     const choirData: any = {
         name: name.trim(),
+        choirType,
         memberCode,
         regentCode,
         ownerId: userId,
@@ -132,7 +137,8 @@ export const atomicCreateChoir = functions.https.onCall(async (data, context) =>
     const newMembership = {
         choirId: choirId,
         choirName: name.trim(),
-        role: 'head'
+        role: 'head',
+        choirType
     };
 
     // Updates
@@ -273,7 +279,8 @@ export const atomicJoinChoir = functions.https.onCall(async (data, context) => {
             updatedMemberships.push({
                 choirId: choirId,
                 choirName: choirName,
-                role: newRole
+                role: newRole,
+                choirType: choirData.choirType || 'msc'
             });
         }
 

@@ -609,8 +609,10 @@ export async function updateChoirMembers(choirId: string, members: any[]): Promi
 
 export async function updateChoir(choirId: string, updates: Partial<Choir>): Promise<void> {
     try {
+        // choirType is immutable after creation — remove if accidentally passed
+        const { choirType, ...safeUpdates } = updates;
         const docRef = doc(db, "choirs", choirId);
-        await updateDoc(docRef, updates);
+        await updateDoc(docRef, safeUpdates);
     } catch (error) {
         console.error("Error updating choir:", error);
         throw error;
@@ -774,10 +776,10 @@ export async function deleteMyAccount(): Promise<void> {
     }
 }
 
-export async function createChoir(name: string): Promise<string> {
+export async function createChoir(name: string, choirType: 'msc' | 'standard'): Promise<string> {
     try {
         const createFn = httpsCallable(functions, 'atomicCreateChoir');
-        const result = await createFn({ name });
+        const result = await createFn({ name, choirType });
         const data = result.data as any;
 
         // Force token refresh to pick up new claims immediately

@@ -19,6 +19,7 @@ export interface UserMembership {
     choirId: string;
     choirName: string;
     role: UserRole;
+    choirType?: 'msc' | 'standard';
 }
 
 export interface UserData {
@@ -47,6 +48,7 @@ export interface ChoirMember {
 export interface Choir {
     id: string;
     name: string;
+    choirType: 'msc' | 'standard';
     memberCode: string;
     regentCode: string;
     createdAt: string;

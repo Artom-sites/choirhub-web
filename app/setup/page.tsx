@@ -33,6 +33,7 @@ function SetupPageContent() {
 
     // Form State (Moved to top to avoid hook violation)
     const [choirName, setChoirName] = useState("");
+    const [choirType, setChoirType] = useState<'msc' | 'standard' | null>(null);
     const [inviteCode, setInviteCode] = useState("");
     const [formLoading, setFormLoading] = useState(false);
     const [error, setError] = useState("");
@@ -201,19 +202,19 @@ function SetupPageContent() {
             setError("Введіть назву хору");
             return;
         }
+        if (!choirType) {
+            setError("Оберіть тип хору");
+            return;
+        }
 
         setFormLoading(true);
         setError("");
 
         try {
-            await createChoir(choirName);
+            await createChoir(choirName, choirType);
 
             // Safety delay to ensure Firestore SDK updates auth state before redirect
             await new Promise(resolve => setTimeout(resolve, 500));
-
-            // Do NOT call refreshProfile() here. 
-            // It risks reading Firestore before the new token is propagated.
-            // Let the Home page load fresh data naturally.
 
             router.push("/");
         } catch (err: any) {
@@ -591,10 +592,51 @@ function SetupPageContent() {
                                     placeholder="Наприклад: Молодіжний Хор"
                                 />
                             </div>
+                            <div>
+                                <label className="text-xs text-text-secondary uppercase font-bold tracking-wider mb-2 block">Тип хору</label>
+                                <div className="space-y-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setChoirType('msc')}
+                                        className={`w-full p-4 rounded-xl text-left transition-all border ${choirType === 'msc'
+                                            ? 'bg-primary/10 border-primary'
+                                            : 'bg-surface-highlight border-border hover:border-text-secondary/30'
+                                            }`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${choirType === 'msc' ? 'border-primary' : 'border-text-secondary/40'}`}>
+                                                {choirType === 'msc' && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-text-primary text-[15px]">Хор МСЦ ЄХБ</p>
+                                                <p className="text-xs text-text-secondary mt-0.5">Має доступ до Архіву МХО</p>
+                                            </div>
+                                        </div>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setChoirType('standard')}
+                                        className={`w-full p-4 rounded-xl text-left transition-all border ${choirType === 'standard'
+                                            ? 'bg-primary/10 border-primary'
+                                            : 'bg-surface-highlight border-border hover:border-text-secondary/30'
+                                            }`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${choirType === 'standard' ? 'border-primary' : 'border-text-secondary/40'}`}>
+                                                {choirType === 'standard' && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-text-primary text-[15px]">Звичайний хор</p>
+                                                <p className="text-xs text-text-secondary mt-0.5">Тільки власний репертуар</p>
+                                            </div>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
                             {error && <p className="text-red-500 text-sm bg-red-500/10 p-3 rounded-lg border border-red-500/20">{error}</p>}
                             <button
                                 onClick={handleCreateChoir}
-                                disabled={formLoading}
+                                disabled={formLoading || !choirName.trim() || !choirType}
                                 className="w-full py-4 bg-primary text-background rounded-xl font-bold mt-4 hover:opacity-90 transition-all flex justify-center shadow-lg disabled:opacity-50"
                             >
                                 {formLoading ? <div className="w-5 h-5 border-2 border-background/20 border-t-background rounded-full animate-spin" /> : "Створити"}
