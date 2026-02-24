@@ -230,26 +230,12 @@ export default function DetailedStatisticsModal({
                                         ))}
                                     </div>
                                 </div>
-                                {/* Make chart scrollable horizontally so it doesn't get compressed */}
-                                <div ref={chartContainerRef} className="h-56 w-full -ml-4 overflow-x-auto overflow-y-hidden scrollbar-hide">
-                                    <div style={{ minWidth: `${Math.max(100, filteredAttendanceData.length * 15)}%`, height: '100%' }}>
+                                {/* Container for fixed YAxis + scrollable chart */}
+                                <div className="relative h-56 w-full mt-2">
+                                    {/* Fixed Y-Axis Layer */}
+                                    <div className="absolute inset-y-0 left-0 w-12 pointer-events-none z-10 bg-surface">
                                         <ResponsiveContainer width="100%" height="100%">
-                                            <AreaChart data={filteredAttendanceData} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
-                                                <defs>
-                                                    <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.25} />
-                                                        <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
-                                                    </linearGradient>
-                                                </defs>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                                                <XAxis
-                                                    dataKey="date"
-                                                    stroke="var(--text-secondary)"
-                                                    tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
-                                                    tickLine={false}
-                                                    axisLine={false}
-                                                    interval={0}
-                                                />
+                                            <AreaChart data={filteredAttendanceData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
                                                 <YAxis
                                                     stroke="var(--text-secondary)"
                                                     tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
@@ -258,31 +244,59 @@ export default function DetailedStatisticsModal({
                                                     unit="%"
                                                     domain={[0, 100]}
                                                 />
-                                                <Tooltip
-                                                    contentStyle={{
-                                                        backgroundColor: 'var(--surface)',
-                                                        borderColor: 'var(--border)',
-                                                        borderRadius: '12px',
-                                                        color: 'var(--text-primary)',
-                                                        fontSize: '13px',
-                                                        boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
-                                                    }}
-                                                    itemStyle={{ color: 'var(--text-secondary)' }}
-                                                    labelStyle={{ color: 'var(--text-primary)', fontWeight: 'bold', marginBottom: '4px' }}
-                                                    formatter={(value: any) => [`${value}%`, 'Явка']}
-                                                />
-                                                <Area
-                                                    type="monotone"
-                                                    dataKey="percentage"
-                                                    stroke="var(--primary)"
-                                                    strokeWidth={2.5}
-                                                    fillOpacity={1}
-                                                    fill="url(#colorPv)"
-                                                    dot={{ r: 3, fill: 'var(--primary)', strokeWidth: 0 }}
-                                                    activeDot={{ r: 5, fill: 'var(--primary)', strokeWidth: 2, stroke: 'var(--surface)' }}
-                                                />
                                             </AreaChart>
                                         </ResponsiveContainer>
+                                    </div>
+
+                                    {/* Scrollable Chart Layer */}
+                                    <div ref={chartContainerRef} className="absolute inset-y-0 left-10 right-0 overflow-x-auto overflow-y-hidden scrollbar-hide">
+                                        <div style={{ minWidth: `${Math.max(100, filteredAttendanceData.length * 15)}%`, height: '100%' }}>
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <AreaChart data={filteredAttendanceData} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
+                                                    <defs>
+                                                        <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
+                                                            <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.25} />
+                                                            <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+                                                        </linearGradient>
+                                                    </defs>
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                                                    <XAxis
+                                                        dataKey="date"
+                                                        stroke="var(--text-secondary)"
+                                                        tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
+                                                        tickLine={false}
+                                                        axisLine={false}
+                                                        interval={0}
+                                                        padding={{ left: 15, right: 15 }}
+                                                    />
+                                                    {/* Hide the duplicated YAxis in the scrollable part using hide={true} but keep it for margin spacing */}
+                                                    <YAxis hide={true} domain={[0, 100]} />
+                                                    <Tooltip
+                                                        contentStyle={{
+                                                            backgroundColor: 'var(--surface)',
+                                                            borderColor: 'var(--border)',
+                                                            borderRadius: '12px',
+                                                            color: 'var(--text-primary)',
+                                                            fontSize: '13px',
+                                                            boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+                                                        }}
+                                                        itemStyle={{ color: 'var(--text-secondary)' }}
+                                                        labelStyle={{ color: 'var(--text-primary)', fontWeight: 'bold', marginBottom: '4px' }}
+                                                        formatter={(value: any) => [`${value}%`, 'Явка']}
+                                                    />
+                                                    <Area
+                                                        type="monotone"
+                                                        dataKey="percentage"
+                                                        stroke="var(--primary)"
+                                                        strokeWidth={2.5}
+                                                        fillOpacity={1}
+                                                        fill="url(#colorPv)"
+                                                        dot={{ r: 3, fill: 'var(--primary)', strokeWidth: 0 }}
+                                                        activeDot={{ r: 5, fill: 'var(--primary)', strokeWidth: 2, stroke: 'var(--surface)' }}
+                                                    />
+                                                </AreaChart>
+                                            </ResponsiveContainer>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
