@@ -1014,9 +1014,13 @@ function HomePageContent() {
       // Cloud Function handles both Firestore cleanup and Auth deletion
       await deleteMyAccount();
       // Navigation handles itself (auth state change)
-    } catch (error) {
+    } catch (error: any) {
       console.error("Delete Account Error:", error);
-      setManagerError("Для видалення потрібно перезайти в акаунт");
+      // Sole-admin guard: CF returns a specific precondition error
+      const message = error?.code === 'functions/failed-precondition'
+        ? error.message
+        : "Для видалення потрібно перезайти в акаунт";
+      setManagerError(message);
     }
   };
 
@@ -1491,9 +1495,23 @@ function HomePageContent() {
               exit={{ scale: 0.95, opacity: 0 }}
               className="bg-surface card-shadow w-full max-w-sm p-6 rounded-3xl shadow-2xl overflow-hidden relative"
             >
-              <h3 className="text-xl font-bold text-text-primary mb-2">Оберіть себе зі списку</h3>
-              <p className="text-sm text-text-secondary mb-4">
-                Ви приєдналися до хору. Якщо ви вже є в списку учасників — оберіть своє ім&apos;я:
+              <h3 className="text-xl font-bold text-text-primary mb-2">Це ви?</h3>
+              <p className="text-sm text-text-secondary mb-2">
+                {(() => {
+                  const userName = userData?.name || user?.displayName || '';
+                  const matchedMember = claimMembers.find((m: any) =>
+                    userName && m.name.toLowerCase().trim() === userName.toLowerCase().trim()
+                  );
+                  if (matchedMember && !selectedClaimId) {
+                    setTimeout(() => setSelectedClaimId(matchedMember.id), 0);
+                  }
+                  return matchedMember
+                    ? <>Ми знайшли вас у списку: <b className="text-text-primary">{matchedMember.name}</b></>
+                    : 'Оберіть себе зі списку учасників хору.';
+                })()}
+              </p>
+              <p className="text-xs text-text-secondary/60 mb-4">
+                Це дозволить зберегти вашу історію відвідувань та партію.
               </p>
 
               <div className="max-h-64 overflow-y-auto space-y-2 mb-4 pr-1 custom-scrollbar">
@@ -1556,7 +1574,7 @@ function HomePageContent() {
                   disabled={claimLoading}
                   className="w-full py-3 text-sm text-text-secondary hover:text-text-primary border border-border rounded-xl hover:bg-surface-highlight transition-colors font-medium"
                 >
-                  Мене нема в списку (Створити нове)
+                  Я — новий учасник
                 </button>
               </div>
             </motion.div>
@@ -2130,15 +2148,17 @@ function HomePageContent() {
       </div >
 
       {/* Global FAB */}
-      {!showAccount && !showChoirManager && !showAddSongModal && !showAddServiceModal && (activeTab === 'home' && canEdit) && (
-        <button
-          onClick={() => setShowAddServiceModal(true)}
-          className="fixed bottom-[calc(5.5rem_+_env(safe-area-inset-bottom))] md:bottom-24 right-6 w-[56px] h-[56px] bg-primary text-background rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60]"
-          title="Додати служіння"
-        >
-          <Plus className="w-7 h-7" />
-        </button>
-      )}
+      {
+        !showAccount && !showChoirManager && !showAddSongModal && !showAddServiceModal && (activeTab === 'home' && canEdit) && (
+          <button
+            onClick={() => setShowAddServiceModal(true)}
+            className="fixed bottom-[calc(5.5rem_+_env(safe-area-inset-bottom))] md:bottom-24 right-6 w-[56px] h-[56px] bg-primary text-background rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60]"
+            title="Додати служіння"
+          >
+            <Plus className="w-7 h-7" />
+          </button>
+        )
+      }
 
       {/* Bottom Nav */}
       <nav className="fixed bottom-0 left-0 right-0 bg-surface/90 backdrop-blur-xl px-4 pb-safe pt-2 md:pt-1 z-50 border-t border-border">

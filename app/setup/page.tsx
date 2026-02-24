@@ -679,8 +679,22 @@ function SetupPageContent() {
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm animate-in fade-in duration-200">
                         <div className="bg-[#18181b] border border-white/10 rounded-3xl p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200">
                             <h3 className="text-xl font-bold text-white mb-2">Це ви?</h3>
-                            <p className="text-sm text-text-secondary mb-6">
-                                Ми знайшли учасників з таким ім'ям. Якщо це ви — оберіть себе, щоб зберегти історію.
+                            <p className="text-sm text-text-secondary mb-2">
+                                {(() => {
+                                    const matchedMember = claimMembers.find((m: any) =>
+                                        user?.displayName && m.name.toLowerCase().trim() === user.displayName.toLowerCase().trim()
+                                    );
+                                    if (matchedMember && !selectedClaimId) {
+                                        // Auto-select the matched member
+                                        setTimeout(() => setSelectedClaimId(matchedMember.id), 0);
+                                    }
+                                    return matchedMember
+                                        ? <>Ми знайшли вас у списку: <b className="text-white">{matchedMember.name}</b></>
+                                        : 'Оберіть себе зі списку учасників хору.';
+                                })()}
+                            </p>
+                            <p className="text-xs text-text-secondary/60 mb-4">
+                                Це дозволить зберегти вашу історію відвідувань та партію.
                             </p>
 
                             <div className="space-y-2 max-h-60 overflow-y-auto mb-6 pr-2 custom-scrollbar">
@@ -726,7 +740,7 @@ function SetupPageContent() {
                                     disabled={claimLoading}
                                     className="w-full py-3 text-sm text-text-secondary hover:text-white transition-colors"
                                 >
-                                    Це не я, створити нового
+                                    Я — новий учасник
                                 </button>
                             </div>
                         </div>

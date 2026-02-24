@@ -11,7 +11,7 @@ import { Virtuoso, TableVirtuoso } from 'react-virtuoso';
 import Fuse from 'fuse.js';
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { addSong, uploadSongPdf, deleteSong, addKnownConductor, updateSong, softDeleteLocalSong } from "@/lib/db";
+import { addSong, uploadSongPdf, deleteSong, addKnownConductor, updateSong, softDeleteLocalSong, restoreLocalSong } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRepertoire } from "@/contexts/RepertoireContext";
 import AddSongModal from "./AddSongModal";
@@ -67,7 +67,7 @@ export default function SongList({
     const [showTrashBin, setShowTrashBin] = useState(false);
     const [editingSong, setEditingSong] = useState<SimpleSong | null>(null);
     const [deletingSongId, setDeletingSongId] = useState<string | null>(null);
-    const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+    const [toast, setToast] = useState<{ message: string; type: "success" | "error"; actionLabel?: string; onAction?: () => void } | null>(null);
 
     const effectiveCanAdd = canAddSongs;
 
@@ -205,7 +205,19 @@ export default function SongList({
         if (!userData?.choirId || !deletingSongId) return;
         try {
             await softDeleteLocalSong(userData.choirId, deletingSongId, userData.id || "unknown");
-            setToast({ message: "Пісню видалено", type: "success" });
+            const deletedId = deletingSongId;
+            setToast({
+                message: "Пісню переміщено до кошика",
+                type: "success",
+                actionLabel: "Скасувати",
+                onAction: async () => {
+                    try {
+                        await restoreLocalSong(userData.choirId!, deletedId);
+                        await refreshRepertoire();
+                        if (onRefresh) onRefresh();
+                    } catch (e) { console.error("Undo failed:", e); }
+                }
+            });
             await refreshRepertoire();
             if (onRefresh) onRefresh();
         } catch (e) {
@@ -508,7 +520,7 @@ export default function SongList({
                 message="Пісню успішно додано до репертуару. Відкрити її зараз?"
                 confirmLabel="Відкрити"
             />
-            {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+            {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} duration={toast.onAction ? 5000 : 3000} actionLabel={toast.actionLabel} onAction={toast.onAction} />}
 
             {/* Floating Add Button */}
             {canAddSongs && subTab === 'repertoire' && setShowAddModal && !showAddModal && !isOverlayOpen && (

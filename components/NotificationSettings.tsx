@@ -81,10 +81,16 @@ export default function NotificationSettings() {
             )}
 
             {permissionStatus === "denied" && (
-                <div className="mt-3 p-3 bg-amber-500/10 rounded-xl">
-                    <p className="text-amber-400 text-sm">
-                        Сповіщення заблоковані в налаштуваннях браузера.
-                        Відкрийте налаштування сайту і дозвольте сповіщення.
+                <div className="mt-3 p-3 bg-amber-500/10 rounded-xl space-y-2">
+                    <p className="text-amber-400 text-sm font-medium">
+                        Сповіщення заблоковані в налаштуваннях пристрою
+                    </p>
+                    <p className="text-xs text-text-secondary leading-relaxed">
+                        {/iPad|iPhone|iPod/.test(navigator.userAgent) && (window as any).Capacitor
+                            ? 'Налаштування → MyChoir → Сповіщення → Увімкнути'
+                            : /iPad|iPhone|iPod/.test(navigator.userAgent)
+                                ? 'Налаштування → Safari → Сповіщення → MyChoir → Дозволити'
+                                : 'Відкрийте налаштування браузера для цього сайту і дозвольте сповіщення.'}
                     </p>
                 </div>
             )}

@@ -285,6 +285,21 @@ export default function ServiceList({
                                                     )}
                                                 </div>
 
+                                                {/* Finalization badge for past services */}
+                                                {!isFuture && effectiveCanEdit && (
+                                                    service.isFinalized ? (
+                                                        <div className="flex items-center gap-1.5 mt-2 text-xs text-green-400">
+                                                            <CheckCircle2 className="w-3.5 h-3.5" />
+                                                            <span>Підтверджено</span>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center gap-1.5 mt-2 text-xs text-amber-400">
+                                                            <Clock className="w-3.5 h-3.5" />
+                                                            <span>Очікує підтвердження</span>
+                                                        </div>
+                                                    )
+                                                )}
+
                                                 {isFuture && (
                                                     <div className="flex gap-2 mt-4 pt-3 border-t border-border" onClick={e => e.stopPropagation()}>
                                                         {(status === 'unknown' || status === 'present') && (

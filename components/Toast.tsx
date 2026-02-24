@@ -9,9 +9,11 @@ interface ToastProps {
     onClose: () => void;
     type?: "success" | "error" | "info";
     duration?: number;
+    actionLabel?: string;
+    onAction?: () => void;
 }
 
-export default function Toast({ message, onClose, type = "success", duration = 3000 }: ToastProps) {
+export default function Toast({ message, onClose, type = "success", duration = 3000, actionLabel, onAction }: ToastProps) {
     useEffect(() => {
         if (message) {
             const timer = setTimeout(() => {
@@ -40,6 +42,15 @@ export default function Toast({ message, onClose, type = "success", duration = 3
                         {type === 'error' && <AlertCircle className="w-5 h-5 text-white" />}
 
                         <span>{message}</span>
+
+                        {onAction && actionLabel && (
+                            <button
+                                onClick={() => { onAction(); onClose(); }}
+                                className="ml-1 font-bold underline underline-offset-2 opacity-90 hover:opacity-100"
+                            >
+                                {actionLabel}
+                            </button>
+                        )}
 
                         <button onClick={onClose} className="ml-2 opacity-70 hover:opacity-100">
                             <X className="w-4 h-4" />

@@ -161,9 +161,18 @@ export default function NotificationsModal({
                             )}
 
                             {permissionStatus === "denied" && (
-                                <p className="text-xs text-amber-400 mt-2">
-                                    Сповіщення заблоковані в налаштуваннях браузера
-                                </p>
+                                <div className="mt-2 space-y-1">
+                                    <p className="text-xs text-amber-400 font-medium">
+                                        Сповіщення заблоковані в налаштуваннях пристрою
+                                    </p>
+                                    <p className="text-[11px] text-text-secondary">
+                                        {/iPad|iPhone|iPod/.test(navigator.userAgent) && (window as any).Capacitor
+                                            ? 'Налаштування → MyChoir → Сповіщення → Увімкнути'
+                                            : /iPad|iPhone|iPod/.test(navigator.userAgent)
+                                                ? 'Налаштування → Safari → Сповіщення → MyChoir → Дозволити'
+                                                : 'Відкрийте налаштування браузера для цього сайту і дозвольте сповіщення.'}
+                                    </p>
+                                </div>
                             )}
                         </div>
                     </div>
