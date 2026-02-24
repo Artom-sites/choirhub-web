@@ -261,7 +261,7 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                                 </div>
                                 Динаміка відвідуваності
                             </h3>
-                            <div className="h-56 w-full -ml-4 mt-2">
+                            <div className="h-56 w-full mt-2">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <AreaChart data={attendanceData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
                                         <defs>
@@ -282,7 +282,7 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                                         />
                                         <YAxis
                                             stroke="var(--text-secondary)"
-                                            tick={{ fill: 'var(--text-secondary)', fontSize: 11, dx: 14 }}
+                                            tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
                                             tickLine={false}
                                             axisLine={false}
                                             unit="%"

@@ -232,7 +232,7 @@ export default function DetailedStatisticsModal({
                                     </div>
                                 </div>
                                 {/* Fixed Y-Axis Labels + Scrollable Chart */}
-                                <div className="relative h-56 w-full -ml-4 mt-2">
+                                <div className="relative h-56 w-full mt-2">
                                     {/* Fixed Y-Axis HTML Layer spanning edge-to-edge */}
                                     <div className="absolute top-0 left-0 w-[40px] h-full z-10 bg-surface flex flex-col justify-between text-right pr-2 pb-[24px] pt-1" style={{ pointerEvents: 'none' }}>
                                         {[100, 75, 50, 25, 0].map(v => (
