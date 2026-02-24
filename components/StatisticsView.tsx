@@ -262,7 +262,7 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                             </h3>
                             {/* Make chart scrollable horizontally so it doesn't get compressed */}
                             <div className="h-56 w-full -ml-4 overflow-x-auto overflow-y-hidden scrollbar-hide">
-                                <div style={{ minWidth: `${Math.max(100, attendanceData.length * 9)}%`, height: '100%' }}>
+                                <div style={{ minWidth: `${Math.max(100, attendanceData.length * 15)}%`, height: '100%' }}>
                                     <ResponsiveContainer width="100%" height="100%">
                                         <AreaChart data={attendanceData}>
                                             <defs>
@@ -278,6 +278,7 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                                                 tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
                                                 tickLine={false}
                                                 axisLine={false}
+                                                interval={0}
                                             />
                                             <YAxis
                                                 stroke="var(--text-secondary)"

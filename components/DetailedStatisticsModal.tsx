@@ -221,7 +221,7 @@ export default function DetailedStatisticsModal({
                                 </div>
                                 {/* Make chart scrollable horizontally so it doesn't get compressed */}
                                 <div className="h-56 w-full -ml-4 overflow-x-auto overflow-y-hidden scrollbar-hide">
-                                    <div style={{ minWidth: `${Math.max(100, filteredAttendanceData.length * 9)}%`, height: '100%' }}>
+                                    <div style={{ minWidth: `${Math.max(100, filteredAttendanceData.length * 15)}%`, height: '100%' }}>
                                         <ResponsiveContainer width="100%" height="100%">
                                             <AreaChart data={filteredAttendanceData}>
                                                 <defs>
@@ -237,6 +237,7 @@ export default function DetailedStatisticsModal({
                                                     tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
                                                     tickLine={false}
                                                     axisLine={false}
+                                                    interval={0}
                                                 />
                                                 <YAxis
                                                     stroke="var(--text-secondary)"
@@ -312,8 +313,8 @@ export default function DetailedStatisticsModal({
                                     </p>
                                 </div>
                                 <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-sm ${trendInfo.diff > 0 ? 'bg-green-500/10 text-green-400' :
-                                        trendInfo.diff < 0 ? 'bg-red-500/10 text-red-400' :
-                                            'bg-surface-highlight text-text-secondary'
+                                    trendInfo.diff < 0 ? 'bg-red-500/10 text-red-400' :
+                                        'bg-surface-highlight text-text-secondary'
                                     }`}>
                                     {trendInfo.diff > 0 ? <ArrowUpRight className="w-4 h-4" /> :
                                         trendInfo.diff < 0 ? <ArrowDownRight className="w-4 h-4" /> :
