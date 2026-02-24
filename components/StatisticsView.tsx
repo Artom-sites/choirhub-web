@@ -278,11 +278,11 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                                             tickLine={false}
                                             axisLine={false}
                                             interval={0}
-                                            padding={{ right: 15 }}
+                                            padding={{ right: 20 }}
                                         />
                                         <YAxis
                                             stroke="var(--text-secondary)"
-                                            tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
+                                            tick={{ fill: 'var(--text-secondary)', fontSize: 11, dx: 14 }}
                                             tickLine={false}
                                             axisLine={false}
                                             unit="%"

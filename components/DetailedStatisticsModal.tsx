@@ -232,19 +232,19 @@ export default function DetailedStatisticsModal({
                                     </div>
                                 </div>
                                 {/* Fixed Y-Axis Labels + Scrollable Chart */}
-                                <div className="relative w-full mt-2">
-                                    {/* Fixed Y-Axis — plain HTML labels over the chart */}
-                                    <div className="absolute top-0 left-0 w-8 h-56 z-10 bg-surface flex flex-col justify-between text-right pr-1 pb-[26px] pt-3">
+                                <div className="relative h-56 w-full -ml-4 mt-2">
+                                    {/* Fixed Y-Axis HTML Layer spanning edge-to-edge */}
+                                    <div className="absolute top-0 left-0 w-[40px] h-full z-10 bg-surface flex flex-col justify-between text-right pr-2 pb-[24px] pt-1" style={{ pointerEvents: 'none' }}>
                                         {[100, 75, 50, 25, 0].map(v => (
                                             <span key={v} className="text-[11px] text-text-secondary leading-none">{v}%</span>
                                         ))}
                                     </div>
 
                                     {/* Scrollable Chart */}
-                                    <div ref={chartContainerRef} className="h-56 w-full overflow-x-auto overflow-y-hidden scrollbar-hide">
-                                        <div className="pl-8" style={{ minWidth: `${Math.max(100, filteredAttendanceData.length * 15)}%`, height: '100%' }}>
+                                    <div ref={chartContainerRef} className="h-full w-full overflow-x-auto overflow-y-hidden scrollbar-hide">
+                                        <div style={{ minWidth: `${Math.max(100, filteredAttendanceData.length * 15)}%`, height: '100%' }}>
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <AreaChart data={filteredAttendanceData} margin={{ top: 12, right: 20, left: -20, bottom: 0 }}>
+                                                <AreaChart data={filteredAttendanceData}>
                                                     <defs>
                                                         <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
                                                             <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.25} />
@@ -259,9 +259,9 @@ export default function DetailedStatisticsModal({
                                                         tickLine={false}
                                                         axisLine={false}
                                                         interval={0}
-                                                        padding={{ right: 20 }}
+                                                        padding={{ right: 35 }}
                                                     />
-                                                    <YAxis hide={true} domain={[0, 100]} />
+                                                    <YAxis tick={false} axisLine={false} tickLine={false} width={40} domain={[0, 100]} />
                                                     <Tooltip
                                                         contentStyle={{
                                                             backgroundColor: 'var(--surface)',
