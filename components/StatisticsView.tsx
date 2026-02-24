@@ -257,9 +257,9 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                         <div className="bg-surface border border-border rounded-3xl p-5">
                             <h3 className="font-bold mb-4 flex items-center gap-2 text-[15px]">
                                 <div className="w-8 h-8 rounded-xl bg-orange-500/10 flex items-center justify-center">
-                                    <Calendar className="w-4 h-4 text-orange-400" />
+                                    <TrendingUp className="w-4 h-4 text-orange-400" />
                                 </div>
-                                Динаміка відвідуваності
+                                Графік
                             </h3>
                             {/* Dedicated Layout Row for Chart and YAxis matching Detailed Stats */}
                             <div className="flex h-56 w-full mt-2">
