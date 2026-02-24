@@ -261,56 +261,60 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                                 </div>
                                 Динаміка відвідуваності
                             </h3>
-                            <div className="h-56 w-full mt-2">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={attendanceData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                                        <defs>
-                                            <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.25} />
-                                                <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                                        <XAxis
-                                            dataKey="date"
-                                            stroke="var(--text-secondary)"
-                                            tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
-                                            tickLine={false}
-                                            axisLine={false}
-                                            interval={0}
-                                            padding={{ right: 10 }}
-                                        />
-                                        <YAxis
-                                            stroke="var(--text-secondary)"
-                                            tick={{ fill: 'var(--text-secondary)', fontSize: 11, dx: 2 }}
-                                            tickLine={false}
-                                            axisLine={false}
-                                            unit="%"
-                                            domain={[0, 100]}
-                                        />
-                                        <Tooltip
-                                            contentStyle={{
-                                                backgroundColor: 'var(--surface)',
-                                                borderColor: 'var(--border)',
-                                                borderRadius: '12px',
-                                                color: 'var(--text-primary)',
-                                                fontSize: '13px',
-                                                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
-                                            }}
-                                            formatter={(value: any) => [`${value}%`, 'Явка']}
-                                        />
-                                        <Area
-                                            type="monotone"
-                                            dataKey="percentage"
-                                            stroke="var(--primary)"
-                                            strokeWidth={2.5}
-                                            fillOpacity={1}
-                                            fill="url(#colorPv)"
-                                            dot={{ r: 3, fill: 'var(--primary)', strokeWidth: 0 }}
-                                            activeDot={{ r: 5, fill: 'var(--primary)', strokeWidth: 2, stroke: 'var(--surface)' }}
-                                        />
-                                    </AreaChart>
-                                </ResponsiveContainer>
+                            {/* Dedicated Layout Row for Chart and YAxis matching Detailed Stats */}
+                            <div className="flex h-56 w-full mt-2">
+                                {/* Completely Decoupled HTML Y-Axis Column (Perfectly aligned with w-8 icon) */}
+                                <div className="w-8 h-full flex flex-col justify-between text-center pb-[24px] pt-[2px] shrink-0">
+                                    {[100, 75, 50, 25, 0].map(v => (
+                                        <span key={v} className="text-[11px] text-text-secondary leading-none">{v}%</span>
+                                    ))}
+                                </div>
+
+                                {/* Chart Container */}
+                                <div className="flex-1 overflow-visible -ml-2">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart data={attendanceData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                            <defs>
+                                                <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.25} />
+                                                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                                            <XAxis
+                                                dataKey="date"
+                                                stroke="var(--text-secondary)"
+                                                tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
+                                                tickLine={false}
+                                                axisLine={false}
+                                                interval={0}
+                                                padding={{ right: 20 }}
+                                            />
+                                            <YAxis hide={true} domain={[0, 100]} />
+                                            <Tooltip
+                                                contentStyle={{
+                                                    backgroundColor: 'var(--surface)',
+                                                    borderColor: 'var(--border)',
+                                                    borderRadius: '12px',
+                                                    color: 'var(--text-primary)',
+                                                    fontSize: '13px',
+                                                    boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+                                                }}
+                                                formatter={(value: any) => [`${value}%`, 'Явка']}
+                                            />
+                                            <Area
+                                                type="monotone"
+                                                dataKey="percentage"
+                                                stroke="var(--primary)"
+                                                strokeWidth={2.5}
+                                                fillOpacity={1}
+                                                fill="url(#colorPv)"
+                                                dot={{ r: 3, fill: 'var(--primary)', strokeWidth: 0 }}
+                                                activeDot={{ r: 5, fill: 'var(--primary)', strokeWidth: 2, stroke: 'var(--surface)' }}
+                                            />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                </div>
                             </div>
                             <button
                                 onClick={() => setShowDetailedStats(true)}
