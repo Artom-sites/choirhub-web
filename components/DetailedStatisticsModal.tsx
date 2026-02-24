@@ -234,10 +234,10 @@ export default function DetailedStatisticsModal({
                                 {/* Container for fixed YAxis + scrollable chart */}
                                 <div className="relative h-56 w-full mt-2">
                                     {/* Fixed Y-Axis Layer */}
-                                    <div className="absolute inset-y-0 left-0 w-10 pointer-events-none z-10 bg-surface overflow-hidden">
-                                        <div className="w-[500px] h-full">
+                                    <div className="absolute inset-y-0 left-0 w-8 pointer-events-none z-10 bg-surface overflow-hidden">
+                                        <div className="w-[500px] h-full flex flex-col items-center">
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <AreaChart data={filteredAttendanceData} margin={{ top: 10, right: 0, left: -5, bottom: 0 }}>
+                                                <AreaChart data={filteredAttendanceData} margin={{ top: 10, right: 0, left: -10, bottom: 0 }}>
                                                     <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: 'transparent' }} interval={0} />
                                                     <YAxis width={40} tickLine={false} axisLine={false} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} unit="%" domain={[0, 100]} />
                                                 </AreaChart>
@@ -246,10 +246,10 @@ export default function DetailedStatisticsModal({
                                     </div>
 
                                     {/* Scrollable Chart Layer */}
-                                    <div ref={chartContainerRef} className="absolute inset-0 overflow-x-auto overflow-y-hidden scrollbar-hide">
-                                        <div className="h-full pl-10" style={{ minWidth: `${Math.max(100, filteredAttendanceData.length * 15)}%` }}>
+                                    <div ref={chartContainerRef} className="absolute inset-y-0 left-8 right-0 overflow-x-auto overflow-y-hidden scrollbar-hide">
+                                        <div className="h-full" style={{ minWidth: `${Math.max(100, filteredAttendanceData.length * 15)}%` }}>
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <AreaChart data={filteredAttendanceData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                                                <AreaChart data={filteredAttendanceData} margin={{ top: 10, right: 20, left: -20, bottom: 0 }}>
                                                     <defs>
                                                         <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
                                                             <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.25} />
