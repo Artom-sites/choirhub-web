@@ -255,7 +255,27 @@ export default function DetailedStatisticsModal({
                                                     <XAxis
                                                         dataKey="date"
                                                         stroke="var(--text-secondary)"
-                                                        tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
+                                                        tick={({ x, y, payload, index }) => {
+                                                            const isFirst = index === 0;
+                                                            const isLast = index === filteredAttendanceData.length - 1;
+                                                            let dx = 0;
+                                                            if (isFirst) dx = 12;
+                                                            if (isLast) dx = -12;
+
+                                                            return (
+                                                                <text
+                                                                    x={x}
+                                                                    y={y}
+                                                                    dx={dx}
+                                                                    dy={10}
+                                                                    fill="var(--text-secondary)"
+                                                                    fontSize={11}
+                                                                    textAnchor="middle"
+                                                                >
+                                                                    {payload.value}
+                                                                </text>
+                                                            );
+                                                        }}
                                                         tickLine={false}
                                                         axisLine={false}
                                                         interval={0}
