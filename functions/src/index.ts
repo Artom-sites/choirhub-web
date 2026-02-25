@@ -509,6 +509,9 @@ export const atomicDeleteSelf = functions.https.onCall(async (_data, context) =>
         return { success: true };
     } catch (error) {
         console.error("Self-delete error:", error);
+        if (error instanceof functions.https.HttpsError) {
+            throw error;
+        }
         throw new functions.https.HttpsError("internal", "Failed to delete account");
     }
 });
