@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon, mergeMembers, updateChoir, deleteMyAccount, adminDeleteUser, deleteAdminCode, getChoirNotifications, getChoirUsers, joinChoir, updateMember, claimMember, leaveChoir } from "@/lib/db";
 import { updateAttendanceCache } from "@/lib/attendanceCache";
+import { Capacitor } from "@capacitor/core";
 import { Service, Choir, UserMembership, UserData, ChoirMember, Permission, AdminCode, StatsSummary } from "@/types";
 import SongList from "@/components/SongList";
 import SwipeableCard from "@/components/SwipeableCard";
@@ -71,6 +72,7 @@ function HomePageContent() {
 
   // App Readiness
   const [isAppReady, setIsAppReady] = useState(false);
+  const [isNative, setIsNative] = useState(false);
   const [showPreloader, setShowPreloader] = useState(true);
   const [preloaderFading, setPreloaderFading] = useState(false);
   const preloaderMinReady = useRef(false);
@@ -95,6 +97,11 @@ function HomePageContent() {
       hide();
     }
   }, [isAppReady]);
+
+  // Detect native platform after mount (Capacitor not available at SSG build time)
+  useEffect(() => {
+    setIsNative(Capacitor.isNativePlatform());
+  }, []);
 
   // Tab Animation Variants
   const tabVariants = {
@@ -2152,7 +2159,10 @@ function HomePageContent() {
         !showAccount && !showChoirManager && !showAddSongModal && !showAddServiceModal && (activeTab === 'home' && canEdit) && (
           <button
             onClick={() => setShowAddServiceModal(true)}
-            className="fixed bottom-[calc(5.5rem_+_env(safe-area-inset-bottom))] md:bottom-24 right-6 w-[56px] h-[56px] bg-primary text-background rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60]"
+            className={`app-fab fixed w-[56px] h-[56px] bg-primary text-background rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60] ${isNative
+              ? 'bottom-[calc(3.75rem_+_env(safe-area-inset-bottom))] right-4'
+              : 'bottom-[6.5rem] md:bottom-24 right-6'
+              }`}
             title="Додати служіння"
           >
             <Plus className="w-7 h-7" />
@@ -2161,8 +2171,10 @@ function HomePageContent() {
       }
 
       {/* Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-surface/90 backdrop-blur-xl px-4 pb-safe pt-2 md:pt-1 z-50 border-t border-border">
-        <div className="max-w-5xl mx-auto flex justify-around items-center h-16 md:h-14 relative">
+      <nav className={`app-nav fixed bottom-0 left-0 right-0 bg-surface/90 backdrop-blur-xl px-4 z-50 border-t border-border ${isNative ? 'pb-safe pt-0.5' : 'pt-2 pb-2 md:pt-1 md:pb-1'
+        }`}>
+        <div className={`app-nav-inner max-w-5xl mx-auto flex justify-around items-center relative ${isNative ? 'h-12' : 'h-16 md:h-14'
+          }`}>
 
           {[
             { id: 'home', label: 'Служіння', icon: Home },

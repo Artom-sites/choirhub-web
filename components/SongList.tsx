@@ -68,6 +68,11 @@ export default function SongList({
     const [editingSong, setEditingSong] = useState<SimpleSong | null>(null);
     const [deletingSongId, setDeletingSongId] = useState<string | null>(null);
     const [toast, setToast] = useState<{ message: string; type: "success" | "error"; actionLabel?: string; onAction?: () => void } | null>(null);
+    const [isNative, setIsNative] = useState(false);
+
+    useEffect(() => {
+        setIsNative(Capacitor.isNativePlatform());
+    }, []);
 
     const effectiveCanAdd = canAddSongs;
 
@@ -524,7 +529,7 @@ export default function SongList({
 
             {/* Floating Add Button */}
             {canAddSongs && subTab === 'repertoire' && setShowAddModal && !showAddModal && !isOverlayOpen && (
-                <button onClick={() => setShowAddModal(true)} className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] md:bottom-24 right-6 w-[56px] h-[56px] bg-primary text-background rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60]" title="Додати пісню">
+                <button onClick={() => setShowAddModal(true)} className={`fixed w-[56px] h-[56px] bg-primary text-background rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60] ${isNative ? 'bottom-[calc(3.75rem_+_env(safe-area-inset-bottom))] right-4' : 'bottom-[6.5rem] md:bottom-24 right-6'}`} title="Додати пісню">
                     <Plus className="w-7 h-7" />
                 </button>
             )}

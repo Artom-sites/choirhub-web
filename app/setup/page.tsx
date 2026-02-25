@@ -213,8 +213,8 @@ function SetupPageContent() {
         try {
             await createChoir(choirName, choirType);
 
-            // Safety delay to ensure Firestore SDK updates auth state before redirect
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // Refresh profile so userData.choirId is set before redirect
+            await refreshProfile();
 
             router.push("/");
         } catch (err: any) {

@@ -114,6 +114,11 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
     const [showAddOptions, setShowAddOptions] = useState(false);
     const [songToAdd, setSongToAdd] = useState<GlobalSong | null>(null);
     const [toastMessage, setToastMessage] = useState<string | null>(null);
+    const [isNative, setIsNative] = useState(false);
+
+    useEffect(() => {
+        setIsNative(Capacitor.isNativePlatform());
+    }, []);
 
     // Submission & Moderation
     const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -1214,7 +1219,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                 canSubmit && !isModerationMode && !showSubmitModal && !isOverlayOpen && (
                     <button
                         onClick={() => setShowSubmitModal(true)}
-                        className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] md:bottom-24 right-6 w-[56px] h-[56px] bg-primary text-background rounded-full shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40"
+                        className={`fixed w-[56px] h-[56px] bg-primary text-background rounded-full shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40 ${isNative ? 'bottom-[calc(3.75rem_+_env(safe-area-inset-bottom))] right-4' : 'bottom-[6.5rem] md:bottom-24 right-6'}`}
                         title="Запропонувати пісню"
                     >
                         <Plus className="w-7 h-7" />
