@@ -2,7 +2,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, connectFirestoreEmulator } from "firebase/firestore";
-import { initializeAuth, getAuth, indexedDBLocalPersistence, browserLocalPersistence, Auth } from "firebase/auth";
+import { initializeAuth, getAuth, indexedDBLocalPersistence, browserLocalPersistence, browserPopupRedirectResolver, Auth } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 import { getMessaging, getToken, onMessage, isSupported as isMessagingSupported, Messaging } from "firebase/messaging";
 import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check"; // App Check Import
@@ -32,7 +32,8 @@ const db = initializeFirestore(app, {
 let auth: Auth;
 try {
     auth = initializeAuth(app, {
-        persistence: [indexedDBLocalPersistence, browserLocalPersistence]
+        persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+        popupRedirectResolver: browserPopupRedirectResolver,
     });
 } catch (e) {
     // If already initialized (e.g. hot reload), fall back to getAuth
