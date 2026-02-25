@@ -14,7 +14,8 @@ import {
     signOut as firebaseSignOut,
     User as FirebaseUser,
     signInWithCredential,
-    OAuthProvider
+    OAuthProvider,
+    browserPopupRedirectResolver
 } from "firebase/auth";
 import { Capacitor } from "@capacitor/core";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
@@ -114,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (Capacitor.getPlatform() === 'web') {
                 const provider = new GoogleAuthProvider();
                 provider.setCustomParameters({ prompt: 'select_account' });
-                await signInWithPopup(auth, provider);
+                await signInWithPopup(auth, provider, browserPopupRedirectResolver);
             } else {
                 const result = await FirebaseAuthentication.signInWithGoogle();
                 const credential = GoogleAuthProvider.credential(result.credential?.idToken);
@@ -135,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
             if (Capacitor.getPlatform() === 'web') {
                 const provider = new OAuthProvider('apple.com');
-                await signInWithPopup(auth, provider);
+                await signInWithPopup(auth, provider, browserPopupRedirectResolver);
             } else {
                 const result = await FirebaseAuthentication.signInWithApple();
                 const credential = new OAuthProvider('apple.com').credential({

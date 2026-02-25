@@ -422,6 +422,7 @@ function HomePageContent() {
 
     // 2. Unauthenticated -> Redirect to Setup
     if (!user || !userData?.choirId) {
+      setIsAppReady(true); // Dismiss preloader before redirect
       const currentParams = searchParams.toString();
       router.replace(currentParams ? `/setup?${currentParams}` : "/setup");
       return;
