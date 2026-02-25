@@ -30,13 +30,18 @@ const db = initializeFirestore(app, {
 // Initialize Auth with explicit persistence for iOS Safari reliability
 // indexedDBLocalPersistence = primary (best multi-tab), browserLocalPersistence = fallback (survives Safari ITP)
 let auth: Auth;
-try {
-    auth = initializeAuth(app, {
-        persistence: [indexedDBLocalPersistence, browserLocalPersistence],
-        popupRedirectResolver: browserPopupRedirectResolver,
-    });
-} catch (e) {
-    // If already initialized (e.g. hot reload), fall back to getAuth
+if (typeof window !== "undefined") {
+    try {
+        auth = initializeAuth(app, {
+            persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+            popupRedirectResolver: browserPopupRedirectResolver,
+        });
+    } catch (e) {
+        // If already initialized (e.g. hot reload), fall back to getAuth
+        auth = getAuth(app);
+    }
+} else {
+    // Server-side (SSG build) — no browser APIs available
     auth = getAuth(app);
 }
 const storage = getStorage(app);
