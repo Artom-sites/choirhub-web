@@ -1018,9 +1018,6 @@ function HomePageContent() {
 
   const handleDeleteAccount = async () => {
     if (!user) return;
-    const isConfirmed = window.confirm("Ви впевнені, що хочете видалити свій акаунт? Цю дію неможливо скасувати.");
-    if (!isConfirmed) return;
-
     try {
       // Cloud Function handles both Firestore cleanup and Auth deletion
       await deleteMyAccount();
