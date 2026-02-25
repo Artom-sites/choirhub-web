@@ -448,21 +448,7 @@ export const atomicDeleteSelf = functions.https.onCall(async (_data, context) =>
                 const choirData = choirSnap.data()!;
                 const currentMembers = choirData.members || [];
 
-                // Headless choir guard: prevent deletion if user is the only admin/regent/head
-                const userMember = currentMembers.find((m: any) => m.id === userId || m.accountUid === userId);
-                if (userMember && ['head', 'regent', 'admin'].includes(userMember.role || '')) {
-                    const otherAdmins = currentMembers.filter((m: any) =>
-                        (m.id !== userId && m.accountUid !== userId) &&
-                        ['head', 'regent', 'admin'].includes(m.role || '') &&
-                        m.hasAccount === true
-                    );
-                    if (otherAdmins.length === 0) {
-                        throw new functions.https.HttpsError(
-                            "failed-precondition",
-                            "Ви є єдиним керівником хору «" + (choirData.name || '') + "». Передайте права іншому учаснику перед видаленням акаунту."
-                        );
-                    }
-                }
+
 
                 const updatedMembers = currentMembers.map((m: any) => {
                     // Check strict ID match OR linked account match

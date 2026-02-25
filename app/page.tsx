@@ -1018,17 +1018,16 @@ function HomePageContent() {
 
   const handleDeleteAccount = async () => {
     if (!user) return;
+    const isConfirmed = window.confirm("Ви впевнені, що хочете видалити свій акаунт? Цю дію неможливо скасувати.");
+    if (!isConfirmed) return;
+
     try {
       // Cloud Function handles both Firestore cleanup and Auth deletion
       await deleteMyAccount();
       // Navigation handles itself (auth state change)
     } catch (error: any) {
       console.error("Delete Account Error:", error);
-      // Sole-admin guard: CF returns a specific precondition error
-      const message = error?.code === 'functions/failed-precondition'
-        ? error.message
-        : "Для видалення потрібно перезайти в акаунт";
-      setManagerError(message);
+      setManagerError(error.message || "Сталася помилка при видаленні акаунту");
     }
   };
 

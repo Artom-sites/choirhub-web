@@ -416,16 +416,6 @@ exports.atomicDeleteSelf = functions.https.onCall(async (_data, context) => {
             if (choirSnap.exists) {
                 const choirData = choirSnap.data();
                 const currentMembers = choirData.members || [];
-                // Headless choir guard: prevent deletion if user is the only admin/regent/head
-                const userMember = currentMembers.find((m) => m.id === userId || m.accountUid === userId);
-                if (userMember && ['head', 'regent', 'admin'].includes(userMember.role || '')) {
-                    const otherAdmins = currentMembers.filter((m) => (m.id !== userId && m.accountUid !== userId) &&
-                        ['head', 'regent', 'admin'].includes(m.role || '') &&
-                        m.hasAccount === true);
-                    if (otherAdmins.length === 0) {
-                        throw new functions.https.HttpsError("failed-precondition", "Ви є єдиним керівником хору «" + (choirData.name || '') + "». Передайте права іншому учаснику перед видаленням акаунту.");
-                    }
-                }
                 const updatedMembers = currentMembers.map((m) => {
                     // Check strict ID match OR linked account match
                     if (m.id === userId || m.accountUid === userId) {
@@ -466,6 +456,9 @@ exports.atomicDeleteSelf = functions.https.onCall(async (_data, context) => {
     }
     catch (error) {
         console.error("Self-delete error:", error);
+        if (error instanceof functions.https.HttpsError) {
+            throw error;
+        }
         throw new functions.https.HttpsError("internal", "Failed to delete account");
     }
 });
