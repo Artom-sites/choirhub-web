@@ -847,24 +847,24 @@ export async function getUserProfile(userId: string): Promise<UserData | null> {
 // Instead of scanning entire users collection
 export async function getChoirUsers(choirId: string): Promise<UserData[]> {
     try {
-        const choir = await getChoir(choirId);
-        if (!choir?.members) return [];
+        // Query the real users collection — find all users linked to this choir
+        const usersRef = collection(db, "users");
+        const q = query(usersRef, where("choirId", "==", choirId));
+        const snapshot = await getDocs(q);
 
-        // Filter for members who have an account and deduplicate by ID
-        const dedupedMembers = Array.from(new Map(choir.members.map(m => [m.id, m])).values());
-        return dedupedMembers
-            .filter(m => m.hasAccount)
-            .map(m => ({
-                id: m.id,
-                name: m.name,
-                role: m.role,
+        return snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                name: data.name || '',
+                email: data.email || '',
+                role: data.role,
                 choirId: choirId,
-                choirName: choir.name,
-                // Note: email and createdAt are not available in choir.members
-                // Permissions might be available in member object
-                permissions: m.permissions,
-                // We don't have createdAt, so sorting in UI might treat it as undefined
-            }));
+                choirName: data.choirName,
+                permissions: data.permissions,
+                createdAt: data.createdAt,
+            };
+        });
     } catch (error) {
         console.error("Error fetching choir users:", error);
         return [];

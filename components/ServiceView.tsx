@@ -41,9 +41,17 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
     // Offline PDF modal
     const [offlineModalSong, setOfflineModalSong] = useState<SimpleSong | null>(null);
 
-    // Filter choir members for attendance (only hide actual duplicate markers)
+    // Filter choir members for attendance — exclude voiceless auto-stubs
     const filterRosterMembers = (members: ChoirMember[]): ChoirMember[] => {
-        return members.filter((m: any) => !m.isDuplicate);
+        return members.filter((m: any) => {
+            if (m.isDuplicate) return false;
+            if (m.voice) return true;
+            if (m.role === 'head' || m.role === 'regent') return true;
+            if (typeof m.id === 'string' && m.id.startsWith('manual_')) return true;
+            // Voiceless entry with hasAccount = auto-created app stub → hide from attendance
+            if (m.hasAccount && !m.voice) return false;
+            return true;
+        });
     };
 
     // Choir members for attendance
