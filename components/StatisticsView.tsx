@@ -78,7 +78,7 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
     // Voice distribution
     const voiceData = useMemo(() => {
         const counts: Record<string, number> = { Soprano: 0, Alto: 0, Tenor: 0, Bass: 0, Unassigned: 0 };
-        (choir.members || []).forEach(m => {
+        (choir.members || []).filter((m: any) => !m.isDuplicate).forEach(m => {
             if (m.voice && counts[m.voice] !== undefined) {
                 counts[m.voice]++;
             } else {
@@ -104,7 +104,7 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
         return raw.map((d, i) => ({ ...d, pct: floored[i] }));
     }, [choir.members]);
 
-    const totalMembers = (choir.members || []).length;
+    const totalMembers = (choir.members || []).filter((m: any) => !m.isDuplicate).length;
     const voicedMembers = voiceData.reduce((sum, d) => sum + d.value, 0);
 
     const attendanceData = useMemo(() => {

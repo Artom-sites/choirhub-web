@@ -41,8 +41,13 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
     // Offline PDF modal
     const [offlineModalSong, setOfflineModalSong] = useState<SimpleSong | null>(null);
 
+    // Filter choir members for attendance (only hide actual duplicate markers)
+    const filterRosterMembers = (members: ChoirMember[]): ChoirMember[] => {
+        return members.filter((m: any) => !m.isDuplicate);
+    };
+
     // Choir members for attendance
-    const [choirMembers, setChoirMembers] = useState<ChoirMember[]>(choir?.members || []);
+    const [choirMembers, setChoirMembers] = useState<ChoirMember[]>(filterRosterMembers(choir?.members || []));
     const [absentMembers, setAbsentMembers] = useState<string[]>(service.absentMembers || []);
     const [confirmedMembers, setConfirmedMembers] = useState<string[]>(service.confirmedMembers || []);
     const [membersLoading, setMembersLoading] = useState(!(choir?.members && choir.members.length > 0));
@@ -57,7 +62,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
     // Sync choir data updates
     useEffect(() => {
         if (choir) {
-            setChoirMembers(choir.members || []);
+            setChoirMembers(filterRosterMembers(choir.members || []));
             if (choir.knownConductors) setKnownConductors(choir.knownConductors);
             if (choir.knownPianists) setKnownPianists(choir.knownPianists);
             setMembersLoading(false);
@@ -76,7 +81,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                 try {
                     const fetchedChoir = await getChoir(userData.choirId);
                     if (fetchedChoir?.members) {
-                        setChoirMembers(fetchedChoir.members);
+                        setChoirMembers(filterRosterMembers(fetchedChoir.members));
                     }
                     if (fetchedChoir?.knownConductors) setKnownConductors(fetchedChoir.knownConductors);
                     if (fetchedChoir?.knownPianists) setKnownPianists(fetchedChoir.knownPianists);
@@ -509,15 +514,24 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
     const absentCount = absentMembers.length;
     const isFuture = isUpcoming(currentService.date, currentService.time);
 
+    // Helper: check if a member matches any UID in a list (checks id, accountUid, linkedUserIds)
+    const memberMatchesUid = (m: any, uids: string[]) => {
+        if (uids.includes(m.id)) return true;
+        if (m.accountUid && uids.includes(m.accountUid)) return true;
+        if (m.linkedUserIds?.some((uid: string) => uids.includes(uid))) return true;
+        return false;
+    };
+
+    const confirmedMembersList = choirMembers.filter(m => memberMatchesUid(m, confirmedMembers));
+
     const displayConfirmedCount = !isFuture
         ? choirMembers.length - absentCount
-        : choirMembers.filter(m => confirmedMembers.includes(m.id)).length;
+        : confirmedMembersList.length;
 
     const displayWaitingCount = !isFuture
         ? 0
         : choirMembers.length - displayConfirmedCount - absentCount;
 
-    const confirmedMembersList = choirMembers.filter(m => confirmedMembers.includes(m.id));
     const previewAttendees = membersLoading ? [] : confirmedMembersList.slice(0, 4);
     const extraAttendees = displayConfirmedCount > 4 ? displayConfirmedCount - 4 : 0;
     const myStatus = getMyStatus();
@@ -767,8 +781,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                 {/* Attendees Section - Enhanced */}
                 {(canEdit || canEditAttendance || !isFuture) && (() => {
                     // Calculate stats
-                    const confirmedIds = confirmedMembers;
-                    const confirmedList = choirMembers.filter(m => confirmedIds.includes(m.id));
+                    const confirmedList = choirMembers.filter(m => memberMatchesUid(m, confirmedMembers));
 
                     // Case-insensitive voice matching
                     const normalizeVoice = (v: string | undefined) => v?.toLowerCase().trim();
@@ -979,8 +992,8 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                     );
 
                                     return sortedMembers.map(member => {
-                                        const isAbsent = absentMembers.includes(member.id);
-                                        const isConfirmed = confirmedMembers.includes(member.id);
+                                        const isAbsent = memberMatchesUid(member, absentMembers);
+                                        const isConfirmed = memberMatchesUid(member, confirmedMembers);
                                         const canMarkAttendance = canEdit || canEditAttendance;
 
                                         return (

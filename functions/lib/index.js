@@ -34,7 +34,7 @@ var __rest = (this && this.__rest) || function (s, e) {
     return t;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.backfillStats = exports.onServiceWrite = exports.cleanupOldNotifications = exports.generateUploadUrl = exports.registerFcmToken = exports.migrateAllClaims = exports.atomicUpdateMember = exports.claimMember = exports.atomicMergeMembers = exports.adminDeleteUser = exports.atomicDeleteSelf = exports.atomicLeaveChoir = exports.atomicJoinChoir = exports.atomicCreateChoir = exports.forceSyncClaims = void 0;
+exports.fixUserData = exports.backfillStats = exports.onServiceWrite = exports.cleanupOldNotifications = exports.generateUploadUrl = exports.registerFcmToken = exports.migrateAllClaims = exports.atomicUpdateMember = exports.claimMember = exports.atomicMergeMembers = exports.adminDeleteUser = exports.atomicDeleteSelf = exports.atomicLeaveChoir = exports.atomicJoinChoir = exports.atomicCreateChoir = exports.forceSyncClaims = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const client_s3_1 = require("@aws-sdk/client-s3");
@@ -228,7 +228,6 @@ exports.atomicJoinChoir = functions.https.onCall(async (data, context) => {
     }
     // 2. Perform Join/Upgrade Logic
     const result = await db.runTransaction(async (transaction) => {
-        var _a, _b;
         const userRef = db.collection("users").doc(userId);
         const choirRef = db.collection("choirs").doc(choirId);
         const userDoc = await transaction.get(userRef);
@@ -291,28 +290,16 @@ exports.atomicJoinChoir = functions.https.onCall(async (data, context) => {
         }
         transaction.set(userRef, updates, { merge: true }); // Use set with merge to create if new
         // --- UPDATE CHOIR MEMBER LIST ---
+        // Only update if user already exists in roster (e.g. previously linked).
+        // Do NOT create new entries — new users appear only in "Користувачі" tab.
         const members = choirData.members || [];
-        const memberIndex = members.findIndex((m) => m.id === userId);
-        const userName = userData.name || ((_b = (_a = context.auth) === null || _a === void 0 ? void 0 : _a.token) === null || _b === void 0 ? void 0 : _b.name) || "Unknown";
-        const userVoice = userData.voice || "";
-        const memberData = {
-            id: userId,
-            name: userName,
-            role: newRole,
-            voice: userVoice,
-            permissions: uniquePermissions,
-            hasAccount: true
-        };
+        const memberIndex = members.findIndex((m) => m.id === userId || m.accountUid === userId || (m.linkedUserIds || []).includes(userId));
         if (memberIndex >= 0) {
             const updatedMembers = [...members];
-            updatedMembers[memberIndex] = Object.assign(Object.assign({}, updatedMembers[memberIndex]), memberData);
+            updatedMembers[memberIndex] = Object.assign(Object.assign({}, updatedMembers[memberIndex]), { role: newRole, permissions: uniquePermissions, hasAccount: true });
             transaction.update(choirRef, { members: updatedMembers });
         }
-        else {
-            transaction.update(choirRef, {
-                members: admin.firestore.FieldValue.arrayUnion(memberData)
-            });
-        }
+        // If memberIndex < 0: user is new → NO entry created in members[]
         // Collect unlinked members for client-side "Claim Member" UI
         // Use original members array (before our write) — the new auto-created entry is excluded by filter
         const unlinkedMembers = members
@@ -1076,4 +1063,61 @@ var statsAggregator_1 = require("./statsAggregator");
 Object.defineProperty(exports, "onServiceWrite", { enumerable: true, get: function () { return statsAggregator_1.onServiceWrite; } });
 var backfillStats_1 = require("./backfillStats");
 Object.defineProperty(exports, "backfillStats", { enumerable: true, get: function () { return backfillStats_1.backfillStats; } });
+// --- TEMPORARY: Fix user data (role + isDuplicate) ---
+exports.fixUserData = functions.https.onCall(async (data, context) => {
+    if (!context.auth)
+        throw new functions.https.HttpsError("unauthenticated", "Must be logged in");
+    const callerUid = context.auth.uid;
+    const targetUid = data.targetUid || callerUid;
+    const newRole = data.role || 'head';
+    // Only allow the target user or an admin to run this
+    const callerDoc = await db.collection("users").doc(callerUid).get();
+    const callerData = callerDoc.data();
+    if (callerUid !== targetUid && (callerData === null || callerData === void 0 ? void 0 : callerData.role) !== 'head') {
+        throw new functions.https.HttpsError("permission-denied", "Only the head can fix other users");
+    }
+    const userRef = db.collection("users").doc(targetUid);
+    const userDoc = await db.collection("users").doc(targetUid).get();
+    if (!userDoc.exists)
+        throw new functions.https.HttpsError("not-found", "User not found");
+    const userData = userDoc.data();
+    const choirId = userData.choirId;
+    if (!choirId)
+        throw new functions.https.HttpsError("not-found", "User has no choir");
+    // 1. Fix user doc role
+    const updates = { role: newRole };
+    if (userData.memberships) {
+        updates.memberships = userData.memberships.map((m) => {
+            if (m.choirId === choirId)
+                return Object.assign(Object.assign({}, m), { role: newRole });
+            return m;
+        });
+    }
+    await userRef.update(updates);
+    // 2. Fix choir member entry: clear isDuplicate, set role
+    const choirRef = db.collection("choirs").doc(choirId);
+    const choirDoc = await choirRef.get();
+    if (!choirDoc.exists)
+        throw new functions.https.HttpsError("not-found", "Choir not found");
+    const members = choirDoc.data().members || [];
+    const memberIndex = members.findIndex((m) => m.id === targetUid || m.accountUid === targetUid || (m.linkedUserIds || []).includes(targetUid));
+    let memberInfo = "No member entry found";
+    if (memberIndex >= 0) {
+        const updatedMembers = [...members];
+        const member = Object.assign({}, updatedMembers[memberIndex]);
+        delete member.isDuplicate;
+        member.role = newRole;
+        member.hasAccount = true;
+        updatedMembers[memberIndex] = member;
+        await choirRef.update({ members: updatedMembers });
+        memberInfo = `Fixed member at index ${memberIndex}: ${member.name} (id=${member.id})`;
+    }
+    // 3. Sync claims
+    await syncUserClaims(targetUid);
+    return {
+        success: true,
+        message: `Role set to ${newRole}. ${memberInfo}`,
+        userData: { name: userData.name, email: userData.email, choirId }
+    };
+});
 //# sourceMappingURL=index.js.map

@@ -594,9 +594,9 @@ function HomePageContent() {
     }
   }, [searchParams, services, choir, router]);
 
-  // Load registered users when "App Users" filter is active
+  // Load registered users when Members tab is active (for "Нові користувачі" section)
   useEffect(() => {
-    if (memberFilter === 'real' && userData?.choirId) {
+    if (activeTab === 'members' && userData?.choirId) {
       setLoadingRegisteredUsers(true);
       getChoirUsers(userData.choirId).then(users => {
         // Client-side sort to avoid needing composite index
@@ -616,7 +616,7 @@ function HomePageContent() {
         setLoadingRegisteredUsers(false);
       });
     }
-  }, [memberFilter, userData?.choirId]);
+  }, [activeTab, userData?.choirId]);
 
   // Sync selectedService REVERTED due to infinite preloader bug. 
   // We will re-implement safer sync later.
@@ -870,11 +870,11 @@ function HomePageContent() {
       // Updates: name, voice, role...
       // member object contains updated fields.
       // We extract what we want to update.
-      const updates = {
+      const updates: Record<string, any> = {
         name: member.name,
         voice: member.voice,
-        role: member.role
-        // permissions? EditMemberModal doesn't seem to edit permissions yet, just role.
+        role: member.role,
+        isDuplicate: false // Always clear isDuplicate when admin explicitly saves
       };
 
       // Generate a deduplicated list of current members (just in case)
@@ -884,13 +884,17 @@ function HomePageContent() {
       let updatedMembers = [...dedupedCurrent];
 
       if (existingIndex >= 0) {
-        // Updating existing member
-        updatedMembers[existingIndex] = { ...updatedMembers[existingIndex], ...member };
+        // Updating existing member — clear isDuplicate so it becomes visible
+        const updated = { ...updatedMembers[existingIndex], ...member };
+        delete (updated as any).isDuplicate;
+        updatedMembers[existingIndex] = updated;
         await updateMember(userData.choirId, member.id, updates);
         setChoir({ ...choir, members: updatedMembers });
       } else {
-        // Adding new manual member
-        updatedMembers.push(member);
+        // Adding new manual member — ensure no isDuplicate flag
+        const cleanMember = { ...member };
+        delete (cleanMember as any).isDuplicate;
+        updatedMembers.push(cleanMember);
         await updateChoirMembers(userData.choirId, updatedMembers);
         setChoir({ ...choir, members: updatedMembers });
       }
@@ -1959,7 +1963,7 @@ function HomePageContent() {
                 <div className="flex items-center gap-2">
                   <h2 className="text-xl font-bold text-text-primary">Учасники</h2>
                   <span className="text-xs text-text-secondary bg-surface-highlight px-2 py-0.5 rounded-lg font-semibold tabular-nums">
-                    {(choir?.members || []).length}
+                    {(choir?.members || []).filter((m: any) => !m.isDuplicate).length}
                   </span>
                 </div>
 
@@ -1999,7 +2003,6 @@ function HomePageContent() {
                   { key: 'Alto', label: 'Альт' },
                   { key: 'Tenor', label: 'Тенор' },
                   { key: 'Bass', label: 'Бас' },
-                  ...(canEdit ? [{ key: 'real', label: '📱 Додаток' }] : []),
                 ].map(filter => (
                   <button
                     key={filter.key}
@@ -2016,72 +2019,7 @@ function HomePageContent() {
             </div>
 
             <div className="mt-4">
-              {memberFilter === 'real' ? (
-                loadingRegisteredUsers ? (
-                  <div className="text-center py-12 text-text-secondary">
-                    <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin opacity-50" />
-                    <p>Завантаження...</p>
-                  </div>
-                ) : registeredUsers.length === 0 ? (
-                  <div className="text-center py-12 text-text-secondary">
-                    <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Немає зареєстрованих користувачів</p>
-                    <p className="text-sm mt-2">Користувачі з'являться тут після входу через Google або email</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
-                    {registeredUsers.map(appUser => (
-                      <div
-                        key={appUser.id}
-                        className="px-3 py-2.5 bg-surface rounded-xl flex items-center justify-between group hover:bg-surface-highlight transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-blue-500/15 flex items-center justify-center text-blue-400 font-bold text-xs">
-                            {appUser.name?.[0]?.toUpperCase() || appUser.email?.[0]?.toUpperCase() || "?"}
-                          </div>
-                          <div>
-                            <div className="text-text-primary text-[13px] font-semibold flex items-center gap-1.5">
-                              {appUser.name || 'Без імені'}
-                              <Smartphone className="w-3 h-3 text-blue-400" />
-                            </div>
-                            <div className="text-text-secondary text-[11px]">
-                              {canEdit && appUser.email}
-                              {appUser.voice && <span className="ml-2 text-primary">{appUser.voice}</span>}
-                            </div>
-                          </div>
-                        </div>
-
-                        {canEdit && (
-                          <div className="flex items-center gap-1">
-                            {(() => {
-                              const isLinkedSecondary = (choir?.members || []).some(m => (m.linkedUserIds || []).includes(appUser.id) || (m as any).accountUid === appUser.id);
-                              const isEstablishedMain = (choir?.members || []).some(m => m.id === appUser.id && !!m.voice);
-                              return !isLinkedSecondary && !isEstablishedMain;
-                            })() && (
-                                <button
-                                  onClick={() => setLinkingAppUser(appUser)}
-                                  className="text-text-secondary/50 hover:text-accent transition-colors p-1.5 hover:bg-accent/10 rounded-lg"
-                                  title="Прив'язати до учасника зі списку"
-                                >
-                                  <Link2 className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-                            {user?.uid !== appUser.id && (
-                              <button
-                                onClick={() => setUserToDelete(appUser)}
-                                className="text-text-secondary/50 hover:text-danger transition-colors p-1.5 hover:bg-danger/10 rounded-lg"
-                                title="Видалити користувача"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )
-              ) : (choir?.members || []).length === 0 ? (
+              {(choir?.members || []).length === 0 ? (
                 <div className="text-center py-12 text-text-secondary">
                   <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>Немає учасників</p>
@@ -2091,24 +2029,39 @@ function HomePageContent() {
                 ((() => {
                   // Deduplicate by ID to prevent React key errors from corrupted DB state
                   const dedupedMembers = Array.from(new Map((choir?.members || []).map(m => [m.id, m])).values());
-                  const filtered = dedupedMembers.filter(m => {
-                    if ((m as any).isDuplicate) return false;
-                    // Hide auto-created stub: if this entry is the user's UID-based auto-entry
-                    // AND the user is already linked to a real member, hide it
-                    if (user && m.id === user.uid && !m.voice && !(m as any).accountUid) {
-                      const linkedElsewhere = dedupedMembers.some((other: any) =>
-                        other.id !== user.uid && (
-                          other.accountUid === user.uid ||
-                          (other.linkedUserIds || []).includes(user.uid)
-                        )
-                      );
-                      if (linkedElsewhere) return false;
+
+                  // Determine which UIDs are linked to a REAL roster entry
+                  const linkedUids = new Set<string>();
+                  dedupedMembers.forEach((m: any) => {
+                    if (m.isDuplicate) return;
+                    // accountUid and linkedUserIds always count as linked
+                    if (m.accountUid) linkedUids.add(m.accountUid);
+                    (m.linkedUserIds || []).forEach((uid: string) => linkedUids.add(uid));
+                    // Only count the member's own ID as "linked" if admin-created/assigned
+                    // voice = admin assigned a part; manual_ = admin created entry
+                    const isAdminEntry = m.voice || (typeof m.id === 'string' && m.id.startsWith('manual_'));
+                    if (isAdminEntry) {
+                      linkedUids.add(m.id);
                     }
+                  });
+
+                  // Roster = only admin-created members (has voice, manual_, or not an auto-stub)
+                  const isRosterMember = (m: any) => {
+                    if (m.isDuplicate) return false;
+                    if (m.voice) return true;
+                    if (typeof m.id === 'string' && m.id.startsWith('manual_')) return true;
+                    // Voiceless entry with hasAccount but no admin assignment = auto-stub, hide
+                    if (m.hasAccount && !m.voice) return false;
+                    return true; // other entries (no hasAccount, no voice) are kept
+                  };
+
+                  const rosterMembers = dedupedMembers.filter(m => {
+                    if (!isRosterMember(m)) return false;
                     if (memberFilter && m.voice !== memberFilter) return false;
                     return true;
                   });
 
-                  const sortedMembers = [...filtered].sort((a, b) => {
+                  const sortedMembers = [...rosterMembers].sort((a, b) => {
                     const aHasVoice = !!a.voice;
                     const bHasVoice = !!b.voice;
                     if (aHasVoice && !bHasVoice) return -1;
@@ -2116,7 +2069,7 @@ function HomePageContent() {
                     return (a.name || '').localeCompare(b.name || '', 'uk');
                   });
 
-                  if (sortedMembers.length === 0) {
+                  if (sortedMembers.length === 0 && !canEdit) {
                     return <div className="text-center py-8 text-text-secondary">Нікого не знайдено</div>;
                   }
 
@@ -2137,12 +2090,83 @@ function HomePageContent() {
                     if (letter) scrollToLetter(letter);
                   };
 
+                  // Unlinked app users: registered users who are NOT linked to any roster member
+                  const unlinkedUsers = canEdit ? registeredUsers.filter(appUser => {
+                    // If this user's UID is in linkedUids or is a roster member's ID, they're linked
+                    if (linkedUids.has(appUser.id)) return false;
+                    // If the user IS a visible roster member (has voice, not duplicate), they're established
+                    const isEstablished = dedupedMembers.some(m => m.id === appUser.id && !!m.voice && !(m as any).isDuplicate);
+                    if (isEstablished) return false;
+                    return true;
+                  }) : [];
+
                   return (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
-                      <AnimatePresence mode="popLayout">
-                        {sortedMembers.map((member, index) => renderMemberCard(member, index))}
-                      </AnimatePresence>
-                    </div>
+                    <>
+                      {sortedMembers.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
+                          <AnimatePresence mode="popLayout">
+                            {sortedMembers.map((member, index) => renderMemberCard(member, index))}
+                          </AnimatePresence>
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-text-secondary">Нікого не знайдено</div>
+                      )}
+
+                      {/* Нові користувачі — unlinked app users */}
+                      {canEdit && unlinkedUsers.length > 0 && (
+                        <div className="mt-6">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Smartphone className="w-4 h-4 text-blue-400" />
+                            <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">Нові користувачі</span>
+                            <span className="text-[10px] px-1.5 py-0.5 bg-blue-500/15 text-blue-400 rounded-full font-bold">{unlinkedUsers.length}</span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
+                            {unlinkedUsers.map(appUser => (
+                              <div
+                                key={appUser.id}
+                                className="px-3 py-2.5 bg-surface rounded-xl flex items-center justify-between group hover:bg-surface-highlight transition-colors"
+                              >
+                                <div
+                                  className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                                  onClick={() => setLinkingAppUser(appUser)}
+                                >
+                                  <div className="w-9 h-9 rounded-full bg-blue-500/15 flex items-center justify-center text-blue-400 font-bold text-xs">
+                                    {appUser.name?.[0]?.toUpperCase() || appUser.email?.[0]?.toUpperCase() || '?'}
+                                  </div>
+                                  <div>
+                                    <div className="text-text-primary text-[13px] font-semibold flex items-center gap-1.5">
+                                      {appUser.name || 'Без імені'}
+                                      <Smartphone className="w-3 h-3 text-blue-400" />
+                                    </div>
+                                    <div className="text-text-secondary text-[11px]">
+                                      {appUser.email}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => setLinkingAppUser(appUser)}
+                                    className="text-text-secondary/50 hover:text-accent transition-colors p-1.5 hover:bg-accent/10 rounded-lg"
+                                    title="Об'єднати з учасником хору"
+                                  >
+                                    <Link2 className="w-3.5 h-3.5" />
+                                  </button>
+                                  {user?.uid !== appUser.id && (
+                                    <button
+                                      onClick={() => setUserToDelete(appUser)}
+                                      className="text-text-secondary/50 hover:text-danger transition-colors p-1.5 hover:bg-danger/10 rounded-lg"
+                                      title="Видалити користувача"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
                   );
                 })())
               )}
