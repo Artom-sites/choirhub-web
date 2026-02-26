@@ -257,7 +257,9 @@ function HomePageContent() {
     if (isLinkedAnywhere) return false;
     // If not linked anywhere, check if they have an auto-created stub entry
     const myEntry = choir.members.find((m: any) => m.id === user.uid);
-    if (!myEntry) return false;
+    // No member entry at all — user exists in users collection but not in choir.members
+    if (!myEntry) return true;
+    // Has a voiceless stub — needs to claim a real profile
     if (myEntry.hasAccount && !myEntry.voice) return true;
     return false;
   })();
@@ -1835,7 +1837,13 @@ function HomePageContent() {
 
 
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-surface/90 backdrop-blur-3xl border-b border-border shadow-sm pt-safe transition-all">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-surface/90 backdrop-blur-3xl border-b border-border shadow-sm pt-safe transition-all flex flex-col">
+        {/* Under Construction Banner */}
+        <div className="bg-orange-500/10 border-b border-orange-500/20 py-1.5 px-4 text-center">
+          <p className="text-[11px] font-medium text-orange-400">
+            🚧 Додаток в активній розробці. Вибачте за можливі незручності.
+          </p>
+        </div>
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
           {/* Left: Logo + Title */}
           <div className="flex items-center gap-3 shrink-0">
@@ -1908,7 +1916,7 @@ function HomePageContent() {
       </header>
 
       {/* Tab Content */}
-      <div className="relative pt-[calc(4rem_+_env(safe-area-inset-top))] pb-32 md:pb-24">
+      <div className="relative pt-[calc(5.5rem_+_env(safe-area-inset-top))] pb-32 md:pb-24">
         {/* Self-service claim banner for unlinked users */}
         {isUserUnlinked && (
           <div className="mx-4 mt-3 mb-2">
@@ -1958,7 +1966,7 @@ function HomePageContent() {
         {activeTab === 'members' && (
           <div className="max-w-5xl mx-auto px-4 pb-32">
             {/* Header + Filters — sticky */}
-            <div className="sticky top-[calc(4rem_+_env(safe-area-inset-top))] z-40 bg-background/95 backdrop-blur-md -mx-4 px-4 pt-3 pb-1 border-b border-border">
+            <div className="sticky top-[calc(5.5rem_+_env(safe-area-inset-top))] z-40 bg-background/95 backdrop-blur-md -mx-4 px-4 pt-3 pb-1 border-b border-border">
               <div className="flex justify-between items-center mb-3">
                 <div className="flex items-center gap-2">
                   <h2 className="text-xl font-bold text-text-primary">Учасники</h2>
