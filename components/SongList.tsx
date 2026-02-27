@@ -1,4 +1,4 @@
-конки мають бути по центру а не під верхом"use client";
+"use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
