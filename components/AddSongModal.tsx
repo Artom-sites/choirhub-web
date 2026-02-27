@@ -109,11 +109,6 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
             return;
         }
 
-        if (!finalConductor) {
-            setError("Оберіть або введіть диригента");
-            return;
-        }
-
         setLoading(true);
         setError("");
 

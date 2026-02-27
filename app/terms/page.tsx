@@ -8,7 +8,7 @@ export default function TermsPage() {
     const router = useRouter();
 
     const handleBack = () => {
-        router.push('/?view=account');
+        router.back();
     };
 
     return (

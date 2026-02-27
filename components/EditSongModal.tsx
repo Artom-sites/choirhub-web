@@ -132,12 +132,12 @@ export default function EditSongModal({
     const handleSave = async (e: React.FormEvent | React.MouseEvent) => {
         e.preventDefault();
         if (!title.trim()) {
-            // setError("Введіть назву пісні"); // Ensure setError is defined or use alert
-            alert("Введіть назву пісні");
+            setError("Введіть назву пісні");
             return;
         }
 
         setLoading(true);
+        setError("");
 
         try {
             // Logic to determine final values
@@ -154,12 +154,6 @@ export default function EditSongModal({
             let finalPianist = pianist;
             if (showCustomPianist && customPianist.trim()) {
                 finalPianist = customPianist.trim();
-            }
-
-            if (!finalConductor) {
-                alert("Оберіть або введіть диригента");
-                setLoading(false);
-                return;
             }
 
             // Save custom category/theme

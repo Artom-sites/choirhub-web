@@ -1,0 +1,4678 @@
+{
+  "users": {
+    "1dFYQOIv9WYDhnPXsDo4hmCdIv72": {
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1771057214,
+        "_nanoseconds": 428000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "name": "Максим Гарбузовский",
+      "id": "1dFYQOIv9WYDhnPXsDo4hmCdIv72",
+      "email": "makcum36436@gmail.com",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ]
+    },
+    "2s62hlYPEafM6QtoGk177iq19xt2": {
+      "photoURL": "https://lh3.googleusercontent.com/a/ACg8ocKTcBsYLGR1vn7Afi23_LE94r3R-DNV2hO-nVx5LGCzYpwrvA=s96-c",
+      "createdAt": {
+        "_seconds": 1771697280,
+        "_nanoseconds": 589000000
+      },
+      "name": "Андрій Дуля",
+      "id": "2s62hlYPEafM6QtoGk177iq19xt2",
+      "email": "andrijdula332@gmail.com",
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "permissions": [],
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ],
+      "notificationsEnabled": true,
+      "fcmTokens": [
+        "dx0Sp93Htk5sUBL9f9VYd5:APA91bEfy8TJap7P85v-PfU7bhGaDeoEY6vGIIzQZtrFc8qnX_h9MSZhuRBJ2lCBF4jHAT0SBTiD93Epq6ARbSoSJKzfT2CfRg7zyRdPmvzgFhX8ZtAwY78"
+      ],
+      "updatedAt": {
+        "_seconds": 1771697368,
+        "_nanoseconds": 402000000
+      }
+    },
+    "2wYWfa8nZvdqV3FBXesWplFvVLf2": {
+      "photoURL": "https://lh3.googleusercontent.com/a/ACg8ocInQ4lIXfE9j_-yh-0GPFWjjzgbkdadYng_4qocAvUhPa4iwZM=s96-c",
+      "id": "2wYWfa8nZvdqV3FBXesWplFvVLf2",
+      "email": "semenchukmargo123@gmail.com",
+      "choirId": "LqwSFGevg30GOb2gLsen",
+      "choirName": "GEC Third Choir",
+      "role": "member",
+      "permissions": [],
+      "memberships": [
+        {
+          "choirId": "LqwSFGevg30GOb2gLsen",
+          "choirName": "GEC Third Choir",
+          "role": "member",
+          "choirType": "msc"
+        }
+      ],
+      "updatedAt": {
+        "_seconds": 1772076678,
+        "_nanoseconds": 290000000
+      },
+      "name": "Маргарита Наконечна",
+      "createdAt": {
+        "_seconds": 1772076789,
+        "_nanoseconds": 325000000
+      },
+      "voice": "Alto"
+    },
+    "58sZ0hfmJzanJL5yjbqAvWh6nJB3": {
+      "photoURL": "https://lh3.googleusercontent.com/a/ACg8ocL9kalROU8OAK0LLJFIKwnThzW11GwAQga0HRZFBLl_sFApQg=s96-c",
+      "createdAt": {
+        "_seconds": 1771156055,
+        "_nanoseconds": 692000000
+      },
+      "name": "Vitalii Oboznyi",
+      "id": "58sZ0hfmJzanJL5yjbqAvWh6nJB3",
+      "email": "vitalii.o@icloud.com",
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "permissions": [],
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ],
+      "notificationsEnabled": true,
+      "fcmTokens": [
+        "d_RdLeNg4l-cd8viuMLalm:APA91bHvTFZecqbrg4OJe1dQC7iGWHy_TBTq7y3EDYjQEzBGg7VSlwkVkULypZNK39w9amTo4e4tRcYiNTsd8pZiAdaoTB3ql2I7wZ5T5k6kHlPhBjEUbTg"
+      ],
+      "updatedAt": {
+        "_seconds": 1771511351,
+        "_nanoseconds": 193000000
+      }
+    },
+    "6EIMCMck61RBm1ybnJf5I1UzMSt2": {
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1770931730,
+        "_nanoseconds": 265000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "name": "Evelina",
+      "id": "6EIMCMck61RBm1ybnJf5I1UzMSt2",
+      "email": "evelinadulia@icloud.com",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ]
+    },
+    "6PdlWsvhW6RmzHTBK37M1bBol1w2": {
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1771010374,
+        "_nanoseconds": 405000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "name": "Illia Dvernytskyi",
+      "id": "6PdlWsvhW6RmzHTBK37M1bBol1w2",
+      "email": "illia.dvernytskyi@gmail.com",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ]
+    },
+    "6m9Tbkmo91XeBN3NFcfRKlRuPLp1": {
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1771016463,
+        "_nanoseconds": 692000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "name": "Yana Akopian",
+      "id": "6m9Tbkmo91XeBN3NFcfRKlRuPLp1",
+      "email": "yankaako@gmail.com",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ]
+    },
+    "70ZSGld3tNN6OHtA1tKHelByP5s1": {
+      "choirId": "Q6zP97Hs6b4wISPvZtDd",
+      "createdAt": {
+        "_seconds": 1769210586,
+        "_nanoseconds": 272000000
+      },
+      "choirName": "гпшг",
+      "role": "head",
+      "name": "артьом",
+      "id": "70ZSGld3tNN6OHtA1tKHelByP5s1",
+      "memberships": [
+        {
+          "choirId": "Q6zP97Hs6b4wISPvZtDd",
+          "choirName": "гпшг",
+          "role": "head"
+        }
+      ]
+    },
+    "7J1uyJeyn6aRGPQFhVr5CehPL9I2": {
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1771010964,
+        "_nanoseconds": 980000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "name": "Aleksandr Kondratiev",
+      "id": "7J1uyJeyn6aRGPQFhVr5CehPL9I2",
+      "email": "alexandrovih85@gmail.com",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ]
+    },
+    "7PHfSEhXjKOC8Klus8c8QTK3oHJ2": {
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1771013314,
+        "_nanoseconds": 522000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "name": "Karina Tymchenko",
+      "id": "7PHfSEhXjKOC8Klus8c8QTK3oHJ2",
+      "email": "katarinatimchenko.97@gmail.com",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ]
+    },
+    "7zQ0nN9sNle3WYWlEJOrkatxtL73": {
+      "id": "7zQ0nN9sNle3WYWlEJOrkatxtL73",
+      "email": "iordandanik0@gmail.com",
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ],
+      "createdAt": {
+        "_seconds": 1771019292,
+        "_nanoseconds": 937000000
+      },
+      "name": "Iordan Danik"
+    },
+    "836J83iaJAXIndrWWxY5GQ155vn2": {
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1771010293,
+        "_nanoseconds": 362000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "name": "Андрій Мангер",
+      "id": "836J83iaJAXIndrWWxY5GQ155vn2",
+      "email": "manger1211@gmail.com",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ]
+    },
+    "96B3iFCfe8W0KoVLByq6pi7lOGp1": {
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1769942060,
+        "_nanoseconds": 239000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "regent",
+      "name": "Дуля Авенір ",
+      "id": "96B3iFCfe8W0KoVLByq6pi7lOGp1",
+      "email": "dulaavenir@icloud.com",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "regent"
+        }
+      ],
+      "notificationsEnabled": true,
+      "fcmTokens": [
+        "cjFBXWgQxLiMXFgdUV0Mga:APA91bE_V9M_BPe-9bv0F4nqmOPNrsfXwaifvo1IxfbDOtPO1cHS_cLXt6LTy1gXBxsKuxY6D6NLwkpGSW07kugZHdo38VJ7FDHM11wcSKrVhrHhj2n08o4"
+      ],
+      "updatedAt": {
+        "_seconds": 1771749002,
+        "_nanoseconds": 445000000
+      }
+    },
+    "AH2CN87AXkV6FXYbroDYmcFHyE23": {
+      "choirId": "P0l5A0yej9s3gRb9MCYj",
+      "createdAt": {
+        "_seconds": 1769296574,
+        "_nanoseconds": 30000000
+      },
+      "choirName": "И до ют ср",
+      "role": "head",
+      "name": "Эмиль",
+      "id": "AH2CN87AXkV6FXYbroDYmcFHyE23",
+      "memberships": [
+        {
+          "choirId": "P0l5A0yej9s3gRb9MCYj",
+          "choirName": "И до ют ср",
+          "role": "head"
+        }
+      ]
+    },
+    "BMRdxmeC1QUEdrifYrfatjiSObE2": {
+      "createdAt": {
+        "_seconds": 1772040440,
+        "_nanoseconds": 813000000
+      },
+      "name": "Рустам",
+      "id": "BMRdxmeC1QUEdrifYrfatjiSObE2",
+      "email": "rustam.klymchuk@ukr.net",
+      "choirName": "Молодіжний хор",
+      "role": "head",
+      "choirId": "HqZZnHZB93nJZWusq3Yn",
+      "memberships": [
+        {
+          "choirId": "WubPhvQ5m8MrH4TRN6dP",
+          "choirName": "Молодіжний хор",
+          "role": "head",
+          "choirType": "standard"
+        },
+        {
+          "choirId": "HqZZnHZB93nJZWusq3Yn",
+          "choirName": "Молодіжний хор",
+          "role": "head",
+          "choirType": "standard"
+        }
+      ],
+      "updatedAt": {
+        "_seconds": 1772040498,
+        "_nanoseconds": 37000000
+      }
+    },
+    "DzWHnb24EfeMLAdFW5815VuyDy23": {
+      "id": "DzWHnb24EfeMLAdFW5815VuyDy23",
+      "memberships": [
+        {
+          "choirId": "Bal2FfmJRP5xbmbgrLN1",
+          "choirName": "Сводный хор",
+          "role": "head"
+        },
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "regent"
+        }
+      ],
+      "name": "Ричард",
+      "choirId": "Bal2FfmJRP5xbmbgrLN1",
+      "createdAt": {
+        "_seconds": 1770238648,
+        "_nanoseconds": 686000000
+      },
+      "choirName": "Сводный хор",
+      "role": "head"
+    },
+    "HMX9k3Z1qiOzoK01syZo0foUpMX2": {
+      "photoURL": "https://lh3.googleusercontent.com/a/ACg8ocJbWKYiTvveo7ErecOpg6jE9qWXHVqA4TUtpS9-mTptoH2QNg=s96-c",
+      "createdAt": {
+        "_seconds": 1772136840,
+        "_nanoseconds": 699000000
+      },
+      "name": "Яків Шевченко",
+      "id": "HMX9k3Z1qiOzoK01syZo0foUpMX2",
+      "email": "yakivshev@gmail.com",
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "permissions": [],
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member",
+          "choirType": "msc"
+        }
+      ],
+      "notificationsEnabled": true,
+      "fcmTokens": [
+        "c-dAa8KDoFJj3nzOSxWh7Q:APA91bG62UrFkKvtKZ3ollAQVXgaqSUjT3un9tSeaiMyExLGRe8fWJ-ipBx4uPR1Ic9I1-td8ZFY8cZzPF5HdZhGs8RWkCs44V5odzc4A5zu264susDGVLY"
+      ],
+      "updatedAt": {
+        "_seconds": 1772140674,
+        "_nanoseconds": 396000000
+      }
+    },
+    "IYoSRTV6CygKYlhpEHrv1adGt1y1": {
+      "name": "Петро Загородній",
+      "id": "IYoSRTV6CygKYlhpEHrv1adGt1y1",
+      "email": "petro280786@gmail.com",
+      "choirId": "vOuHdELYa0jC60CV4Tx4",
+      "createdAt": {
+        "_seconds": 1769423480,
+        "_nanoseconds": 284000000
+      },
+      "choirName": "Загальний хор",
+      "role": "regent",
+      "memberships": [
+        {
+          "choirId": "WOnO1WuJlpkHKuVWnt8o",
+          "choirName": "Хор",
+          "role": "head"
+        },
+        {
+          "choirId": "vOuHdELYa0jC60CV4Tx4",
+          "choirName": "Загальний хор",
+          "role": "regent"
+        }
+      ]
+    },
+    "Ifv6hDozbpMRdtiD0HSLthxHJj93": {
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1771083507,
+        "_nanoseconds": 754000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "name": "Dina Zapara",
+      "id": "Ifv6hDozbpMRdtiD0HSLthxHJj93",
+      "email": "zaparadina232002@gmail.com",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ]
+    },
+    "JbXUNKaS25bX5PG7VlFtLGn4pJ52": {
+      "name": "Ларіса",
+      "id": "JbXUNKaS25bX5PG7VlFtLGn4pJ52",
+      "email": "pelepiaklarisa@gmail.com",
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1771010616,
+        "_nanoseconds": 52000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ]
+    },
+    "Klo1gPq9sVVyQMILbsNPdO9nSjH3": {
+      "choirId": "aVqGQp1uzoPvTAwKcWMp",
+      "createdAt": {
+        "_seconds": 1770585390,
+        "_nanoseconds": 211000000
+      },
+      "choirName": "Хор",
+      "role": "head",
+      "name": "Користувач",
+      "id": "Klo1gPq9sVVyQMILbsNPdO9nSjH3",
+      "memberships": [
+        {
+          "choirId": "aVqGQp1uzoPvTAwKcWMp",
+          "choirName": "Хор",
+          "role": "head"
+        }
+      ]
+    },
+    "LAmaU8uITcfc4DacfsRYqnmuWPA2": {
+      "name": "Діана Левценюк ",
+      "id": "LAmaU8uITcfc4DacfsRYqnmuWPA2",
+      "email": "diana.levtseniuk@ukr.net",
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1771063294,
+        "_nanoseconds": 920000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ],
+      "notificationsEnabled": true,
+      "fcmTokens": [
+        "fs7M1djnJcEittE-BRCT0D:APA91bHLezO3RnBKFk5v7GD3yYUIMqsE5qwy_CQ5s6mjo503tnMcLDEFbEDkHNRo4h-uzk4nC2qqvGOwgPLEtp4c2nHiViNmIef--FLb6D2wP-plfdnRHEE"
+      ]
+    },
+    "LxXZFLPpYueIctOqEORmjvGZeGj2": {
+      "photoURL": "https://lh3.googleusercontent.com/a/ACg8ocIq7WXFT9DpnLaTrqtDhfaSsJ2sUjZ8Pp2RDVyv4p3_syqd6Q=s96-c",
+      "createdAt": {
+        "_seconds": 1771749695,
+        "_nanoseconds": 675000000
+      },
+      "name": "Vy Tg",
+      "id": "LxXZFLPpYueIctOqEORmjvGZeGj2",
+      "email": "vytg0950@gmail.com",
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "permissions": [],
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ],
+      "updatedAt": {
+        "_seconds": 1771749716,
+        "_nanoseconds": 650000000
+      }
+    },
+    "M8nrxc0ijOSvxb3W7kpgC01JS0k1": {
+      "choirId": "vOuHdELYa0jC60CV4Tx4",
+      "createdAt": {
+        "_seconds": 1769425013,
+        "_nanoseconds": 856000000
+      },
+      "choirName": "Загальний хор",
+      "role": "member",
+      "name": "Liubov Reshetnik",
+      "id": "M8nrxc0ijOSvxb3W7kpgC01JS0k1",
+      "email": "reshetnikliubov@gmail.com",
+      "memberships": [
+        {
+          "choirId": "vOuHdELYa0jC60CV4Tx4",
+          "choirName": "Загальний хор",
+          "role": "member"
+        }
+      ]
+    },
+    "Ndad8pQDmKUwb1yQantXYT1lZC12": {
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1769372060,
+        "_nanoseconds": 455000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "permissions": [
+        "edit_attendance",
+        "view_stats"
+      ],
+      "name": "Erik Dulia ",
+      "id": "Ndad8pQDmKUwb1yQantXYT1lZC12",
+      "email": "erikdula702@gmail.com",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ],
+      "notificationsEnabled": true,
+      "fcmTokens": [
+        "cTrIInazxdXak1CHinoYGQ:APA91bHYJCLhnlUbX5hVX2Q7oCwbI400BVwqgki-P98qhpgWX3j1hCwxnD_iXRuJdVj3LfBsV5hzkgtr0c6jPw5ElI0uCS6PnMF-V3Ao3O4pknU6nyUcc0M"
+      ]
+    },
+    "OyqZh89jF8c2rpmsCaC9WfCEYM63": {
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1771010794,
+        "_nanoseconds": 919000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "name": "Yesfir Akopian",
+      "id": "OyqZh89jF8c2rpmsCaC9WfCEYM63",
+      "email": "akopianyesfir@gmail.com",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ],
+      "notificationsEnabled": true,
+      "fcmTokens": [
+        "eC--83GWy-hoaVVp4LVrSK:APA91bGda6gefXam_PDt0FbOQOxOmQayqzLMaKwrk-AqmyO8HkOipLp0Ic_-0IpfnDHwUL9kEBps-4KC3dT4-GgTYKA8MFM0ij8omPE_Ucs6ln1AWsADxcs"
+      ],
+      "updatedAt": {
+        "_seconds": 1771165363,
+        "_nanoseconds": 967000000
+      }
+    },
+    "P9iztTy5AcfDoevWZlLbeP0YLv63": {
+      "name": "Данюк Меріліна",
+      "id": "P9iztTy5AcfDoevWZlLbeP0YLv63",
+      "email": "daniukmerilina@gmail.com",
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1771084443,
+        "_nanoseconds": 537000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ],
+      "notificationsEnabled": true,
+      "fcmTokens": [
+        "dp2NapKPFtZC_Al0vNjHQt:APA91bE2IoHeVTt5L7lIOV4icmwtO_hPyPg9OBgXulxdqNg6GAkt9-3B8I1Cw8uAFVACl6iZCvKjnjglZOoE2njlII3kAO4Y44aqIgfgII1lnGBfbqL3V3A"
+      ]
+    },
+    "PH8fSF8ugyNUghhM05xAQVuKkEa2": {
+      "notificationsEnabled": true,
+      "fcmTokens": [
+        "eO5NbQXg4zd1SuIaOpFz80:APA91bF85PEYzSqFWb47ZyGfe5ymBM9Zjdwq2qcIFtm9V8n6iqU1MtkEgjETjS5zAG6z4mgQ9ll7nuz6u5Y8BGvCKc08u6EPFFUblp7PvjZQlIhRPJcUGYM",
+        "eO5NbQXg4zd1SuIaOpFz80:APA91bHv7gwaFJfwaWzr83-SqkeT1NvQXWBXQgEBv02cEnntp_027TYz1WrbTlPaVuhYK9xt9vnPeWkswQUOoQr2TrnXamAuBduENUOkxeFjjyTB03cMjmE",
+        "eO5NbQXg4zd1SuIaOpFz80:APA91bG32Nkyp-3HHYymLShMdJrxBvIY0p2pF6PWdpIlvLRBXXF21XKbDGwZj_Q-JUjRAGkEZAIU2dJa47k3dOpozCTNpU-3U3d_soHxJc0WLh2Q_z7pCN8"
+      ],
+      "updatedAt": {
+        "_seconds": 1771171939,
+        "_nanoseconds": 125000000
+      }
+    },
+    "QMqRrD9BnuOjjLSPlJ8iIMQwXsW2": {
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1769714451,
+        "_nanoseconds": 116000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "name": "Oleg Dulia",
+      "id": "QMqRrD9BnuOjjLSPlJ8iIMQwXsW2",
+      "email": "duliaoleg0@gmail.com",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ],
+      "notificationsEnabled": true,
+      "fcmTokens": [
+        "e0bYiRg36WG7O2Lmvp0sdv:APA91bEZgUUvlia5hp3UklwDCI0_2UvvHEKozheu3n8vpWPSo1ielwTyOQs5P8QcE6e5tiASr9C72ZQbgEfcnG7V04wh4rl8x4Uexvn_ET1pIsq5ZnFG-z4"
+      ],
+      "updatedAt": {
+        "_seconds": 1772129680,
+        "_nanoseconds": 239000000
+      }
+    },
+    "TYEI1BjEQkbv8ZxJHHlZUKQx5w32": {
+      "name": "artem",
+      "id": "TYEI1BjEQkbv8ZxJHHlZUKQx5w32",
+      "email": "duliartem@gmail.com",
+      "notificationsEnabled": true,
+      "fcmTokens": [
+        "eTWUb6cW23Zhi2RYN1ig6C:APA91bGWfFEpaVZLpzyYl-LXnB1FIEl2AE5Iwf1e6uyNIka7xVS6Tr6OxJqoFWHozB-ka7mfLLobPERIyl_hJ7tH1HD7dkGvhOlFfUlr0rVIFEiadUC93MQ"
+      ],
+      "choirId": "kRMDfFtII7yPQTcsiv8w",
+      "createdAt": {
+        "_seconds": 1770052005,
+        "_nanoseconds": 89000000
+      },
+      "choirName": "Загальний",
+      "role": "member",
+      "memberships": [
+        {
+          "choirId": "d5nlcJeHXV4QiqaNwFZ0",
+          "choirName": "Test Choir",
+          "role": "head"
+        },
+        {
+          "choirId": "kRMDfFtII7yPQTcsiv8w",
+          "choirName": "Загальний",
+          "role": "member"
+        }
+      ]
+    },
+    "UMJP4XrHtiO2NlZFs3O4TUeGbRz2": {
+      "id": "UMJP4XrHtiO2NlZFs3O4TUeGbRz2",
+      "email": "olenka140985@gmail.com",
+      "choirId": "FqU7eoHHYXX0lGboOyeA",
+      "choirName": "L&H WORSHIP",
+      "role": "member",
+      "permissions": [],
+      "memberships": [
+        {
+          "choirId": "FqU7eoHHYXX0lGboOyeA",
+          "choirName": "L&H WORSHIP",
+          "role": "member",
+          "choirType": "standard"
+        }
+      ],
+      "updatedAt": {
+        "_seconds": 1772114991,
+        "_nanoseconds": 30000000
+      },
+      "createdAt": {
+        "_seconds": 1772115089,
+        "_nanoseconds": 380000000
+      },
+      "name": "Lena Nikolenko"
+    },
+    "V6WIhphXyVZQJX2jo9Pm0okfzFe2": {
+      "id": "V6WIhphXyVZQJX2jo9Pm0okfzFe2",
+      "email": "Shvetsanna2005@gmail.com",
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "permissions": [],
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ],
+      "updatedAt": {
+        "_seconds": 1771181638,
+        "_nanoseconds": 502000000
+      },
+      "createdAt": {
+        "_seconds": 1771181758,
+        "_nanoseconds": 148000000
+      },
+      "name": "Anna Chekh"
+    },
+    "XTD6KuHLqoMkpAXyb762I3pGL4C2": {
+      "id": "XTD6KuHLqoMkpAXyb762I3pGL4C2",
+      "email": "iordankatya28@gmail.com",
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ],
+      "createdAt": {
+        "_seconds": 1771011997,
+        "_nanoseconds": 625000000
+      },
+      "name": "Katerina"
+    },
+    "Yh2oMMyEK9ZDCW78Edp8JXgm9of1": {
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "id": "Yh2oMMyEK9ZDCW78Edp8JXgm9of1",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ],
+      "createdAt": {
+        "_seconds": 1771010363,
+        "_nanoseconds": 313000000
+      },
+      "name": "Alina Kondratieva"
+    },
+    "Z6MSOLSK22gyi1Iaiw2MC5HAOay1": {
+      "id": "Z6MSOLSK22gyi1Iaiw2MC5HAOay1",
+      "email": "lysenko.sanya2017@gmail.com",
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1771016392,
+        "_nanoseconds": 265000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "name": "Александр Лысенко",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ],
+      "notificationsEnabled": true,
+      "fcmTokens": [
+        "ecOJ717-KL7KwBuhBHQFIR:APA91bHep5ojLAytrwn13O9qlFuqGv-YSVswwmPDth5hHzBjlHUGzFyW7EivV2gg0ZjtnvzHiriMpNoX16seBz0x5Vjv046fbPNDKw39v-5qrKJroffAxec"
+      ]
+    },
+    "ZT4DIb32XicX3ZvIOgjIuhybJIb2": {
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "permissions": [],
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ],
+      "updatedAt": {
+        "_seconds": 1771283514,
+        "_nanoseconds": 451000000
+      }
+    },
+    "awDQQda1r4Oxd25E6XZyEucRtUw1": {
+      "choirId": "85dZBHSD59hKpprzevhO",
+      "createdAt": {
+        "_seconds": 1769210610,
+        "_nanoseconds": 710000000
+      },
+      "choirName": "Загальний",
+      "role": "head",
+      "name": "Артьом",
+      "id": "awDQQda1r4Oxd25E6XZyEucRtUw1",
+      "memberships": [
+        {
+          "choirId": "85dZBHSD59hKpprzevhO",
+          "choirName": "Загальний",
+          "role": "head"
+        }
+      ]
+    },
+    "cDA5mHpRXmU2BmWgcD5tW8yrHCE2": {
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1771009404,
+        "_nanoseconds": 691000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "name": "Sofia Sofia",
+      "id": "cDA5mHpRXmU2BmWgcD5tW8yrHCE2",
+      "email": "sofiassss862@gmail.com",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ]
+    },
+    "cl7my8mTEsVUrZsS6Jig45CduRQ2": {
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1769375286,
+        "_nanoseconds": 584000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "regent",
+      "name": "Davyd Ratushnyi",
+      "id": "cl7my8mTEsVUrZsS6Jig45CduRQ2",
+      "email": "ratushni098888@gmail.com",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "regent"
+        }
+      ]
+    },
+    "dqG84YtiXhV8zl9jduUBZYlpAFx1": {
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1769715027,
+        "_nanoseconds": 945000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "name": "Андрій О",
+      "id": "dqG84YtiXhV8zl9jduUBZYlpAFx1",
+      "email": "andreyol396@gmail.com",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ]
+    },
+    "fKXBzczC3WXb20ndjKJuTQ0z5xH3": {
+      "photoURL": "https://lh3.googleusercontent.com/a/ACg8ocIkUSMT7tXDvDaK9wNKe4QkvtOpfW2BJ7qoj1bBm3hP1Ayw1Q=s96-c",
+      "createdAt": {
+        "_seconds": 1771180370,
+        "_nanoseconds": 919000000
+      },
+      "name": "kostia khatoev",
+      "id": "fKXBzczC3WXb20ndjKJuTQ0z5xH3",
+      "email": "khatoev.k@gmail.com",
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "permissions": [],
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ],
+      "updatedAt": {
+        "_seconds": 1771180379,
+        "_nanoseconds": 514000000
+      }
+    },
+    "gVlT8FKXsoOuxzg56IXmisCeTG73": {
+      "createdAt": {
+        "_seconds": 1771150311,
+        "_nanoseconds": 373000000
+      },
+      "name": "Ivan ",
+      "id": "gVlT8FKXsoOuxzg56IXmisCeTG73",
+      "email": "Stoliar.van.n@gmail.com",
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "permissions": [],
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ],
+      "updatedAt": {
+        "_seconds": 1771150324,
+        "_nanoseconds": 665000000
+      },
+      "voice": null
+    },
+    "h32A3yWS9UX69yUeXmJLCVbAO7H2": {
+      "name": "Давид Демченко",
+      "id": "h32A3yWS9UX69yUeXmJLCVbAO7H2",
+      "email": "ddem18585@gmail.com",
+      "memberships": [
+        {
+          "choirId": "vOuHdELYa0jC60CV4Tx4",
+          "choirName": "Загальний хор",
+          "role": "member"
+        },
+        {
+          "choirId": "qsCxPI9Zh83C3GSTQCYu",
+          "choirName": "МСЦ Бюнде",
+          "role": "head"
+        }
+      ],
+      "choirId": "vOuHdELYa0jC60CV4Tx4",
+      "choirName": "Загальний хор",
+      "role": "member",
+      "createdAt": {
+        "_seconds": 1771541991,
+        "_nanoseconds": 822000000
+      }
+    },
+    "heDfSwxJg7Ti6ipGSk18bA7hz9D3": {
+      "createdAt": {
+        "_seconds": 1772135956,
+        "_nanoseconds": 691000000
+      },
+      "name": "Анжеліна",
+      "id": "heDfSwxJg7Ti6ipGSk18bA7hz9D3",
+      "email": "angelina.kutsan@gmail.com",
+      "choirId": "FqU7eoHHYXX0lGboOyeA",
+      "choirName": "L&H WORSHIP",
+      "role": "member",
+      "permissions": [],
+      "memberships": [
+        {
+          "choirId": "FqU7eoHHYXX0lGboOyeA",
+          "choirName": "L&H WORSHIP",
+          "role": "member",
+          "choirType": "standard"
+        }
+      ],
+      "notificationsEnabled": true,
+      "fcmTokens": [
+        "dLHvgBjjiBwHvdNNCEJKPL:APA91bHAtjrH6BBqKuF1v2EZ0gCBfs0Krm9nnrELIIB_SuFf1FRYX_RToMYhJ95cyekWozqWmBYJc-0QrC7eduBLKMADNZkquJFILkvO5ks8K9SpTS4DF_A"
+      ],
+      "updatedAt": {
+        "_seconds": 1772136110,
+        "_nanoseconds": 472000000
+      }
+    },
+    "iAwuCX7OBbhfI7PqVcAp6iVJs6n2": {
+      "choirId": "ZwEXdTW1g0KOh6rRIqbL",
+      "createdAt": {
+        "_seconds": 1770584012,
+        "_nanoseconds": 112000000
+      },
+      "choirName": "Хор",
+      "role": "head",
+      "name": "Artem",
+      "id": "iAwuCX7OBbhfI7PqVcAp6iVJs6n2",
+      "email": "aptemdula@gmail.com",
+      "memberships": [
+        {
+          "choirId": "ZwEXdTW1g0KOh6rRIqbL",
+          "choirName": "Хор",
+          "role": "head"
+        }
+      ]
+    },
+    "jKipsfS5poZtXyFvCEW3PKk7BBI2": {
+      "photoURL": "https://lh3.googleusercontent.com/a/ACg8ocLnoDjwkYZ8rfAY8469EJTFHX46Be6NROV33dQ0gSAlIlZPsKrs=s96-c",
+      "name": "Настя Савчак",
+      "id": "jKipsfS5poZtXyFvCEW3PKk7BBI2",
+      "email": "nastiabr@gmail.com",
+      "choirId": "FqU7eoHHYXX0lGboOyeA",
+      "choirName": "L&H WORSHIP",
+      "role": "member",
+      "permissions": [],
+      "memberships": [
+        {
+          "choirId": "FqU7eoHHYXX0lGboOyeA",
+          "choirName": "L&H WORSHIP",
+          "role": "member",
+          "choirType": "standard"
+        }
+      ],
+      "updatedAt": {
+        "_seconds": 1772114451,
+        "_nanoseconds": 368000000
+      },
+      "createdAt": {
+        "_seconds": 1772114642,
+        "_nanoseconds": 278000000
+      }
+    },
+    "jNtoDEOGRQgQo0in6jKIE4miIxh1": {
+      "name": "Olga",
+      "id": "jNtoDEOGRQgQo0in6jKIE4miIxh1",
+      "email": "iordanolga@icloud.com",
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1771018427,
+        "_nanoseconds": 167000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ]
+    },
+    "jszDFTWjcrhjuW7iCOflXhV3dIb2": {
+      "photoURL": "https://lh3.googleusercontent.com/a/ACg8ocIpaOjtBS0No0yboDIgRPqvLt-X9RcGw-f-VbuzHPOTYlGa7zC8jQ=s96-c",
+      "id": "jszDFTWjcrhjuW7iCOflXhV3dIb2",
+      "email": "artemdula0@gmail.com",
+      "choirName": "Харзевінкель",
+      "permissions": [],
+      "name": "Дуля Артьом",
+      "notificationsEnabled": true,
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1772107245,
+        "_nanoseconds": 246000000
+      },
+      "voice": "Tenor",
+      "fcmTokens": [
+        "cl4kiHOtfRVlnq0A2aqTyt:APA91bEzY6eNeWc2eD6Hmry0eBDB7bCMn3H3Hp9wedQIrtJmPp9-gGKTMv-MK81ht_ZcvkMlDvyQuV8bmh03THn9_LY0OfZCjNOCX2uRE1uy42f2ADl8uaE",
+        "dq2za-LaOdXQpw9Y9d5Rdy:APA91bGmRSHXDp8OOql7LSyQVz5tF5_JWH54s4VBxAPbeiec481e5OK2UIsWxJ1WU9urdIt0CzY2iuVTqgaJ8RKlmG1kdFrBBjJ5gwbgYZHA1fBGFjrazlU"
+      ],
+      "updatedAt": {
+        "_seconds": 1772122647,
+        "_nanoseconds": 119000000
+      },
+      "role": "head",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "head",
+          "choirType": "standard"
+        }
+      ]
+    },
+    "kHHV0Jna65g3msxhfYeCqM2ZVGr2": {
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1771011619,
+        "_nanoseconds": 258000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "name": "Bohdan Dulia",
+      "id": "kHHV0Jna65g3msxhfYeCqM2ZVGr2",
+      "email": "bohdandulia777@gmail.com",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ]
+    },
+    "kNLHAn1WgSMcEtYb5rpe5Y5Bki83": {
+      "choirId": "vOuHdELYa0jC60CV4Tx4",
+      "createdAt": {
+        "_seconds": 1769432830,
+        "_nanoseconds": 191000000
+      },
+      "choirName": "Загальний хор",
+      "role": "member",
+      "permissions": [
+        "manage_services",
+        "edit_credits",
+        "view_stats"
+      ],
+      "name": "Viliy Reshetnik",
+      "id": "kNLHAn1WgSMcEtYb5rpe5Y5Bki83",
+      "email": "reshetnikviliy@gmail.com",
+      "memberships": [
+        {
+          "choirId": "vOuHdELYa0jC60CV4Tx4",
+          "choirName": "Загальний хор",
+          "role": "member"
+        }
+      ]
+    },
+    "qIbR6jI776Me8l6GkPzbMhD37e73": {
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1771011140,
+        "_nanoseconds": 974000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "name": "Мілана Мангер",
+      "id": "qIbR6jI776Me8l6GkPzbMhD37e73",
+      "email": "ursulmilana29@gmail.com",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ]
+    },
+    "qMnN3HuAoaNJk6h1dxMgr7DW0uD3": {
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1771016627,
+        "_nanoseconds": 487000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "name": "Elsi Nadiya Akopian",
+      "id": "qMnN3HuAoaNJk6h1dxMgr7DW0uD3",
+      "email": "elsinadiyaakopian@gmail.com",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ]
+    },
+    "qN7ZnMb1JWPEzK1WCOnC4J2iWzC3": {
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1769361737,
+        "_nanoseconds": 976000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "regent",
+      "name": "Mark Dulia ",
+      "id": "qN7ZnMb1JWPEzK1WCOnC4J2iWzC3",
+      "email": "cardrivegarage@gmail.com",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "regent"
+        }
+      ],
+      "notificationsEnabled": true,
+      "fcmTokens": [
+        "dzVG8qFuaAIndth0VjNfS-:APA91bFWza4x8ER4XXVVRU9QFwEI3DCHvri_7R2ZsZunFeUG6lQDKLyemD-qZlWkYAkpVGItaey5wkdMEHvygjfS2ZE83zq_HFOVU0K-j-kwoqdH8GiXKD0"
+      ]
+    },
+    "rD5fv0zIdWdldtER08FslQwdxBM2": {
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "permissions": [],
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ],
+      "updatedAt": {
+        "_seconds": 1771178497,
+        "_nanoseconds": 970000000
+      }
+    },
+    "sd682mVpSRWl2QvwTh0nOzVYQuA3": {
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1771010977,
+        "_nanoseconds": 147000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "name": "Iryna Perets",
+      "id": "sd682mVpSRWl2QvwTh0nOzVYQuA3",
+      "email": "iryna.perets@gmail.com",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ]
+    },
+    "tJwwmIvyF2bDNAzGi6wb8r65x8y2": {
+      "photoURL": "https://lh3.googleusercontent.com/a/ACg8ocI74K04VnkS5mVYJNN5Q6ctici3hIyaXe3rmEBgjj7tN6GujfcY=s96-c",
+      "createdAt": {
+        "_seconds": 1772112371,
+        "_nanoseconds": 730000000
+      },
+      "name": "Elina Bodnar",
+      "id": "tJwwmIvyF2bDNAzGi6wb8r65x8y2",
+      "email": "elinabod15@gmail.com",
+      "choirId": "FqU7eoHHYXX0lGboOyeA",
+      "choirName": "L&H WORSHIP",
+      "updatedAt": {
+        "_seconds": 1772112540,
+        "_nanoseconds": 838000000
+      },
+      "voice": "Alto",
+      "role": "member",
+      "memberships": [
+        {
+          "choirId": "FqU7eoHHYXX0lGboOyeA",
+          "choirName": "L&H WORSHIP",
+          "role": "member",
+          "choirType": "standard"
+        }
+      ]
+    },
+    "u2nkNsz0BWVcRPO9QKgltU9Kp4l2": {
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1769935753,
+        "_nanoseconds": 579000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "name": "Oleg Dulia",
+      "id": "u2nkNsz0BWVcRPO9QKgltU9Kp4l2",
+      "email": "olegdulia989@gmail.com",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ],
+      "notificationsEnabled": true,
+      "fcmTokens": [
+        "dkldokIVHBYmef5LjguY2N:APA91bFxvMyP348CRxbX4uxSKgClHVQH2AoCDxhklBPXfeuO0My2cto-EgmnXFMGGr-7cUBCM5nuX6sa5PxW3UBDB2176iuvuL7Kz9Dfwl_ujDr86sO3FXY",
+        "dkldokIVHBYmef5LjguY2N:APA91bGUuHhJiZC6zEdPPwuLN5wx6wdXKskBRQSrIem5za1voJEA4aHbncTfRv-QGLcTwz-J-M3-G4o-_sAAbw-HrtkZ2ySZo7TFRaUP-fMLnth1i28-TV0"
+      ],
+      "updatedAt": {
+        "_seconds": 1771748992,
+        "_nanoseconds": 202000000
+      }
+    },
+    "uGcHF89m3AMV2umCH1R35RMc7pf1": {
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1771009438,
+        "_nanoseconds": 332000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "regent",
+      "name": "Користувач",
+      "id": "uGcHF89m3AMV2umCH1R35RMc7pf1",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "regent"
+        }
+      ]
+    },
+    "uTusajJTVBUVe8CMkUOcUvw0YkZ2": {
+      "role": "head",
+      "name": "Вітя Решетнік",
+      "id": "uTusajJTVBUVe8CMkUOcUvw0YkZ2",
+      "email": "resetnikvita@gmail.com",
+      "memberships": [
+        {
+          "choirId": "ih3VZ7qnOd4hi5pFZ0Ou",
+          "choirName": "Молодіжний хор",
+          "role": "head"
+        },
+        {
+          "choirId": "vOuHdELYa0jC60CV4Tx4",
+          "choirName": "Загальний хор",
+          "role": "head"
+        }
+      ],
+      "choirId": "vOuHdELYa0jC60CV4Tx4",
+      "createdAt": {
+        "_seconds": 1769432649,
+        "_nanoseconds": 794000000
+      },
+      "choirName": "Загальний хор",
+      "notificationsEnabled": true,
+      "fcmTokens": [
+        "dIxl-Y4_jmwuz3oRbUvv5T:APA91bENW0fTULFjipsaSZaQl_edVtCPYuoxuPwPQ8bHkr54guTMQmodhio0KnXwGSKBJKrCwHAkRq3TfuM1tbAIgcGLpZ_f7hPFPAKn5CETEC5cOqeLDro"
+      ]
+    },
+    "x3DbnOVPI0hUouMBx13aAoJmmUP2": {
+      "createdAt": {
+        "_seconds": 1771962829,
+        "_nanoseconds": 693000000
+      },
+      "name": "Zakhar",
+      "id": "x3DbnOVPI0hUouMBx13aAoJmmUP2",
+      "email": "zakklym98@gmail.com",
+      "choirId": "LZlicAQnnXbz7Akx72kQ",
+      "choirName": "1",
+      "updatedAt": {
+        "_seconds": 1771962882,
+        "_nanoseconds": 985000000
+      },
+      "voice": null,
+      "role": "regent",
+      "memberships": [
+        {
+          "choirId": "gXo1obpo6fDwgLeXvZ0b",
+          "choirName": "Молодіжний хор",
+          "role": "head"
+        },
+        {
+          "choirId": "aoMiIPZASJk7rY15ILeV",
+          "choirName": "Молодіжний",
+          "role": "head"
+        },
+        {
+          "choirId": "LZlicAQnnXbz7Akx72kQ",
+          "choirName": "1",
+          "role": "regent"
+        }
+      ]
+    },
+    "xLok5atLNQaloTZWrvvl6fIVqKH3": {
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "createdAt": {
+        "_seconds": 1769346080,
+        "_nanoseconds": 733000000
+      },
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "permissions": [
+        "edit_credits",
+        "manage_services"
+      ],
+      "name": "Маріела",
+      "id": "xLok5atLNQaloTZWrvvl6fIVqKH3",
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ]
+    },
+    "xPWnXHxsNaa0g9dQhxWPVI7zMXJ3": {
+      "photoURL": "https://lh3.googleusercontent.com/a/ACg8ocKFhe-OQuBKAoeXfAqh7wa3s0ZrJAntvmfITX4gZVJi8f58Qzi3=s96-c",
+      "createdAt": {
+        "_seconds": 1771175119,
+        "_nanoseconds": 333000000
+      },
+      "name": "Ljubov Dronova",
+      "id": "xPWnXHxsNaa0g9dQhxWPVI7zMXJ3",
+      "email": "lubovdronova17.v@gmail.com",
+      "choirId": "IFnsKWKiRaCzgOy9niwE",
+      "choirName": "Харзевінкель",
+      "role": "member",
+      "permissions": [],
+      "memberships": [
+        {
+          "choirId": "IFnsKWKiRaCzgOy9niwE",
+          "choirName": "Харзевінкель",
+          "role": "member"
+        }
+      ],
+      "updatedAt": {
+        "_seconds": 1771175170,
+        "_nanoseconds": 994000000
+      }
+    },
+    "zqXEBgkOUwNThbu7GaFsh9QNvxC3": {
+      "createdAt": {
+        "_seconds": 1772049151,
+        "_nanoseconds": 158000000
+      },
+      "name": "Oleg",
+      "id": "zqXEBgkOUwNThbu7GaFsh9QNvxC3",
+      "email": "xolegnakx@gmail.com",
+      "choirName": "GEC Third Choir",
+      "choirId": "LqwSFGevg30GOb2gLsen",
+      "updatedAt": {
+        "_seconds": 1772049309,
+        "_nanoseconds": 350000000
+      },
+      "voice": "Bass",
+      "role": "regent",
+      "memberships": [
+        {
+          "choirId": "5b9c4j933BTqCU3LzOQF",
+          "choirName": "GEC Third Choir",
+          "role": "head",
+          "choirType": "standard"
+        },
+        {
+          "choirId": "WGwq1Go4oVAbZh7Is0vL",
+          "choirName": "GEC Third Choir",
+          "role": "head",
+          "choirType": "standard"
+        },
+        {
+          "choirId": "Zp91Jf7EhTSrIb4CKt5s",
+          "choirName": "GEC Third Choir",
+          "role": "head",
+          "choirType": "standard"
+        },
+        {
+          "choirId": "4w86K18x0zkjxoYkccFV",
+          "choirName": "GEC Third Choir",
+          "role": "head",
+          "choirType": "standard"
+        },
+        {
+          "choirId": "4M30gLMHC0ZpjfW7xrYy",
+          "choirName": "GEC Third Choir",
+          "role": "head",
+          "choirType": "msc"
+        },
+        {
+          "choirId": "eiUhSlASzJWBqlLp3y9R",
+          "choirName": "GEC Third Choir",
+          "role": "head",
+          "choirType": "standard"
+        },
+        {
+          "choirId": "LqwSFGevg30GOb2gLsen",
+          "choirName": "GEC Third Choir",
+          "role": "regent",
+          "choirType": "msc"
+        }
+      ]
+    }
+  },
+  "choirs": {
+    "4M30gLMHC0ZpjfW7xrYy": {
+      "name": "GEC Third Choir",
+      "choirType": "msc",
+      "memberCode": "4R6D9F",
+      "regentCode": "XPQF9D",
+      "ownerId": "zqXEBgkOUwNThbu7GaFsh9QNvxC3",
+      "regents": [
+        "Oleg"
+      ],
+      "members": [
+        {
+          "id": "zqXEBgkOUwNThbu7GaFsh9QNvxC3",
+          "name": "Oleg",
+          "photoURL": null,
+          "role": "head",
+          "hasAccount": true,
+          "accountUid": "zqXEBgkOUwNThbu7GaFsh9QNvxC3"
+        }
+      ],
+      "createdAt": {
+        "_seconds": 1772049280,
+        "_nanoseconds": 968000000
+      }
+    },
+    "4w86K18x0zkjxoYkccFV": {
+      "name": "GEC Third Choir",
+      "choirType": "standard",
+      "memberCode": "18971T",
+      "regentCode": "B90T30",
+      "ownerId": "zqXEBgkOUwNThbu7GaFsh9QNvxC3",
+      "regents": [
+        "Oleg"
+      ],
+      "members": [
+        {
+          "id": "zqXEBgkOUwNThbu7GaFsh9QNvxC3",
+          "name": "Oleg",
+          "photoURL": null,
+          "role": "head",
+          "hasAccount": true,
+          "accountUid": "zqXEBgkOUwNThbu7GaFsh9QNvxC3"
+        }
+      ],
+      "createdAt": {
+        "_seconds": 1772049268,
+        "_nanoseconds": 50000000
+      }
+    },
+    "5KqAbGLfFRzAu4Mp8By2": {
+      "name": "Загальний",
+      "memberCode": "BOXBTO",
+      "regentCode": "EV255P",
+      "createdAt": "2026-01-23T23:18:05.148Z",
+      "regents": [
+        "Артьом"
+      ],
+      "members": [
+        {
+          "id": "awDQQda1r4Oxd25E6XZyEucRtUw1",
+          "name": "Артьом",
+          "role": "head"
+        }
+      ]
+    },
+    "5b9c4j933BTqCU3LzOQF": {
+      "name": "GEC Third Choir",
+      "choirType": "standard",
+      "memberCode": "L5R9KD",
+      "regentCode": "23KHOX",
+      "ownerId": "zqXEBgkOUwNThbu7GaFsh9QNvxC3",
+      "regents": [
+        "Oleg"
+      ],
+      "members": [
+        {
+          "id": "zqXEBgkOUwNThbu7GaFsh9QNvxC3",
+          "name": "Oleg",
+          "photoURL": null,
+          "role": "head",
+          "hasAccount": true,
+          "accountUid": "zqXEBgkOUwNThbu7GaFsh9QNvxC3"
+        }
+      ],
+      "createdAt": {
+        "_seconds": 1772049188,
+        "_nanoseconds": 567000000
+      }
+    },
+    "85dZBHSD59hKpprzevhO": {
+      "name": "Загальний",
+      "memberCode": "ZK9MBQ",
+      "regentCode": "44NZT3",
+      "createdAt": "2026-01-23T23:23:29.261Z",
+      "regents": [
+        "Артьом"
+      ],
+      "members": [
+        {
+          "id": "awDQQda1r4Oxd25E6XZyEucRtUw1",
+          "name": "Дуля Артьом",
+          "role": "regent",
+          "voice": "Tenor"
+        }
+      ]
+    },
+    "ABLI6Nc2YzbTVlvparoc": {
+      "name": "Чоловічий Хор",
+      "memberCode": "BQSE24",
+      "regentCode": "CKAXDY",
+      "createdAt": "2026-01-25T14:04:29.711Z",
+      "regents": [],
+      "knownConductors": [
+        "Ратушний Давид",
+        "Дуля Марк"
+      ],
+      "members": [
+        {
+          "id": "BOjpMvpXxBam1DYS4lP2M9RmqR13",
+          "name": "Артем",
+          "role": "head",
+          "hasAccount": false
+        }
+      ]
+    },
+    "Bal2FfmJRP5xbmbgrLN1": {
+      "memberCode": "NQOMZR",
+      "regentCode": "MAJ63Z",
+      "createdAt": "2026-01-24T23:12:43.800Z",
+      "regents": [
+        "Ричард"
+      ],
+      "members": [
+        {
+          "name": "Ричард",
+          "id": "DzWHnb24EfeMLAdFW5815VuyDy23",
+          "role": "head"
+        }
+      ],
+      "name": "Молодёжный хор",
+      "icon": "https://pub-c2a4c563f2f2479dae75d46e36d88a49.r2.dev/choirs/Bal2FfmJRP5xbmbgrLN1/icon.jpeg"
+    },
+    "D1A5K8Yd90K3OFJobjOK": {
+      "name": "Чоловічий хор",
+      "memberCode": "VRUS8M",
+      "regentCode": "PW8M9M",
+      "createdAt": "2026-02-17T15:15:17.363Z",
+      "regents": [
+        "Артем"
+      ],
+      "members": []
+    },
+    "Etw6Iz8L0SDohXF3kPte": {
+      "name": "Загальний",
+      "memberCode": "5TRZOD",
+      "regentCode": "ZSGGPF",
+      "createdAt": "2026-01-23T23:18:04.292Z",
+      "regents": [
+        "Артьом"
+      ],
+      "members": [
+        {
+          "id": "awDQQda1r4Oxd25E6XZyEucRtUw1",
+          "name": "Артьом",
+          "role": "head"
+        }
+      ]
+    },
+    "FIB81ZIspq6zQHKg4Tk4": {
+      "name": "хор",
+      "memberCode": "MJ5SV6",
+      "regentCode": "R2AAFK",
+      "createdAt": "2026-02-18T17:18:40.518Z",
+      "regents": [
+        "Артем"
+      ],
+      "members": [
+        {
+          "id": "wSQhy1X9bkgJStnA1trrTtdPiAk2",
+          "name": "Артем",
+          "role": "head"
+        }
+      ]
+    },
+    "FqU7eoHHYXX0lGboOyeA": {
+      "name": "L&H WORSHIP",
+      "choirType": "standard",
+      "memberCode": "171W83",
+      "regentCode": "8V815Q",
+      "ownerId": "tJwwmIvyF2bDNAzGi6wb8r65x8y2",
+      "regents": [
+        "Elina Bodnar"
+      ],
+      "createdAt": {
+        "_seconds": 1772112540,
+        "_nanoseconds": 838000000
+      },
+      "members": [
+        {
+          "id": "tJwwmIvyF2bDNAzGi6wb8r65x8y2",
+          "name": "Elina Bodnar",
+          "photoURL": "https://lh3.googleusercontent.com/a/ACg8ocI74K04VnkS5mVYJNN5Q6ctici3hIyaXe3rmEBgjj7tN6GujfcY=s96-c",
+          "role": "member",
+          "hasAccount": true,
+          "accountUid": "tJwwmIvyF2bDNAzGi6wb8r65x8y2",
+          "voice": "Alto"
+        },
+        {
+          "id": "jKipsfS5poZtXyFvCEW3PKk7BBI2",
+          "name": "Настя Савчак",
+          "role": "member",
+          "voice": "",
+          "permissions": [],
+          "hasAccount": true
+        },
+        {
+          "id": "UMJP4XrHtiO2NlZFs3O4TUeGbRz2",
+          "name": "Лєна",
+          "role": "member",
+          "voice": "",
+          "permissions": [],
+          "hasAccount": true
+        },
+        {
+          "id": "heDfSwxJg7Ti6ipGSk18bA7hz9D3",
+          "name": "Анжеліна",
+          "role": "member",
+          "voice": "",
+          "permissions": [],
+          "hasAccount": true
+        }
+      ]
+    },
+    "FroYDPDZzIP8ADxNWamj": {
+      "name": "Загальний",
+      "memberCode": "RF730D",
+      "regentCode": "704IYP",
+      "createdAt": "2026-01-23T23:18:06.071Z",
+      "regents": [
+        "Артьом"
+      ],
+      "members": [
+        {
+          "id": "awDQQda1r4Oxd25E6XZyEucRtUw1",
+          "name": "Артьом",
+          "role": "head"
+        }
+      ]
+    },
+    "FzNt2DKqPDYOUFCoVTf5": {
+      "name": "Test",
+      "choirType": "standard",
+      "memberCode": "84XAZQ",
+      "regentCode": "X854UC",
+      "ownerId": "wSQhy1X9bkgJStnA1trrTtdPiAk2",
+      "regents": [
+        "Артем"
+      ],
+      "createdAt": {
+        "_seconds": 1771977069,
+        "_nanoseconds": 227000000
+      },
+      "members": [
+        {
+          "id": "wSQhy1X9bkgJStnA1trrTtdPiAk2",
+          "name": "Артем",
+          "photoURL": "https://lh3.googleusercontent.com/a/ACg8ocIpaOjtBS0No0yboDIgRPqvLt-X9RcGw-f-VbuzHPOTYlGa7zC8jQ=s96-c",
+          "role": "head",
+          "hasAccount": false
+        }
+      ]
+    },
+    "HqZZnHZB93nJZWusq3Yn": {
+      "name": "Молодіжний хор",
+      "choirType": "standard",
+      "memberCode": "OVQQRI",
+      "regentCode": "BJ7FM8",
+      "ownerId": "BMRdxmeC1QUEdrifYrfatjiSObE2",
+      "regents": [
+        "Рустам"
+      ],
+      "members": [
+        {
+          "id": "BMRdxmeC1QUEdrifYrfatjiSObE2",
+          "name": "Рустам",
+          "photoURL": null,
+          "role": "head",
+          "hasAccount": true,
+          "accountUid": "BMRdxmeC1QUEdrifYrfatjiSObE2"
+        }
+      ],
+      "createdAt": {
+        "_seconds": 1772040498,
+        "_nanoseconds": 37000000
+      }
+    },
+    "IFnsKWKiRaCzgOy9niwE": {
+      "name": "Харзевінкель",
+      "memberCode": "ERGCOW",
+      "regentCode": "2747N8",
+      "createdAt": "2026-01-24T16:57:52.622Z",
+      "regents": [],
+      "knownCategories": [
+        "Хрещення",
+        "Новий рік"
+      ],
+      "icon": "https://pub-c2a4c563f2f2479dae75d46e36d88a49.r2.dev/choirs/IFnsKWKiRaCzgOy9niwE/icon.jpg",
+      "knownPianists": [
+        "Надя А.",
+        "Іра В.",
+        "Мілана",
+        "Меріліна"
+      ],
+      "knownConductors": [
+        "Дуля Артьом ",
+        "Пелепяк Давид",
+        "Дуля Марк",
+        "Ратушний Давид",
+        "Дуля Авенір",
+        "???",
+        "Дуля Андрій"
+      ],
+      "adminCodes": [
+        {
+          "label": "Статист",
+          "code": "EO36IP",
+          "permissions": [
+            "edit_credits",
+            "manage_services"
+          ]
+        },
+        {
+          "label": "Відсутні",
+          "code": "33ZK2K",
+          "permissions": [
+            "edit_attendance"
+          ]
+        }
+      ],
+      "members": [
+        {
+          "voice": "Tenor",
+          "name": "Дуля Марк",
+          "id": "qN7ZnMb1JWPEzK1WCOnC4J2iWzC3",
+          "role": "regent"
+        },
+        {
+          "id": "OyqZh89jF8c2rpmsCaC9WfCEYM63",
+          "role": "member",
+          "name": "Акопян Естер",
+          "voice": "Soprano",
+          "hasAccount": true
+        },
+        {
+          "hasAccount": true,
+          "voice": "Alto",
+          "role": "member",
+          "id": "qMnN3HuAoaNJk6h1dxMgr7DW0uD3",
+          "name": "Акопян Надія"
+        },
+        {
+          "id": "manual_1769369031543_2",
+          "role": "member",
+          "voice": "Bass",
+          "name": "Акопян Руслан"
+        },
+        {
+          "id": "6m9Tbkmo91XeBN3NFcfRKlRuPLp1",
+          "role": "member",
+          "name": "Акопян Яна",
+          "voice": "Alto",
+          "hasAccount": true
+        },
+        {
+          "id": "manual_1769369031543_4",
+          "role": "member",
+          "voice": "Soprano",
+          "name": "Алутіс Софія"
+        },
+        {
+          "id": "manual_1769369031543_5",
+          "role": "member",
+          "voice": "Alto",
+          "name": "Бабенчук Аліна"
+        },
+        {
+          "voice": "Bass",
+          "name": "Бабенчук Веніамін",
+          "id": "manual_1769369031543_6",
+          "role": "member"
+        },
+        {
+          "name": "Берчук Іван",
+          "voice": "Tenor",
+          "role": "member",
+          "id": "manual_1769369031543_7"
+        },
+        {
+          "name": "Бульчук Ання",
+          "voice": "Alto",
+          "role": "member",
+          "id": "manual_1769369031543_8"
+        },
+        {
+          "voice": "Soprano",
+          "name": "Бульчук Люба",
+          "id": "manual_1769369031543_9",
+          "role": "member"
+        },
+        {
+          "role": "member",
+          "id": "manual_1769369031543_10",
+          "name": "Валла Даниїл",
+          "voice": "Bass"
+        },
+        {
+          "voice": "Bass",
+          "name": "Валла Іван",
+          "id": "manual_1769369031543_11",
+          "role": "member"
+        },
+        {
+          "voice": "Alto",
+          "hasAccount": true,
+          "id": "sd682mVpSRWl2QvwTh0nOzVYQuA3",
+          "role": "member",
+          "name": "Валла Ірина"
+        },
+        {
+          "id": "manual_1769369031543_13",
+          "role": "member",
+          "voice": "Alto",
+          "name": "Валла Вікторія"
+        },
+        {
+          "role": "member",
+          "id": "manual_1769369031543_14",
+          "name": "Веселуха Валентина",
+          "voice": "Soprano"
+        },
+        {
+          "name": "Гарбузовський Максим",
+          "id": "1dFYQOIv9WYDhnPXsDo4hmCdIv72",
+          "role": "member",
+          "voice": "Bass",
+          "hasAccount": true
+        },
+        {
+          "name": "Гиріч Альфред",
+          "voice": "Bass",
+          "role": "member",
+          "id": "manual_1769369031543_16"
+        },
+        {
+          "voice": "Bass",
+          "name": "Гриценко Даниїл",
+          "id": "manual_1769369031543_17",
+          "role": "member"
+        },
+        {
+          "voice": "Bass",
+          "name": "Данюк Валентин",
+          "id": "manual_1769369031543_18",
+          "role": "member"
+        },
+        {
+          "hasAccount": true,
+          "voice": "Alto",
+          "name": "Данюк Меріліна",
+          "role": "member",
+          "id": "P9iztTy5AcfDoevWZlLbeP0YLv63"
+        },
+        {
+          "voice": "Tenor",
+          "hasAccount": true,
+          "id": "6PdlWsvhW6RmzHTBK37M1bBol1w2",
+          "role": "member",
+          "name": "Дверницький Ілля"
+        },
+        {
+          "role": "member",
+          "id": "manual_1769369031543_22",
+          "name": "Дуля Анатолій",
+          "voice": "Bass"
+        },
+        {
+          "id": "manual_1769369031543_23",
+          "accountUid": "2s62hlYPEafM6QtoGk177iq19xt2",
+          "role": "regent",
+          "photoURL": null,
+          "linkedUserIds": [
+            "2s62hlYPEafM6QtoGk177iq19xt2"
+          ],
+          "name": "Дуля Андрій",
+          "voice": "Tenor",
+          "hasAccount": true
+        },
+        {
+          "hasAccount": true,
+          "voice": "Tenor",
+          "role": "regent",
+          "id": "96B3iFCfe8W0KoVLByq6pi7lOGp1",
+          "name": "Дуля Авенір"
+        },
+        {
+          "hasAccount": true,
+          "voice": "Bass",
+          "role": "member",
+          "id": "kHHV0Jna65g3msxhfYeCqM2ZVGr2",
+          "name": "Дуля Богдан"
+        },
+        {
+          "voice": "Tenor",
+          "hasAccount": true,
+          "name": "Дуля Ерік",
+          "id": "Ndad8pQDmKUwb1yQantXYT1lZC12",
+          "role": "member"
+        },
+        {
+          "hasAccount": true,
+          "voice": "Alto",
+          "name": "Дуля Евеліна",
+          "role": "member",
+          "id": "6EIMCMck61RBm1ybnJf5I1UzMSt2"
+        },
+        {
+          "name": "Дуля Люба",
+          "voice": "Alto",
+          "role": "member",
+          "id": "manual_1769369031543_29"
+        },
+        {
+          "name": "Дуля Маріела",
+          "id": "xLok5atLNQaloTZWrvvl6fIVqKH3",
+          "role": "member",
+          "voice": "Alto",
+          "hasAccount": true
+        },
+        {
+          "hasAccount": true,
+          "voice": "Tenor",
+          "role": "member",
+          "id": "u2nkNsz0BWVcRPO9QKgltU9Kp4l2",
+          "name": "Дуля Олег",
+          "linkedUserIds": [
+            "QMqRrD9BnuOjjLSPlJ8iIMQwXsW2"
+          ]
+        },
+        {
+          "id": "Ifv6hDozbpMRdtiD0HSLthxHJj93",
+          "role": "member",
+          "name": "Запара Діна",
+          "voice": "Alto",
+          "hasAccount": true
+        },
+        {
+          "id": "manual_1769369031543_34",
+          "role": "member",
+          "voice": "Soprano",
+          "name": "Ільєва Аліна"
+        },
+        {
+          "voice": "Soprano",
+          "name": "Ільєва Світлана",
+          "id": "manual_1769369031543_35",
+          "role": "member"
+        },
+        {
+          "name": "Іордан Даниїл",
+          "id": "7zQ0nN9sNle3WYWlEJOrkatxtL73",
+          "role": "member",
+          "voice": "Bass",
+          "hasAccount": true
+        },
+        {
+          "hasAccount": true,
+          "voice": "Soprano",
+          "role": "member",
+          "id": "jNtoDEOGRQgQo0in6jKIE4miIxh1",
+          "name": "Іордан Ольга"
+        },
+        {
+          "hasAccount": true,
+          "voice": "Soprano",
+          "role": "member",
+          "id": "XTD6KuHLqoMkpAXyb762I3pGL4C2",
+          "name": "Іордан Катерина"
+        },
+        {
+          "role": "member",
+          "id": "7J1uyJeyn6aRGPQFhVr5CehPL9I2",
+          "name": "Кондратьєв Олександер",
+          "hasAccount": true,
+          "voice": "Bass"
+        },
+        {
+          "hasAccount": true,
+          "voice": "Alto",
+          "role": "member",
+          "id": "Yh2oMMyEK9ZDCW78Edp8JXgm9of1",
+          "name": "Кондратьєва Аліна"
+        },
+        {
+          "name": "Левценюк Діана",
+          "role": "member",
+          "id": "LAmaU8uITcfc4DacfsRYqnmuWPA2",
+          "hasAccount": true,
+          "voice": "Soprano"
+        },
+        {
+          "role": "member",
+          "id": "Z6MSOLSK22gyi1Iaiw2MC5HAOay1",
+          "name": "Лисенко Олександр",
+          "hasAccount": true,
+          "voice": "Tenor"
+        },
+        {
+          "voice": "Tenor",
+          "hasAccount": true,
+          "name": "Мангар Андрій",
+          "id": "836J83iaJAXIndrWWxY5GQ155vn2",
+          "role": "member"
+        },
+        {
+          "voice": "Soprano",
+          "hasAccount": true,
+          "id": "qIbR6jI776Me8l6GkPzbMhD37e73",
+          "role": "member",
+          "name": "Мангар Мілана"
+        },
+        {
+          "id": "manual_1769369031543_46",
+          "role": "member",
+          "voice": "Soprano",
+          "name": "Марфіч Софія"
+        },
+        {
+          "role": "member",
+          "id": "manual_1769369031543_47",
+          "name": "Мейстер Давід",
+          "voice": "Bass"
+        },
+        {
+          "voice": "Bass",
+          "name": "Обозний Віталій",
+          "id": "58sZ0hfmJzanJL5yjbqAvWh6nJB3",
+          "role": "member",
+          "hasAccount": true
+        },
+        {
+          "name": "Олійник Андрій",
+          "id": "dqG84YtiXhV8zl9jduUBZYlpAFx1",
+          "role": "member",
+          "voice": "Tenor",
+          "hasAccount": true
+        },
+        {
+          "voice": "Alto",
+          "name": "Олексієвець Соня",
+          "id": "manual_1769369031543_50",
+          "role": "member"
+        },
+        {
+          "name": "Пелепяк Давід",
+          "voice": "Bass",
+          "role": "regent",
+          "id": "manual_1769369031543_52"
+        },
+        {
+          "hasAccount": true,
+          "voice": "Alto",
+          "name": "Пелепяк Ларіса",
+          "role": "member",
+          "id": "JbXUNKaS25bX5PG7VlFtLGn4pJ52"
+        },
+        {
+          "role": "member",
+          "id": "manual_1769369031543_54",
+          "name": "Петренко Ірина",
+          "voice": "Soprano"
+        },
+        {
+          "voice": "Bass",
+          "hasAccount": true,
+          "name": "Ратушний Давід",
+          "id": "cl7my8mTEsVUrZsS6Jig45CduRQ2",
+          "role": "regent"
+        },
+        {
+          "id": "manual_1769369031543_56",
+          "role": "member",
+          "voice": "Soprano",
+          "name": "Стецюк Оксана"
+        },
+        {
+          "voice": "Bass",
+          "hasAccount": true,
+          "linkedUserIds": [
+            "gVlT8FKXsoOuxzg56IXmisCeTG73"
+          ],
+          "name": "Столярчук Іван",
+          "id": "manual_1769369031543_57",
+          "role": "member"
+        },
+        {
+          "role": "member",
+          "id": "manual_1769369031543_58",
+          "name": "Столярчук Інна",
+          "voice": "Soprano"
+        },
+        {
+          "voice": "Soprano",
+          "name": "Тимченко Дарія",
+          "id": "manual_1769369031543_59",
+          "role": "member"
+        },
+        {
+          "hasAccount": true,
+          "voice": "Soprano",
+          "role": "member",
+          "id": "7PHfSEhXjKOC8Klus8c8QTK3oHJ2",
+          "name": "Тимченко Каріна"
+        },
+        {
+          "role": "member",
+          "id": "manual_1769369031543_61",
+          "name": "Юхимук Давід",
+          "voice": "Bass"
+        },
+        {
+          "id": "manual_1769369031543_62",
+          "role": "member",
+          "voice": "Bass",
+          "name": "Юхимук Василь"
+        },
+        {
+          "name": "Хатоєв Констянтин",
+          "role": "member",
+          "id": "fKXBzczC3WXb20ndjKJuTQ0z5xH3",
+          "hasAccount": true,
+          "voice": "Bass"
+        },
+        {
+          "id": "manual_1769369031543_64",
+          "role": "member",
+          "voice": "Alto",
+          "name": "Швець Ангеліна"
+        },
+        {
+          "voice": "Bass",
+          "name": "Швець Назар",
+          "id": "manual_1769369031543_65",
+          "role": "member"
+        },
+        {
+          "id": "manual_1769369031543_66",
+          "role": "member",
+          "voice": "Tenor",
+          "name": "Шевченка Ілля"
+        },
+        {
+          "id": "manual_1769369031543_67",
+          "role": "member",
+          "voice": "Alto",
+          "name": "Швець Інна"
+        },
+        {
+          "role": "member",
+          "id": "manual_1769369031543_68",
+          "name": "Примаченко Валерія",
+          "voice": "Soprano"
+        },
+        {
+          "id": "manual_1769369031543_69",
+          "role": "member",
+          "voice": "Alto",
+          "name": "Бульчук Ліда"
+        },
+        {
+          "linkedUserIds": [
+            "HMX9k3Z1qiOzoK01syZo0foUpMX2"
+          ],
+          "name": "Шевченко Яша",
+          "id": "manual_1769369031543_70",
+          "accountUid": "HMX9k3Z1qiOzoK01syZo0foUpMX2",
+          "role": "member",
+          "voice": "Tenor",
+          "hasAccount": true
+        },
+        {
+          "voice": "Bass",
+          "name": "Таран Анатолій",
+          "id": "manual_1769369031543_71",
+          "role": "member"
+        },
+        {
+          "name": "Таран Інна",
+          "voice": "Alto",
+          "role": "member",
+          "id": "manual_1769369031543_72"
+        },
+        {
+          "id": "manual_1769369031543_74",
+          "role": "member",
+          "voice": "Bass",
+          "name": "Нетеса Руслан"
+        },
+        {
+          "voice": "Tenor",
+          "hasAccount": true,
+          "name": "Цигольніков Віталік",
+          "accountUid": "LxXZFLPpYueIctOqEORmjvGZeGj2",
+          "id": "manual_1769369031543_75",
+          "role": "member"
+        },
+        {
+          "role": "member",
+          "id": "manual_1769369031543_76",
+          "name": "Веселовська Дана",
+          "voice": "Soprano"
+        },
+        {
+          "voice": "Soprano",
+          "name": "Швець Ання",
+          "id": "V6WIhphXyVZQJX2jo9Pm0okfzFe2",
+          "role": "member",
+          "hasAccount": true
+        },
+        {
+          "name": "Sofia Sofia",
+          "hasAccount": true,
+          "role": "member",
+          "id": "cDA5mHpRXmU2BmWgcD5tW8yrHCE2"
+        },
+        {
+          "isDuplicate": true,
+          "id": "dyShFVLLzXSl28rVuWyWWOtuCPs2",
+          "role": "member",
+          "permissions": [],
+          "name": "Unknown",
+          "voice": "",
+          "hasAccount": false
+        },
+        {
+          "id": "2s62hlYPEafM6QtoGk177iq19xt2",
+          "isDuplicate": true,
+          "role": "member",
+          "permissions": [],
+          "name": "Андрій Дуля",
+          "voice": "",
+          "hasAccount": true
+        },
+        {
+          "voice": "",
+          "hasAccount": true,
+          "isDuplicate": true,
+          "id": "LxXZFLPpYueIctOqEORmjvGZeGj2",
+          "role": "member",
+          "permissions": [],
+          "name": "Vy Tg"
+        },
+        {
+          "id": "manual_1771873766522",
+          "role": "member",
+          "name": "Дронова Люба",
+          "linkedUserIds": [
+            "xPWnXHxsNaa0g9dQhxWPVI7zMXJ3"
+          ],
+          "voice": "Soprano",
+          "hasAccount": true
+        },
+        {
+          "accountUid": "jszDFTWjcrhjuW7iCOflXhV3dIb2",
+          "voice": "Tenor",
+          "hasAccount": true,
+          "permissions": [],
+          "email": "artemdula0@gmail.com",
+          "photoURL": null,
+          "name": "Дуля Артьом",
+          "id": "jszDFTWjcrhjuW7iCOflXhV3dIb2",
+          "role": "head"
+        },
+        {
+          "isDuplicate": true,
+          "id": "HMX9k3Z1qiOzoK01syZo0foUpMX2",
+          "role": "member",
+          "permissions": [],
+          "name": "Яків Шевченко",
+          "voice": "",
+          "hasAccount": true
+        }
+      ]
+    },
+    "IbGWzYlRcB9xQijXmvkg": {
+      "name": "Xor",
+      "memberCode": "9XZXVY",
+      "regentCode": "MRRGLT",
+      "createdAt": "2026-02-18T17:18:03.759Z",
+      "regents": [
+        "Артем"
+      ],
+      "members": [
+        {
+          "id": "wSQhy1X9bkgJStnA1trrTtdPiAk2",
+          "name": "Артем",
+          "role": "head"
+        }
+      ]
+    },
+    "Kc0LShhBpVrDfWbtwcic": {
+      "name": "Чоловічий хор",
+      "memberCode": "MN7MY2",
+      "regentCode": "719MJB",
+      "createdAt": "2026-02-17T15:15:00.043Z",
+      "regents": [
+        "Артем"
+      ],
+      "members": []
+    },
+    "LZlicAQnnXbz7Akx72kQ": {
+      "memberCode": "UEI9AN",
+      "regentCode": "35IOGS",
+      "ownerId": "x3DbnOVPI0hUouMBx13aAoJmmUP2",
+      "regents": [
+        "Zakhar"
+      ],
+      "createdAt": {
+        "_seconds": 1771962882,
+        "_nanoseconds": 985000000
+      },
+      "name": "Молодіжний",
+      "members": [
+        {
+          "accountUid": "x3DbnOVPI0hUouMBx13aAoJmmUP2",
+          "id": "x3DbnOVPI0hUouMBx13aAoJmmUP2",
+          "photoURL": null,
+          "hasAccount": true,
+          "name": "Zakhar",
+          "role": "regent",
+          "voice": null
+        },
+        {
+          "id": "manual_1771963230557",
+          "name": "Суламіта",
+          "role": "member",
+          "voice": "Soprano"
+        }
+      ]
+    },
+    "LqwSFGevg30GOb2gLsen": {
+      "name": "GEC Third Choir",
+      "choirType": "msc",
+      "memberCode": "M3BO73",
+      "regentCode": "MDRRGJ",
+      "ownerId": "zqXEBgkOUwNThbu7GaFsh9QNvxC3",
+      "regents": [
+        "Oleg"
+      ],
+      "createdAt": {
+        "_seconds": 1772049309,
+        "_nanoseconds": 350000000
+      },
+      "members": [
+        {
+          "id": "zqXEBgkOUwNThbu7GaFsh9QNvxC3",
+          "name": "Oleg",
+          "photoURL": null,
+          "role": "regent",
+          "hasAccount": true,
+          "accountUid": "zqXEBgkOUwNThbu7GaFsh9QNvxC3",
+          "voice": "Bass"
+        },
+        {
+          "id": "2wYWfa8nZvdqV3FBXesWplFvVLf2",
+          "name": "Маргарита Семенчук",
+          "role": "member",
+          "voice": "Alto",
+          "permissions": [],
+          "hasAccount": true,
+          "photoURL": null
+        }
+      ]
+    },
+    "MQyxRdQPTY7TsgdSwYIl": {
+      "name": "новий",
+      "memberCode": "Z4Q199",
+      "regentCode": "KSRSH7",
+      "createdAt": "2026-02-17T20:14:44.930Z",
+      "regents": [
+        "Артем"
+      ],
+      "members": []
+    },
+    "NYxcJlhXSXgJL9McjQX2": {
+      "name": "дит",
+      "memberCode": "LH3WLJ",
+      "regentCode": "VPDR9X",
+      "createdAt": "2026-01-23T23:20:29.277Z",
+      "regents": [
+        "артьом"
+      ],
+      "members": [
+        {
+          "id": "70ZSGld3tNN6OHtA1tKHelByP5s1",
+          "name": "артьом",
+          "role": "head"
+        }
+      ]
+    },
+    "O9s3FfE0AEiL7xcAOJHv": {
+      "name": "хор",
+      "memberCode": "7U9ZTN",
+      "regentCode": "PIOF0T",
+      "createdAt": "2026-02-17T22:12:17.974Z",
+      "regents": [
+        "Артем"
+      ],
+      "members": []
+    },
+    "OOmNvEsVba48C7Q7G3zw": {
+      "name": "тест",
+      "choirType": "standard",
+      "memberCode": "YBRBWD",
+      "regentCode": "OTPIYK",
+      "ownerId": "JgNlguSavCh25HKiMgyV4guCpGy1",
+      "regents": [
+        "sika ka"
+      ],
+      "createdAt": {
+        "_seconds": 1772061067,
+        "_nanoseconds": 704000000
+      },
+      "members": [
+        {
+          "id": "JgNlguSavCh25HKiMgyV4guCpGy1",
+          "name": "sika ka",
+          "photoURL": "https://lh3.googleusercontent.com/a/ACg8ocJujDVJY2OaKZJr1mC0UrcYYZlDDlOQitWrQ3ublZy4YayZFQ=s96-c",
+          "role": "head",
+          "hasAccount": false
+        }
+      ]
+    },
+    "P0l5A0yej9s3gRb9MCYj": {
+      "name": "И до ют ср",
+      "memberCode": "KJ4X2K",
+      "regentCode": "I1U6MA",
+      "createdAt": "2026-01-24T23:16:12.645Z",
+      "regents": [
+        "Эмиль"
+      ],
+      "members": [
+        {
+          "id": "AH2CN87AXkV6FXYbroDYmcFHyE23",
+          "name": "Эмиль",
+          "role": "head"
+        }
+      ]
+    },
+    "Q6zP97Hs6b4wISPvZtDd": {
+      "name": "гпшг",
+      "memberCode": "5TGVL1",
+      "regentCode": "EPM43F",
+      "createdAt": "2026-01-23T23:23:04.701Z",
+      "regents": [
+        "артьом"
+      ],
+      "members": [
+        {
+          "id": "70ZSGld3tNN6OHtA1tKHelByP5s1",
+          "name": "артьом",
+          "role": "head"
+        }
+      ]
+    },
+    "RmJtC5md6Xy2Z4t8fUSI": {
+      "name": "дит",
+      "memberCode": "SUMFVD",
+      "regentCode": "SVUQYX",
+      "createdAt": "2026-01-23T23:22:52.852Z",
+      "regents": [
+        "артьом"
+      ],
+      "members": [
+        {
+          "id": "70ZSGld3tNN6OHtA1tKHelByP5s1",
+          "name": "артьом",
+          "role": "head"
+        }
+      ]
+    },
+    "T21AEEN9PzZJSD781ze4": {
+      "name": "чоло",
+      "memberCode": "QQA79M",
+      "regentCode": "8F4ENR",
+      "createdAt": "2026-02-17T20:31:45.679Z",
+      "regents": [
+        "Артем"
+      ],
+      "members": []
+    },
+    "U2qzWm99N0gEGlpNyUqz": {
+      "name": "Загальний",
+      "memberCode": "LQOGF8",
+      "regentCode": "JHSG6N",
+      "createdAt": "2026-01-23T23:17:58.517Z",
+      "regents": [
+        "Артьом"
+      ],
+      "members": [
+        {
+          "id": "awDQQda1r4Oxd25E6XZyEucRtUw1",
+          "name": "Артьом",
+          "role": "head"
+        }
+      ]
+    },
+    "UPsOi9Ro7ae6RzOoAdyP": {
+      "name": "хор",
+      "memberCode": "0XWSIF",
+      "regentCode": "43UE7K",
+      "createdAt": "2026-02-18T17:22:41.363Z",
+      "regents": [
+        "Артем"
+      ],
+      "members": [
+        {
+          "id": "wSQhy1X9bkgJStnA1trrTtdPiAk2",
+          "name": "Артем",
+          "role": "head"
+        }
+      ]
+    },
+    "UmOsBuql8hXTJbXLp5yz": {
+      "name": "тест",
+      "memberCode": "J06SUU",
+      "regentCode": "BQC3TU",
+      "createdAt": "2026-02-17T19:30:06.417Z",
+      "regents": [
+        "Артем"
+      ],
+      "members": []
+    },
+    "V9sTKeyqGfpXiUiy4cWh": {
+      "name": "Загальний",
+      "memberCode": "VD2XC4",
+      "regentCode": "WOSF6N",
+      "createdAt": "2026-01-23T18:04:18.951Z",
+      "regents": [
+        "Артьом"
+      ],
+      "members": [
+        {
+          "id": "iJLFSwLReHQeaakLcNai9oJbbGo2",
+          "name": "Артьом",
+          "role": "head"
+        }
+      ]
+    },
+    "WGwq1Go4oVAbZh7Is0vL": {
+      "name": "GEC Third Choir",
+      "choirType": "standard",
+      "memberCode": "D9H4PV",
+      "regentCode": "RDZ0MR",
+      "ownerId": "zqXEBgkOUwNThbu7GaFsh9QNvxC3",
+      "regents": [
+        "Oleg"
+      ],
+      "members": [
+        {
+          "id": "zqXEBgkOUwNThbu7GaFsh9QNvxC3",
+          "name": "Oleg",
+          "photoURL": null,
+          "role": "head",
+          "hasAccount": true,
+          "accountUid": "zqXEBgkOUwNThbu7GaFsh9QNvxC3"
+        }
+      ],
+      "createdAt": {
+        "_seconds": 1772049201,
+        "_nanoseconds": 832000000
+      }
+    },
+    "WOnO1WuJlpkHKuVWnt8o": {
+      "name": "Хор",
+      "memberCode": "7WRIOQ",
+      "regentCode": "70V3RL",
+      "createdAt": "2026-01-26T10:23:52.900Z",
+      "regents": [
+        "Петро Загородній"
+      ],
+      "members": [
+        {
+          "id": "IYoSRTV6CygKYlhpEHrv1adGt1y1",
+          "name": "Петро Загородній",
+          "role": "head"
+        }
+      ]
+    },
+    "WYhgYAp3xzjQcsNnqz3m": {
+      "name": "My",
+      "memberCode": "9GN262",
+      "regentCode": "7SPY9N",
+      "createdAt": "2026-02-14T18:34:01.658Z",
+      "regents": [
+        "Artom"
+      ],
+      "members": [
+        {
+          "id": "mV4VAoveiJPXPKynt1nKgxfsigA2",
+          "name": "Artom",
+          "role": "head",
+          "hasAccount": false
+        }
+      ]
+    },
+    "WubPhvQ5m8MrH4TRN6dP": {
+      "name": "Молодіжний хор",
+      "choirType": "standard",
+      "memberCode": "YUAOEP",
+      "regentCode": "YMGKS9",
+      "ownerId": "BMRdxmeC1QUEdrifYrfatjiSObE2",
+      "regents": [
+        "Рустам"
+      ],
+      "members": [
+        {
+          "id": "BMRdxmeC1QUEdrifYrfatjiSObE2",
+          "name": "Рустам",
+          "photoURL": null,
+          "role": "head",
+          "hasAccount": true,
+          "accountUid": "BMRdxmeC1QUEdrifYrfatjiSObE2"
+        }
+      ],
+      "createdAt": {
+        "_seconds": 1772040477,
+        "_nanoseconds": 986000000
+      }
+    },
+    "XAob6UaZ8McBb5BGo4pi": {
+      "name": "Загальний",
+      "memberCode": "SA9LEW",
+      "regentCode": "PQ5OX7",
+      "createdAt": "2026-01-23T18:04:17.326Z",
+      "regents": [
+        "Артьом"
+      ],
+      "members": [
+        {
+          "id": "iJLFSwLReHQeaakLcNai9oJbbGo2",
+          "name": "Артьом",
+          "role": "head"
+        }
+      ]
+    },
+    "XLUjMFd4icy2Mq15IvzR": {
+      "name": "Загальний",
+      "memberCode": "S9F9DA",
+      "regentCode": "CSE9AW",
+      "createdAt": "2026-01-23T23:21:03.611Z",
+      "regents": [
+        "Артьом"
+      ],
+      "members": [
+        {
+          "id": "awDQQda1r4Oxd25E6XZyEucRtUw1",
+          "name": "Артьом",
+          "role": "head"
+        }
+      ]
+    },
+    "YJO03iW9p8U0wjvVVDbI": {
+      "name": "Загальний",
+      "memberCode": "BOD3J3",
+      "regentCode": "MN0DFK",
+      "createdAt": "2026-01-23T18:04:24.522Z",
+      "regents": [
+        "Артьом"
+      ],
+      "members": [
+        {
+          "id": "iJLFSwLReHQeaakLcNai9oJbbGo2",
+          "name": "Артьом",
+          "role": "head"
+        }
+      ]
+    },
+    "YgXSIihIWi9YcSQOEZ2O": {
+      "name": "MyCHOIR",
+      "memberCode": "T0OIMP",
+      "regentCode": "L7KDPD",
+      "ownerId": "wSQhy1X9bkgJStnA1trrTtdPiAk2",
+      "regents": [
+        "Артем"
+      ],
+      "createdAt": {
+        "_seconds": 1771972110,
+        "_nanoseconds": 43000000
+      },
+      "members": []
+    },
+    "Zp91Jf7EhTSrIb4CKt5s": {
+      "name": "GEC Third Choir",
+      "choirType": "standard",
+      "memberCode": "LF3ZPM",
+      "regentCode": "W1J287",
+      "ownerId": "zqXEBgkOUwNThbu7GaFsh9QNvxC3",
+      "regents": [
+        "Oleg"
+      ],
+      "members": [
+        {
+          "id": "zqXEBgkOUwNThbu7GaFsh9QNvxC3",
+          "name": "Oleg",
+          "photoURL": null,
+          "role": "head",
+          "hasAccount": true,
+          "accountUid": "zqXEBgkOUwNThbu7GaFsh9QNvxC3"
+        }
+      ],
+      "createdAt": {
+        "_seconds": 1772049257,
+        "_nanoseconds": 858000000
+      }
+    },
+    "aVqGQp1uzoPvTAwKcWMp": {
+      "name": "Хор",
+      "memberCode": "WT209E",
+      "regentCode": "EMDQXA",
+      "createdAt": "2026-02-08T21:16:27.968Z",
+      "regents": [
+        "Head"
+      ],
+      "members": [
+        {
+          "id": "Klo1gPq9sVVyQMILbsNPdO9nSjH3",
+          "name": "Користувач",
+          "role": "head"
+        }
+      ]
+    },
+    "aoMiIPZASJk7rY15ILeV": {
+      "name": "Молодіжний",
+      "memberCode": "MDQYMD",
+      "regentCode": "LICUFV",
+      "ownerId": "x3DbnOVPI0hUouMBx13aAoJmmUP2",
+      "regents": [
+        "Zakhar"
+      ],
+      "members": [
+        {
+          "id": "x3DbnOVPI0hUouMBx13aAoJmmUP2",
+          "name": "Zakhar",
+          "photoURL": null,
+          "role": "head",
+          "hasAccount": true,
+          "accountUid": "x3DbnOVPI0hUouMBx13aAoJmmUP2"
+        }
+      ],
+      "createdAt": {
+        "_seconds": 1771962871,
+        "_nanoseconds": 495000000
+      }
+    },
+    "atccFeSisFE1sNxdnaEx": {
+      "name": "т б",
+      "memberCode": "9TWCI3",
+      "regentCode": "UH6SAE",
+      "createdAt": "2026-02-09T17:53:10.282Z",
+      "regents": [
+        "Head"
+      ],
+      "members": []
+    },
+    "cCRoW6u6XfER7tZCyAvi": {
+      "name": "Загальнийєє",
+      "memberCode": "SB2YPL",
+      "regentCode": "DPKEPK",
+      "createdAt": "2026-01-23T23:18:23.063Z",
+      "regents": [
+        "Артьом"
+      ],
+      "members": [
+        {
+          "id": "awDQQda1r4Oxd25E6XZyEucRtUw1",
+          "name": "Артьом",
+          "role": "head"
+        }
+      ]
+    },
+    "ciC94coxxnBTOpwFt9Ov": {
+      "name": "Xor",
+      "memberCode": "BTTIS9",
+      "regentCode": "XA5D19",
+      "createdAt": "2026-02-18T17:17:44.858Z",
+      "regents": [
+        "Артем"
+      ],
+      "members": [
+        {
+          "id": "wSQhy1X9bkgJStnA1trrTtdPiAk2",
+          "name": "Артем",
+          "role": "head"
+        }
+      ]
+    },
+    "cxh4QtCksMxjaDjgHJHC": {
+      "name": "Xor",
+      "memberCode": "GHEXNJ",
+      "regentCode": "CFIWZ9",
+      "createdAt": "2026-02-18T17:17:53.734Z",
+      "regents": [
+        "Артем"
+      ],
+      "members": [
+        {
+          "id": "wSQhy1X9bkgJStnA1trrTtdPiAk2",
+          "name": "Артем",
+          "role": "head"
+        }
+      ]
+    },
+    "d5nlcJeHXV4QiqaNwFZ0": {
+      "name": "Test Choir",
+      "memberCode": "LKYQCQ",
+      "regentCode": "QKPY0W",
+      "createdAt": "2026-01-27T13:50:24.566Z",
+      "regents": [
+        "artem"
+      ],
+      "knownConductors": [
+        "иом"
+      ],
+      "knownPianists": [
+        "шмшо"
+      ],
+      "members": [
+        {
+          "id": "TYEI1BjEQkbv8ZxJHHlZUKQx5w32",
+          "name": "artem",
+          "role": "head",
+          "voice": "Soprano"
+        }
+      ],
+      "adminCodes": [
+        {
+          "code": "E69Z32",
+          "permissions": [
+            "edit_attendance",
+            "edit_credits",
+            "add_songs",
+            "view_stats",
+            "manage_services"
+          ],
+          "label": "тест"
+        }
+      ]
+    },
+    "dObpPuHUl61HVUfy2zSs": {
+      "name": "Загальний",
+      "memberCode": "7I44GZ",
+      "regentCode": "LNO4V3",
+      "createdAt": "2026-01-23T18:03:21.324Z",
+      "regents": [
+        "Артьом"
+      ],
+      "members": [
+        {
+          "id": "iJLFSwLReHQeaakLcNai9oJbbGo2",
+          "name": "Артьом",
+          "role": "head"
+        }
+      ]
+    },
+    "dgxCOEwo1ESaZN1FDuov": {
+      "name": "Загальнийєє",
+      "memberCode": "EU37U9",
+      "regentCode": "ZVETZG",
+      "createdAt": "2026-01-23T23:18:20.920Z",
+      "regents": [
+        "Артьом"
+      ],
+      "members": [
+        {
+          "id": "awDQQda1r4Oxd25E6XZyEucRtUw1",
+          "name": "Артьом",
+          "role": "head"
+        }
+      ]
+    },
+    "eiUhSlASzJWBqlLp3y9R": {
+      "name": "GEC Third Choir",
+      "choirType": "standard",
+      "memberCode": "S9BC98",
+      "regentCode": "B3YLXZ",
+      "ownerId": "zqXEBgkOUwNThbu7GaFsh9QNvxC3",
+      "regents": [
+        "Oleg"
+      ],
+      "members": [
+        {
+          "id": "zqXEBgkOUwNThbu7GaFsh9QNvxC3",
+          "name": "Oleg",
+          "photoURL": null,
+          "role": "head",
+          "hasAccount": true,
+          "accountUid": "zqXEBgkOUwNThbu7GaFsh9QNvxC3"
+        }
+      ],
+      "createdAt": {
+        "_seconds": 1772049299,
+        "_nanoseconds": 777000000
+      }
+    },
+    "gWh08axqs6y7xzMY5TKX": {
+      "name": "Чоловічий",
+      "memberCode": "SCID7P",
+      "regentCode": "I0AP6O",
+      "createdAt": "2026-02-17T16:23:19.144Z",
+      "regents": [
+        "Артем"
+      ],
+      "members": []
+    },
+    "gXo1obpo6fDwgLeXvZ0b": {
+      "name": "Молодіжний хор",
+      "memberCode": "3PV7CQ",
+      "regentCode": "XV1ZLP",
+      "ownerId": "x3DbnOVPI0hUouMBx13aAoJmmUP2",
+      "regents": [
+        "Zakhar"
+      ],
+      "members": [
+        {
+          "id": "x3DbnOVPI0hUouMBx13aAoJmmUP2",
+          "name": "Zakhar",
+          "photoURL": null,
+          "role": "head",
+          "hasAccount": true,
+          "accountUid": "x3DbnOVPI0hUouMBx13aAoJmmUP2"
+        }
+      ],
+      "createdAt": {
+        "_seconds": 1771962851,
+        "_nanoseconds": 7000000
+      }
+    },
+    "ih3VZ7qnOd4hi5pFZ0Ou": {
+      "name": "Молодіжний хор",
+      "memberCode": "FLFP9Z",
+      "regentCode": "5S8FEE",
+      "createdAt": "2026-01-26T09:09:28.315Z",
+      "knownCategories": [
+        "Різдво"
+      ],
+      "members": [
+        {
+          "id": "uTusajJTVBUVe8CMkUOcUvw0YkZ2",
+          "name": "Віктор Решетнік",
+          "role": "member",
+          "voice": "Soprano"
+        }
+      ],
+      "knownConductors": [],
+      "regents": []
+    },
+    "jhqfbWDvPHRZppBhEnGH": {
+      "name": "Test",
+      "memberCode": "0K3MC8",
+      "regentCode": "JC52LW",
+      "ownerId": "wSQhy1X9bkgJStnA1trrTtdPiAk2",
+      "regents": [
+        "Артем"
+      ],
+      "createdAt": {
+        "_seconds": 1771972309,
+        "_nanoseconds": 574000000
+      },
+      "members": []
+    },
+    "kRMDfFtII7yPQTcsiv8w": {
+      "name": "Загальний",
+      "memberCode": "KZMPX9",
+      "regentCode": "4V91BA",
+      "createdAt": "2026-01-23T16:47:57.001Z",
+      "regents": [
+        "Artom Dulia"
+      ],
+      "members": [
+        {
+          "voice": "Tenor",
+          "role": "member",
+          "id": "manual_1769187647247",
+          "name": "авп"
+        },
+        {
+          "voice": "Tenor",
+          "id": "manual_1769187656102",
+          "name": "Артьом",
+          "role": "regent"
+        },
+        {
+          "name": "Артьом",
+          "role": "member",
+          "voice": "Soprano",
+          "id": "awDQQda1r4Oxd25E6XZyEucRtUw1"
+        },
+        {
+          "id": "TYEI1BjEQkbv8ZxJHHlZUKQx5w32",
+          "voice": "Bass",
+          "role": "member",
+          "name": "artem"
+        }
+      ]
+    },
+    "mIdMdmBz2z1DhgL3Ow20": {
+      "name": "олілов",
+      "memberCode": "V2V6YD",
+      "regentCode": "3BUMZR",
+      "createdAt": "2026-02-17T23:05:35.084Z",
+      "regents": [
+        "Артем"
+      ],
+      "members": []
+    },
+    "nYjf2tk5nYnMnhuU44YN": {
+      "name": "Загальний",
+      "memberCode": "T91ZBM",
+      "regentCode": "6TNXTD",
+      "createdAt": "2026-01-23T23:18:02.539Z",
+      "regents": [
+        "Артьом"
+      ],
+      "members": [
+        {
+          "id": "awDQQda1r4Oxd25E6XZyEucRtUw1",
+          "name": "Артьом",
+          "role": "head"
+        }
+      ]
+    },
+    "nalnGqegjYs7FYzbt68S": {
+      "name": "Hot",
+      "memberCode": "RD46QF",
+      "regentCode": "OTWWRM",
+      "ownerId": "wSQhy1X9bkgJStnA1trrTtdPiAk2",
+      "regents": [
+        "Артем"
+      ],
+      "createdAt": {
+        "_seconds": 1771436278,
+        "_nanoseconds": 958000000
+      },
+      "members": []
+    },
+    "oqOD8XNkPPCBnpkpaovg": {
+      "name": "MyChoir",
+      "memberCode": "09G0I9",
+      "regentCode": "PX7ZBU",
+      "ownerId": "wSQhy1X9bkgJStnA1trrTtdPiAk2",
+      "regents": [
+        "Артем"
+      ],
+      "createdAt": {
+        "_seconds": 1771972385,
+        "_nanoseconds": 21000000
+      },
+      "knownConductors": [
+        "Мулик Роман",
+        "Василевич Максим",
+        "Бондарчук Йосип"
+      ],
+      "icon": "https://pub-c2a4c563f2f2479dae75d46e36d88a49.r2.dev/choirs/oqOD8XNkPPCBnpkpaovg/icon.png",
+      "members": [
+        {
+          "id": "wSQhy1X9bkgJStnA1trrTtdPiAk2",
+          "name": "Артем",
+          "photoURL": "https://lh3.googleusercontent.com/a/ACg8ocIpaOjtBS0No0yboDIgRPqvLt-X9RcGw-f-VbuzHPOTYlGa7zC8jQ=s96-c",
+          "role": "head",
+          "hasAccount": false
+        }
+      ]
+    },
+    "pa7PxVoJppeA86mEOZcz": {
+      "name": "Загальний",
+      "memberCode": "BW49EI",
+      "regentCode": "NG6IVA",
+      "createdAt": "2026-01-23T23:18:03.600Z",
+      "regents": [
+        "Артьом"
+      ],
+      "members": [
+        {
+          "id": "awDQQda1r4Oxd25E6XZyEucRtUw1",
+          "name": "Артьом",
+          "role": "head"
+        }
+      ]
+    },
+    "qeGPpxn49IJFa6xp1Tve": {
+      "name": "ропшаш",
+      "memberCode": "7043KF",
+      "regentCode": "1DD3FJ",
+      "createdAt": "2026-02-18T17:23:21.238Z",
+      "regents": [
+        "Артем"
+      ],
+      "members": [
+        {
+          "id": "wSQhy1X9bkgJStnA1trrTtdPiAk2",
+          "name": "Артем",
+          "role": "head"
+        }
+      ]
+    },
+    "qsCxPI9Zh83C3GSTQCYu": {
+      "name": "МСЦ Бюнде",
+      "memberCode": "V2U06M",
+      "regentCode": "MYJU09",
+      "createdAt": "2026-01-26T10:24:32.419Z",
+      "regents": [
+        "Давид Демченко"
+      ],
+      "members": [
+        {
+          "id": "h32A3yWS9UX69yUeXmJLCVbAO7H2",
+          "name": "Давид Демченко",
+          "role": "head"
+        }
+      ]
+    },
+    "tnQsJ6B5kXa5W0QNVPN8": {
+      "name": "Загальнийєє",
+      "memberCode": "GAKYHF",
+      "regentCode": "8DVGYD",
+      "createdAt": "2026-01-23T23:18:26.471Z",
+      "regents": [
+        "Артьом"
+      ],
+      "members": [
+        {
+          "id": "awDQQda1r4Oxd25E6XZyEucRtUw1",
+          "name": "Артьом",
+          "role": "head"
+        }
+      ]
+    },
+    "vOuHdELYa0jC60CV4Tx4": {
+      "name": "Загальний хор",
+      "memberCode": "QIETRL",
+      "regentCode": "JUZ5WG",
+      "createdAt": "2026-01-26T09:56:52.838Z",
+      "regents": [
+        "Вітя Решетнік"
+      ],
+      "knownConductors": [
+        "Аарон Цуман"
+      ],
+      "knownCategories": [
+        "Семінар"
+      ],
+      "adminCodes": [
+        {
+          "code": "1IJPDR",
+          "permissions": [
+            "manage_services",
+            "edit_credits",
+            "view_stats"
+          ],
+          "label": "иа сам"
+        }
+      ],
+      "members": [
+        {
+          "role": "head",
+          "name": "Вітя Решетнік",
+          "id": "uTusajJTVBUVe8CMkUOcUvw0YkZ2"
+        },
+        {
+          "role": "member",
+          "id": "h32A3yWS9UX69yUeXmJLCVbAO7H2",
+          "name": "Давид Демченко"
+        },
+        {
+          "role": "regent",
+          "name": "Петро Загородній",
+          "id": "IYoSRTV6CygKYlhpEHrv1adGt1y1"
+        },
+        {
+          "id": "M8nrxc0ijOSvxb3W7kpgC01JS0k1",
+          "name": "Liubov Reshetnik",
+          "role": "member",
+          "voice": "Soprano"
+        },
+        {
+          "id": "kNLHAn1WgSMcEtYb5rpe5Y5Bki83",
+          "name": "Viliy Reshetnik",
+          "role": "member",
+          "permissions": [
+            "manage_services",
+            "edit_credits",
+            "view_stats"
+          ]
+        }
+      ]
+    },
+    "xIoY3Kipr5ZZuR4rItmv": {
+      "name": "Загальний",
+      "memberCode": "0S8HEZ",
+      "regentCode": "YISH80",
+      "createdAt": "2026-01-23T23:18:06.545Z",
+      "regents": [
+        "Артьом"
+      ],
+      "members": [
+        {
+          "id": "awDQQda1r4Oxd25E6XZyEucRtUw1",
+          "name": "Артьом",
+          "role": "head"
+        }
+      ]
+    },
+    "yg2Bx02Pdi0qrOWDpLpV": {
+      "name": "MyChoir",
+      "memberCode": "KEDYBI",
+      "regentCode": "MZX0CP",
+      "createdAt": "2026-02-14T18:34:19.870Z",
+      "regents": [
+        "Artom"
+      ],
+      "members": [
+        {
+          "id": "mV4VAoveiJPXPKynt1nKgxfsigA2",
+          "name": "Artom",
+          "role": "head",
+          "hasAccount": false
+        }
+      ]
+    }
+  },
+  "choir_services": {
+    "85dZBHSD59hKpprzevhO": {
+      "LrEYfSUU93qhwEakV7Rd": {
+        "title": "Співанка",
+        "date": "2026-01-22",
+        "songs": [
+          {
+            "songId": "UZKRMFus2hD5z3IHoKch",
+            "songTitle": "Ми знову зустрічаєм осінь"
+          }
+        ],
+        "isFinalized": true
+      },
+      "XyJqwlUoOC3RGD7y6u7Q": {
+        "title": "Співанка",
+        "date": "2026-01-29",
+        "songs": [
+          {
+            "songId": "UZKRMFus2hD5z3IHoKch",
+            "songTitle": "Ми знову зустрічаєм осінь"
+          },
+          {
+            "songId": "iiMjWa9xzN51bascjkWJ",
+            "songTitle": "Той день"
+          }
+        ],
+        "isFinalized": true
+      }
+    },
+    "ABLI6Nc2YzbTVlvparoc": {
+      "keT2CkzE1hOfHwSfmej8": {
+        "title": "Співанка",
+        "date": "2026-01-25",
+        "time": "10:00",
+        "songs": [],
+        "isFinalized": true
+      }
+    },
+    "Bal2FfmJRP5xbmbgrLN1": {
+      "EXtckILbFzFm5bUfK3eI": {
+        "title": "Співанка",
+        "date": "2026-02-04",
+        "time": "10:00",
+        "songs": [],
+        "absentMembers": [
+          "DzWHnb24EfeMLAdFW5815VuyDy23"
+        ],
+        "confirmedMembers": [],
+        "isFinalized": true
+      },
+      "PQcMGCMrU1rwkr8qHk6F": {
+        "title": "Співанка",
+        "date": "2026-02-06",
+        "time": "10:00",
+        "songs": [],
+        "absentMembers": [],
+        "confirmedMembers": [
+          "DzWHnb24EfeMLAdFW5815VuyDy23"
+        ],
+        "isFinalized": true
+      },
+      "UMIsfcU1l0AWyC7D0FMl": {
+        "title": "Співанка",
+        "date": "2026-02-05",
+        "time": "10:00",
+        "songs": [],
+        "absentMembers": [],
+        "confirmedMembers": [
+          "DzWHnb24EfeMLAdFW5815VuyDy23"
+        ],
+        "isFinalized": true
+      },
+      "VfskAexrREbmYW9HSwng": {
+        "title": "Співанка",
+        "date": "2026-02-05",
+        "time": "10:00",
+        "songs": [],
+        "absentMembers": [
+          "DzWHnb24EfeMLAdFW5815VuyDy23"
+        ],
+        "confirmedMembers": [],
+        "isFinalized": true
+      }
+    },
+    "FqU7eoHHYXX0lGboOyeA": {
+      "UyHNLhXa4LqQuv2H6LaO": {
+        "title": "Співанка",
+        "date": "2026-02-28",
+        "songs": [],
+        "time": "15:00",
+        "warmupConductor": "Elina Bodnar",
+        "absentMembers": [],
+        "confirmedMembers": [
+          "tJwwmIvyF2bDNAzGi6wb8r65x8y2",
+          "jKipsfS5poZtXyFvCEW3PKk7BBI2",
+          "UMJP4XrHtiO2NlZFs3O4TUeGbRz2"
+        ]
+      }
+    },
+    "HqZZnHZB93nJZWusq3Yn": {
+      "bzYVOsdHOKfYRSAKxysP": {
+        "title": "Співанка",
+        "date": "2026-02-25",
+        "songs": [],
+        "time": "10:00",
+        "absentMembers": [],
+        "confirmedMembers": [
+          "BMRdxmeC1QUEdrifYrfatjiSObE2"
+        ],
+        "finalizedBy": "BMRdxmeC1QUEdrifYrfatjiSObE2",
+        "isFinalized": true,
+        "finalizedAt": "2026-02-25T17:30:57.711Z"
+      }
+    },
+    "IFnsKWKiRaCzgOy9niwE": {
+      "A1OJM7D2V66TDnQDTSCY": {
+        "title": "Неділя 25.01.2026",
+        "date": "2026-01-25",
+        "time": "10:00",
+        "songs": [
+          {
+            "pianist": "Міла",
+            "songTitle": "Прославте Бога сил",
+            "songId": "HdfCl04Sxx3OsyA6olGI",
+            "performedBy": "Авенір Д."
+          },
+          {
+            "songTitle": "Подивись як лагідно",
+            "songId": "rHMgS0cV97Iw91lfa8Dk",
+            "pianist": "Міла",
+            "performedBy": "Марк Д."
+          }
+        ],
+        "absentMembers": [],
+        "confirmedMembers": [
+          "xLok5atLNQaloTZWrvvl6fIVqKH3",
+          "qN7ZnMb1JWPEzK1WCOnC4J2iWzC3",
+          "cl7my8mTEsVUrZsS6Jig45CduRQ2"
+        ],
+        "isFinalized": true
+      },
+      "CF9kLIxu0eLr9jdQHmwB": {
+        "title": "Неділя",
+        "date": "2026-02-22",
+        "time": "09:30",
+        "warmupConductor": "Дуля Артьом",
+        "songs": [
+          {
+            "performedBy": "Дуля Марк",
+            "songId": "rHMgS0cV97Iw91lfa8Dk",
+            "songTitle": "Подивись як лагідно",
+            "pianist": "Мілана"
+          },
+          {
+            "songId": "J6o5eFHmFWGDifEtGW3D",
+            "songTitle": "Ласка чудова Божа",
+            "performedBy": "Ратушний Давид",
+            "pianist": "Мілана"
+          }
+        ],
+        "isFinalized": true,
+        "lateMembers": {},
+        "finalizedBy": "jszDFTWjcrhjuW7iCOflXhV3dIb2",
+        "finalizedAt": "2026-02-26T16:32:48.798Z",
+        "confirmedMembers": [
+          "qN7ZnMb1JWPEzK1WCOnC4J2iWzC3",
+          "OyqZh89jF8c2rpmsCaC9WfCEYM63",
+          "6m9Tbkmo91XeBN3NFcfRKlRuPLp1",
+          "manual_1769369031543_7",
+          "manual_1769369031543_14",
+          "1dFYQOIv9WYDhnPXsDo4hmCdIv72",
+          "manual_1769369031543_18",
+          "6PdlWsvhW6RmzHTBK37M1bBol1w2",
+          "manual_1769369031543_22",
+          "manual_1769369031543_23",
+          "96B3iFCfe8W0KoVLByq6pi7lOGp1",
+          "kHHV0Jna65g3msxhfYeCqM2ZVGr2",
+          "Ndad8pQDmKUwb1yQantXYT1lZC12",
+          "6EIMCMck61RBm1ybnJf5I1UzMSt2",
+          "xLok5atLNQaloTZWrvvl6fIVqKH3",
+          "u2nkNsz0BWVcRPO9QKgltU9Kp4l2",
+          "Ifv6hDozbpMRdtiD0HSLthxHJj93",
+          "manual_1769369031543_34",
+          "manual_1769369031543_35",
+          "7zQ0nN9sNle3WYWlEJOrkatxtL73",
+          "XTD6KuHLqoMkpAXyb762I3pGL4C2",
+          "7J1uyJeyn6aRGPQFhVr5CehPL9I2",
+          "LAmaU8uITcfc4DacfsRYqnmuWPA2",
+          "836J83iaJAXIndrWWxY5GQ155vn2",
+          "qIbR6jI776Me8l6GkPzbMhD37e73",
+          "manual_1769369031543_47",
+          "dqG84YtiXhV8zl9jduUBZYlpAFx1",
+          "manual_1769369031543_50",
+          "manual_1769369031543_52",
+          "JbXUNKaS25bX5PG7VlFtLGn4pJ52",
+          "cl7my8mTEsVUrZsS6Jig45CduRQ2",
+          "manual_1769369031543_56",
+          "manual_1769369031543_61",
+          "manual_1769369031543_62",
+          "manual_1769369031543_65",
+          "manual_1769369031543_66",
+          "manual_1769369031543_67",
+          "manual_1769369031543_68",
+          "manual_1769369031543_75",
+          "manual_1769369031543_76",
+          "2s62hlYPEafM6QtoGk177iq19xt2",
+          "W5ZHuRbHCAWbK5NAwIaUQl6fB9l1",
+          "jszDFTWjcrhjuW7iCOflXhV3dIb2",
+          "58sZ0hfmJzanJL5yjbqAvWh6nJB3"
+        ],
+        "absentMembers": [
+          "qMnN3HuAoaNJk6h1dxMgr7DW0uD3",
+          "manual_1769369031543_2",
+          "manual_1769369031543_4",
+          "manual_1769369031543_5",
+          "manual_1769369031543_6",
+          "manual_1769369031543_8",
+          "manual_1769369031543_69",
+          "manual_1769369031543_9",
+          "manual_1769369031543_13",
+          "manual_1769369031543_10",
+          "manual_1769369031543_11",
+          "sd682mVpSRWl2QvwTh0nOzVYQuA3",
+          "manual_1769369031543_16",
+          "manual_1769369031543_17",
+          "P9iztTy5AcfDoevWZlLbeP0YLv63",
+          "manual_1769369031543_29",
+          "jNtoDEOGRQgQo0in6jKIE4miIxh1",
+          "Yh2oMMyEK9ZDCW78Edp8JXgm9of1",
+          "Z6MSOLSK22gyi1Iaiw2MC5HAOay1",
+          "manual_1769369031543_46",
+          "manual_1769369031543_74",
+          "manual_1769369031543_54",
+          "manual_1769369031543_57",
+          "manual_1769369031543_58",
+          "manual_1769369031543_71",
+          "manual_1769369031543_72",
+          "manual_1769369031543_59",
+          "7PHfSEhXjKOC8Klus8c8QTK3oHJ2",
+          "fKXBzczC3WXb20ndjKJuTQ0z5xH3",
+          "manual_1769369031543_64",
+          "manual_1769369031543_70",
+          "ThvSayoObKZZo9trVBg7WJPJRVr2",
+          "LxXZFLPpYueIctOqEORmjvGZeGj2",
+          "dyShFVLLzXSl28rVuWyWWOtuCPs2",
+          "cDA5mHpRXmU2BmWgcD5tW8yrHCE2",
+          "V6WIhphXyVZQJX2jo9Pm0okfzFe2",
+          "manual_1771873766522"
+        ]
+      },
+      "DITYSGmw8WC4jjuD9WHg": {
+        "title": "Неділя 01.02.2026",
+        "date": "2026-02-01",
+        "time": "10:00",
+        "songs": [
+          {
+            "songId": "9ZBLfMCgVLIzhziqD5Sp",
+            "songTitle": "Той день",
+            "performedBy": "Дуля Артьом ",
+            "pianist": "Міла"
+          },
+          {
+            "songId": "YX4UQqOn7Xswuqw2zIWK",
+            "songTitle": "На небеснім причалі",
+            "pianist": "Іра В.",
+            "performedBy": "Пелепяк Давид"
+          }
+        ],
+        "isFinalized": true,
+        "lateMembers": {},
+        "confirmedMembers": [
+          "u2nkNsz0BWVcRPO9QKgltU9Kp4l2",
+          "cl7my8mTEsVUrZsS6Jig45CduRQ2",
+          "manual_1769369031543_7",
+          "manual_1769369031543_9",
+          "manual_1769369031543_76",
+          "manual_1769369031543_10",
+          "manual_1769369031543_14",
+          "manual_1769369031543_18",
+          "manual_1769369031543_17",
+          "manual_1769369031543_22",
+          "manual_1769369031543_23",
+          "qN7ZnMb1JWPEzK1WCOnC4J2iWzC3",
+          "manual_1769369031543_34",
+          "manual_1769369031543_35",
+          "manual_1769369031543_46",
+          "manual_1769369031543_47",
+          "manual_1769369031543_52",
+          "manual_1769369031543_56",
+          "manual_1769369031543_68",
+          "manual_1769369031543_54",
+          "manual_1769369031543_58",
+          "manual_1769369031543_57",
+          "manual_1769369031543_59",
+          "manual_1769369031543_75",
+          "manual_1769369031543_67",
+          "manual_1769369031543_65",
+          "manual_1769369031543_66",
+          "manual_1769369031543_70",
+          "manual_1769369031543_62",
+          "manual_1769369031543_50",
+          "6EIMCMck61RBm1ybnJf5I1UzMSt2",
+          "xLok5atLNQaloTZWrvvl6fIVqKH3",
+          "dqG84YtiXhV8zl9jduUBZYlpAFx1",
+          "96B3iFCfe8W0KoVLByq6pi7lOGp1",
+          "6PdlWsvhW6RmzHTBK37M1bBol1w2",
+          "836J83iaJAXIndrWWxY5GQ155vn2",
+          "7J1uyJeyn6aRGPQFhVr5CehPL9I2",
+          "JbXUNKaS25bX5PG7VlFtLGn4pJ52",
+          "OyqZh89jF8c2rpmsCaC9WfCEYM63",
+          "XTD6KuHLqoMkpAXyb762I3pGL4C2",
+          "kHHV0Jna65g3msxhfYeCqM2ZVGr2",
+          "sd682mVpSRWl2QvwTh0nOzVYQuA3",
+          "Yh2oMMyEK9ZDCW78Edp8JXgm9of1",
+          "qIbR6jI776Me8l6GkPzbMhD37e73",
+          "7PHfSEhXjKOC8Klus8c8QTK3oHJ2",
+          "Z6MSOLSK22gyi1Iaiw2MC5HAOay1",
+          "6m9Tbkmo91XeBN3NFcfRKlRuPLp1",
+          "qMnN3HuAoaNJk6h1dxMgr7DW0uD3",
+          "jNtoDEOGRQgQo0in6jKIE4miIxh1",
+          "7zQ0nN9sNle3WYWlEJOrkatxtL73",
+          "Ifv6hDozbpMRdtiD0HSLthxHJj93",
+          "LAmaU8uITcfc4DacfsRYqnmuWPA2",
+          "1dFYQOIv9WYDhnPXsDo4hmCdIv72",
+          "fKXBzczC3WXb20ndjKJuTQ0z5xH3",
+          "jszDFTWjcrhjuW7iCOflXhV3dIb2",
+          "58sZ0hfmJzanJL5yjbqAvWh6nJB3"
+        ],
+        "absentMembers": [
+          "manual_1769369031543_2",
+          "manual_1769369031543_4",
+          "manual_1769369031543_5",
+          "manual_1769369031543_6",
+          "manual_1769369031543_8",
+          "manual_1769369031543_69",
+          "manual_1769369031543_13",
+          "manual_1769369031543_11",
+          "manual_1769369031543_20",
+          "manual_1769369031543_19",
+          "manual_1769369031543_16",
+          "manual_1769369031543_29",
+          "manual_1769369031543_74",
+          "manual_1769369031543_72",
+          "manual_1769369031543_71",
+          "manual_1769369031543_64",
+          "manual_1769369031543_61",
+          "Ndad8pQDmKUwb1yQantXYT1lZC12",
+          "V6WIhphXyVZQJX2jo9Pm0okfzFe2"
+        ]
+      },
+      "NsOR6k2T9wDyKcVbg0Lt": {
+        "title": "Неділя",
+        "date": "2026-02-15",
+        "time": "10:00",
+        "songs": [
+          {
+            "songTitle": "Велики и чудны дела Твои",
+            "songId": "EOgsrbbxuQaNe8wl0z4T",
+            "performedBy": "Дуля Марк",
+            "pianist": "Іра В."
+          },
+          {
+            "songId": "76mRvBxA5NN8xQUiru7Q",
+            "songTitle": "Не унывай",
+            "performedBy": "Пелепяк Давид",
+            "pianist": "Надя А."
+          }
+        ],
+        "warmupConductor": "Дуля Авенір",
+        "isFinalized": true,
+        "lateMembers": {},
+        "absentMembers": [
+          "cDA5mHpRXmU2BmWgcD5tW8yrHCE2",
+          "6EIMCMck61RBm1ybnJf5I1UzMSt2",
+          "JbXUNKaS25bX5PG7VlFtLGn4pJ52",
+          "P9iztTy5AcfDoevWZlLbeP0YLv63",
+          "manual_1769369031543_2",
+          "manual_1769369031543_4",
+          "manual_1769369031543_5",
+          "manual_1769369031543_6",
+          "manual_1769369031543_7",
+          "manual_1769369031543_8",
+          "manual_1769369031543_69",
+          "manual_1769369031543_9",
+          "manual_1769369031543_13",
+          "manual_1769369031543_10",
+          "manual_1769369031543_11",
+          "manual_1769369031543_16",
+          "manual_1769369031543_29",
+          "7J1uyJeyn6aRGPQFhVr5CehPL9I2",
+          "manual_1769369031543_46",
+          "manual_1769369031543_47",
+          "manual_1769369031543_74",
+          "manual_1769369031543_54",
+          "manual_1769369031543_56",
+          "manual_1769369031543_57",
+          "manual_1769369031543_58",
+          "manual_1769369031543_71",
+          "manual_1769369031543_72",
+          "manual_1769369031543_59",
+          "7PHfSEhXjKOC8Klus8c8QTK3oHJ2",
+          "manual_1769369031543_75",
+          "manual_1769369031543_64",
+          "manual_1769369031543_70",
+          "manual_1769369031543_62",
+          "manual_1769369031543_61",
+          "V6WIhphXyVZQJX2jo9Pm0okfzFe2",
+          "dyShFVLLzXSl28rVuWyWWOtuCPs2",
+          "ThvSayoObKZZo9trVBg7WJPJRVr2"
+        ],
+        "finalizedBy": "jszDFTWjcrhjuW7iCOflXhV3dIb2",
+        "finalizedAt": "2026-02-26T16:34:00.977Z",
+        "confirmedMembers": [
+          "u2nkNsz0BWVcRPO9QKgltU9Kp4l2",
+          "xLok5atLNQaloTZWrvvl6fIVqKH3",
+          "Ndad8pQDmKUwb1yQantXYT1lZC12",
+          "6PdlWsvhW6RmzHTBK37M1bBol1w2",
+          "836J83iaJAXIndrWWxY5GQ155vn2",
+          "sd682mVpSRWl2QvwTh0nOzVYQuA3",
+          "Yh2oMMyEK9ZDCW78Edp8JXgm9of1",
+          "qIbR6jI776Me8l6GkPzbMhD37e73",
+          "manual_1769369031543_52",
+          "OyqZh89jF8c2rpmsCaC9WfCEYM63",
+          "6m9Tbkmo91XeBN3NFcfRKlRuPLp1",
+          "qMnN3HuAoaNJk6h1dxMgr7DW0uD3",
+          "7zQ0nN9sNle3WYWlEJOrkatxtL73",
+          "1dFYQOIv9WYDhnPXsDo4hmCdIv72",
+          "Z6MSOLSK22gyi1Iaiw2MC5HAOay1",
+          "W5ZHuRbHCAWbK5NAwIaUQl6fB9l1",
+          "96B3iFCfe8W0KoVLByq6pi7lOGp1",
+          "LAmaU8uITcfc4DacfsRYqnmuWPA2",
+          "cl7my8mTEsVUrZsS6Jig45CduRQ2",
+          "Ifv6hDozbpMRdtiD0HSLthxHJj93",
+          "qN7ZnMb1JWPEzK1WCOnC4J2iWzC3",
+          "manual_1769369031543_76",
+          "manual_1769369031543_14",
+          "manual_1769369031543_17",
+          "manual_1769369031543_18",
+          "manual_1769369031543_22",
+          "manual_1769369031543_23",
+          "kHHV0Jna65g3msxhfYeCqM2ZVGr2",
+          "manual_1769369031543_34",
+          "manual_1769369031543_35",
+          "XTD6KuHLqoMkpAXyb762I3pGL4C2",
+          "jNtoDEOGRQgQo0in6jKIE4miIxh1",
+          "manual_1769369031543_50",
+          "dqG84YtiXhV8zl9jduUBZYlpAFx1",
+          "manual_1769369031543_68",
+          "fKXBzczC3WXb20ndjKJuTQ0z5xH3",
+          "manual_1769369031543_65",
+          "manual_1769369031543_67",
+          "manual_1769369031543_66",
+          "manual_1771873766522",
+          "jszDFTWjcrhjuW7iCOflXhV3dIb2",
+          "58sZ0hfmJzanJL5yjbqAvWh6nJB3",
+          "V6WIhphXyVZQJX2jo9Pm0okfzFe2"
+        ]
+      },
+      "OusQQTidMrKwtAcvKQjq": {
+        "title": "Співанка",
+        "date": "2026-02-05",
+        "time": "20:00",
+        "songs": [
+          {
+            "songTitle": "Він мене полюбив",
+            "performedBy": "Артьом ",
+            "pianist": "Міла",
+            "songId": "YAxoV673qxb4vsUdBzN7"
+          },
+          {
+            "pianist": "Меріліна",
+            "songTitle": "Велики и чудны дела Твои",
+            "songId": "EOgsrbbxuQaNe8wl0z4T",
+            "performedBy": "Марк"
+          },
+          {
+            "songTitle": "Не унывай",
+            "songId": "76mRvBxA5NN8xQUiru7Q",
+            "performedBy": "Давид П.",
+            "pianist": "Надя"
+          }
+        ],
+        "isFinalized": true,
+        "confirmedMembers": [
+          "qN7ZnMb1JWPEzK1WCOnC4J2iWzC3",
+          "manual_1769369031543_4",
+          "manual_1769369031543_7",
+          "manual_1769369031543_9",
+          "manual_1769369031543_16",
+          "manual_1769369031543_18",
+          "manual_1769369031543_20",
+          "manual_1769369031543_23",
+          "manual_1769369031543_34",
+          "manual_1769369031543_35",
+          "manual_1769369031543_46",
+          "manual_1769369031543_47",
+          "manual_1769369031543_50",
+          "manual_1769369031543_52",
+          "manual_1769369031543_56",
+          "manual_1769369031543_57",
+          "manual_1769369031543_58",
+          "manual_1769369031543_62",
+          "manual_1769369031543_67",
+          "manual_1769369031543_68",
+          "manual_1769369031543_70",
+          "manual_1769369031543_75",
+          "manual_1769369031543_74",
+          "6EIMCMck61RBm1ybnJf5I1UzMSt2",
+          "xLok5atLNQaloTZWrvvl6fIVqKH3",
+          "u2nkNsz0BWVcRPO9QKgltU9Kp4l2",
+          "dqG84YtiXhV8zl9jduUBZYlpAFx1",
+          "Ndad8pQDmKUwb1yQantXYT1lZC12",
+          "96B3iFCfe8W0KoVLByq6pi7lOGp1",
+          "6PdlWsvhW6RmzHTBK37M1bBol1w2",
+          "836J83iaJAXIndrWWxY5GQ155vn2",
+          "7J1uyJeyn6aRGPQFhVr5CehPL9I2",
+          "OyqZh89jF8c2rpmsCaC9WfCEYM63",
+          "XTD6KuHLqoMkpAXyb762I3pGL4C2",
+          "kHHV0Jna65g3msxhfYeCqM2ZVGr2",
+          "Yh2oMMyEK9ZDCW78Edp8JXgm9of1",
+          "qIbR6jI776Me8l6GkPzbMhD37e73",
+          "Z6MSOLSK22gyi1Iaiw2MC5HAOay1",
+          "6m9Tbkmo91XeBN3NFcfRKlRuPLp1",
+          "qMnN3HuAoaNJk6h1dxMgr7DW0uD3",
+          "jNtoDEOGRQgQo0in6jKIE4miIxh1",
+          "7zQ0nN9sNle3WYWlEJOrkatxtL73",
+          "Ifv6hDozbpMRdtiD0HSLthxHJj93",
+          "LAmaU8uITcfc4DacfsRYqnmuWPA2",
+          "1dFYQOIv9WYDhnPXsDo4hmCdIv72",
+          "fKXBzczC3WXb20ndjKJuTQ0z5xH3",
+          "jszDFTWjcrhjuW7iCOflXhV3dIb2"
+        ],
+        "lateMembers": {},
+        "absentMembers": [
+          "manual_1769369031543_13",
+          "manual_1769369031543_2",
+          "manual_1769369031543_5",
+          "manual_1769369031543_6",
+          "manual_1769369031543_8",
+          "manual_1769369031543_69",
+          "manual_1769369031543_10",
+          "manual_1769369031543_11",
+          "manual_1769369031543_14",
+          "manual_1769369031543_76",
+          "manual_1769369031543_17",
+          "manual_1769369031543_22",
+          "manual_1769369031543_29",
+          "manual_1769369031543_54",
+          "manual_1769369031543_71",
+          "manual_1769369031543_72",
+          "manual_1769369031543_59",
+          "manual_1769369031543_64",
+          "manual_1769369031543_65",
+          "manual_1769369031543_66",
+          "manual_1769369031543_61",
+          "manual_1769369031543_19",
+          "cl7my8mTEsVUrZsS6Jig45CduRQ2",
+          "JbXUNKaS25bX5PG7VlFtLGn4pJ52",
+          "sd682mVpSRWl2QvwTh0nOzVYQuA3",
+          "7PHfSEhXjKOC8Klus8c8QTK3oHJ2",
+          "58sZ0hfmJzanJL5yjbqAvWh6nJB3",
+          "V6WIhphXyVZQJX2jo9Pm0okfzFe2"
+        ]
+      },
+      "Su0WVpI2nLJ9IerDfzVX": {
+        "title": "Співанка",
+        "date": "2026-02-26",
+        "time": "19:45",
+        "warmupConductor": "Пелепяк Давід",
+        "songs": [
+          {
+            "songTitle": "Звучит, как эхо, над планетой",
+            "performedBy": "Дуля Марк",
+            "pianist": "Надя А.",
+            "songId": "shl1u4KX3vYNYMTzRGQC"
+          },
+          {
+            "songId": "aOfXRBVcDGC6UWTcseWv",
+            "pianist": "Мілана",
+            "performedBy": "Ратушний Давид",
+            "songTitle": "Твердо уповал я на Господа."
+          },
+          {
+            "songTitle": "Он воскрес! И теперь переливами",
+            "performedBy": "Ратушний Давид",
+            "pianist": "Надя А.",
+            "songId": "5D19xhB9HWy0TUlmbwVH"
+          },
+          {
+            "songId": "LJG7OeuvGDWgRqDxz53w",
+            "songTitle": "Біль і плач душі",
+            "performedBy": "Дуля Марк",
+            "pianist": "Іра В."
+          }
+        ],
+        "absentMembers": [
+          "58sZ0hfmJzanJL5yjbqAvWh6nJB3",
+          "sd682mVpSRWl2QvwTh0nOzVYQuA3",
+          "manual_1769369031543_2",
+          "manual_1769369031543_5",
+          "manual_1769369031543_6",
+          "manual_1769369031543_7",
+          "manual_1769369031543_8",
+          "manual_1769369031543_69",
+          "manual_1769369031543_9",
+          "manual_1769369031543_13",
+          "manual_1769369031543_10",
+          "manual_1769369031543_11",
+          "manual_1771873766522",
+          "96B3iFCfe8W0KoVLByq6pi7lOGp1",
+          "manual_1769369031543_29",
+          "manual_1769369031543_34",
+          "manual_1769369031543_35",
+          "LAmaU8uITcfc4DacfsRYqnmuWPA2",
+          "manual_1769369031543_47",
+          "manual_1769369031543_50",
+          "dqG84YtiXhV8zl9jduUBZYlpAFx1",
+          "manual_1769369031543_54",
+          "manual_1769369031543_56",
+          "manual_1769369031543_57",
+          "manual_1769369031543_71",
+          "manual_1769369031543_72",
+          "fKXBzczC3WXb20ndjKJuTQ0z5xH3",
+          "2s62hlYPEafM6QtoGk177iq19xt2",
+          "manual_1769369031543_23",
+          "V6WIhphXyVZQJX2jo9Pm0okfzFe2",
+          "cDA5mHpRXmU2BmWgcD5tW8yrHCE2",
+          "dyShFVLLzXSl28rVuWyWWOtuCPs2"
+        ],
+        "confirmedMembers": [
+          "xPWnXHxsNaa0g9dQhxWPVI7zMXJ3",
+          "jszDFTWjcrhjuW7iCOflXhV3dIb2",
+          "7zQ0nN9sNle3WYWlEJOrkatxtL73",
+          "rD5fv0zIdWdldtER08FslQwdxBM2",
+          "Ndad8pQDmKUwb1yQantXYT1lZC12",
+          "xLok5atLNQaloTZWrvvl6fIVqKH3",
+          "u2nkNsz0BWVcRPO9QKgltU9Kp4l2",
+          "836J83iaJAXIndrWWxY5GQ155vn2",
+          "qN7ZnMb1JWPEzK1WCOnC4J2iWzC3",
+          "OyqZh89jF8c2rpmsCaC9WfCEYM63",
+          "qMnN3HuAoaNJk6h1dxMgr7DW0uD3",
+          "6m9Tbkmo91XeBN3NFcfRKlRuPLp1",
+          "manual_1769369031543_4",
+          "manual_1769369031543_76",
+          "manual_1769369031543_14",
+          "1dFYQOIv9WYDhnPXsDo4hmCdIv72",
+          "manual_1769369031543_16",
+          "manual_1769369031543_17",
+          "manual_1769369031543_18",
+          "P9iztTy5AcfDoevWZlLbeP0YLv63",
+          "6PdlWsvhW6RmzHTBK37M1bBol1w2",
+          "manual_1769369031543_22",
+          "kHHV0Jna65g3msxhfYeCqM2ZVGr2",
+          "6EIMCMck61RBm1ybnJf5I1UzMSt2",
+          "Ifv6hDozbpMRdtiD0HSLthxHJj93",
+          "XTD6KuHLqoMkpAXyb762I3pGL4C2",
+          "jNtoDEOGRQgQo0in6jKIE4miIxh1",
+          "Yh2oMMyEK9ZDCW78Edp8JXgm9of1",
+          "Z6MSOLSK22gyi1Iaiw2MC5HAOay1",
+          "qIbR6jI776Me8l6GkPzbMhD37e73",
+          "manual_1769369031543_74",
+          "manual_1769369031543_52",
+          "JbXUNKaS25bX5PG7VlFtLGn4pJ52",
+          "manual_1769369031543_68",
+          "cl7my8mTEsVUrZsS6Jig45CduRQ2",
+          "7PHfSEhXjKOC8Klus8c8QTK3oHJ2",
+          "manual_1769369031543_59",
+          "manual_1769369031543_75",
+          "manual_1769369031543_64",
+          "manual_1769369031543_67",
+          "manual_1769369031543_65",
+          "manual_1769369031543_66",
+          "manual_1769369031543_70",
+          "manual_1769369031543_62",
+          "manual_1769369031543_61",
+          "manual_1769369031543_58",
+          "7J1uyJeyn6aRGPQFhVr5CehPL9I2",
+          "manual_1769369031543_46",
+          "LxXZFLPpYueIctOqEORmjvGZeGj2",
+          "HMX9k3Z1qiOzoK01syZo0foUpMX2",
+          "V6WIhphXyVZQJX2jo9Pm0okfzFe2"
+        ]
+      },
+      "X41f9XOqzXOK30LYZFTw": {
+        "title": "Співанка",
+        "date": "2026-01-29",
+        "time": "20:00",
+        "songs": [
+          {
+            "songId": "YAxoV673qxb4vsUdBzN7",
+            "songTitle": "Він мене полюбив",
+            "performedBy": "Дуля Артьом ",
+            "pianist": "Міла"
+          },
+          {
+            "songId": "9ZBLfMCgVLIzhziqD5Sp",
+            "songTitle": "Той день",
+            "performedBy": "Дуля Артьом ",
+            "pianist": "Міла"
+          },
+          {
+            "songTitle": "Велики и чудны",
+            "songId": "EsnQ74VPDeJ4AfrQUf6T",
+            "performedBy": "Дуля Марк",
+            "pianist": "Іра В."
+          },
+          {
+            "songId": "aOfXRBVcDGC6UWTcseWv",
+            "songTitle": "Твердо уповал я на Господа.",
+            "performedBy": "Ратушний Давид",
+            "pianist": "Міла"
+          },
+          {
+            "songTitle": "На небеснім причалі",
+            "songId": "YX4UQqOn7Xswuqw2zIWK",
+            "performedBy": "Пелепяк Давид",
+            "pianist": "Іра В."
+          }
+        ],
+        "isFinalized": true,
+        "finalizedBy": "jszDFTWjcrhjuW7iCOflXhV3dIb2",
+        "finalizedAt": "2026-02-26T13:35:19.249Z",
+        "lateMembers": {},
+        "confirmedMembers": [
+          "xLok5atLNQaloTZWrvvl6fIVqKH3",
+          "qN7ZnMb1JWPEzK1WCOnC4J2iWzC3",
+          "dqG84YtiXhV8zl9jduUBZYlpAFx1",
+          "OyqZh89jF8c2rpmsCaC9WfCEYM63",
+          "6m9Tbkmo91XeBN3NFcfRKlRuPLp1",
+          "manual_1769369031543_10",
+          "sd682mVpSRWl2QvwTh0nOzVYQuA3",
+          "manual_1769369031543_14",
+          "manual_1769369031543_18",
+          "P9iztTy5AcfDoevWZlLbeP0YLv63",
+          "6PdlWsvhW6RmzHTBK37M1bBol1w2",
+          "manual_1771873766522",
+          "96B3iFCfe8W0KoVLByq6pi7lOGp1",
+          "manual_1769369031543_22",
+          "manual_1769369031543_23",
+          "kHHV0Jna65g3msxhfYeCqM2ZVGr2",
+          "6EIMCMck61RBm1ybnJf5I1UzMSt2",
+          "Ndad8pQDmKUwb1yQantXYT1lZC12",
+          "u2nkNsz0BWVcRPO9QKgltU9Kp4l2",
+          "Ifv6hDozbpMRdtiD0HSLthxHJj93",
+          "7zQ0nN9sNle3WYWlEJOrkatxtL73",
+          "XTD6KuHLqoMkpAXyb762I3pGL4C2",
+          "jNtoDEOGRQgQo0in6jKIE4miIxh1",
+          "836J83iaJAXIndrWWxY5GQ155vn2",
+          "qIbR6jI776Me8l6GkPzbMhD37e73",
+          "manual_1769369031543_46",
+          "manual_1769369031543_50",
+          "JbXUNKaS25bX5PG7VlFtLGn4pJ52",
+          "manual_1769369031543_52",
+          "manual_1769369031543_54",
+          "cl7my8mTEsVUrZsS6Jig45CduRQ2",
+          "manual_1769369031543_57",
+          "manual_1769369031543_58",
+          "manual_1769369031543_75",
+          "manual_1769369031543_66",
+          "manual_1769369031543_70",
+          "jszDFTWjcrhjuW7iCOflXhV3dIb2",
+          "58sZ0hfmJzanJL5yjbqAvWh6nJB3"
+        ],
+        "absentMembers": [
+          "manual_1769369031543_2",
+          "manual_1769369031543_4",
+          "manual_1769369031543_5",
+          "manual_1769369031543_6",
+          "manual_1769369031543_7",
+          "manual_1769369031543_8",
+          "manual_1769369031543_9",
+          "manual_1769369031543_11",
+          "manual_1769369031543_13",
+          "manual_1769369031543_16",
+          "manual_1769369031543_17",
+          "manual_1769369031543_19",
+          "manual_1769369031543_20",
+          "manual_1769369031543_29",
+          "manual_1769369031543_34",
+          "manual_1769369031543_35",
+          "manual_1769369031543_47",
+          "manual_1769369031543_56",
+          "manual_1769369031543_59",
+          "manual_1769369031543_61",
+          "manual_1769369031543_62",
+          "manual_1769369031543_65",
+          "manual_1769369031543_64",
+          "manual_1769369031543_67",
+          "manual_1769369031543_68",
+          "manual_1769369031543_69",
+          "manual_1769369031543_71",
+          "manual_1769369031543_72",
+          "manual_1769369031543_74",
+          "manual_1769369031543_76",
+          "7J1uyJeyn6aRGPQFhVr5CehPL9I2",
+          "Yh2oMMyEK9ZDCW78Edp8JXgm9of1",
+          "7PHfSEhXjKOC8Klus8c8QTK3oHJ2",
+          "Z6MSOLSK22gyi1Iaiw2MC5HAOay1",
+          "qMnN3HuAoaNJk6h1dxMgr7DW0uD3",
+          "LAmaU8uITcfc4DacfsRYqnmuWPA2",
+          "1dFYQOIv9WYDhnPXsDo4hmCdIv72",
+          "fKXBzczC3WXb20ndjKJuTQ0z5xH3",
+          "V6WIhphXyVZQJX2jo9Pm0okfzFe2"
+        ]
+      },
+      "Xh50UIxOWBZ5HWLFSlhd": {
+        "title": "Співанка",
+        "date": "2026-02-12",
+        "time": "19:45",
+        "songs": [
+          {
+            "pianist": "Меріліна",
+            "songTitle": "Велики и чудны дела Твои",
+            "songId": "EOgsrbbxuQaNe8wl0z4T",
+            "performedBy": "Дуля Марк"
+          },
+          {
+            "performedBy": "Пелепяк Давид",
+            "songTitle": "Не унывай",
+            "songId": "76mRvBxA5NN8xQUiru7Q",
+            "pianist": "Надя А."
+          },
+          {
+            "performedBy": "Ратушний Давид",
+            "songId": "aOfXRBVcDGC6UWTcseWv",
+            "songTitle": "Твердо уповал я на Господа.",
+            "pianist": "Мілана"
+          },
+          {
+            "songId": "LJG7OeuvGDWgRqDxz53w",
+            "songTitle": "Біль і плач душі",
+            "performedBy": "Дуля Марк",
+            "pianist": "Іра В."
+          }
+        ],
+        "isFinalized": true,
+        "lateMembers": {},
+        "confirmedMembers": [
+          "qN7ZnMb1JWPEzK1WCOnC4J2iWzC3",
+          "manual_1769369031543_10",
+          "manual_1769369031543_76",
+          "manual_1769369031543_14",
+          "manual_1769369031543_18",
+          "manual_1769369031543_23",
+          "manual_1769369031543_46",
+          "manual_1769369031543_74",
+          "manual_1769369031543_50",
+          "manual_1769369031543_52",
+          "manual_1769369031543_68",
+          "manual_1769369031543_56",
+          "manual_1769369031543_67",
+          "manual_1769369031543_65",
+          "manual_1769369031543_66",
+          "manual_1769369031543_62",
+          "manual_1769369031543_61",
+          "6EIMCMck61RBm1ybnJf5I1UzMSt2",
+          "xLok5atLNQaloTZWrvvl6fIVqKH3",
+          "u2nkNsz0BWVcRPO9QKgltU9Kp4l2",
+          "Ndad8pQDmKUwb1yQantXYT1lZC12",
+          "96B3iFCfe8W0KoVLByq6pi7lOGp1",
+          "cl7my8mTEsVUrZsS6Jig45CduRQ2",
+          "6PdlWsvhW6RmzHTBK37M1bBol1w2",
+          "836J83iaJAXIndrWWxY5GQ155vn2",
+          "7J1uyJeyn6aRGPQFhVr5CehPL9I2",
+          "OyqZh89jF8c2rpmsCaC9WfCEYM63",
+          "XTD6KuHLqoMkpAXyb762I3pGL4C2",
+          "kHHV0Jna65g3msxhfYeCqM2ZVGr2",
+          "sd682mVpSRWl2QvwTh0nOzVYQuA3",
+          "Yh2oMMyEK9ZDCW78Edp8JXgm9of1",
+          "qIbR6jI776Me8l6GkPzbMhD37e73",
+          "6m9Tbkmo91XeBN3NFcfRKlRuPLp1",
+          "qMnN3HuAoaNJk6h1dxMgr7DW0uD3",
+          "jNtoDEOGRQgQo0in6jKIE4miIxh1",
+          "7zQ0nN9sNle3WYWlEJOrkatxtL73",
+          "Ifv6hDozbpMRdtiD0HSLthxHJj93",
+          "LAmaU8uITcfc4DacfsRYqnmuWPA2",
+          "1dFYQOIv9WYDhnPXsDo4hmCdIv72",
+          "jszDFTWjcrhjuW7iCOflXhV3dIb2",
+          "58sZ0hfmJzanJL5yjbqAvWh6nJB3"
+        ],
+        "absentMembers": [
+          "manual_1769369031543_2",
+          "manual_1769369031543_4",
+          "manual_1769369031543_5",
+          "manual_1769369031543_6",
+          "manual_1769369031543_7",
+          "manual_1769369031543_8",
+          "manual_1769369031543_69",
+          "manual_1769369031543_9",
+          "manual_1769369031543_13",
+          "manual_1769369031543_11",
+          "manual_1769369031543_16",
+          "manual_1769369031543_17",
+          "manual_1769369031543_19",
+          "manual_1769369031543_20",
+          "manual_1769369031543_22",
+          "manual_1769369031543_29",
+          "manual_1769369031543_34",
+          "manual_1769369031543_35",
+          "manual_1769369031543_47",
+          "manual_1769369031543_54",
+          "manual_1769369031543_57",
+          "manual_1769369031543_58",
+          "manual_1769369031543_71",
+          "manual_1769369031543_72",
+          "manual_1769369031543_59",
+          "manual_1769369031543_75",
+          "manual_1769369031543_64",
+          "manual_1769369031543_70",
+          "dqG84YtiXhV8zl9jduUBZYlpAFx1",
+          "JbXUNKaS25bX5PG7VlFtLGn4pJ52",
+          "7PHfSEhXjKOC8Klus8c8QTK3oHJ2",
+          "Z6MSOLSK22gyi1Iaiw2MC5HAOay1",
+          "fKXBzczC3WXb20ndjKJuTQ0z5xH3",
+          "jszDFTWjcrhjuW7iCOflXhV3dIb2",
+          "V6WIhphXyVZQJX2jo9Pm0okfzFe2"
+        ]
+      },
+      "vnSr5jpe45yIwd1unESp": {
+        "title": "Співанка",
+        "date": "2026-02-19",
+        "songs": [],
+        "time": "19:45",
+        "confirmedMembers": [
+          "qN7ZnMb1JWPEzK1WCOnC4J2iWzC3",
+          "1dFYQOIv9WYDhnPXsDo4hmCdIv72",
+          "rD5fv0zIdWdldtER08FslQwdxBM2",
+          "Ifv6hDozbpMRdtiD0HSLthxHJj93",
+          "58sZ0hfmJzanJL5yjbqAvWh6nJB3",
+          "OyqZh89jF8c2rpmsCaC9WfCEYM63",
+          "836J83iaJAXIndrWWxY5GQ155vn2",
+          "Ndad8pQDmKUwb1yQantXYT1lZC12",
+          "P9iztTy5AcfDoevWZlLbeP0YLv63",
+          "Z6MSOLSK22gyi1Iaiw2MC5HAOay1"
+        ],
+        "deletedAt": "2026-02-21T14:58:56.107Z",
+        "absentMembers": [
+          "qMnN3HuAoaNJk6h1dxMgr7DW0uD3",
+          "fKXBzczC3WXb20ndjKJuTQ0z5xH3",
+          "manual_1771873766522"
+        ]
+      }
+    },
+    "LZlicAQnnXbz7Akx72kQ": {
+      "49iT00JFaLpRTPmuzKrp": {
+        "title": "Неділя",
+        "date": "2026-03-01",
+        "time": "10:00",
+        "warmupConductor": "Zakhar",
+        "absentMembers": [],
+        "confirmedMembers": [
+          "x3DbnOVPI0hUouMBx13aAoJmmUP2",
+          "manual_1771963230557"
+        ],
+        "songs": [
+          {
+            "songId": "DVnBDvesvTgkDcBcZhOe",
+            "songTitle": "Без Бога жить на свете"
+          }
+        ]
+      },
+      "8VdVJUqfCqArvPJaJ80A": {
+        "title": "Співанка",
+        "date": "2026-02-27",
+        "songs": [],
+        "time": "12:00",
+        "warmupConductor": "Zakhar",
+        "absentMembers": [],
+        "confirmedMembers": [
+          "x3DbnOVPI0hUouMBx13aAoJmmUP2"
+        ]
+      },
+      "Ay6AYMSddUTGIRhXltl1": {
+        "title": "Співанка",
+        "date": "2026-02-26",
+        "songs": [],
+        "time": "10:00",
+        "warmupConductor": "Zakhar",
+        "absentMembers": [
+          "x3DbnOVPI0hUouMBx13aAoJmmUP2"
+        ],
+        "confirmedMembers": [],
+        "deletedAt": "2026-02-25T17:11:59.277Z"
+      },
+      "O2uOHDKFPStr3HT6iWXK": {
+        "title": "Співанка",
+        "date": "2026-02-25",
+        "time": "13:00",
+        "warmupConductor": "Zakhar",
+        "absentMembers": [
+          "x3DbnOVPI0hUouMBx13aAoJmmUP2"
+        ],
+        "confirmedMembers": [],
+        "songs": [
+          {
+            "songId": "DVnBDvesvTgkDcBcZhOe",
+            "songTitle": "Без Бога жить на свете"
+          }
+        ],
+        "deletedAt": "2026-02-25T17:12:01.127Z"
+      },
+      "QkZxrDWygY4Q4ptZRErG": {
+        "title": "Співанка",
+        "date": "2026-02-24",
+        "songs": [],
+        "time": "10:00",
+        "warmupConductor": ""
+      },
+      "bDWO7250j1yvHL9w0gGj": {
+        "title": "Вечірнє",
+        "date": "2026-03-01",
+        "songs": [],
+        "time": "17:00",
+        "warmupConductor": "Zakhar",
+        "absentMembers": [],
+        "confirmedMembers": [
+          "x3DbnOVPI0hUouMBx13aAoJmmUP2"
+        ]
+      },
+      "tXa570gvNGK5UGfYGRgK": {
+        "title": "Співанка",
+        "date": "2026-02-25",
+        "songs": [],
+        "time": "10:00"
+      }
+    },
+    "LqwSFGevg30GOb2gLsen": {
+      "0MzHtvysFFXxvaEHvVsY": {
+        "title": "Служіння",
+        "date": "2026-03-01",
+        "songs": [],
+        "time": "11:30",
+        "absentMembers": [],
+        "confirmedMembers": [
+          "zqXEBgkOUwNThbu7GaFsh9QNvxC3"
+        ],
+        "deletedAt": "2026-02-25T22:48:21.627Z"
+      },
+      "W4B4Pqj3506H2Ged3rsh": {
+        "title": "Співанка",
+        "date": "2026-02-26",
+        "songs": [],
+        "time": "19:30",
+        "warmupConductor": "Oleg",
+        "absentMembers": [],
+        "confirmedMembers": [
+          "zqXEBgkOUwNThbu7GaFsh9QNvxC3",
+          "2wYWfa8nZvdqV3FBXesWplFvVLf2"
+        ]
+      },
+      "qmKUdJ3WqqyQUVaqd7gA": {
+        "title": "Співанка",
+        "date": "2026-03-05",
+        "songs": [],
+        "time": "19:30"
+      },
+      "tm85VQTwpKd1CI8nUlNg": {
+        "title": "Служіння",
+        "date": "2026-03-01",
+        "songs": [],
+        "time": "11:30"
+      }
+    },
+    "P0l5A0yej9s3gRb9MCYj": {
+      "6iB14epWhJIWtrMGAmi3": {
+        "title": "Співанка",
+        "date": "2026-01-24",
+        "songs": [],
+        "absentMembers": [],
+        "isFinalized": true
+      },
+      "Hkeygm1jh3LUI5C2rxHP": {
+        "title": "Співанка",
+        "date": "2026-01-27",
+        "time": "10:00",
+        "songs": [],
+        "isFinalized": true
+      },
+      "MomFJ89UDvDAtUE22cm4": {
+        "title": "Співанка",
+        "date": "2026-01-27",
+        "time": "10:00",
+        "songs": [],
+        "isFinalized": true
+      }
+    },
+    "Q6zP97Hs6b4wISPvZtDd": {
+      "ajLxKbBE2rjBWuBmpww7": {
+        "title": "Співанка",
+        "date": "2026-01-24",
+        "songs": [],
+        "isFinalized": true
+      }
+    },
+    "d5nlcJeHXV4QiqaNwFZ0": {
+      "6DE3SJcAskXko7wtBGjE": {
+        "title": "Співанка",
+        "date": "2026-02-02",
+        "time": "10:00",
+        "songs": [],
+        "isFinalized": true
+      },
+      "9nACg7znqWUyAvz2KGyh": {
+        "title": "Співанка",
+        "date": "2026-02-02",
+        "time": "11:00",
+        "songs": [],
+        "deletedAt": "2026-02-02T16:06:48.787Z"
+      },
+      "GVplXnFdhgCPmCSLWIpe": {
+        "title": "Співанка",
+        "date": "2026-01-27",
+        "time": "10:00",
+        "songs": [
+          {
+            "songId": "r6Cn18Kgrm1ZQpJ7VvkC",
+            "songTitle": "Мухомор",
+            "performedBy": "иом",
+            "pianist": "шмшо"
+          }
+        ],
+        "isFinalized": true
+      },
+      "St03qep4yECLz03hhv8e": {
+        "title": "Співанка",
+        "date": "2026-01-27",
+        "time": "10:00",
+        "songs": [],
+        "deletedAt": "2026-01-27T16:20:53.604Z"
+      },
+      "aAARZoxOH8k6kwkokLKc": {
+        "title": "Співанка",
+        "date": "2026-02-04",
+        "time": "10:00",
+        "songs": [],
+        "isFinalized": true
+      },
+      "fn4YcKzadWQTyIBtFLOf": {
+        "title": "Співанка",
+        "date": "2026-01-27",
+        "time": "10:00",
+        "songs": [
+          {
+            "songId": "2dGPnFZY5p9xriL6OZ4R",
+            "songTitle": "А мне ушедшедших дней не жаль..."
+          }
+        ],
+        "isFinalized": true
+      },
+      "kcYP54lg9sdp2GGfn25k": {
+        "title": "Співанка",
+        "date": "2026-02-02",
+        "time": "10:00",
+        "songs": [],
+        "confirmedMembers": [],
+        "absentMembers": [],
+        "deletedAt": "2026-02-02T16:06:28.637Z"
+      },
+      "mxvVBQYP0Qlhad9aoXgG": {
+        "title": "Співанка",
+        "date": "2026-01-27",
+        "time": "10:00",
+        "songs": [],
+        "isFinalized": true
+      },
+      "uLDWEfnGvM2MAZ43kFI0": {
+        "title": "Співанка",
+        "date": "2026-01-30",
+        "time": "00:00",
+        "songs": [],
+        "isFinalized": true
+      }
+    },
+    "ih3VZ7qnOd4hi5pFZ0Ou": {
+      "6uSxOT3q6qHgpN8gwCYz": {
+        "title": "Співанка",
+        "date": "2026-01-26",
+        "time": "10:00",
+        "songs": [],
+        "absentMembers": [],
+        "confirmedMembers": [
+          "uTusajJTVBUVe8CMkUOcUvw0YkZ2"
+        ],
+        "isFinalized": true
+      },
+      "YT7jTJo3rZv4cxWa81cU": {
+        "title": "Співанка",
+        "date": "2026-01-26",
+        "time": "10:00",
+        "songs": [],
+        "absentMembers": [],
+        "confirmedMembers": [
+          "uTusajJTVBUVe8CMkUOcUvw0YkZ2"
+        ],
+        "deletedAt": "2026-01-26T09:10:26.705Z"
+      }
+    },
+    "kRMDfFtII7yPQTcsiv8w": {
+      "KLsERvbGAmr5AEzFheIY": {
+        "title": "Співанка",
+        "date": "2026-02-02",
+        "time": "10:00",
+        "songs": [],
+        "confirmedMembers": [],
+        "absentMembers": [
+          "awDQQda1r4Oxd25E6XZyEucRtUw1",
+          "manual_1769187656102",
+          "TYEI1BjEQkbv8ZxJHHlZUKQx5w32"
+        ],
+        "isFinalized": true
+      },
+      "sbCU0yIw7SzAESzzTC8s": {
+        "title": "Співанка",
+        "date": "2026-02-02",
+        "time": "10:00",
+        "songs": [],
+        "isFinalized": true
+      },
+      "sfZNbVLnIX25uqYDVOZK": {
+        "title": "Співанка",
+        "date": "2026-02-04",
+        "time": "10:00",
+        "songs": [],
+        "absentMembers": [
+          "tl0nWkBCv6NpUiL4Tdbsf5eWggg2",
+          "manual_1769187647247",
+          "manual_1769187656102"
+        ],
+        "confirmedMembers": [],
+        "isFinalized": true
+      },
+      "u62gSwtfI2fUz35ceMcF": {
+        "title": "Співанка",
+        "date": "2026-02-03",
+        "time": "10:00",
+        "songs": [],
+        "absentMembers": [
+          "tl0nWkBCv6NpUiL4Tdbsf5eWggg2"
+        ],
+        "confirmedMembers": [],
+        "isFinalized": true
+      }
+    },
+    "nalnGqegjYs7FYzbt68S": {
+      "0l7VnpCt79aB1PdBilxF": {
+        "title": "Співанка",
+        "date": "2026-02-24",
+        "songs": [],
+        "time": "10:00",
+        "absentMembers": [],
+        "confirmedMembers": [],
+        "finalizedBy": "wSQhy1X9bkgJStnA1trrTtdPiAk2",
+        "finalizedAt": "2026-02-24T23:38:01.845Z",
+        "isFinalized": true
+      },
+      "eN9Mz8BWPyHJHmZP7P3c": {
+        "title": "Співанка",
+        "date": "2026-02-27",
+        "songs": [],
+        "time": "10:00"
+      },
+      "gn3e7Q3spBhipE0aeDPR": {
+        "title": "Співанка",
+        "date": "2026-02-24",
+        "songs": [],
+        "time": "10:00"
+      },
+      "vLFre83195sTvSMQgZDv": {
+        "title": "Співанка",
+        "date": "2026-02-24",
+        "songs": [],
+        "time": "10:00",
+        "absentMembers": [],
+        "confirmedMembers": [
+          "wSQhy1X9bkgJStnA1trrTtdPiAk2"
+        ],
+        "finalizedBy": "wSQhy1X9bkgJStnA1trrTtdPiAk2",
+        "finalizedAt": "2026-02-24T23:37:55.576Z",
+        "isFinalized": true
+      }
+    },
+    "oqOD8XNkPPCBnpkpaovg": {
+      "h5TP1xqm4s6pBB59iiXj": {
+        "title": "Співанка",
+        "date": "2026-02-26",
+        "songs": [],
+        "time": "19:00"
+      }
+    },
+    "vOuHdELYa0jC60CV4Tx4": {
+      "0ZlAbw2wYxAzB0jw62wR": {
+        "title": "Співанка",
+        "date": "2026-01-28",
+        "time": "18:00",
+        "songs": [
+          {
+            "songId": "wZPmMrntuNoSp4Khz1km",
+            "songTitle": "Осанна, честь и слава"
+          }
+        ],
+        "absentMembers": [
+          "M8nrxc0ijOSvxb3W7kpgC01JS0k1",
+          "kNLHAn1WgSMcEtYb5rpe5Y5Bki83"
+        ],
+        "confirmedMembers": [
+          "h32A3yWS9UX69yUeXmJLCVbAO7H2",
+          "IYoSRTV6CygKYlhpEHrv1adGt1y1",
+          "uTusajJTVBUVe8CMkUOcUvw0YkZ2",
+          "M8nrxc0ijOSvxb3W7kpgC01JS0k1"
+        ],
+        "isFinalized": true
+      },
+      "DkeYHK0S6jZZZ7xj44tX": {
+        "title": "Зібрання",
+        "date": "2026-02-01",
+        "time": "11:00",
+        "absentMembers": [],
+        "confirmedMembers": [
+          "M8nrxc0ijOSvxb3W7kpgC01JS0k1",
+          "kNLHAn1WgSMcEtYb5rpe5Y5Bki83",
+          "h32A3yWS9UX69yUeXmJLCVbAO7H2",
+          "uTusajJTVBUVe8CMkUOcUvw0YkZ2"
+        ],
+        "songs": [
+          {
+            "songId": "YQm7fqtkFkYphciAZlvy",
+            "songTitle": "Дерзновение, упование"
+          },
+          {
+            "songId": "K0qHhz2tZXx8CwxfrpLJ",
+            "songTitle": "Христос - надежда тех сердец"
+          }
+        ],
+        "isFinalized": true
+      },
+      "fYnHJvUtg3p92zL97ajd": {
+        "title": "Співанка",
+        "date": "2026-02-13",
+        "time": "10:00",
+        "songs": [
+          {
+            "songId": "8jzqsY1MpvjDsteePFgy",
+            "songTitle": "Господня земля"
+          },
+          {
+            "songId": "6qoxPU6SkILYMstwM8og",
+            "songTitle": "Дерзновение упование"
+          },
+          {
+            "songId": "9Q38jLRr6yfjifRrFmKC",
+            "songTitle": "Дерзновение, упование"
+          }
+        ],
+        "isFinalized": true
+      },
+      "zWMhImSdiApCQmCmOA11": {
+        "title": "Співанка",
+        "date": "2026-02-21",
+        "time": "10:00",
+        "songs": [
+          {
+            "songId": "2xNY0N41v9bUbXaiTex4",
+            "songTitle": "А весна пришла"
+          },
+          {
+            "songId": "8jzqsY1MpvjDsteePFgy",
+            "songTitle": "Господня земля"
+          },
+          {
+            "songId": "6qoxPU6SkILYMstwM8og",
+            "songTitle": "Дерзновение упование"
+          }
+        ],
+        "warmupConductor": "Петро Загородній",
+        "isFinalized": true
+      }
+    }
+  }
+}

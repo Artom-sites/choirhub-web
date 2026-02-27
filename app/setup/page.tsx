@@ -63,9 +63,9 @@ function SetupPageContent() {
     useEffect(() => {
         if (!authLoading && userData?.choirId && !showClaimModal) {
             if (urlCode) {
-                router.push(`/?joinCode=${urlCode}`);
+                router.push(`/app?joinCode=${urlCode}`);
             } else {
-                router.push("/");
+                router.push("/app");
             }
         }
     }, [authLoading, userData, router, urlCode, showClaimModal]);
@@ -216,7 +216,7 @@ function SetupPageContent() {
             // Refresh profile so userData.choirId is set before redirect
             await refreshProfile();
 
-            router.push("/");
+            router.push("/app");
         } catch (err: any) {
             console.error(err);
             alert("Помилка створення: " + (err.message || JSON.stringify(err)));
@@ -254,7 +254,7 @@ function SetupPageContent() {
             } else {
                 // Now we verify profile and redirect
                 await refreshProfile();
-                router.push("/");
+                router.push("/app");
             }
         } catch (err: any) {
             console.error(err);
@@ -269,7 +269,7 @@ function SetupPageContent() {
                     setClaimChoirId(err.details.choirId);
                     setShowClaimModal(true);
                 } else {
-                    router.push("/");
+                    router.push("/app");
                 }
             } else {
                 alert("Помилка приєднання: " + msg);
@@ -286,7 +286,7 @@ function SetupPageContent() {
         try {
             await claimMember(claimChoirId, targetMemberId);
             await refreshProfile();
-            router.push("/");
+            router.push("/app");
         } catch (e: any) {
             console.error("Claim error:", e);
             alert(e.message || "Помилка прив'язки");
@@ -322,7 +322,7 @@ function SetupPageContent() {
             }
 
             await refreshProfile();
-            router.push("/");
+            router.push("/app");
         } catch (e: any) {
             console.error("Save Name Error:", e);
             alert("Помилка збереження імені");
@@ -333,23 +333,23 @@ function SetupPageContent() {
 
     if (!user && view !== 'email_auth' && view !== 'reset_password') {
         return (
-            <div className="min-h-screen bg-[#09090b] flex flex-col items-center justify-center p-6 text-center">
-                <div className="w-24 h-24 bg-[#18181b] rounded-3xl flex items-center justify-center mb-8 border border-white/10 shadow-2xl">
-                    <Music2 className="w-10 h-10 text-white" />
+            <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
+                <div className="w-24 h-24 bg-surface rounded-3xl flex items-center justify-center mb-8 border border-border shadow-2xl">
+                    <Music2 className="w-10 h-10 text-primary" />
                 </div>
-                <h1 className="text-4xl font-bold text-white mb-2">MyChoir</h1>
-                <p className="text-[#a1a1aa] mb-12">Ваш хоровий асистент</p>
+                <h1 className="text-4xl font-bold text-text-primary mb-2">MyChoir</h1>
+                <p className="text-text-secondary mb-12">Ваш хоровий асистент</p>
 
                 <div className="w-full max-w-sm space-y-3">
                     <button
                         onClick={handleGoogleLogin}
                         disabled={formLoading}
-                        className="w-full py-4 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-3 hover:bg-gray-200 transition-colors disabled:opacity-50"
+                        className="w-full py-4 bg-surface-highlight text-text-primary border border-border font-bold rounded-xl flex items-center justify-center gap-3 hover:bg-surface transition-colors disabled:opacity-50"
                     >
                         {formLoading && view === 'welcome' ? (
-                            <Loader2 className="w-5 h-5 animate-spin text-black" />
+                            <Loader2 className="w-5 h-5 animate-spin text-text-primary" />
                         ) : (
-                            <svg className="w-5 h-5" viewBox="0 0 24 24">
+                            <svg className="w-5 h-5 text-text-primary" viewBox="0 0 24 24">
                                 <path fill="currentColor" d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z" />
                             </svg>
                         )}
@@ -374,14 +374,14 @@ function SetupPageContent() {
                     <button
                         onClick={() => { setView('email_auth'); setIsRegistering(false); setEmail(""); setPassword(""); setAuthName(""); setError(""); }}
                         disabled={formLoading}
-                        className="w-full py-4 bg-[#18181b] text-white font-bold rounded-xl flex items-center justify-center gap-3 hover:bg-[#27272a] transition-colors border border-white/10 disabled:opacity-50"
+                        className="w-full py-4 bg-primary text-background font-bold rounded-xl flex items-center justify-center gap-3 hover:opacity-90 transition-colors disabled:opacity-50"
                     >
-                        <Mail className="w-5 h-5" />
+                        <Mail className="w-5 h-5 text-background" />
                         Увійти через пошту
                     </button>
 
                     {urlCode && (
-                        <p className="text-xs text-green-400 mt-2">
+                        <p className="text-xs text-green-500 mt-2">
                             Посилання на хор знайдено! Увійдіть, щоб продовжити.
                         </p>
                     )}
@@ -389,8 +389,8 @@ function SetupPageContent() {
                 </div>
 
                 <div className="mt-8 flex gap-6 text-xs text-text-secondary">
-                    <Link href="/terms" className="hover:text-white transition-colors">Умови використання</Link>
-                    <Link href="/privacy" className="hover:text-white transition-colors">Політика конфіденційності</Link>
+                    <Link href="/terms" className="hover:text-text-primary transition-colors">Умови використання</Link>
+                    <Link href="/privacy" className="hover:text-text-primary transition-colors">Політика конфіденційності</Link>
                 </div>
             </div>
         );
@@ -398,13 +398,13 @@ function SetupPageContent() {
 
     if (view === 'email_auth') {
         return (
-            <div className="min-h-screen bg-[#09090b] flex items-center justify-center p-6">
-                <div className="w-full max-w-md bg-surface border border-white/5 rounded-3xl p-8">
+            <div className="min-h-screen bg-background flex items-center justify-center p-6">
+                <div className="w-full max-w-md bg-surface border border-border rounded-3xl p-8 shadow-xl">
                     <button onClick={() => setView('welcome')} className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors mb-6 text-sm font-medium">
                         <ArrowLeft className="w-5 h-5" />
                         Назад
                     </button>
-                    <h2 className="text-2xl font-bold text-white mb-2">{isRegistering ? "Реєстрація" : "Вхід"}</h2>
+                    <h2 className="text-2xl font-bold text-text-primary mb-2">{isRegistering ? "Реєстрація" : "Вхід"}</h2>
                     <p className="text-text-secondary text-sm mb-6">Введіть дані для входу</p>
 
                     <div className="space-y-4">
@@ -412,7 +412,7 @@ function SetupPageContent() {
                             <input
                                 value={authName}
                                 onChange={(e) => setAuthName(e.target.value)}
-                                className="w-full px-4 py-3 bg-black/20 rounded-xl border border-white/10 text-white focus:outline-none focus:border-white/30"
+                                className="w-full px-4 py-3 bg-surface border border-border rounded-xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all font-medium"
                                 placeholder="Ваше ім'я"
                             />
                         )}
@@ -420,7 +420,7 @@ function SetupPageContent() {
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-4 py-3 bg-black/20 rounded-xl border border-white/10 text-white focus:outline-none focus:border-white/30"
+                            className="w-full px-4 py-3 bg-surface border border-border rounded-xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all font-medium"
                             placeholder="Email"
                         />
                         <div className="relative">
@@ -428,13 +428,13 @@ function SetupPageContent() {
                                 type={showPassword ? "text" : "password"}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-4 py-3 bg-black/20 rounded-xl border border-white/10 text-white focus:outline-none focus:border-white/30 pr-12"
+                                className="w-full px-4 py-3 bg-surface border border-border rounded-xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all font-medium pr-12"
                                 placeholder="Пароль"
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-text-secondary hover:text-white transition-colors"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-text-secondary hover:text-text-primary transition-colors"
                             >
                                 {showPassword ? (
                                     <EyeOff className="w-5 h-5" />
@@ -460,15 +460,15 @@ function SetupPageContent() {
                         <button
                             onClick={handleEmailAuth}
                             disabled={formLoading}
-                            className="w-full py-4 bg-text-primary text-background rounded-2xl font-bold mt-4 hover:opacity-90 transition-all flex justify-center shadow-lg"
+                            className="w-full py-4 bg-primary hover:opacity-90 text-background font-bold rounded-xl mt-4 flex items-center justify-center shadow-lg transition-all disabled:opacity-50"
                         >
-                            {formLoading ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : (isRegistering ? "Зареєструватися" : "Увійти")}
+                            {formLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isRegistering ? "Зареєструватися" : "Увійти")}
                         </button>
 
                         <div className="flex flex-col items-center gap-4 mt-8">
                             <button
                                 onClick={() => setIsRegistering(!isRegistering)}
-                                className="text-sm font-medium text-white hover:text-gray-300 transition-colors"
+                                className="text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
                             >
                                 {isRegistering ? "Увійти" : "Реєстрація"}
                             </button>
@@ -483,25 +483,25 @@ function SetupPageContent() {
 
     if (view === 'reset_password') {
         return (
-            <div className="min-h-screen bg-[#09090b] flex items-center justify-center p-6">
-                <div className="w-full max-w-md bg-surface border border-white/5 rounded-3xl p-8">
+            <div className="min-h-screen bg-background flex items-center justify-center p-6">
+                <div className="w-full max-w-md bg-surface border border-border rounded-3xl p-8 shadow-xl">
                     <button onClick={() => setView('email_auth')} className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors mb-6 text-sm font-medium">
                         <ArrowLeft className="w-5 h-5" />
                         Назад
                     </button>
-                    <h2 className="text-2xl font-bold text-white mb-2">Відновлення паролю</h2>
+                    <h2 className="text-2xl font-bold text-text-primary mb-2">Відновлення паролю</h2>
                     <p className="text-text-secondary text-sm mb-6">Введіть email для отримання посилання</p>
 
                     {resetSent ? (
                         <div className="text-center space-y-4">
-                            <div className="w-16 h-16 bg-green-500/20 rounded-full mx-auto flex items-center justify-center">
-                                <Check className="w-8 h-8 text-green-400" />
+                            <div className="w-16 h-16 bg-green-500/10 rounded-full mx-auto flex items-center justify-center">
+                                <Check className="w-8 h-8 text-green-500" />
                             </div>
-                            <p className="text-white font-medium">Лист надіслано!</p>
+                            <p className="text-text-primary font-bold">Лист надіслано!</p>
                             <p className="text-text-secondary text-sm">Перевірте вашу пошту {email} та перейдіть за посиланням для скидання паролю.</p>
                             <button
                                 onClick={() => { setView('email_auth'); setResetSent(false); }}
-                                className="w-full py-4 bg-white text-black rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                                className="w-full py-4 bg-primary text-background rounded-xl font-bold hover:opacity-90 transition-colors"
                             >
                                 Повернутися до входу
                             </button>
@@ -512,17 +512,17 @@ function SetupPageContent() {
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full px-4 py-3 bg-black/20 rounded-xl border border-white/10 text-white focus:outline-none focus:border-white/30"
+                                className="w-full px-4 py-3 bg-surface border border-border rounded-xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all font-medium"
                                 placeholder="Email"
                             />
-                            {error && <p className="text-red-400 text-sm bg-red-400/10 p-3 rounded-lg">{error}</p>}
+                            {error && <p className="text-red-500 text-sm bg-red-500/10 p-3 rounded-lg">{error}</p>}
 
                             <button
                                 onClick={handlePasswordReset}
                                 disabled={formLoading}
-                                className="w-full py-4 bg-white text-black rounded-xl font-bold hover:bg-gray-200 transition-colors flex justify-center"
+                                className="w-full py-4 bg-primary hover:opacity-90 text-background rounded-xl font-bold flex justify-center transition-colors disabled:opacity-50"
                             >
-                                {formLoading ? <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" /> : "Надіслати лист"}
+                                {formLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Надіслати лист"}
                             </button>
                         </div>
                     )}
