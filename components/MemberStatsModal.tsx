@@ -56,7 +56,8 @@ export default function MemberStatsModal({ member, choirId, onClose, globalStats
     }, [absences, period]);
 
     const formatDate = (dateStr: string) => {
-        const date = new Date(dateStr);
+        const [y, m, d] = dateStr.split('-').map(Number);
+        const date = new Date(y, m - 1, d);
         return date.toLocaleDateString('uk-UA', {
             day: 'numeric',
             month: 'short',

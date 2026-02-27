@@ -108,7 +108,10 @@ export function getAttendanceStats(
 
     // Filter by period
     const filtered = periodStart
-        ? entries.filter(([, r]) => new Date(r.date) >= periodStart)
+        ? entries.filter(([, r]) => {
+            const [y, m, d] = r.date.split('-').map(Number);
+            return new Date(y, m - 1, d) >= periodStart;
+        })
         : entries;
 
     let presentCount = 0;
@@ -129,7 +132,11 @@ export function getAttendanceStats(
     }
 
     // Sort absences by date descending
-    absences.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    absences.sort((a, b) => {
+        const [ya, ma, da] = a.date.split('-').map(Number);
+        const [yb, mb, db] = b.date.split('-').map(Number);
+        return new Date(yb, mb - 1, db).getTime() - new Date(ya, ma - 1, da).getTime();
+    });
 
     const servicesWithRecord = presentCount + absentCount;
     const attendanceRate = servicesWithRecord > 0

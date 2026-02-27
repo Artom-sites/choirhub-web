@@ -110,10 +110,13 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
     const attendanceData = useMemo(() => {
         if (!stats?.attendanceTrend) return [];
         // Only show the last 5 services on the main screen to avoid scrolling and clipping
-        return stats.attendanceTrend.slice(-5).map(entry => ({
-            ...entry,
-            date: new Date(entry.date).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' }),
-        }));
+        return stats.attendanceTrend.slice(-5).map(entry => {
+            const [y, m, d] = entry.date.split('-').map(Number);
+            return {
+                ...entry,
+                date: new Date(y, m - 1, d).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' }),
+            };
+        });
     }, [stats?.attendanceTrend]);
 
     const [activeIndex, setActiveIndex] = useState<number | null>(null);

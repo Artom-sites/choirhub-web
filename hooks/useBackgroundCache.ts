@@ -46,7 +46,8 @@ export function useBackgroundCache() {
                 const now = new Date();
                 const upcomingServices = candidateServices
                     .filter(s => {
-                        const serviceDate = new Date(s.date);
+                        const [y, m, d] = s.date.split('-').map(Number);
+                        const serviceDate = new Date(y, m - 1, d);
                         if (s.time) {
                             const [hours, minutes] = s.time.split(':').map(Number);
                             serviceDate.setHours(hours, minutes, 0, 0);
@@ -56,7 +57,11 @@ export function useBackgroundCache() {
                         return serviceDate > now;
                     })
                     // Already sorted by DB, but good to be safe if client logic differs
-                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                    .sort((a, b) => {
+                        const [ya, ma, da] = a.date.split('-').map(Number);
+                        const [yb, mb, db] = b.date.split('-').map(Number);
+                        return new Date(ya, ma - 1, da).getTime() - new Date(yb, mb - 1, db).getTime();
+                    })
                     .slice(0, 2); // Cache up to 2 nearest services
 
                 if (upcomingServices.length === 0) {

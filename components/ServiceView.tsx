@@ -567,7 +567,10 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                         <Calendar className="w-5 h-5 text-blue-400" />
                     </div>
                     <p className="text-text-primary font-medium text-[15px]">
-                        {new Date(currentService.date).toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' })}
+                        {(() => {
+                            const [y, m, d] = currentService.date.split('-').map(Number);
+                            return new Date(y, m - 1, d).toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' });
+                        })()}
                         {currentService.time && <span className="text-blue-400 font-bold ml-2">о {currentService.time}</span>}
                     </p>
                 </div>

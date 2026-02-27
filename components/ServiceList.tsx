@@ -152,7 +152,8 @@ export default function ServiceList({
 
 
     const formatDate = (dateStr: string) => {
-        const date = new Date(dateStr);
+        const [y, m, d] = dateStr.split('-').map(Number);
+        const date = new Date(y, m - 1, d);
         return new Intl.DateTimeFormat('uk-UA', {
             weekday: 'long',
             day: 'numeric',
@@ -211,8 +212,14 @@ export default function ServiceList({
                 // Actually the `services` prop from getServices (Smart Sort) returns upcoming then past.
                 // We need to re-filter to separate them for the view toggle.
 
-                const upcomingServices = services.filter(s => new Date(s.date) >= today);
-                const pastServices = services.filter(s => new Date(s.date) < today);
+                const upcomingServices = services.filter(s => {
+                    const [y, m, d] = s.date.split('-').map(Number);
+                    return new Date(y, m - 1, d) >= today;
+                });
+                const pastServices = services.filter(s => {
+                    const [y, m, d] = s.date.split('-').map(Number);
+                    return new Date(y, m - 1, d) < today;
+                });
 
                 const displayServices = showArchive ? pastServices : upcomingServices;
 
@@ -286,8 +293,10 @@ export default function ServiceList({
                                                 </div>
 
                                                 {/* Finalization badge - only in archive view */}
-                                                {showArchive && effectiveCanEdit && (
-                                                    service.isFinalized ? (
+                                                {showArchive && effectiveCanEdit && (() => {
+                                                    const hasAttendanceData = service.isFinalized ||
+                                                        (service.absentMembers && service.absentMembers.length > 0);
+                                                    return hasAttendanceData ? (
                                                         <div className="flex items-center gap-1.5 mt-2 text-xs text-green-400">
                                                             <CheckCircle2 className="w-3.5 h-3.5" />
                                                             <span>Присутніх збережено</span>
@@ -297,8 +306,8 @@ export default function ServiceList({
                                                             <Clock className="w-3.5 h-3.5" />
                                                             <span>Відкрийте, щоб зберегти присутніх</span>
                                                         </div>
-                                                    )
-                                                )}
+                                                    );
+                                                })()}
 
                                                 {isFuture && (
                                                     <div className="flex gap-2 mt-4 pt-3 border-t border-border" onClick={e => e.stopPropagation()}>

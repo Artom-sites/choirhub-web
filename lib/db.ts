@@ -361,11 +361,23 @@ export async function getServices(choirId: string): Promise<Service[]> {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const upcoming = services.filter(s => new Date(s.date) >= today)
-            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const upcoming = services.filter(s => {
+            const [y, m, d] = s.date.split('-').map(Number);
+            return new Date(y, m - 1, d) >= today;
+        }).sort((a, b) => {
+            const [ya, ma, da] = a.date.split('-').map(Number);
+            const [yb, mb, db] = b.date.split('-').map(Number);
+            return new Date(ya, ma - 1, da).getTime() - new Date(yb, mb - 1, db).getTime();
+        });
 
-        const past = services.filter(s => new Date(s.date) < today)
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        const past = services.filter(s => {
+            const [y, m, d] = s.date.split('-').map(Number);
+            return new Date(y, m - 1, d) < today;
+        }).sort((a, b) => {
+            const [ya, ma, da] = a.date.split('-').map(Number);
+            const [yb, mb, db] = b.date.split('-').map(Number);
+            return new Date(yb, mb - 1, db).getTime() - new Date(ya, ma - 1, da).getTime();
+        });
 
         const sorted = [...upcoming, ...past];
 

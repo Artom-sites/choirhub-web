@@ -27,7 +27,11 @@ export default function SendNotificationModal({ isOpen, onClose }: SendNotificat
             setLoadingServices(true);
             getServices(userData.choirId).then((allServices) => {
                 const activeServices = allServices.filter(s => !s.isFinalized);
-                activeServices.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                activeServices.sort((a, b) => {
+                    const [ya, ma, da] = a.date.split('-').map(Number);
+                    const [yb, mb, db] = b.date.split('-').map(Number);
+                    return new Date(ya, ma - 1, da).getTime() - new Date(yb, mb - 1, db).getTime();
+                });
                 setServices(activeServices);
                 setLoadingServices(false);
             }).catch(e => {
@@ -148,11 +152,14 @@ export default function SendNotificationModal({ isOpen, onClose }: SendNotificat
                                 className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl text-text-primary focus:outline-none focus:border-accent/30 appearance-none"
                             >
                                 <option value="">Без прив'язки</option>
-                                {services.map(s => (
-                                    <option key={s.id} value={s.id}>
-                                        {new Date(s.date).toLocaleDateString()} - {s.title}
-                                    </option>
-                                ))}
+                                {services.map(s => {
+                                    const [y, m, d] = s.date.split('-').map(Number);
+                                    return (
+                                        <option key={s.id} value={s.id}>
+                                            {new Date(y, m - 1, d).toLocaleDateString()} - {s.title}
+                                        </option>
+                                    );
+                                })}
                             </select>
                         )}
                     </div>

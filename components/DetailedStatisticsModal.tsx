@@ -82,11 +82,17 @@ export default function DetailedStatisticsModal({
         else cutoff = new Date(0); // all
 
         return attendanceTrend
-            .filter(entry => new Date(entry.date) >= cutoff)
-            .map(entry => ({
-                ...entry,
-                date: new Date(entry.date).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' }),
-            }));
+            .filter(entry => {
+                const [y, m, d] = entry.date.split('-').map(Number);
+                return new Date(y, m - 1, d) >= cutoff;
+            })
+            .map(entry => {
+                const [y, m, d] = entry.date.split('-').map(Number);
+                return {
+                    ...entry,
+                    date: new Date(y, m - 1, d).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' }),
+                };
+            });
     }, [attendanceTrend, timeFilter]);
 
     const voiceGroupStats = useMemo(() => {
@@ -144,8 +150,8 @@ export default function DetailedStatisticsModal({
         if (!attendanceTrend || attendanceTrend.length === 0) return [];
         const months: Record<string, { sum: number; count: number }> = {};
         attendanceTrend.forEach(entry => {
-            const d = new Date(entry.date);
-            const key = `${d.getFullYear()} -${String(d.getMonth() + 1).padStart(2, '0')} `;
+            const [y, m] = entry.date.split('-').map(Number);
+            const key = `${y}-${String(m).padStart(2, '0')}`;
             if (!months[key]) months[key] = { sum: 0, count: 0 };
             months[key].sum += entry.percentage;
             months[key].count++;
@@ -323,7 +329,12 @@ export default function DetailedStatisticsModal({
                                         <span className="text-xs text-text-secondary font-medium">Найкраща</span>
                                     </div>
                                     <p className="text-2xl font-bold text-green-400">{records.best.percentage}%</p>
-                                    <p className="text-[11px] text-text-secondary mt-0.5">{new Date(records.best.date).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
+                                    <p className="text-[11px] text-text-secondary mt-0.5">
+                                        {(() => {
+                                            const [y, m, d] = records.best.date.split('-').map(Number);
+                                            return new Date(y, m - 1, d).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                                        })()}
+                                    </p>
                                 </div>
                                 <div className="bg-surface border border-border rounded-2xl p-4">
                                     <div className="flex items-center gap-2 mb-2">
@@ -333,7 +344,12 @@ export default function DetailedStatisticsModal({
                                         <span className="text-xs text-text-secondary font-medium">Найгірша</span>
                                     </div>
                                     <p className="text-2xl font-bold text-red-400">{records.worst.percentage}%</p>
-                                    <p className="text-[11px] text-text-secondary mt-0.5">{new Date(records.worst.date).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
+                                    <p className="text-[11px] text-text-secondary mt-0.5">
+                                        {(() => {
+                                            const [y, m, d] = records.worst.date.split('-').map(Number);
+                                            return new Date(y, m - 1, d).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                                        })()}
+                                    </p>
                                 </div>
                             </div>
                         )}
@@ -418,7 +434,12 @@ export default function DetailedStatisticsModal({
                             {sortedServices.map((service, idx) => (
                                 <div key={idx} className="bg-surface border border-border rounded-2xl p-4 flex items-center justify-between">
                                     <div>
-                                        <div className="text-text-primary font-bold">{new Date(service.date).toLocaleDateString('uk-UA', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
+                                        <div className="text-text-primary font-bold">
+                                            {(() => {
+                                                const [y, m, d] = service.date.split('-').map(Number);
+                                                return new Date(y, m - 1, d).toLocaleDateString('uk-UA', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
+                                            })()}
+                                        </div>
                                         <div className="text-sm text-text-secondary mt-1">Присутні: {service.present} з {service.total}</div>
                                     </div>
                                     <div className="text-right">
