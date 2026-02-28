@@ -811,6 +811,13 @@ function HomePageContent() {
       console.log("Joined result:", result);
       await refreshProfile();
 
+      // If already a member, just close the manager — don't create another stub
+      if (result?.message === "Already a member") {
+        setManagerError("Ви вже є учасником цього хору");
+        setManagerLoading(false);
+        return;
+      }
+
       const unlinked = result?.unlinkedMembers || [];
       console.log("Unlinked members found:", unlinked.length, unlinked);
 
