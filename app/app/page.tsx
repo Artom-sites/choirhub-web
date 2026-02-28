@@ -2268,13 +2268,13 @@ function HomePageContent() {
                     if (letter) scrollToLetter(letter);
                   };
 
-                  // Unlinked app users: registered users who are NOT linked to any roster member
+                  // Unlinked app users: registered users who are NOT in the roster at all
                   const unlinkedUsers = registeredUsers.filter(appUser => {
-                    // If this user's UID is in linkedUids or is a roster member's ID, they're linked
+                    // If this user's UID is in linkedUids, they're linked
                     if (linkedUids.has(appUser.id)) return false;
-                    // If the user IS a visible roster member (has voice, not duplicate), they're established
-                    const isEstablished = dedupedMembers.some(m => m.id === appUser.id && !!m.voice && !(m as any).isDuplicate);
-                    if (isEstablished) return false;
+                    // If the user already has a member entry in the roster, they're established
+                    const hasRosterEntry = dedupedMembers.some(m => m.id === appUser.id && !(m as any).isDuplicate);
+                    if (hasRosterEntry) return false;
                     return true;
                   });
 
