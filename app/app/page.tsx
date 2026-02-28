@@ -819,7 +819,9 @@ function HomePageContent() {
         const matchedMember = unlinked.find((m: any) => {
           if (!m.name) return false;
           const mName = normalize(m.name);
-          return mName === enteredNameNorm || mName === enteredNameReversed;
+          const distNormal = distance(mName, enteredNameNorm);
+          const distReversed = distance(mName, enteredNameReversed);
+          return distNormal <= 2 || distReversed <= 2;
         });
 
         if (matchedMember) {
@@ -830,11 +832,15 @@ function HomePageContent() {
           setShowChoirManager(false);
           setShowClaimModal(true);
         } else {
-          console.log("No name match. New member path -> closing manager");
+          console.log("No name match. Auto-creating self-stub -> closing manager");
+          await updateMember(result.choirId, user.uid, { name: fullName });
           setShowChoirManager(false);
         }
+      } else if (result?.choirId) {
+        console.log("No unlinked members found. Auto-creating self-stub -> closing manager");
+        await updateMember(result.choirId, user.uid, { name: fullName });
+        setShowChoirManager(false);
       } else {
-        console.log("No unlinked members or no choirId, closing manager");
         setShowChoirManager(false);
       }
     } catch (e: any) {
