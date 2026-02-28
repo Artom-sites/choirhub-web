@@ -57,10 +57,10 @@ export default function LandingPage() {
                 <div className="max-w-5xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-text-secondary">
                     <p>© 2026 MyChoir. Всі права захищені.</p>
                     <div className="flex gap-6">
-                        <button onClick={() => router.push("/privacy")} className="hover:text-text-primary transition-colors">
+                        <button onClick={() => router.push("/privacy")} className="hover:text-text-primary transition-colors whitespace-nowrap">
                             Політика конфіденційності
                         </button>
-                        <button onClick={() => router.push("/terms")} className="hover:text-text-primary transition-colors">
+                        <button onClick={() => router.push("/terms")} className="hover:text-text-primary transition-colors whitespace-nowrap">
                             Умови використання
                         </button>
                     </div>
