@@ -85,7 +85,7 @@ function AuthActionContent() {
                     <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
                     <h2 className="text-xl font-bold text-white mb-2">Невірне посилання</h2>
                     <p className="text-text-secondary mb-6">Параметри відновлення відсутні.</p>
-                    <Link href="/setup" className="block w-full py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors">
+                    <Link href="/" className="block w-full py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors">
                         На головну
                     </Link>
                 </div>
@@ -100,7 +100,7 @@ function AuthActionContent() {
                     <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
                     <h2 className="text-xl font-bold text-white mb-2">Помилка</h2>
                     <p className="text-text-secondary mb-6">{error}</p>
-                    <Link href="/setup" className="block w-full py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors">
+                    <Link href="/" className="block w-full py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors">
                         Спробувати знову
                     </Link>
                 </div>
@@ -117,7 +117,7 @@ function AuthActionContent() {
                     </div>
                     <h2 className="text-2xl font-bold text-white mb-2">Пароль змінено!</h2>
                     <p className="text-text-secondary mb-8">Тепер ви можете увійти з новим паролем.</p>
-                    <Link href="/setup" className="block w-full py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors">
+                    <Link href="/" className="block w-full py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors">
                         Увійти
                     </Link>
                 </div>

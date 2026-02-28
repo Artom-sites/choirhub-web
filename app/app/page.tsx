@@ -1709,10 +1709,10 @@ function HomePageContent() {
                           <div className="flex items-center gap-3">
                             <code className="text-base font-mono font-medium text-text-primary">{choir.memberCode}</code>
                             <button
-                              onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.memberCode}`)}
+                              onClick={() => copyCode(`https://${window.location.host}/?code=${choir.memberCode}`)}
                               className="text-text-secondary hover:text-accent transition-colors"
                             >
-                              {copiedCode === `https://${window.location.host}/setup?code=${choir.memberCode}`
+                              {copiedCode === `https://${window.location.host}/?code=${choir.memberCode}`
                                 ? <Check className="w-5 h-5 text-success" />
                                 : <Copy className="w-5 h-5" />}
                             </button>
@@ -1725,10 +1725,10 @@ function HomePageContent() {
                           <div className="flex items-center gap-3">
                             <code className="text-base font-mono font-medium text-text-primary">{choir.regentCode}</code>
                             <button
-                              onClick={() => copyCode(`https://${window.location.host}/setup?code=${choir.regentCode}`)}
+                              onClick={() => copyCode(`https://${window.location.host}/?code=${choir.regentCode}`)}
                               className="text-text-secondary hover:text-accent transition-colors"
                             >
-                              {copiedCode === `https://${window.location.host}/setup?code=${choir.regentCode}`
+                              {copiedCode === `https://${window.location.host}/?code=${choir.regentCode}`
                                 ? <Check className="w-5 h-5 text-success" />
                                 : <Copy className="w-5 h-5" />}
                             </button>
@@ -1742,10 +1742,10 @@ function HomePageContent() {
                             <div className="flex items-center gap-3">
                               <code className="text-base font-mono font-medium text-text-primary">{ac.code}</code>
                               <button
-                                onClick={() => copyCode(`https://${window.location.host}/setup?code=${ac.code}`)}
+                                onClick={() => copyCode(`https://${window.location.host}/?code=${ac.code}`)}
                                 className="text-text-secondary hover:text-accent transition-colors"
                               >
-                                {copiedCode === `https://${window.location.host}/setup?code=${ac.code}`
+                                {copiedCode === `https://${window.location.host}/?code=${ac.code}`
                                   ? <Check className="w-5 h-5 text-success" />
                                   : <Copy className="w-5 h-5" />}
                               </button>
