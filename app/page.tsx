@@ -45,7 +45,7 @@ export default function LandingPage() {
 
             {/* Hero Section */}
             <section className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-3xl mx-auto w-full">
-                <div className="w-24 h-24 rounded-[2rem] flex items-center justify-center mb-8 mx-auto shadow-2xl shadow-primary/20 overflow-hidden">
+                <div className="w-24 h-24 flex items-center justify-center mb-8 mx-auto shadow-2xl shadow-primary/20 rounded-3xl overflow-hidden">
                     <img src="/apple-touch-icon.png" alt="MyChoir Logo" className="w-full h-full object-cover" />
                 </div>
                 <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight text-balance">
