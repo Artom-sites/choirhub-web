@@ -260,12 +260,33 @@ function SetupPageContent() {
             const result = await joinChoir(inviteCode);
             console.log("Joined:", result);
 
-            // Check if there are unlinked members to claim
             const unlinked = result?.unlinkedMembers || [];
+
+            // Auto-matching logic
             if (unlinked.length > 0 && result?.choirId) {
-                setClaimMembers(unlinked);
-                setClaimChoirId(result.choirId);
-                setShowClaimModal(true);
+                // Normalize names for comparison (lowercase, single spaces only)
+                const normalize = (name: string) => name.toLowerCase().replace(/\s+/g, ' ').trim();
+                const enteredNameNorm = normalize(`${joinLastName} ${joinFirstName}`);
+                const enteredNameReversed = normalize(`${joinFirstName} ${joinLastName}`);
+
+                // Find a member whose name closely matches the entered one
+                const matchedMember = unlinked.find((m: any) => {
+                    if (!m.name) return false;
+                    const mName = normalize(m.name);
+                    return mName === enteredNameNorm || mName === enteredNameReversed;
+                });
+
+                if (matchedMember) {
+                    // Strong match found! Show modal but ONLY with this single member.
+                    setClaimMembers([matchedMember]);
+                    setClaimChoirId(result.choirId);
+                    setSelectedClaimId(matchedMember.id);
+                    setShowClaimModal(true);
+                } else {
+                    // No match -> they are a brand new member, skip claim modal.
+                    await refreshProfile();
+                    router.push("/app");
+                }
             } else {
                 await refreshProfile();
                 router.push("/app");
@@ -722,21 +743,10 @@ function SetupPageContent() {
                         <div className="bg-[#18181b] border border-white/10 rounded-3xl p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200">
                             <h3 className="text-xl font-bold text-white mb-2">Це ви?</h3>
                             <p className="text-sm text-text-secondary mb-2">
-                                {(() => {
-                                    const matchedMember = claimMembers.find((m: any) =>
-                                        user?.displayName && m.name.toLowerCase().trim() === user.displayName.toLowerCase().trim()
-                                    );
-                                    if (matchedMember && !selectedClaimId) {
-                                        // Auto-select the matched member
-                                        setTimeout(() => setSelectedClaimId(matchedMember.id), 0);
-                                    }
-                                    return matchedMember
-                                        ? <>Ми знайшли вас у списку: <b className="text-white">{matchedMember.name}</b></>
-                                        : 'Оберіть себе зі списку учасників хору.';
-                                })()}
+                                Ми знайшли дуже схоже ім'я в списку хору.
                             </p>
                             <p className="text-xs text-text-secondary/60 mb-4">
-                                Це дозволить зберегти вашу історію відвідувань та партію.
+                                Зв'яжіть свій акаунт із цим профілем, щоб зберегти вашу історію відвідувань та партію.
                             </p>
 
                             <div className="space-y-2 max-h-60 overflow-y-auto mb-6 pr-2 custom-scrollbar">
@@ -775,14 +785,15 @@ function SetupPageContent() {
                                     )}
                                 </button>
                                 <button
-                                    onClick={() => {
+                                    onClick={async () => {
                                         setShowClaimModal(false);
-                                        setShowNameInput(true);
+                                        await refreshProfile();
+                                        router.push("/app");
                                     }}
                                     disabled={claimLoading}
                                     className="w-full py-3 text-sm text-text-secondary hover:text-white transition-colors"
                                 >
-                                    Я — новий учасник
+                                    Ні, я новий учасник
                                 </button>
                             </div>
                         </div>

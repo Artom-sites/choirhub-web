@@ -753,12 +753,31 @@ function HomePageContent() {
       const unlinked = result?.unlinkedMembers || [];
       console.log("Unlinked members found:", unlinked.length, unlinked);
 
+      // Auto-matching logic
       if (unlinked.length > 0 && result?.choirId) {
-        console.log("Showing claim modal for choir:", result.choirId);
-        setClaimMembers(unlinked);
-        setClaimChoirId(result.choirId);
-        setShowChoirManager(false);
-        setShowClaimModal(true);
+        // Normalize names for comparison (lowercase, single spaces only)
+        const normalize = (name: string) => name.toLowerCase().replace(/\s+/g, ' ').trim();
+        const enteredNameNorm = normalize(`${joinLastName} ${joinFirstName}`);
+        const enteredNameReversed = normalize(`${joinFirstName} ${joinLastName}`);
+
+        // Find a member whose name closely matches the entered one
+        const matchedMember = unlinked.find((m: any) => {
+          if (!m.name) return false;
+          const mName = normalize(m.name);
+          return mName === enteredNameNorm || mName === enteredNameReversed;
+        });
+
+        if (matchedMember) {
+          console.log("Showing claim modal for matched member:", matchedMember.name);
+          setClaimMembers([matchedMember]);
+          setClaimChoirId(result.choirId);
+          setSelectedClaimId(matchedMember.id);
+          setShowChoirManager(false);
+          setShowClaimModal(true);
+        } else {
+          console.log("No name match. New member path -> closing manager");
+          setShowChoirManager(false);
+        }
       } else {
         console.log("No unlinked members or no choirId, closing manager");
         setShowChoirManager(false);
@@ -1553,21 +1572,10 @@ function HomePageContent() {
             >
               <h3 className="text-xl font-bold text-text-primary mb-2">Це ви?</h3>
               <p className="text-sm text-text-secondary mb-2">
-                {(() => {
-                  const userName = userData?.name || user?.displayName || '';
-                  const matchedMember = claimMembers.find((m: any) =>
-                    userName && m.name.toLowerCase().trim() === userName.toLowerCase().trim()
-                  );
-                  if (matchedMember && !selectedClaimId) {
-                    setTimeout(() => setSelectedClaimId(matchedMember.id), 0);
-                  }
-                  return matchedMember
-                    ? <>Ми знайшли вас у списку: <b className="text-text-primary">{matchedMember.name}</b></>
-                    : 'Оберіть себе зі списку учасників хору.';
-                })()}
+                Ми знайшли дуже схоже ім'я в списку хору.
               </p>
               <p className="text-xs text-text-secondary/60 mb-4">
-                Це дозволить зберегти вашу історію відвідувань та партію.
+                Зв'яжіть свій акаунт із цим профілем, щоб зберегти вашу історію відвідувань та партію.
               </p>
 
               <div className="max-h-64 overflow-y-auto space-y-2 mb-4 pr-1 custom-scrollbar">
@@ -1609,13 +1617,9 @@ function HomePageContent() {
                 <button
                   onClick={() => selectedClaimId && handleClaimMember(selectedClaimId)}
                   disabled={claimLoading || !selectedClaimId}
-                  className="w-full py-3 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-all flex justify-center shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-4 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-all flex justify-center shadow-lg disabled:opacity-50"
                 >
-                  {claimLoading ? (
-                    <div className="w-5 h-5 border-2 border-background/20 border-t-background rounded-full animate-spin" />
-                  ) : (
-                    "Так, це я"
-                  )}
+                  {claimLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Так, це я"}
                 </button>
                 <button
                   onClick={() => {
@@ -1623,14 +1627,11 @@ function HomePageContent() {
                     setClaimMembers([]);
                     setClaimChoirId(null);
                     setSelectedClaimId(null);
-                    // Open Edit Name to enforce Surname First
-                    setNewName("");
-                    setShowEditName(true);
                   }}
                   disabled={claimLoading}
-                  className="w-full py-3 text-sm text-text-secondary hover:text-text-primary border border-border rounded-xl hover:bg-surface-highlight transition-colors font-medium"
+                  className="w-full py-3 text-sm text-text-secondary hover:text-text-primary border border-border bg-surface-highlight hover:bg-white/5 rounded-xl transition-colors"
                 >
-                  Я — новий учасник
+                  Ні, я новий учасник
                 </button>
               </div>
             </motion.div>
