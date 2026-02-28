@@ -818,18 +818,18 @@ function HomePageContent() {
         return;
       }
 
+      // Use allMembers (includes linked members) for name matching
+      const allMembers = result?.allMembers || [];
       const unlinked = result?.unlinkedMembers || [];
-      console.log("Unlinked members found:", unlinked.length, unlinked);
+      console.log("All members:", allMembers.length, "Unlinked:", unlinked.length);
 
-      // Auto-matching logic
-      if (unlinked.length > 0 && result?.choirId) {
-        // Normalize names for comparison (lowercase, single spaces only)
+      if (allMembers.length > 0 && result?.choirId) {
         const normalize = (name: string) => name.toLowerCase().replace(/\s+/g, ' ').trim();
         const enteredNameNorm = normalize(`${joinLastName} ${joinFirstName}`);
         const enteredNameReversed = normalize(`${joinFirstName} ${joinLastName}`);
 
-        // Find a member whose name closely matches the entered one
-        const matchedMember = unlinked.find((m: any) => {
+        // Search ALL members (including those with accounts) for a name match
+        const matchedMember = allMembers.find((m: any) => {
           if (!m.name) return false;
           const mName = normalize(m.name);
           const distNormal = distance(mName, enteredNameNorm);
@@ -838,19 +838,21 @@ function HomePageContent() {
         });
 
         if (matchedMember) {
-          console.log("Showing claim modal for matched member:", matchedMember.name);
+          console.log("Showing claim modal for matched member:", matchedMember.name, "hasAccount:", matchedMember.hasAccount);
           setClaimMembers([matchedMember]);
           setClaimChoirId(result.choirId);
           setSelectedClaimId(matchedMember.id);
           setShowChoirManager(false);
           setShowClaimModal(true);
         } else {
-          console.log("No name match. Auto-creating self-stub -> closing manager");
+          // No match among ANY members — create a new stub
+          console.log("No name match in any members. Auto-creating self-stub");
           await updateMember(result.choirId, user.uid, { name: fullName });
           setShowChoirManager(false);
         }
       } else if (result?.choirId) {
-        console.log("No unlinked members found. Auto-creating self-stub -> closing manager");
+        // Empty choir — just add self
+        console.log("No members in choir. Auto-creating self-stub");
         await updateMember(result.choirId, user.uid, { name: fullName });
         setShowChoirManager(false);
       } else {

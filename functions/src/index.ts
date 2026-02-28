@@ -327,7 +327,13 @@ export const atomicJoinChoir = functions.https.onCall(async (data, context) => {
             .filter((m: any) => !m.hasAccount && !m.accountUid && m.id !== userId)
             .map((m: any) => ({ id: m.id, name: m.name, voice: m.voice || "" }));
 
-        return { success: true, message: isUpgrade ? "Role Upgraded" : "Joined", choirId, unlinkedMembers };
+        // Also return ALL members (including those with accounts) for name matching
+        // This allows the client to show "Is this you?" even for linked members
+        const allMembers = members
+            .filter((m: any) => m.id !== userId && !m.isDuplicate)
+            .map((m: any) => ({ id: m.id, name: m.name, voice: m.voice || "", hasAccount: !!m.hasAccount }));
+
+        return { success: true, message: isUpgrade ? "Role Upgraded" : "Joined", choirId, unlinkedMembers, allMembers };
     });
 
     // ✅ Sync claims AFTER transaction commits
