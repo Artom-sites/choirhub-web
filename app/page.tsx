@@ -8,7 +8,7 @@ import { Music2, ArrowRight } from "lucide-react";
 import InstallPrompt from "@/components/InstallPrompt";
 
 export default function LandingPage() {
-    const { user, userData, loading } = useAuth();
+    const { user, userData, loading, signInWithGoogle } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
@@ -42,12 +42,36 @@ export default function LandingPage() {
                     Додаток для організації хорового служіння.<br />Управління репертуаром, розкладом та нотами.
                 </p>
 
-                <button
-                    onClick={() => router.push("/setup")}
-                    className="bg-primary text-background px-10 py-4 rounded-xl font-semibold text-lg hover:bg-primary/90 transition-colors w-full sm:w-auto"
-                >
-                    Увійти
-                </button>
+                <div className="w-full max-w-sm space-y-3">
+                    <button
+                        onClick={async () => {
+                            try {
+                                await signInWithGoogle();
+                            } catch (err: any) {
+                                if (!err.message?.includes("canceled")) {
+                                    alert("Google Login Error: " + (err.message || ""));
+                                }
+                            }
+                        }}
+                        className="w-full py-4 bg-surface border border-border text-text-primary font-bold rounded-xl flex items-center justify-center gap-3 hover:bg-surface-highlight transition-colors shadow-sm"
+                    >
+                        <svg className="w-5 h-5 text-text-primary" viewBox="0 0 24 24">
+                            <path fill="currentColor" d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z" />
+                        </svg>
+                        Увійти через Google
+                    </button>
+
+                    <button
+                        onClick={() => router.push("/setup?view=email")}
+                        className="w-full py-4 bg-primary text-background font-bold rounded-xl outline-none flex items-center justify-center gap-3 hover:opacity-90 transition-colors shadow-sm"
+                    >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        Консоль (Email)
+                    </button>
+
+                </div>
             </section>
 
             <InstallPrompt />
