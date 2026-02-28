@@ -757,7 +757,8 @@ exports.atomicUpdateMember = functions.https.onCall(async (data, context) => {
             throw new functions.https.HttpsError("not-found", "Choir not found");
         const choirData = choirDoc.data();
         const members = choirData.members || [];
-        const memberIndex = members.findIndex((m) => m.id === memberId);
+        // Search by ID, accountUid, or linkedUserIds to prevent duplicates
+        const memberIndex = members.findIndex((m) => m.id === memberId || m.accountUid === memberId || (m.linkedUserIds || []).includes(memberId));
         if (memberIndex === -1 && !isSelfUpdate) {
             throw new functions.https.HttpsError("not-found", "Member not found");
         }

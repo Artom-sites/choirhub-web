@@ -657,6 +657,12 @@ function HomePageContent() {
           setShowChoirManager(true);
           setManagerMode('join');
           setJoinCode(joinCodeParam);
+          // Auto-fill name from profile
+          if (userData?.name && userData.name.includes(' ')) {
+            const parts = userData.name.split(' ');
+            setJoinLastName(parts[0]);
+            setJoinFirstName(parts.slice(1).join(' '));
+          }
         }
       }
     }
@@ -1451,7 +1457,15 @@ function HomePageContent() {
                     <button onClick={() => setManagerMode('create')} className="p-3 bg-primary text-background rounded-xl text-sm font-bold hover:opacity-90">
                       Створити
                     </button>
-                    <button onClick={() => setManagerMode('join')} className="p-3 bg-surface-highlight text-text-primary rounded-xl text-sm font-bold hover:bg-surface-highlight/80 border border-border">
+                    <button onClick={() => {
+                      setManagerMode('join');
+                      // Auto-fill name from profile if available
+                      if (userData?.name && userData.name.includes(' ')) {
+                        const parts = userData.name.split(' ');
+                        setJoinLastName(parts[0]);
+                        setJoinFirstName(parts.slice(1).join(' '));
+                      }
+                    }} className="p-3 bg-surface-highlight text-text-primary rounded-xl text-sm font-bold hover:bg-surface-highlight/80 border border-border">
                       Приєднатись
                     </button>
                   </div>
