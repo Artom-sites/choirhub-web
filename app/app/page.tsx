@@ -811,10 +811,13 @@ function HomePageContent() {
       console.log("Joined result:", result);
       await refreshProfile();
 
-      // If already a member, just close the manager — don't create another stub
-      if (result?.message === "Already a member") {
-        setManagerError("Ви вже є учасником цього хору");
-        setManagerLoading(false);
+      // If already a member, just switch to that choir
+      if (result?.message === "Already a member" && result?.choirId) {
+        await createUser(user.uid, { choirId: result.choirId });
+        await refreshProfile();
+        setShowChoirManager(false);
+        setJoinCode(""); setJoinLastName(""); setJoinFirstName("");
+        window.location.reload();
         return;
       }
 
@@ -1890,7 +1893,7 @@ function HomePageContent() {
                 <div className="bg-surface rounded-2xl p-4 card-shadow">
                   {/* Change Choir Button */}
                   <button
-                    onClick={() => { setShowAccount(false); setShowChoirManager(true); }}
+                    onClick={() => { setShowAccount(false); setManagerMode('list'); setJoinCode(''); setJoinLastName(''); setJoinFirstName(''); setManagerError(''); setShowChoirManager(true); }}
                     className="w-full flex items-center justify-between py-2 transition-all group"
                   >
                     <div className="flex items-center gap-3">
