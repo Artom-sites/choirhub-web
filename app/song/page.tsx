@@ -486,6 +486,7 @@ function SongContent() {
                 {/* PDF Content */}
                 <div className="flex-1 overflow-hidden relative">
                     <PDFViewer
+                        key={`part-${currentPartIndex}`}
                         url={(() => {
                             // Always use direct URL for static export compatibility
                             return currentPdfUrl;
