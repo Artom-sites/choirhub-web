@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import Preloader from "@/components/Preloader";
-import { Music2, ArrowRight } from "lucide-react";
+import { Mail } from "lucide-react";
 import InstallPrompt from "@/components/InstallPrompt";
 
 export default function LandingPage() {
@@ -62,13 +62,11 @@ export default function LandingPage() {
                     </button>
 
                     <button
-                        onClick={() => router.push("/setup?view=email")}
+                        onClick={() => router.push("/setup?auth=email")}
                         className="w-full py-4 bg-primary text-background font-bold rounded-xl outline-none flex items-center justify-center gap-3 hover:opacity-90 transition-colors shadow-sm"
                     >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
-                        Консоль (Email)
+                        <Mail className="w-5 h-5" />
+                        Увійти через пошту
                     </button>
 
                 </div>

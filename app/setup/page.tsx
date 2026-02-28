@@ -27,9 +27,12 @@ function SetupPageContent() {
 
     const searchParams = useSearchParams();
     const urlCode = searchParams.get('code');
+    const authMode = searchParams.get('auth');
 
     // UI State
-    const [view, setView] = useState<'welcome' | 'join' | 'create' | 'email_auth' | 'reset_password'>('welcome');
+    const [view, setView] = useState<'welcome' | 'join' | 'create' | 'email_auth' | 'reset_password'>(
+        authMode === 'email' ? 'email_auth' : 'welcome'
+    );
 
     // Form State (Moved to top to avoid hook violation)
     const [choirName, setChoirName] = useState("");
