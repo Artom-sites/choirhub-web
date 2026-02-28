@@ -59,7 +59,8 @@ function SongContent() {
     // Annotation State
     const [isAnnotating, setIsAnnotating] = useState(false);
 
-    // Wait, let's keep isIOS if needed for UI quirks, but disabled native viewer launch.
+    // iOS detection
+    const [isIOS, setIsIOS] = useState(false);
     useEffect(() => {
         setIsIOS(Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios');
     }, []);
