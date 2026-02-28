@@ -142,7 +142,7 @@ function SongContent() {
 
     useEffect(() => {
         // iOS fast-path: open native viewer IMMEDIATELY from cached data
-        if (isIOS && songId && userData?.choirId) {
+        if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios' && songId && userData?.choirId) {
             const cached = getCachedSongs(userData.choirId);
             if (cached) {
                 const cachedSong = cached.find((s: any) => s.id === songId);
