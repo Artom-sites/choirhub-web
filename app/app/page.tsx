@@ -887,15 +887,26 @@ function HomePageContent() {
   };
 
   const handleClaimMember = async (targetMemberId: string) => {
-    if (!claimChoirId) return;
+    if (!claimChoirId || !user) return;
     setClaimLoading(true);
     try {
       const result = await claimMember(claimChoirId, targetMemberId);
       console.log("Claimed:", result);
+
+      // Switch active choir to the claimed one and reload
+      await createUser(user.uid, { choirId: claimChoirId });
       await refreshProfile();
+
+      // Clear form state
       setShowClaimModal(false);
       setClaimMembers([]);
+      setJoinCode("");
+      setJoinLastName("");
+      setJoinFirstName("");
+      setManagerError("");
+
       setClaimChoirId(null);
+      window.location.reload();
     } catch (e: any) {
       console.error("Claim error:", e);
       const msg = e.message || "";
