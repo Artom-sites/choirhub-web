@@ -29,8 +29,8 @@ export default function LandingPage() {
             {/* Header */}
             <header className="flex items-center justify-between p-6 w-full max-w-5xl mx-auto">
                 <div className="flex items-center gap-2">
-                    <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center">
-                        <Music2 className="w-6 h-6 text-primary" />
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden">
+                        <img src="/apple-touch-icon.png" alt="MyChoir Logo" className="w-full h-full object-cover" />
                     </div>
                     <span className="text-xl font-bold tracking-tight">MyChoir</span>
                 </div>
@@ -45,8 +45,8 @@ export default function LandingPage() {
 
             {/* Hero Section */}
             <section className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-3xl mx-auto w-full">
-                <div className="w-20 h-20 bg-primary/20 rounded-3xl flex items-center justify-center mb-8 mx-auto shadow-xl shadow-primary/10">
-                    <Music2 className="w-10 h-10 text-primary" />
+                <div className="w-24 h-24 rounded-[2rem] flex items-center justify-center mb-8 mx-auto shadow-2xl shadow-primary/20 overflow-hidden">
+                    <img src="/apple-touch-icon.png" alt="MyChoir Logo" className="w-full h-full object-cover" />
                 </div>
                 <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight text-balance">
                     Додаток для організації хорового служіння
@@ -79,9 +79,6 @@ export default function LandingPage() {
                             Умови використання
                         </button>
                     </div>
-                    <p>
-                        Розробник: <a href="https://artom.dev" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">artom.dev</a>
-                    </p>
                 </div>
             </footer>
         </main>
