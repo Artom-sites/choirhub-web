@@ -20,28 +20,25 @@ public class PencilKitAnnotatorPlugin: CAPPlugin, CAPBridgedPlugin {
     // MARK: - Open Native PDF Viewer
 
     @objc func openNativePdfViewer(_ call: CAPPluginCall) {
-        guard let pdfUrlString = call.getString("pdfUrl"),
+        guard let partsArray = call.getArray("parts") as? [[String: Any]],
               let songId = call.getString("songId"),
               let userUid = call.getString("userUid") else {
-            call.reject("Missing pdfUrl, songId, or userUid")
+            call.reject("Missing parts array, songId, or userUid")
             return
         }
 
+        let initialPartIndex = call.getInt("initialPartIndex") ?? 0
         let title = call.getString("title")
 
-        // Determine source type
-        let source: NativePdfViewController.PDFSource
-
-        if pdfUrlString.hasPrefix("data:") {
-            source = .base64(pdfUrlString)
-        } else if let url = URL(string: pdfUrlString) {
-            if url.isFileURL {
-                source = .fileURL(url)
-            } else {
-                source = .remoteURL(url)
+        var parts: [NativePdfViewController.PDFPart] = []
+        for dict in partsArray {
+            if let name = dict["name"] as? String, let pdfUrl = dict["pdfUrl"] as? String {
+                parts.append(NativePdfViewController.PDFPart(name: name, urlString: pdfUrl))
             }
-        } else {
-            call.reject("Invalid PDF URL")
+        }
+
+        if parts.isEmpty {
+            call.reject("Parts array is empty or invalid")
             return
         }
 
@@ -54,7 +51,8 @@ public class PencilKitAnnotatorPlugin: CAPPlugin, CAPBridgedPlugin {
             }
 
             let vc = NativePdfViewController(
-                source: source,
+                parts: parts,
+                initialPartIndex: initialPartIndex,
                 songId: songId,
                 userUid: userUid,
                 title: title

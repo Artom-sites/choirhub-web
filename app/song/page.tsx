@@ -141,8 +141,35 @@ function SongContent() {
     };
 
     useEffect(() => {
-        // iOS fast-path (removed): We now want iOS users to see the song page (which includes part tabs) 
-        // and use the standard web PDFViewer, rather than blindly launching the PencilKit plugin.
+        // iOS fast-path: open native viewer IMMEDIATELY from cached data
+        if (isIOS && songId && userData?.choirId) {
+            const cached = getCachedSongs(userData.choirId);
+            if (cached) {
+                const cachedSong = cached.find((s: any) => s.id === songId);
+                if (cachedSong) {
+                    const pdfUrl = cachedSong.parts?.[0]?.pdfUrl || cachedSong.pdfUrl;
+                    if (pdfUrl && !isTelegramLink(pdfUrl)) {
+                        const partsData = (cachedSong.parts && cachedSong.parts.length > 0)
+                            ? cachedSong.parts.map((p: any) => ({ name: p.name || 'Part', pdfUrl: p.pdfUrl }))
+                            : [{ name: 'Головна', pdfUrl }];
+
+                        PencilKitAnnotator.openNativePdfViewer({
+                            parts: partsData,
+                            initialPartIndex: 0,
+                            songId,
+                            userUid: userData?.id || 'anonymous',
+                            title: cachedSong.title,
+                        }).then(() => {
+                            router.back();
+                        }).catch(e => {
+                            console.error('[NativePdf] Error:', e);
+                            setLoading(false);
+                        });
+                        return; // Skip loadSong entirely on iOS
+                    }
+                }
+            }
+        }
 
         async function loadSong() {
             if (!songId) return;
@@ -199,7 +226,27 @@ function SongContent() {
 
             if (fetched?.hasPdf && (fetched.pdfUrl || fetched.pdfData) && !isCheckingArchive && !isEditing) {
                 if (!isTelegramLink(fetched.pdfUrl || "")) {
-                    setShowViewer(true);
+                    if (isIOS) {
+                        const partsData = (fetched.parts && fetched.parts.length > 0)
+                            ? fetched.parts.map(p => ({ name: p.name || 'Part', pdfUrl: p.pdfUrl }))
+                            : [{ name: 'Головна', pdfUrl: fetched.pdfUrl || fetched.pdfData! }];
+
+                        PencilKitAnnotator.openNativePdfViewer({
+                            parts: partsData,
+                            initialPartIndex: 0,
+                            songId: songId!,
+                            userUid: userData?.id || 'anonymous',
+                            title: fetched.title,
+                        }).then(() => {
+                            router.back();
+                        }).catch(e => {
+                            console.error('[NativePdf] Error:', e);
+                            setLoading(false);
+                        });
+                        return; // Don't setLoading(false) — keep preloader showing
+                    } else {
+                        setShowViewer(true);
+                    }
                 }
             }
             setLoading(false);
@@ -405,9 +452,14 @@ function SongContent() {
                             <button
                                 onClick={() => {
                                     if (isIOS) {
+                                        const partsData = (song.parts && song.parts.length > 0)
+                                            ? song.parts.map(p => ({ name: p.name || 'Part', pdfUrl: p.pdfUrl }))
+                                            : [{ name: 'Головна', pdfUrl: song.pdfUrl || song.pdfData! }];
+
                                         PencilKitAnnotator.openNativePdfViewer({
-                                            pdfUrl: currentPdfUrl,
-                                            songId: currentPartIndex === 0 ? (songId as string) : `${songId}_${currentPartIndex}`,
+                                            parts: partsData,
+                                            initialPartIndex: currentPartIndex,
+                                            songId: songId as string,
                                             userUid: userData?.id || 'anonymous',
                                             title: song.title,
                                         }).catch(e => {
@@ -590,7 +642,21 @@ function SongContent() {
                                     <div className="flex gap-3 mb-4">
                                         <button
                                             onClick={() => {
-                                                setShowViewer(true);
+                                                if (isIOS) {
+                                                    const partsData = (song.parts && song.parts.length > 0)
+                                                        ? song.parts.map(p => ({ name: p.name || 'Part', pdfUrl: p.pdfUrl }))
+                                                        : [{ name: 'Головна', pdfUrl: song.pdfUrl || song.pdfData! }];
+
+                                                    PencilKitAnnotator.openNativePdfViewer({
+                                                        parts: partsData,
+                                                        initialPartIndex: currentPartIndex,
+                                                        songId: songId!,
+                                                        userUid: userData?.id || 'anonymous',
+                                                        title: song.title,
+                                                    }).catch(e => console.error('[NativePdf] Error:', e));
+                                                } else {
+                                                    setShowViewer(true);
+                                                }
                                             }}
                                             className="flex-1 py-4 bg-primary text-background rounded-xl font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
                                         >
