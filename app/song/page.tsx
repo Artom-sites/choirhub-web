@@ -403,8 +403,21 @@ function SongContent() {
 
                         <div className="flex items-center gap-1">
                             <button
-                                onClick={() => setIsAnnotating(!isAnnotating)}
-                                className={`p-2 rounded-full transition-colors ${isAnnotating ? 'bg-gray-900 text-white' : 'hover:bg-gray-100 text-gray-700'}`}
+                                onClick={() => {
+                                    if (isIOS) {
+                                        PencilKitAnnotator.openNativePdfViewer({
+                                            pdfUrl: currentPdfUrl,
+                                            songId: currentPartIndex === 0 ? (songId as string) : `${songId}_${currentPartIndex}`,
+                                            userUid: userData?.id || 'anonymous',
+                                            title: song.title,
+                                        }).catch(e => {
+                                            console.error('[NativePdf] Error:', e);
+                                        });
+                                    } else {
+                                        setIsAnnotating(!isAnnotating);
+                                    }
+                                }}
+                                className={`p-2 rounded-full transition-colors ${isAnnotating && !isIOS ? 'bg-gray-900 text-white' : 'hover:bg-gray-100 text-gray-700'}`}
                                 title="Малювати на PDF"
                             >
                                 <Pencil className="w-6 h-6" />
