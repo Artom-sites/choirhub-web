@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { Capacitor, CapacitorHttp } from "@capacitor/core";
 import {
@@ -234,6 +234,12 @@ export default function PDFViewer({ url, songId, title, onClose, onAddAction, is
         setupWorker();
     }, []);
 
+    const pdfOptions = useMemo(() => ({
+        cMapUrl: `https://unpkg.com/pdfjs-dist@5.4.296/cmaps/`,
+        cMapPacked: true,
+        standardFontDataUrl: `https://unpkg.com/pdfjs-dist@5.4.296/standard_fonts/`,
+    }), []);
+
     useEffect(() => {
         const updateWidth = () => {
             if (containerRef.current) {
@@ -349,11 +355,7 @@ export default function PDFViewer({ url, songId, title, onClose, onAddAction, is
                             onLoadError={onDocumentLoadError}
                             loading={null}
                             className="flex flex-col w-full"
-                            options={{
-                                cMapUrl: `https://unpkg.com/pdfjs-dist@5.4.296/cmaps/`,
-                                cMapPacked: true,
-                                standardFontDataUrl: `https://unpkg.com/pdfjs-dist@5.4.296/standard_fonts/`,
-                            }}
+                            options={pdfOptions}
                         >
                             {Array.from(new Array(numPages), (el, index) => {
                                 const pageNum = index + 1;
