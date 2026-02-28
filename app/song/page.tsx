@@ -59,8 +59,7 @@ function SongContent() {
     // Annotation State
     const [isAnnotating, setIsAnnotating] = useState(false);
 
-    // iOS detection
-    const [isIOS, setIsIOS] = useState(false);
+    // Wait, let's keep isIOS if needed for UI quirks, but disabled native viewer launch.
     useEffect(() => {
         setIsIOS(Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios');
     }, []);
@@ -141,30 +140,8 @@ function SongContent() {
     };
 
     useEffect(() => {
-        // iOS fast-path: open native viewer IMMEDIATELY from cached data
-        if (isIOS && songId && userData?.choirId) {
-            const cached = getCachedSongs(userData.choirId);
-            if (cached) {
-                const cachedSong = cached.find((s: any) => s.id === songId);
-                if (cachedSong) {
-                    const pdfUrl = cachedSong.parts?.[0]?.pdfUrl || cachedSong.pdfUrl;
-                    if (pdfUrl && !pdfUrl.includes('t.me/') && !pdfUrl.includes('telegram.me/')) {
-                        PencilKitAnnotator.openNativePdfViewer({
-                            pdfUrl,
-                            songId,
-                            userUid: userData?.id || 'anonymous',
-                            title: cachedSong.title,
-                        }).then(() => {
-                            router.back();
-                        }).catch(e => {
-                            console.error('[NativePdf] Error:', e);
-                            setLoading(false);
-                        });
-                        return; // Skip loadSong entirely on iOS
-                    }
-                }
-            }
-        }
+        // iOS fast-path (removed): We now want iOS users to see the song page (which includes part tabs) 
+        // and use the standard web PDFViewer, rather than blindly launching the PencilKit plugin.
 
         async function loadSong() {
             if (!songId) return;
@@ -221,26 +198,7 @@ function SongContent() {
 
             if (fetched?.hasPdf && (fetched.pdfUrl || fetched.pdfData) && !isCheckingArchive && !isEditing) {
                 if (!isTelegramLink(fetched.pdfUrl || "")) {
-                    if (isIOS) {
-                        // iOS fallback: if fast-path didn't trigger (no cache)
-                        const url = (fetched.parts && fetched.parts.length > 0)
-                            ? fetched.parts[0].pdfUrl
-                            : (fetched.pdfUrl || fetched.pdfData!);
-                        PencilKitAnnotator.openNativePdfViewer({
-                            pdfUrl: url,
-                            songId: songId!,
-                            userUid: userData?.id || 'anonymous',
-                            title: fetched.title,
-                        }).then(() => {
-                            router.back();
-                        }).catch(e => {
-                            console.error('[NativePdf] Error:', e);
-                            setLoading(false);
-                        });
-                        return; // Don't setLoading(false) — keep preloader showing
-                    } else {
-                        setShowViewer(true);
-                    }
+                    setShowViewer(true);
                 }
             }
             setLoading(false);
@@ -385,10 +343,6 @@ function SongContent() {
     };
 
     if (loading) {
-        // On iOS, show blank white screen (native viewer opens on top immediately)
-        if (isIOS) {
-            return <div className="min-h-screen bg-white" />;
-        }
         return <Preloader />;
     }
 
@@ -409,8 +363,8 @@ function SongContent() {
     // Check if link is Telegram
     const isTg = isTelegramLink(song.pdfUrl);
 
-    // Show PDF Viewer (Web/Android only — iOS uses native viewer)
-    if (!isIOS && showViewer && ((song.parts && song.parts.length > 0) || song.pdfUrl || song.pdfData) && !isTg) {
+    // Show PDF Viewer
+    if (showViewer && ((song.parts && song.parts.length > 0) || song.pdfUrl || song.pdfData) && !isTg) {
         const hasParts = song.parts && song.parts.length > 1;
         const originalPdfUrl = (song.parts && song.parts.length > 0)
             ? song.parts[currentPartIndex].pdfUrl
@@ -435,8 +389,13 @@ function SongContent() {
                                 {song.title}
                             </h1>
                             {hasParts && song.parts && (
-                                <p className="text-xs text-gray-500 font-medium">
-                                    {song.parts[currentPartIndex].name}
+                                <p className="text-xs text-gray-500 font-medium whitespace-none truncate px-1" style={{ maxWidth: "200px" }}>
+                                    {(() => {
+                                        const nameToCheck = song.parts[currentPartIndex].name || "";
+                                        const shouldUseFilename = !nameToCheck || isGenericPartName(nameToCheck);
+                                        const sourceString = shouldUseFilename ? getFileNameFromUrl(song.parts[currentPartIndex].pdfUrl || "") : nameToCheck;
+                                        return extractInstrument(sourceString || `Part ${currentPartIndex + 1}`, song.title);
+                                    })()}
                                 </p>
                             )}
                         </div>
@@ -493,7 +452,7 @@ function SongContent() {
                         songId={currentPartIndex === 0 ? songId as string : undefined}
                         title={song.title}
                         onClose={() => router.back()}
-                        isAnnotating={isAnnotating && !(Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios')}
+                        isAnnotating={isAnnotating}
                         onAnnotatingChange={setIsAnnotating}
                     />
                 </div>
@@ -617,19 +576,7 @@ function SongContent() {
                                     <div className="flex gap-3 mb-4">
                                         <button
                                             onClick={() => {
-                                                if (isIOS) {
-                                                    const url = (song.parts && song.parts.length > 0)
-                                                        ? song.parts[currentPartIndex].pdfUrl
-                                                        : (song.pdfUrl || song.pdfData!);
-                                                    PencilKitAnnotator.openNativePdfViewer({
-                                                        pdfUrl: url,
-                                                        songId: songId!,
-                                                        userUid: userData?.id || 'anonymous',
-                                                        title: song.title,
-                                                    }).catch(e => console.error('[NativePdf] Error:', e));
-                                                } else {
-                                                    setShowViewer(true);
-                                                }
+                                                setShowViewer(true);
                                             }}
                                             className="flex-1 py-4 bg-primary text-background rounded-xl font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
                                         >
