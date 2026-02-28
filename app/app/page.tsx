@@ -228,6 +228,7 @@ function HomePageContent() {
 
   // Claim Member modal state
   const [showClaimModal, setShowClaimModal] = useState(false);
+  const [showFinishAppRegistration, setShowFinishAppRegistration] = useState(false);
   const [claimMembers, setClaimMembers] = useState<{ id: string, name: string, voice: string }[]>([]);
   const [claimChoirId, setClaimChoirId] = useState<string | null>(null);
   const [claimLoading, setClaimLoading] = useState(false);
@@ -270,23 +271,77 @@ function HomePageContent() {
     const myEntry = choir.members.find((m: any) => m.id === user.uid);
     // No member entry at all — user exists in users collection but not in choir.members
     if (!myEntry) return true;
-    // Has a voiceless stub — needs to claim a real profile
-    if (myEntry.hasAccount && !myEntry.voice) return true;
+    // Has a voiceless stub without a proper First/Last name (no space)
+    if (myEntry.hasAccount && !myEntry.voice && (!myEntry.name || !myEntry.name.trim().includes(' '))) return true;
     return false;
   })();
 
   const openClaimFromBanner = () => {
     if (!choir?.members || !userData?.choirId) return;
-    // Show ALL real choir members (not just unclaimed), so someone who
-    // lost their previous account can re-claim their profile.
-    const claimable = choir.members
-      .filter((m: any) => !(m as any).isDuplicate && m.id !== user?.uid)
-      .filter((m: any) => m.name && m.name.trim() !== '' && m.name.trim().toLowerCase() !== 'unknown')
-      .map((m: any) => ({ id: m.id, name: m.name, voice: m.voice || '', hasAccount: !!m.hasAccount }));
-    setClaimMembers(claimable);
-    setClaimChoirId(userData.choirId);
-    setSelectedClaimId(null);
-    setShowClaimModal(true);
+    // We now just ask them to type their name and run auto-match
+    // instead of showing a list of users.
+    setShowFinishAppRegistration(true);
+  };
+
+  const handleFinishAppRegistration = async () => {
+    if (!user || !userData?.choirId) return;
+    if (!joinLastName.trim() || !joinFirstName.trim()) {
+      setManagerError("Введіть прізвище та ім'я");
+      return;
+    }
+    setClaimLoading(true);
+    setManagerError("");
+
+    const fullName = `${joinLastName.trim()} ${joinFirstName.trim()}`;
+    try {
+      // 1. Save name to user profile
+      await createUser(user.uid, { name: fullName });
+
+      // 2. Fetch choir to find unlinked members
+      const choirDocRef = doc(db, "choirs", userData.choirId);
+      const choirSnap = await getDoc(choirDocRef);
+      if (!choirSnap.exists()) throw new Error("Choir not found");
+      const cData = choirSnap.data();
+      const currentMembers = cData.members || [];
+      const unlinked = currentMembers.filter((m: any) => !m.hasAccount && m.name);
+
+      // Auto-matching logic
+      if (unlinked.length > 0) {
+        const normalize = (name: string) => name.toLowerCase().replace(/\s+/g, ' ').trim();
+        const enteredNameNorm = normalize(fullName);
+        const enteredNameReversed = normalize(`${joinFirstName.trim()} ${joinLastName.trim()}`);
+
+        const matchedMember = unlinked.find((m: any) => {
+          if (!m.name) return false;
+          const mName = normalize(m.name);
+          return mName === enteredNameNorm || mName === enteredNameReversed;
+        });
+
+        if (matchedMember) {
+          setClaimMembers([matchedMember]);
+          setClaimChoirId(userData.choirId);
+          setSelectedClaimId(matchedMember.id);
+          setShowFinishAppRegistration(false);
+          setShowClaimModal(true);
+          setClaimLoading(false);
+          return;
+        }
+      }
+
+      // No match -> Update their own auto-created stub with the new name
+      const updatedMembers = currentMembers.map((m: any) =>
+        m.id === user.uid ? { ...m, name: fullName } : m
+      );
+      await updateDoc(choirDocRef, { members: updatedMembers });
+
+      await refreshProfile();
+      setShowFinishAppRegistration(false);
+    } catch (e: any) {
+      console.error(e);
+      setManagerError(e.message || "Помилка збереження");
+    } finally {
+      setClaimLoading(false);
+    }
   };
 
   // ------------------------------------------------------------------
@@ -1639,6 +1694,73 @@ function HomePageContent() {
         )}
       </AnimatePresence>
 
+      {/* Finish Registration Modal */}
+      <AnimatePresence>
+        {showFinishAppRegistration && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-surface card-shadow border border-white/10 w-full max-w-sm p-6 rounded-3xl shadow-2xl relative"
+            >
+              <button
+                onClick={() => setShowFinishAppRegistration(false)}
+                className="absolute right-4 top-4 p-2 text-text-secondary hover:text-white bg-black/20 hover:bg-black/40 rounded-full transition-colors"
+                disabled={claimLoading}
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <h3 className="text-xl font-bold text-text-primary mb-2">Завершення реєстрації</h3>
+              <p className="text-sm text-text-secondary mb-6">
+                Будь ласка, введіть ваше Прізвище та Ім'я для повноцінної роботи додатка.
+              </p>
+
+              <div className="space-y-4">
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-text-secondary ml-1">Прізвище</label>
+                    <input
+                      value={joinLastName}
+                      onChange={e => setJoinLastName(e.target.value)}
+                      placeholder="Наприклад: Шевченко"
+                      className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl placeholder:text-text-secondary"
+                      autoCapitalize="words"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-text-secondary ml-1">Ім'я</label>
+                    <input
+                      value={joinFirstName}
+                      onChange={e => setJoinFirstName(e.target.value)}
+                      placeholder="Наприклад: Тарас"
+                      className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl placeholder:text-text-secondary"
+                      autoCapitalize="words"
+                    />
+                  </div>
+                </div>
+
+                {managerError && <p className="text-red-400 text-xs">{managerError}</p>}
+
+                <button
+                  onClick={handleFinishAppRegistration}
+                  disabled={claimLoading || !joinLastName.trim() || !joinFirstName.trim()}
+                  className="w-full py-4 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-all flex justify-center shadow-lg disabled:opacity-50"
+                >
+                  {claimLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Продовжити"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Account Overlay */}
       <AnimatePresence>
         {showAccount && (
@@ -1977,8 +2099,8 @@ function HomePageContent() {
                 <User className="w-5 h-5 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-text-primary">Оберіть себе зі списку</p>
-                <p className="text-xs text-text-secondary mt-0.5">Щоб бачити вашу статистику, прив’яжіть ваш профіль до списку хору</p>
+                <p className="text-sm font-bold text-text-primary">Завершіть реєстрацію</p>
+                <p className="text-xs text-text-secondary mt-0.5">Будь ласка, введіть ваше прізвище та ім'я для повноцінної роботи додатка</p>
               </div>
               <ChevronRight className="w-5 h-5 text-text-secondary flex-shrink-0" />
             </button>
