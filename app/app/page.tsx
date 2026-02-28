@@ -426,7 +426,7 @@ function HomePageContent() {
     if (!user || !userData?.choirId) {
       setIsAppReady(true); // Dismiss preloader before redirect
       const currentParams = searchParams.toString();
-      router.replace(currentParams ? `/setup?${currentParams}` : "/setup");
+      router.replace(currentParams ? `/?${currentParams}` : "/");
       return;
     }
 
@@ -662,7 +662,7 @@ function HomePageContent() {
 
   const handleLogout = async () => {
     await signOut();
-    router.push("/setup");
+    router.push("/");
   };
 
 
