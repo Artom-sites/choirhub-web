@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Capacitor } from "@capacitor/core";
-import { Search, FileText, Music2, ChevronRight, Filter, Plus, Eye, User, Loader2, Trash2, MoreVertical, Library, X, RefreshCw } from "lucide-react";
+import { Search, FileText, Music2, ChevronRight, Filter, Plus, Eye, User, Loader2, Trash2, MoreVertical, Library, X } from "lucide-react";
 import { SimpleSong } from "@/types";
 import { CATEGORIES, Category } from "@/lib/themes";
 import { AnimatePresence, motion } from "framer-motion";
@@ -308,28 +308,15 @@ export default function SongList({
                                 </div>
                             </div>
                         </div>
-                        <div className="flex items-center gap-1">
+                        {canAddSongs && (
                             <button
-                                onClick={async () => {
-                                    if (onRefresh) onRefresh();
-                                    await refreshRepertoire();
-                                }}
-                                className={`p-2 rounded-full hover:bg-surface-highlight transition-colors text-text-secondary ${loading || isSyncing ? 'opacity-50 cursor-not-allowed' : 'hover:text-primary'}`}
-                                title="Оновити список"
-                                disabled={loading || isSyncing}
+                                onClick={() => setShowTrashBin(true)}
+                                className="p-2 rounded-full hover:bg-surface-highlight transition-colors text-text-secondary hover:text-danger"
+                                title="Кошик"
                             >
-                                <RefreshCw className={`w-5 h-5 ${loading || isSyncing ? 'animate-spin' : ''}`} />
+                                <Trash2 className="w-5 h-5" />
                             </button>
-                            {canAddSongs && (
-                                <button
-                                    onClick={() => setShowTrashBin(true)}
-                                    className="p-2 rounded-full hover:bg-surface-highlight transition-colors text-text-secondary hover:text-danger"
-                                    title="Кошик"
-                                >
-                                    <Trash2 className="w-5 h-5" />
-                                </button>
-                            )}
-                        </div>
+                        )}
                     </div>
                 </div>
 
