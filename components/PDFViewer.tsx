@@ -353,7 +353,6 @@ export default function PDFViewer({ url, songId, title, onClose, onAddAction, is
                                 cMapUrl: `https://unpkg.com/pdfjs-dist@5.4.296/cmaps/`,
                                 cMapPacked: true,
                                 standardFontDataUrl: `https://unpkg.com/pdfjs-dist@5.4.296/standard_fonts/`,
-                                useSystemFonts: false,
                             }}
                         >
                             {Array.from(new Array(numPages), (el, index) => {
