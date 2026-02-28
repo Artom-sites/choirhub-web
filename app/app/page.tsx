@@ -1,6 +1,6 @@
 "use client";
-
 import { useEffect, useState, useRef, Suspense } from "react";
+import { distance } from "fastest-levenshtein";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -314,7 +314,10 @@ function HomePageContent() {
         const matchedMember = unlinked.find((m: any) => {
           if (!m.name) return false;
           const mName = normalize(m.name);
-          return mName === enteredNameNorm || mName === enteredNameReversed;
+          // Allow up to 2 typos for a match
+          const distNormal = distance(mName, enteredNameNorm);
+          const distReversed = distance(mName, enteredNameReversed);
+          return distNormal <= 2 || distReversed <= 2;
         });
 
         if (matchedMember) {
@@ -928,25 +931,20 @@ function HomePageContent() {
 
       // 2. Update Choir Data if applicable
       if (userData?.choirId && choir) {
-        const updatedMembers = (choir.members || []).map(m =>
-          m.id === user.uid ? { ...m, name: finalName } : m
-        );
+        // Safely update my own name in the members array via Cloud Function
+        await updateMember(userData.choirId, user.uid, { name: finalName });
 
-        let updatedRegents = [...(choir.regents || [])];
-        if (oldName && updatedRegents.includes(oldName)) {
-          updatedRegents = updatedRegents.map(r => r === oldName ? finalName : r);
+        // If I am a regent, update the regents list (requires admin)
+        const oldName = userData?.name;
+        if (oldName && choir.regents?.includes(oldName)) {
+          const updatedRegents = choir.regents.map((r: string) => r === oldName ? finalName : r);
+          try {
+            const choirRef = doc(db, "choirs", userData.choirId);
+            await updateDoc(choirRef, { regents: updatedRegents });
+          } catch (e) {
+            console.error("Failed to update regents array:", e);
+          }
         }
-
-        // Also update knownConductors if present?
-        // Risky without IDs, but let's assume unique names or user intent.
-        // Actually, let's leave knownConductors alone to avoid side effects on other people with same name,
-        // unless we are sure. The user specifically mentioned "first regent" which is likely from `regents`.
-
-        const choirRef = doc(db, "choirs", userData.choirId);
-        await updateDoc(choirRef, {
-          members: updatedMembers,
-          regents: updatedRegents
-        });
       }
 
       // await fetchChoirData(); // Listener handles updates
@@ -2221,14 +2219,12 @@ function HomePageContent() {
                     }
                   });
 
-                  // Roster = only admin-created members (has voice, manual_, or not an auto-stub)
+                  // Roster = any non-duplicate member in the array.
+                  // We used to hide voiceless entries with accounts to avoid auto-stub clutter,
+                  // but now users self-register explicitly so they should be visible.
                   const isRosterMember = (m: any) => {
                     if (m.isDuplicate) return false;
-                    if (m.voice) return true;
-                    if (typeof m.id === 'string' && m.id.startsWith('manual_')) return true;
-                    // Voiceless entry with hasAccount but no admin assignment = auto-stub, hide
-                    if (m.hasAccount && !m.voice) return false;
-                    return true; // other entries (no hasAccount, no voice) are kept
+                    return true;
                   };
 
                   const rosterMembers = dedupedMembers.filter(m => {
