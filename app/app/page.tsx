@@ -823,27 +823,15 @@ function HomePageContent() {
 
       // Use allMembers (includes linked members) for name matching
       const allMembers = result?.allMembers || [];
-      const unlinked = result?.unlinkedMembers || [];
-      console.log("All members:", allMembers.length, "Unlinked:", unlinked.length);
+      console.log("All members:", allMembers.length);
 
-      // Helper: switch active choir to the newly joined one and reload
-      const switchToNewChoir = async (choirId: string) => {
-        await createUser(user.uid, {
-          choirId: choirId,
-          choirName: result?.choirName || '',
-          role: result?.role || 'member'
-        });
-        await refreshProfile();
-        setShowChoirManager(false);
-        window.location.reload();
-      };
+      // Backend already switched active choir — just need to handle member matching & reload
 
       if (allMembers.length > 0 && result?.choirId) {
         const normalize = (name: string) => name.toLowerCase().replace(/\s+/g, ' ').trim();
         const enteredNameNorm = normalize(`${joinLastName} ${joinFirstName}`);
         const enteredNameReversed = normalize(`${joinFirstName} ${joinLastName}`);
 
-        // Search ALL members (including those with accounts) for a name match
         const matchedMember = allMembers.find((m: any) => {
           if (!m.name) return false;
           const mName = normalize(m.name);
@@ -853,24 +841,21 @@ function HomePageContent() {
         });
 
         if (matchedMember) {
-          console.log("Showing claim modal for matched member:", matchedMember.name, "hasAccount:", matchedMember.hasAccount);
+          console.log("Showing claim modal for:", matchedMember.name);
           setClaimMembers([matchedMember]);
           setClaimChoirId(result.choirId);
           setSelectedClaimId(matchedMember.id);
           setShowChoirManager(false);
           setShowClaimModal(true);
-          // Note: choir switch happens after user confirms claim
         } else {
-          // No match among ANY members — create a new stub and switch
-          console.log("No name match. Auto-creating self-stub and switching to new choir");
           await updateMember(result.choirId, user.uid, { name: fullName });
-          await switchToNewChoir(result.choirId);
+          setShowChoirManager(false);
+          window.location.reload();
         }
       } else if (result?.choirId) {
-        // Empty choir — add self and switch
-        console.log("No members in choir. Auto-creating self-stub and switching");
         await updateMember(result.choirId, user.uid, { name: fullName });
-        await switchToNewChoir(result.choirId);
+        setShowChoirManager(false);
+        window.location.reload();
       } else {
         setShowChoirManager(false);
       }

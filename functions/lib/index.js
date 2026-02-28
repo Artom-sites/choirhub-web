@@ -283,11 +283,10 @@ exports.atomicJoinChoir = functions.https.onCall(async (data, context) => {
             permissions: uniquePermissions,
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         };
-        if (!userData.choirId || userData.choirId === choirId) {
-            updates.choirId = choirId;
-            updates.choirName = choirName;
-            updates.role = newRole;
-        }
+        // Always switch active choir to the newly joined one
+        updates.choirId = choirId;
+        updates.choirName = choirName;
+        updates.role = newRole;
         transaction.set(userRef, updates, { merge: true }); // Use set with merge to create if new
         // --- UPDATE CHOIR MEMBER LIST ---
         // Only update if user already exists in roster (e.g. previously linked).
