@@ -84,11 +84,14 @@ export function RepertoireProvider({ children }: { children: ReactNode }) {
 
         const CACHE_KEY = `choir_songs_v2_${userData.choirId}`;
         const SYNC_KEY = `choir_sync_v2_${userData.choirId}`;
-        const lastSync = localStorage.getItem(SYNC_KEY);
-        const lastSyncTime = lastSync ? parseInt(lastSync) : 0;
+        let lastSyncTime = localStorage.getItem(SYNC_KEY) ? parseInt(localStorage.getItem(SYNC_KEY)!) : 0;
 
-        // Debounce: Don't sync if checked less than 60 seconds ago, unless forced
-        if (!force && Date.now() - lastSyncTime < 60000) {
+        // If forced, do a FULL sync to recover from any stuck cache states
+        if (force) {
+            lastSyncTime = 0;
+            console.log("[Repertoire] Force sync requested. Resetting lastSyncTime to 0 for full sync.");
+        } else if (Date.now() - lastSyncTime < 60000) {
+            // Debounce: Don't sync if checked less than 60 seconds ago, unless forced
             console.log("[Repertoire] Skipping sync (recent)");
             setLoading(false);
             return;
@@ -122,9 +125,9 @@ export function RepertoireProvider({ children }: { children: ReactNode }) {
 
             const { songs: updatedSongs, deletedIds } = await syncSongs(userData.choirId, lastSyncTime);
 
-            if (updatedSongs.length > 0 || deletedIds.length > 0) {
+            if (updatedSongs.length > 0 || deletedIds.length > 0 || lastSyncTime === 0) {
                 setSongs(prev => {
-                    const currentMap = new Map(prev.map(s => [s.id, s]));
+                    const currentMap = new Map((lastSyncTime === 0 ? [] : prev).map(s => [s.id, s]));
 
                     // Remove deleted
                     deletedIds.forEach(id => currentMap.delete(id));
@@ -137,11 +140,12 @@ export function RepertoireProvider({ children }: { children: ReactNode }) {
 
                     // Update Cache
                     localStorage.setItem(CACHE_KEY, JSON.stringify(merged));
+                    console.log(`[Repertoire] Cache updated! Total songs: ${merged.length}`);
                     return merged;
                 });
                 console.log(`[Repertoire] Delta Sync: +${updatedSongs.length}, -${deletedIds.length}`);
             } else {
-                console.log("[Repertoire] Delta Sync: No changes");
+                console.log(`[Repertoire] Delta Sync: No changes since ${lastSyncTime}`);
             }
 
             // Update Sync Time

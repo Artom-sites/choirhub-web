@@ -225,11 +225,8 @@ export async function syncSongs(choirId: string, lastSyncTimestamp: number): Pro
 
         return { songs, deletedIds };
     } catch (error) {
-        // If query fails (e.g. missing index), fall back to full sync or empty?
-        // Better to return empty and let next full sync handle it, or log error.
-        // For "MyChoir", we expect the index to exist.
         console.error("Error syncing songs:", error);
-        return { songs: [], deletedIds: [] };
+        throw error; // MUST throw so RepertoireContext doesn't update lastSyncTime
     }
 }
 
