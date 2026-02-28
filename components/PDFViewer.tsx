@@ -235,9 +235,9 @@ export default function PDFViewer({ url, songId, title, onClose, onAddAction, is
     }, []);
 
     const pdfOptions = useMemo(() => ({
-        cMapUrl: `https://unpkg.com/pdfjs-dist@5.4.296/cmaps/`,
+        cMapUrl: `/pdfjs/cmaps/`,
         cMapPacked: true,
-        standardFontDataUrl: `https://unpkg.com/pdfjs-dist@5.4.296/standard_fonts/`,
+        standardFontDataUrl: `/pdfjs/standard_fonts/`,
     }), []);
 
     useEffect(() => {

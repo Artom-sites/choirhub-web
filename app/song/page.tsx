@@ -486,12 +486,11 @@ function SongContent() {
                 {/* PDF Content */}
                 <div className="flex-1 overflow-hidden relative">
                     <PDFViewer
-                        key={`part-${currentPartIndex}`}
                         url={(() => {
                             // Always use direct URL for static export compatibility
                             return currentPdfUrl;
                         })()}
-                        songId={songId as string}
+                        songId={currentPartIndex === 0 ? songId as string : undefined}
                         title={song.title}
                         onClose={() => router.back()}
                         isAnnotating={isAnnotating && !(Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios')}
