@@ -636,7 +636,7 @@ function HomePageContent() {
     try {
       if (service) {
         newParams.set('serviceId', service.id);
-        const url = `/?${newParams.toString()}`;
+        const url = `/app?${newParams.toString()}`;
         router.push(url, { scroll: false });
       } else {
         newParams.delete('serviceId');
