@@ -26,7 +26,7 @@ export default function LandingPage() {
 
     return (
         <main className="min-h-[100dvh] bg-background text-text-primary flex flex-col font-sans pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
-            {/* Header */}
+            {/* Header / Top Nav */}
             <header className="flex items-center justify-between p-6 w-full max-w-5xl mx-auto">
                 <div className="flex items-center gap-2">
                     <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden">
@@ -34,20 +34,10 @@ export default function LandingPage() {
                     </div>
                     <span className="text-xl font-bold tracking-tight">MyChoir</span>
                 </div>
-                <button
-                    onClick={() => router.push("/setup")}
-                    className="flex items-center gap-2 bg-primary text-background px-4 py-2 rounded-xl font-medium hover:bg-primary/90 transition-colors"
-                >
-                    Увійти
-                    <ArrowRight className="w-4 h-4" />
-                </button>
             </header>
 
             {/* Hero Section */}
-            <section className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-3xl mx-auto w-full">
-                <div className="w-24 h-24 flex items-center justify-center mb-8 mx-auto shadow-2xl shadow-primary/20 rounded-3xl overflow-hidden">
-                    <img src="/apple-touch-icon.png" alt="MyChoir Logo" className="w-full h-full object-cover" />
-                </div>
+            <section className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-3xl mx-auto w-full -mt-20">
                 <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight text-balance">
                     Додаток для організації хорового служіння
                 </h1>
