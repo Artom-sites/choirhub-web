@@ -26,15 +26,7 @@ export default function LandingPage() {
 
     return (
         <main className="min-h-[100dvh] bg-background text-text-primary flex flex-col font-sans pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
-            {/* Header / Top Nav */}
-            <header className="flex items-center justify-between p-6 w-full max-w-5xl mx-auto">
-                <div className="flex items-center gap-2">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden">
-                        <img src="/apple-touch-icon.png" alt="MyChoir Logo" className="w-full h-full object-cover" />
-                    </div>
-                    <span className="text-xl font-bold tracking-tight">MyChoir</span>
-                </div>
-            </header>
+            {/* Main Content */}
 
             {/* Hero Section */}
             <section className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-2xl mx-auto w-full -mt-20">
@@ -54,7 +46,7 @@ export default function LandingPage() {
                     onClick={() => router.push("/setup")}
                     className="bg-primary text-background px-10 py-4 rounded-xl font-semibold text-lg hover:bg-primary/90 transition-colors w-full sm:w-auto"
                 >
-                    Увійти в систему
+                    Увійти
                 </button>
             </section>
 
