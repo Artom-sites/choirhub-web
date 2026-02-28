@@ -876,37 +876,52 @@ export const atomicUpdateMember = functions.https.onCall(async (data, context) =
         const members = choirData.members || [];
         const memberIndex = members.findIndex((m: any) => m.id === memberId);
 
-        if (memberIndex === -1) throw new functions.https.HttpsError("not-found", "Member not found");
-
-        const oldMember = members[memberIndex];
-        // If updates contains photoURL (from client) use it, otherwise keep old
-        // Actually, client might not send it. Let's fetch latest from user doc if possible?
-        // For now, assume client sends it OR we just keep old.
-        // But better: when admin updates role, they don't change photo.
-        // The real fix for photo sync is: when User updates profile, they should trigger a sync to all choirs.
-        // BUT here: just ensure we don't lose it if it exists.
-        const newMember = {
-            ...oldMember,
-            ...updates,
-            photoURL: updates.photoURL !== undefined ? updates.photoURL : (oldMember.photoURL || null)
-        }; // Apply updates
+        if (memberIndex === -1 && !isSelfUpdate) {
+            throw new functions.https.HttpsError("not-found", "Member not found");
+        }
 
         // --- ALL READS FIRST (Firestore requirement) ---
         let targetUserDoc: FirebaseFirestore.DocumentSnapshot | null = null;
         const targetUserRef = db.collection("users").doc(memberId);
-        if (oldMember.hasAccount || newMember.hasAccount) {
-            targetUserDoc = await transaction.get(targetUserRef);
-        }
+        // We need the user doc if they have an account (which they do if it's a self-update)
+        targetUserDoc = await transaction.get(targetUserRef);
 
         // --- ALL WRITES AFTER ---
 
-        // Update Choir Doc
+        let newMember: any;
         const updatedMembers = [...members];
-        updatedMembers[memberIndex] = newMember;
+
+        if (memberIndex === -1 && isSelfUpdate) {
+            // Self-Registration: They have no stub, so we create one and append it.
+            newMember = {
+                id: memberId,
+                name: updates.name || "Unknown",
+                voice: updates.voice || "",
+                role: callerRole || 'member',
+                permissions: [],
+                hasAccount: true,
+                accountUid: memberId,
+                linkedUserIds: [memberId],
+                photoURL: updates.photoURL || null
+            };
+            updatedMembers.push(newMember);
+        } else {
+            // Normal Update
+            const oldMember = members[memberIndex];
+            newMember = {
+                ...oldMember,
+                ...updates,
+                photoURL: updates.photoURL !== undefined ? updates.photoURL : (oldMember.photoURL || null),
+                hasAccount: isSelfUpdate ? true : oldMember.hasAccount // Ensure hasAccount is true if self-updating
+            };
+            updatedMembers[memberIndex] = newMember;
+        }
+
+        // Update Choir Doc
         transaction.update(choirRef, { members: updatedMembers });
 
         // If member has account, sync to User Doc
-        if (targetUserDoc?.exists) {
+        if (targetUserDoc?.exists && newMember.hasAccount) {
             const targetUserData = targetUserDoc.data()!;
 
             // Update memberships array
@@ -918,12 +933,23 @@ export const atomicUpdateMember = functions.https.onCall(async (data, context) =
                 return m;
             });
 
+            // Ensure membership exists (in case it fell out of sync)
+            if (!updatedMemberships.some((m: any) => m.choirId === choirId)) {
+                updatedMemberships.push({
+                    choirId: choirId,
+                    choirName: targetUserData.choirName || "Unknown Choir",
+                    role: newMember.role,
+                    choirType: choirData.choirType || 'msc'
+                });
+            }
+
             const userUpdates: any = { memberships: updatedMemberships };
 
             // Sync active role if this is their active choir
             if (targetUserData.choirId === choirId) {
                 userUpdates.role = newMember.role;
-                userUpdates.voice = newMember.voice;
+                if (updates.voice !== undefined) userUpdates.voice = newMember.voice;
+                if (updates.name !== undefined) userUpdates.name = newMember.name;
                 if (updates.permissions) {
                     userUpdates.permissions = updates.permissions;
                 }
