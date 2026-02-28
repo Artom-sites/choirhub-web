@@ -38,6 +38,8 @@ function SetupPageContent() {
     const [choirName, setChoirName] = useState("");
     const [choirType, setChoirType] = useState<'msc' | 'standard' | null>(null);
     const [inviteCode, setInviteCode] = useState("");
+    const [joinLastName, setJoinLastName] = useState("");
+    const [joinFirstName, setJoinFirstName] = useState("");
     const [formLoading, setFormLoading] = useState(false);
     const [error, setError] = useState("");
     const [resetSent, setResetSent] = useState(false);
@@ -238,15 +240,25 @@ function SetupPageContent() {
             setError("Код має бути 6 символів");
             return;
         }
+        if (!joinLastName.trim() || !joinFirstName.trim()) {
+            setError("Введіть прізвище та ім'я");
+            return;
+        }
 
         setFormLoading(true);
         setError("");
 
+        // Save name to user profile BEFORE joining
+        const fullName = `${joinLastName.trim()} ${joinFirstName.trim()}`;
+        try {
+            await createUser(user.uid, { name: fullName });
+        } catch (e) {
+            console.warn("Failed to save name before join:", e);
+        }
+
         try {
             const result = await joinChoir(inviteCode);
             console.log("Joined:", result);
-
-            // Removed early refreshProfile() to prevent premature redirect by useEffect
 
             // Check if there are unlinked members to claim
             const unlinked = result?.unlinkedMembers || [];
@@ -255,7 +267,6 @@ function SetupPageContent() {
                 setClaimChoirId(result.choirId);
                 setShowClaimModal(true);
             } else {
-                // Now we verify profile and redirect
                 await refreshProfile();
                 router.push("/app");
             }
@@ -266,7 +277,6 @@ function SetupPageContent() {
                 setError("Невірний код");
             } else if (msg.includes("Already a member")) {
                 alert("Ви вже є учасником цього хору");
-                // Check if unlinked members are returned even on error/warning
                 if (err.details?.unlinkedMembers) {
                     setClaimMembers(err.details.unlinkedMembers);
                     setClaimChoirId(err.details.choirId);
@@ -661,8 +671,30 @@ function SetupPageContent() {
                             <ArrowLeft className="w-5 h-5" />
                             Назад
                         </button>
-                        <h2 className="text-2xl font-bold text-text-primary mb-6">Введіть код</h2>
+                        <h2 className="text-2xl font-bold text-text-primary mb-6">Приєднатися</h2>
                         <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-xs text-text-secondary uppercase font-bold tracking-wider mb-2 block">Прізвище</label>
+                                    <input
+                                        value={joinLastName}
+                                        onChange={(e) => setJoinLastName(e.target.value)}
+                                        className="w-full px-4 py-3 bg-surface-highlight rounded-xl border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-text-secondary/30"
+                                        placeholder="Шевченко"
+                                        autoCapitalize="words"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-text-secondary uppercase font-bold tracking-wider mb-2 block">Ім'я</label>
+                                    <input
+                                        value={joinFirstName}
+                                        onChange={(e) => setJoinFirstName(e.target.value)}
+                                        className="w-full px-4 py-3 bg-surface-highlight rounded-xl border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-text-secondary/30"
+                                        placeholder="Тарас"
+                                        autoCapitalize="words"
+                                    />
+                                </div>
+                            </div>
                             <div>
                                 <label className="text-xs text-text-secondary uppercase font-bold tracking-wider mb-2 block">Код запрошення</label>
                                 <input
@@ -676,7 +708,7 @@ function SetupPageContent() {
                             {error && <p className="text-red-500 text-sm bg-red-500/10 p-3 rounded-lg border border-red-500/20">{error}</p>}
                             <button
                                 onClick={handleJoinChoir}
-                                disabled={formLoading}
+                                disabled={formLoading || !joinLastName.trim() || !joinFirstName.trim()}
                                 className="w-full py-4 bg-primary text-background rounded-xl font-bold mt-4 hover:opacity-90 transition-all flex justify-center shadow-lg disabled:opacity-50"
                             >
                                 {formLoading ? <div className="w-5 h-5 border-2 border-background/20 border-t-background rounded-full animate-spin" /> : "Приєднатися"}

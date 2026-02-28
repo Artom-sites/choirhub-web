@@ -35,7 +35,9 @@ export default function MemberStatsModal({ member, choirId, onClose, globalStats
         if (!choirId || !member.id) return;
         setLoadingAbsences(true);
         getMemberAbsences(choirId, member.id).then(data => {
-            setAbsences(data);
+            // Only count absences from finalized services (matches backend aggregation logic)
+            const finalizedAbsences = data.filter(service => service.isFinalized);
+            setAbsences(finalizedAbsences);
             setLoadingAbsences(false);
         }).catch(() => {
             setLoadingAbsences(false);

@@ -69,12 +69,29 @@ export interface ServiceSong {
     pianist?: string;      // Pianist for THIS performance
 }
 
+// Program Item Types (Native-only service order feature)
+export type ProgramItemType = 'choir' | 'verse' | 'prayer' | 'sermon' | 'congregation' | 'solo' | 'ensemble' | 'other';
+
+export interface ProgramItem {
+    id: string;              // Unique ID (nanoid or crypto.randomUUID)
+    type: ProgramItemType;   // Тип пункту
+    title: string;           // "Я спасен", "Влад", etc.
+    performer?: string;      // Хто виконує
+    songId?: string;         // Прив'язка до пісні з репертуару (optional)
+    songTitle?: string;      // Денормалізована назва пісні
+    note?: string;           // Нотатка
+    conductor?: string;      // Хто диригує
+    pianist?: string;        // Піаніст
+    order: number;           // Порядковий номер
+}
+
 export interface Service {
     id: string;
     date: string;
     time?: string; // HH:MM format, e.g. "10:00"
     title: string;
     songs: ServiceSong[];
+    program?: ProgramItem[]; // Порядок служіння (native-only)
     absentMembers?: string[]; // Array of member IDs
     confirmedMembers?: string[]; // Array of member IDs
     warmupConductor?: string; // Who conducts the warm-up (Rozspivanka)

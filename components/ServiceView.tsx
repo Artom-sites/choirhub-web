@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Service, ServiceSong, SimpleSong, Choir, ChoirMember } from "@/types";
+import { Service, ServiceSong, SimpleSong, Choir, ChoirMember, ProgramItem, ProgramItemType } from "@/types";
 import { addSongToService, removeSongFromService, getChoir, updateService, setServiceAttendance, addKnownConductor, addKnownPianist, finalizeService } from "@/lib/db";
 import { updateAttendanceCache } from "@/lib/attendanceCache";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRepertoire } from "@/contexts/RepertoireContext";
-import { ChevronLeft, Eye, X, Plus, Users, UserX, Check, Calendar, Music, UserCheck, AlertCircle, Trash2, User as UserIcon, CloudDownload, CheckCircle, Loader, ChevronDown, Mic2 } from "lucide-react";
+import { ChevronLeft, Eye, X, Plus, Users, UserX, Check, Calendar, Music, UserCheck, AlertCircle, Trash2, User as UserIcon, CloudDownload, CheckCircle, Loader, ChevronDown, Mic2, BookOpen, Hand, Mic, Users2, MoreHorizontal, GripVertical, ListOrdered } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { useRouter } from "next/navigation";
@@ -14,6 +14,7 @@ import SwipeableCard from "./SwipeableCard";
 
 import OfflinePdfModal from "./OfflinePdfModal";
 import { useOfflineCache } from "@/hooks/useOfflineCache";
+import AddProgramItemModal from "./AddProgramItemModal";
 
 interface ServiceViewProps {
     service: Service;
@@ -22,9 +23,10 @@ interface ServiceViewProps {
     canEditCredits?: boolean; // Edit conductor/pianist
     canEditAttendance?: boolean; // Edit attendance
     choir?: Choir | null;
+    isNativeApp?: boolean; // Passed from parent if already computed
 }
 
-export default function ServiceView({ service, onBack, canEdit, canEditCredits = false, canEditAttendance = false, choir }: ServiceViewProps) {
+export default function ServiceView({ service, onBack, canEdit, canEditCredits = false, canEditAttendance = false, choir, isNativeApp }: ServiceViewProps) {
     const router = useRouter();
     const { userData, user } = useAuth();
 
@@ -37,9 +39,30 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
     const [search, setSearch] = useState("");
     const [votingLoading, setVotingLoading] = useState(false);
 
+    // Native-only: Tab state and program items
+    const [isNative, setIsNative] = useState(() => isNativeApp ?? false);
+    useEffect(() => {
+        if (isNativeApp !== undefined) {
+            setIsNative(isNativeApp);
+            return;
+        }
+        // Fallback robust check for standalone usage
+        const checkIsNative = typeof window !== 'undefined' && (
+            ((window as any).Capacitor?.getPlatform && (window as any).Capacitor.getPlatform() !== 'web') ||
+            document.documentElement.classList.contains('is-native') ||
+            Capacitor.isNativePlatform()
+        );
+        setIsNative(!!checkIsNative);
+    }, [isNativeApp]);
+    const [activeTab, setActiveTab] = useState<'program' | 'choir'>('program');
+    const [showAddProgramItem, setShowAddProgramItem] = useState(false);
+    const [programItems, setProgramItems] = useState<ProgramItem[]>(service.program || []);
+    const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
+    const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
+    const [programItemToDelete, setProgramItemToDelete] = useState<string | null>(null);
 
-    // Offline PDF modal
-    const [offlineModalSong, setOfflineModalSong] = useState<SimpleSong | null>(null);
+    // Pdf preview modal (previously strictly offline, now universal for native inline view)
+    const [previewModalSong, setPreviewModalSong] = useState<{ id: string, title: string, pdfUrl?: string, parts?: any[] } | null>(null);
 
     // Filter choir members for attendance — exclude voiceless auto-stubs
     const filterRosterMembers = (members: ChoirMember[]): ChoirMember[] => {
@@ -65,7 +88,32 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
         setCurrentService(service);
         setAbsentMembers(service.absentMembers || []);
         setConfirmedMembers(service.confirmedMembers || []);
-    }, [service]);
+
+        // Auto-migrate legacy songs to program items if program is empty but songs exist
+        if (isNative && (!service.program || service.program.length === 0) && service.songs && service.songs.length > 0) {
+            const migratedProgram: ProgramItem[] = service.songs.map((s, index) => {
+                const songTitle = availableSongs.find(as => as.id === s.songId)?.title || s.songTitle || "Невідома пісня";
+                return {
+                    id: crypto.randomUUID(),
+                    type: 'choir',
+                    title: songTitle,
+                    performer: "Хор", // Default
+                    songId: s.songId,
+                    songTitle: songTitle,
+                    conductor: s.performedBy || undefined,
+                    pianist: s.pianist || undefined,
+                    order: index
+                };
+            });
+            setProgramItems(migratedProgram);
+            // Optionally save the migration to DB right away to persist it
+            if (userData?.choirId) {
+                updateService(userData.choirId, service.id, { program: migratedProgram }).catch(console.error);
+            }
+        } else if (service.program) {
+            setProgramItems(service.program);
+        }
+    }, [service, isNative, availableSongs, userData?.choirId]);
 
     // Sync choir data updates
     useEffect(() => {
@@ -392,17 +440,27 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
         await removeSongFromService(userData.choirId, currentService.id, updatedSongs);
     };
 
-    const handleViewPdf = (songId: string) => {
-        // Check if offline - if so, open modal instead of navigating
-        if (!navigator.onLine) {
-            const song = availableSongs.find(s => s.id === songId);
+    const handleViewPdf = (songId: string, itemTitle?: string) => {
+        // Find the full song details to get the PDF URL
+        const song = availableSongs.find(s => s.id === songId);
+
+        if (isNative) {
+            // Native: Always open in the modal to prevent navigation issues and keep service context
             if (song) {
-                console.log('[ServiceView] Offline - opening PDF modal for:', song.title);
-                setOfflineModalSong(song);
-                return;
+                setPreviewModalSong(song);
+            } else {
+                // If song data is not fully loaded, at least show the title (it will gracefully fail to load PDF if URL is missing)
+                setPreviewModalSong({ id: songId, title: itemTitle || "Пісня" });
             }
+            return;
         }
-        // Online - navigate to song page as usual
+
+        // Web Online - navigate to song page as usual
+        if (!navigator.onLine && song) {
+            setPreviewModalSong(song);
+            return;
+        }
+
         router.push(`/song?id=${songId}`);
     };
 
@@ -544,10 +602,156 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
     const extraAttendees = displayConfirmedCount > 4 ? displayConfirmedCount - 4 : 0;
     const myStatus = getMyStatus();
 
+    // Sync program items with service prop updates
+    useEffect(() => {
+        if (service.program) {
+            setProgramItems(service.program);
+        }
+    }, [service.program]);
+
+    // Program item type config for rendering
+    const programTypeConfig: Record<ProgramItemType, { label: string; icon: React.ReactNode; color: string }> = {
+        choir: { label: 'Хор', icon: <Music className="w-4 h-4" />, color: 'bg-blue-500/10 text-blue-400' },
+        congregation: { label: 'Заг. спів', icon: <Users2 className="w-4 h-4" />, color: 'bg-cyan-500/10 text-cyan-400' },
+        verse: { label: 'Вірш', icon: <BookOpen className="w-4 h-4" />, color: 'bg-purple-500/10 text-purple-400' },
+        prayer: { label: 'Молитва', icon: <Hand className="w-4 h-4" />, color: 'bg-amber-500/10 text-amber-500' },
+        sermon: { label: 'Проповідь', icon: <BookOpen className="w-4 h-4" />, color: 'bg-orange-500/10 text-orange-400' },
+        solo: { label: 'Соло', icon: <Mic className="w-4 h-4" />, color: 'bg-pink-500/10 text-pink-400' },
+        ensemble: { label: 'Ансамбль', icon: <Users2 className="w-4 h-4" />, color: 'bg-green-500/10 text-green-400' },
+        other: { label: 'Інше', icon: <MoreHorizontal className="w-4 h-4" />, color: 'bg-zinc-500/10 text-zinc-400' },
+    };
+
+    // Sync program array back to songs array to maintain web backward compatibility
+    const syncProgramToSongs = async (program: ProgramItem[]) => {
+        if (!userData?.choirId) return;
+        // Extract only choir/song items to keep the legacy `songs` array relevant
+        const syncedSongs: ServiceSong[] = program
+            .filter(p => p.songId)
+            .map(p => ({
+                songId: p.songId!,
+                songTitle: p.songTitle || p.title,
+                performedBy: p.conductor || "",
+                pianist: p.pianist || ""
+            }));
+
+        const newService = { ...currentService, program, songs: syncedSongs };
+        setCurrentService(newService);
+        await updateService(userData.choirId, currentService.id, { program, songs: syncedSongs });
+
+        // Dispatch event to update the parent app's memory (GlobalArchive / page.tsx)
+        const event = new CustomEvent('serviceUpdated', {
+            detail: newService
+        });
+        window.dispatchEvent(event);
+    };
+
+    // Add program item
+    const handleAddProgramItem = async (item: Omit<ProgramItem, 'id' | 'order'>) => {
+        if (!userData?.choirId) return;
+        const newItem: ProgramItem = {
+            ...item,
+            id: crypto.randomUUID(),
+            order: programItems.length,
+        };
+        const updated = [...programItems, newItem];
+        setProgramItems(updated);
+        setShowAddProgramItem(false);
+        await syncProgramToSongs(updated);
+    };
+
+    // Remove program item
+    const handleRemoveProgramItem = async (itemId: string) => {
+        if (!userData?.choirId) return;
+        const updated = programItems
+            .filter(p => p.id !== itemId)
+            .map((p, i) => ({ ...p, order: i }));
+        setProgramItems(updated);
+        setProgramItemToDelete(null);
+        await syncProgramToSongs(updated);
+    };
+
+    // Drag & drop reorder (touch-based)
+    const touchStartY = useRef(0);
+    const touchStartOrder = useRef(0);
+    const dragItemRef = useRef<string | null>(null);
+
+    const handleDragStart = (itemId: string) => {
+        setDraggedItemId(itemId);
+        dragItemRef.current = itemId;
+    };
+
+    const handleDragEnd = async () => {
+        if (!draggedItemId || !dragOverItemId || draggedItemId === dragOverItemId) {
+            setDraggedItemId(null);
+            setDragOverItemId(null);
+            return;
+        }
+        if (!userData?.choirId) return;
+
+        const items = [...programItems];
+        const dragIndex = items.findIndex(p => p.id === draggedItemId);
+        const dropIndex = items.findIndex(p => p.id === dragOverItemId);
+
+        if (dragIndex === -1 || dropIndex === -1) return;
+
+        const [removed] = items.splice(dragIndex, 1);
+        items.splice(dropIndex, 0, removed);
+
+        const reordered = items.map((p, i) => ({ ...p, order: i }));
+        setProgramItems(reordered);
+        setDraggedItemId(null);
+        setDragOverItemId(null);
+
+        await syncProgramToSongs(reordered);
+    };
+
+    // Touch-based reorder for mobile using the Grip icon
+    const handleTouchStart = (e: React.TouchEvent, itemId: string, index: number) => {
+        if (!canEdit) return;
+        touchStartY.current = e.touches[0].clientY;
+        touchStartOrder.current = index;
+        setDraggedItemId(itemId);
+        dragItemRef.current = itemId;
+        // Optionally prevent scrolling while dragging the grip
+        document.body.style.overflow = 'hidden';
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (!draggedItemId || !canEdit) return;
+
+        const currentY = e.touches[0].clientY;
+        const diffY = currentY - touchStartY.current;
+
+        // Assume each row is roughly 70px tall (including gap)
+        const rowHeight = 70;
+        const moves = Math.round(diffY / rowHeight);
+
+        const newIndex = touchStartOrder.current + moves;
+        const validIndex = Math.max(0, Math.min(programItems.length - 1, newIndex));
+
+        // Identify the item currently at validIndex
+        const items = [...programItems].sort((a, b) => a.order - b.order);
+        const targetItem = items[validIndex];
+
+        if (targetItem && targetItem.id !== dragOverItemId) {
+            setDragOverItemId(targetItem.id);
+        }
+    };
+
+    const handleTouchEnd = async () => {
+        document.body.style.overflow = '';
+        if (!draggedItemId || !dragOverItemId || draggedItemId === dragOverItemId) {
+            setDraggedItemId(null);
+            setDragOverItemId(null);
+            return;
+        }
+        await handleDragEnd(); // Re-use the existing drop logic
+    };
+
     return (
         <div className="pb-32 bg-background min-h-screen">
             {/* Header */}
-            <div className="sticky top-0 z-20 bg-surface border-b border-border px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-4 flex items-center gap-4">
+            <div className="sticky top-0 z-20 bg-surface border-b border-border px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-4 flex items-center gap-4">
                 <button
                     onClick={onBack}
                     className="p-2 -ml-2 text-text-secondary hover:text-text-primary rounded-full hover:bg-surface-highlight transition-colors"
@@ -575,283 +779,483 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                     </p>
                 </div>
 
-                {/* Songs Program */}
-                <div className="space-y-4 pt-2">
-                    <div className="flex items-center justify-between px-1">
-                        <div className="flex items-center gap-3">
-                            <h3 className="text-xs font-bold text-text-secondary uppercase tracking-[0.15em]">Програма ({currentService.songs.length})</h3>
-                            {cacheProgress.isRunning && (
-                                <div className="flex items-center gap-1.5 px-2 py-0.5 bg-accent/10 rounded-full text-[10px] font-bold text-accent uppercase tracking-wider">
-                                    <Loader className="w-3 h-3 animate-spin" />
-                                    <span>{Math.round((cacheProgress.cached / cacheProgress.total) * 100)}%</span>
-                                </div>
-                            )}
-                        </div>
-                        {canEdit && (
-                            <button
-                                onClick={() => setShowAddSong(true)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-highlight text-text-primary rounded-full text-xs font-bold hover:bg-surface-highlight/80 transition-colors"
-                            >
-                                <Plus className="w-3.5 h-3.5" />
-                                Додати
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Warmup Row In Program */}
-                    <div className="flex items-center gap-3 bg-surface/30 border border-border/60 p-3.5 rounded-3xl transition-colors">
-                        <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center flex-shrink-0">
-                            <Mic2 className="w-4 h-4 text-orange-400" />
-                        </div>
-                        <div className="flex-1 relative" ref={warmupDropdownRef}>
-                            <div
-                                className={`flex items-center justify-between gap-2 ${canEdit ? 'cursor-pointer hover:text-text-primary transition-colors' : ''}`}
-                                onClick={() => canEdit && setIsWarmupDropdownOpen(!isWarmupDropdownOpen)}
-                            >
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[15px] font-medium text-text-primary">Розспіванка</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                    <span className={`text-[14px] font-medium ${warmupConductor ? 'text-text-secondary' : 'text-text-secondary/40'}`}>
-                                        {warmupConductor || "Хто проводить?"}
-                                    </span>
-                                    {canEdit && <ChevronDown className="w-4 h-4 opacity-40" />}
-                                </div>
-                            </div>
-
-                            {/* Dropdown */}
-                            {isWarmupDropdownOpen && (
-                                <div className="absolute top-full right-0 mt-2 w-full min-w-[200px] bg-surface border border-border rounded-2xl shadow-xl z-[60] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                                    <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                                        <button
-                                            onClick={() => handleUpdateWarmup("")}
-                                            className="w-full text-left px-4 py-3 hover:bg-surface-highlight text-[14px] font-medium text-text-secondary border-b border-border/50"
-                                        >
-                                            Без розспіванКИ
-                                        </button>
-                                        {regentsList.map((name, i) => (
-                                            <button
-                                                key={i}
-                                                onClick={() => handleUpdateWarmup(name)}
-                                                className={`w-full text-left px-4 py-3 hover:bg-surface-highlight text-[14px] font-medium transition-colors ${warmupConductor === name ? 'text-primary bg-primary/5' : 'text-text-primary'}`}
-                                            >
-                                                {name}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {currentService.songs.length === 0 ? (
-                        <div className="text-center py-10 bg-surface border border-border rounded-3xl flex flex-col items-center justify-center gap-3">
-                            <div className="w-16 h-16 rounded-full flex items-center justify-center transition-colors glass-frost-circle text-zinc-700">
-                                <Music className="w-8 h-8" />
-                            </div>
-                            <div>
-                                <p className="text-text-primary font-medium">Список порожній</p>
-                                <p className="text-sm text-text-secondary">Додайте пісні до цього служіння</p>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="space-y-2">
-                            {currentService.songs.map((song, index) => {
-                                const originalSong = availableSongs.find(s => s.id === song.songId);
-                                const hasPdf = originalSong?.hasPdf;
-
-                                return (
-                                    <SwipeableCard
-                                        key={`${song.songId}-${index}`}
-                                        onDelete={() => setSongToDeleteIndex(index)}
-                                        disabled={!canEdit}
-                                        className="rounded-3xl"
-                                    >
-                                        <div className="flex items-center gap-3.5 bg-surface/40 hover:bg-surface/60 border border-border/40 p-3.5 rounded-3xl transition-colors">
-                                            {/* Minimal rounded number */}
-                                            <div className="w-7 h-7 rounded-full bg-surface-highlight/50 flex items-center justify-center text-[10px] font-bold text-text-secondary flex-shrink-0">
-                                                {index + 1}
-                                            </div>
-
-                                            <div className="flex-1 min-w-0" onClick={() => handleViewPdf(song.songId)}>
-                                                <div className="flex items-center gap-2">
-                                                    <h3 className="text-text-primary font-medium text-[16px] truncate">{song.songTitle}</h3>
-                                                    {localCacheStatus[song.songId] && (
-                                                        <CheckCircle className="w-3.5 h-3.5 text-green-500 fill-green-500/10 flex-shrink-0" />
-                                                    )}
-                                                </div>
-
-                                                {/* Sophisticated inline credits */}
-                                                {(song.performedBy || song.pianist) && (
-                                                    <div className="flex items-center gap-3 mt-1 text-[11px] font-medium">
-                                                        {song.performedBy && (
-                                                            <div className="flex items-center gap-1.5 text-indigo-400">
-                                                                <UserIcon className="w-3 h-3" />
-                                                                <span>{song.performedBy}</span>
-                                                            </div>
-                                                        )}
-                                                        {song.performedBy && song.pianist && (
-                                                            <div className="w-1 h-1 rounded-full bg-border/50" />
-                                                        )}
-                                                        {song.pianist && (
-                                                            <div className="flex items-center gap-1.5 text-amber-500/90">
-                                                                <span className="text-[10px]">🎹</span>
-                                                                <span>{song.pianist}</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {(canEdit || canEditCredits) && (
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        openEditCredits(index);
-                                                    }}
-                                                    className="w-10 h-10 flex items-center justify-center text-text-secondary hover:text-text-primary bg-surface-highlight/30 hover:bg-surface-highlight/80 rounded-2xl transition-all flex-shrink-0"
-                                                >
-                                                    <UserIcon className="w-4 h-4" />
-                                                </button>
-                                            )}
-                                        </div>
-                                    </SwipeableCard>
-                                );
-                            })}
-                        </div>
-                    )}
-
-                    {/* Add Song Button (Bottom) */}
-                    {canEdit && currentService.songs.length > 0 && (
+                {/* ===== NATIVE: Tab Bar ===== */}
+                {isNative && (
+                    <div className="flex bg-surface/40 border border-border/60 rounded-2xl p-1 gap-1">
                         <button
-                            onClick={() => setShowAddSong(true)}
-                            className="w-full py-4 border border-dashed border-border/60 rounded-[28px] text-text-secondary hover:text-text-primary hover:bg-surface-highlight/30 hover:border-border transition-all flex items-center justify-center gap-2 text-sm font-medium"
+                            onClick={() => setActiveTab('program')}
+                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'program'
+                                ? 'bg-primary text-background shadow-sm'
+                                : 'text-text-secondary hover:text-text-primary'
+                                }`}
                         >
-                            <Plus className="w-4 h-4" />
-                            Додати ще пісню
+                            <ListOrdered className="w-4 h-4" />
+                            Програма
                         </button>
-                    )}
-                </div>
-
-                {/* Voting Section */}
-                {isFuture ? (
-                    <div className="bg-surface/30 border border-border/60 rounded-[28px] p-5">
-                        <h3 className="text-xs font-bold text-text-secondary uppercase tracking-[0.15em] mb-4 text-center">Ваша участь</h3>
-                        <div className="grid grid-cols-2 gap-3">
-                            <button
-                                onClick={() => handleVote('present')}
-                                disabled={votingLoading}
-                                className={`py-3.5 rounded-2xl border transition-all flex flex-col items-center justify-center gap-2 ${myStatus === 'present'
-                                    ? 'bg-green-500/10 border-green-500/30 shadow-[inset_0_0_20px_rgba(34,197,94,0.05)]'
-                                    : 'bg-surface border-border/50 hover:border-border'
-                                    }`}
-                            >
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${myStatus === 'present' ? 'bg-green-500 text-black shadow-lg shadow-green-500/20' : 'bg-surface-highlight text-text-secondary'}`}>
-                                    <Check className="w-4 h-4" strokeWidth={3} />
-                                </div>
-                                <span className={`text-[13px] font-bold ${myStatus === 'present' ? 'text-green-400' : 'text-text-secondary'}`}>Буду</span>
-                            </button>
-
-                            <button
-                                onClick={() => handleVote('absent')}
-                                disabled={votingLoading}
-                                className={`py-3.5 rounded-2xl border transition-all flex flex-col items-center justify-center gap-2 ${myStatus === 'absent'
-                                    ? 'bg-red-500/10 border-red-500/30 shadow-[inset_0_0_20px_rgba(239,68,68,0.05)]'
-                                    : 'bg-surface border-border/50 hover:border-border'
-                                    }`}
-                            >
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${myStatus === 'absent' ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' : 'bg-surface-highlight text-text-secondary'}`}>
-                                    <X className="w-4 h-4" strokeWidth={3} />
-                                </div>
-                                <span className={`text-[13px] font-bold ${myStatus === 'absent' ? 'text-red-400' : 'text-text-secondary'}`}>Не буду</span>
-                            </button>
-                        </div>
-                    </div>
-                ) : (
-                    /* Past Service Voting Status Check */
-                    <div className="bg-surface/30 border border-border/60 rounded-[24px] p-4 flex items-center gap-4">
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${myStatus === 'present' ? 'bg-green-500/15 text-green-500' :
-                            myStatus === 'absent' ? 'bg-red-500/15 text-red-500' :
-                                'bg-surface-highlight text-text-secondary'
-                            }`}>
-                            {myStatus === 'present' ? <Check className="w-5 h-5" strokeWidth={2.5} /> :
-                                myStatus === 'absent' ? <X className="w-5 h-5" strokeWidth={2.5} /> :
-                                    <AlertCircle className="w-5 h-5" />}
-                        </div>
-                        <div>
-                            <p className="font-bold text-text-primary text-[15px]">
-                                {myStatus === 'present' ? 'Ви були присутні' :
-                                    myStatus === 'absent' ? 'Ви були відсутні' :
-                                        'Статус не вказано'}
-                            </p>
-                            <p className="text-xs text-text-secondary mt-0.5">Голосування завершено</p>
-                        </div>
+                        <button
+                            onClick={() => setActiveTab('choir')}
+                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'choir'
+                                ? 'bg-primary text-background shadow-sm'
+                                : 'text-text-secondary hover:text-text-primary'
+                                }`}
+                        >
+                            <Users className="w-4 h-4" />
+                            Хористи
+                        </button>
                     </div>
                 )}
 
-                {/* Attendees Section - Enhanced */}
-                {(canEdit || canEditAttendance || !isFuture) && (() => {
-                    // Calculate stats
-                    const confirmedList = choirMembers.filter(m => memberMatchesUid(m, confirmedMembers));
+                {/* ===== PROGRAM TAB (or default web view) ===== */}
+                {(!isNative || activeTab === 'program') && (
+                    <>
+                        {/* Program Items (Native-only) */}
+                        {isNative && programItems.length > 0 && (
+                            <div className="space-y-4 pt-2">
+                                <div className="flex items-center justify-between px-1">
+                                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-[0.15em]">Порядок служіння ({programItems.length})</h3>
+                                    {canEdit && (
+                                        <button
+                                            onClick={() => setShowAddProgramItem(true)}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-highlight text-text-primary rounded-full text-xs font-bold hover:bg-surface-highlight/80 transition-colors"
+                                        >
+                                            <Plus className="w-3.5 h-3.5" />
+                                            Додати
+                                        </button>
+                                    )}
+                                </div>
 
-                    // Case-insensitive voice matching
-                    const normalizeVoice = (v: string | undefined) => v?.toLowerCase().trim();
-                    const voiceStats = {
-                        Soprano: confirmedList.filter(m => normalizeVoice(m.voice) === 'soprano').length,
-                        Alto: confirmedList.filter(m => normalizeVoice(m.voice) === 'alto').length,
-                        Tenor: confirmedList.filter(m => normalizeVoice(m.voice) === 'tenor').length,
-                        Bass: confirmedList.filter(m => normalizeVoice(m.voice) === 'bass').length,
-                        Unknown: confirmedList.filter(m => !m.voice || !['soprano', 'alto', 'tenor', 'bass'].includes(normalizeVoice(m.voice)!)).length
-                    };
-
-                    const realUserCount = confirmedList.filter(m => m.hasAccount).length;
-                    const listUserCount = confirmedList.length - realUserCount;
-
-                    return (
-                        <div onClick={() => setShowAttendance(true)} className="bg-surface/30 border border-border/60 rounded-[28px] cursor-pointer hover:border-border/80 transition-colors overflow-hidden relative group">
-                            {/* Header inside the card */}
-                            <div className="p-5 pb-3 flex justify-between items-center relative z-10">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center">
-                                        <Users className="w-4 h-4 text-indigo-400" />
+                                {/* Warmup Row */}
+                                <div className="flex items-center gap-3 bg-surface/30 border border-border/60 p-3.5 rounded-3xl transition-colors">
+                                    <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center flex-shrink-0">
+                                        <Mic2 className="w-4 h-4 text-orange-400" />
                                     </div>
-                                    <span className="text-text-primary font-bold text-[16px]">Учасники</span>
-                                </div>
-                                <span className="text-[11px] font-bold text-text-secondary bg-surface-highlight px-3 py-1.5 rounded-full group-hover:bg-surface-highlight/80 transition-colors">Відкрити</span>
-                            </div>
-
-                            <div className="px-5 pb-5 space-y-4 relative z-10">
-                                {/* Main Count */}
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_12px_rgba(34,197,94,0.6)] animate-pulse"></div>
-                                    <span className="text-2xl font-bold text-text-primary leading-none">{confirmedList.length}</span>
-                                    <span className="text-sm font-medium text-text-secondary">всього</span>
-                                </div>
-
-                                {/* Voice Parts Breakdown */}
-                                <div className="grid grid-cols-2 gap-1.5 text-xs">
-                                    {voiceStats.Soprano > 0 && <div className="flex justify-between px-3 py-2 bg-pink-500/5 rounded-xl"><span className="text-text-secondary">Сопрано</span> <span className="font-bold text-pink-400">{voiceStats.Soprano}</span></div>}
-                                    {voiceStats.Alto > 0 && <div className="flex justify-between px-3 py-2 bg-purple-500/5 rounded-xl"><span className="text-text-secondary">Альт</span> <span className="font-bold text-purple-400">{voiceStats.Alto}</span></div>}
-                                    {voiceStats.Tenor > 0 && <div className="flex justify-between px-3 py-2 bg-blue-500/5 rounded-xl"><span className="text-text-secondary">Тенор</span> <span className="font-bold text-blue-400">{voiceStats.Tenor}</span></div>}
-                                    {voiceStats.Bass > 0 && <div className="flex justify-between px-3 py-2 bg-green-500/5 rounded-xl"><span className="text-text-secondary">Бас</span> <span className="font-bold text-green-400">{voiceStats.Bass}</span></div>}
-                                    {voiceStats.Unknown > 0 && <div className="flex justify-between px-3 py-2 bg-surface-highlight/50 rounded-xl"><span className="text-text-secondary">Без партії</span> <span className="font-bold text-text-primary">{voiceStats.Unknown}</span></div>}
-                                </div>
-
-                                {absentCount > 0 && (
-                                    <div className="flex items-center gap-2 text-xs text-red-400 mt-2 bg-red-500/5 px-3 py-2 rounded-xl border border-red-500/10">
-                                        <div className="w-6 h-6 rounded-full bg-red-500/10 flex items-center justify-center">
-                                            <UserX className="w-3 h-3 text-red-400" />
+                                    <div className="flex-1 relative" ref={warmupDropdownRef}>
+                                        <div
+                                            className={`flex items-center justify-between gap-2 ${canEdit ? 'cursor-pointer hover:text-text-primary transition-colors' : ''}`}
+                                            onClick={() => canEdit && setIsWarmupDropdownOpen(!isWarmupDropdownOpen)}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[15px] font-medium text-text-primary">Розспіванка</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                <span className={`text-[14px] font-medium ${warmupConductor ? 'text-text-secondary' : 'text-text-secondary/40'}`}>
+                                                    {warmupConductor || "Хто проводить?"}
+                                                </span>
+                                                {canEdit && <ChevronDown className="w-4 h-4 opacity-40" />}
+                                            </div>
                                         </div>
-                                        <div>
-                                            <span className="font-bold">{absentCount}</span>
-                                            <span className="ml-1 opacity-80">не буде</span>
+                                        {isWarmupDropdownOpen && (
+                                            <div className="absolute top-full right-0 mt-2 w-full min-w-[200px] bg-surface border border-border rounded-2xl shadow-xl z-[60] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                                                <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                                                    <button
+                                                        onClick={() => handleUpdateWarmup("")}
+                                                        className="w-full text-left px-4 py-3 hover:bg-surface-highlight text-[14px] font-medium text-text-secondary border-b border-border/50"
+                                                    >
+                                                        Без розспіванКИ
+                                                    </button>
+                                                    {regentsList.map((name, i) => (
+                                                        <button
+                                                            key={i}
+                                                            onClick={() => handleUpdateWarmup(name)}
+                                                            className={`w-full text-left px-4 py-3 hover:bg-surface-highlight text-[14px] font-medium transition-colors ${warmupConductor === name ? 'text-primary bg-primary/5' : 'text-text-primary'}`}
+                                                        >
+                                                            {name}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Program Items List */}
+                                <div className="space-y-2">
+                                    {[...programItems].sort((a, b) => a.order - b.order).map((item, index) => {
+                                        const config = programTypeConfig[item.type];
+                                        const isDragged = draggedItemId === item.id;
+                                        const isDragOver = dragOverItemId === item.id;
+                                        return (
+                                            <div
+                                                key={item.id}
+                                                draggable={canEdit}
+                                                onDragStart={() => handleDragStart(item.id)}
+                                                onDragOver={(e) => { e.preventDefault(); setDragOverItemId(item.id); }}
+                                                onDragEnd={handleDragEnd}
+                                                className={`flex items-center gap-3 bg-surface/40 hover:bg-surface/60 border p-3.5 rounded-3xl transition-all ${isDragged ? 'opacity-50 scale-95 border-primary/40' :
+                                                    isDragOver ? 'border-primary/60 bg-primary/5' :
+                                                        'border-border/40'
+                                                    }`}
+                                            >
+                                                {/* Drag Handle */}
+                                                {canEdit && (
+                                                    <div
+                                                        className="flex flex-col gap-0.5 cursor-grab active:cursor-grabbing p-2 -ml-2 select-none"
+                                                        onTouchStart={(e) => handleTouchStart(e, item.id, index)}
+                                                        onTouchMove={handleTouchMove}
+                                                        onTouchEnd={handleTouchEnd}
+                                                    >
+                                                        <GripVertical className="w-4 h-4 text-text-secondary/40 pointer-events-none" />
+                                                    </div>
+                                                )}
+
+                                                {/* Type Icon */}
+                                                <div className={`w-8 h-8 rounded-full ${config.color} flex items-center justify-center flex-shrink-0`}>
+                                                    {config.icon}
+                                                </div>
+
+                                                {/* Content */}
+                                                <div
+                                                    className="flex-1 min-w-0"
+                                                    onClick={() => item.songId && handleViewPdf(item.songId, item.title)}
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <h3 className="text-text-primary font-bold text-[15px] uppercase tracking-wide truncate">{config.label}</h3>
+                                                    </div>
+                                                    {item.title.toLowerCase() !== config.label.toLowerCase() && (
+                                                        <p className="text-sm font-medium text-text-secondary mt-0.5 mb-0.5 truncate">{item.title}</p>
+                                                    )}
+                                                    {item.performer && (
+                                                        <p className="text-xs text-text-secondary/70">{item.performer}</p>
+                                                    )}
+                                                </div>
+
+                                                {/* Status Icons */}
+                                                {item.songId && (
+                                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                                        {localCacheStatus[item.songId] && (
+                                                            <CheckCircle className="w-4 h-4 text-green-500 fill-green-500/10" />
+                                                        )}
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleViewPdf(item.songId!, item.title);
+                                                            }}
+                                                            className="p-1.5 text-text-secondary hover:text-text-primary transition-colors"
+                                                        >
+                                                            <Eye className="w-5 h-5" />
+                                                        </button>
+                                                    </div>
+                                                )}
+
+
+
+                                                {/* Delete */}
+                                                {canEdit && (
+                                                    <button
+                                                        onClick={() => setProgramItemToDelete(item.id)}
+                                                        className="p-2 text-text-secondary/30 hover:text-red-400 transition-colors"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Add Program Item Button (Bottom) */}
+                                {canEdit && (
+                                    <button
+                                        onClick={() => setShowAddProgramItem(true)}
+                                        className="w-full py-4 border border-dashed border-border/60 rounded-[28px] text-text-secondary hover:text-text-primary hover:bg-surface-highlight/30 hover:border-border transition-all flex items-center justify-center gap-2 text-sm font-medium"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                        Додати пункт
+                                    </button>
+                                )}
+                            </div>
+                        )}
+
+                        {/* If native and no program items yet, show a button to start creating */}
+                        {isNative && programItems.length === 0 && canEdit && (
+                            <div className="space-y-4 pt-2">
+                                <button
+                                    onClick={() => setShowAddProgramItem(true)}
+                                    className="w-full py-8 border-2 border-dashed border-primary/20 rounded-[28px] hover:border-primary/50 hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-3"
+                                >
+                                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                                        <Plus className="w-6 h-6 text-primary" />
+                                    </div>
+                                    <div className="text-center">
+                                        <span className="text-[15px] font-bold text-text-primary block mb-1">Створити програму</span>
+                                        <span className="text-sm text-text-secondary">Натисніть, щоб додати пісні та молитви</span>
+                                    </div>
+                                </button>
+                            </div>
+                        )}
+
+                        {/* SONGS LIST (Legacy Web View) */}
+                        {!isNative && (
+                            <div className="mt-8 space-y-4">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
+                                    <h2 className="text-xs font-bold text-text-secondary uppercase tracking-[0.15em]">Пісні ({currentService.songs.length})</h2>
+                                    {canEdit && (
+                                        <button
+                                            onClick={() => setShowAddSong(true)}
+                                            className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 bg-surface-highlight text-text-primary rounded-full text-xs font-bold hover:bg-surface-highlight/80 transition-colors"
+                                        >
+                                            <Plus className="w-3.5 h-3.5" />
+                                            Додати
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Warmup Row (only when NOT using program items — web, or native without program) */}
+                                {(!isNative || programItems.length === 0) && (
+                                    <div className="flex items-center gap-3 bg-surface/30 border border-border/60 p-3.5 rounded-3xl transition-colors">
+                                        <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center flex-shrink-0">
+                                            <Mic2 className="w-4 h-4 text-orange-400" />
+                                        </div>
+                                        <div className="flex-1 relative" ref={warmupDropdownRef}>
+                                            <div
+                                                className={`flex items-center justify-between gap-2 ${canEdit ? 'cursor-pointer hover:text-text-primary transition-colors' : ''}`}
+                                                onClick={() => canEdit && setIsWarmupDropdownOpen(!isWarmupDropdownOpen)}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[15px] font-medium text-text-primary">Розспіванка</span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className={`text-[14px] font-medium ${warmupConductor ? 'text-text-secondary' : 'text-text-secondary/40'}`}>
+                                                        {warmupConductor || "Хто проводить?"}
+                                                    </span>
+                                                    {canEdit && <ChevronDown className="w-4 h-4 opacity-40" />}
+                                                </div>
+                                            </div>
+                                            {isWarmupDropdownOpen && (
+                                                <div className="absolute top-full right-0 mt-2 w-full min-w-[200px] bg-surface border border-border rounded-2xl shadow-xl z-[60] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                                                    <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                                                        <button
+                                                            onClick={() => handleUpdateWarmup("")}
+                                                            className="w-full text-left px-4 py-3 hover:bg-surface-highlight text-[14px] font-medium text-text-secondary border-b border-border/50"
+                                                        >
+                                                            Без розспіванКИ
+                                                        </button>
+                                                        {regentsList.map((name, i) => (
+                                                            <button
+                                                                key={i}
+                                                                onClick={() => handleUpdateWarmup(name)}
+                                                                className={`w-full text-left px-4 py-3 hover:bg-surface-highlight text-[14px] font-medium transition-colors ${warmupConductor === name ? 'text-primary bg-primary/5' : 'text-text-primary'}`}
+                                                            >
+                                                                {name}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 )}
+
+                                {currentService.songs.length === 0 ? (
+                                    <div className="text-center py-10 bg-surface border border-border rounded-3xl flex flex-col items-center justify-center gap-3">
+                                        <div className="w-16 h-16 rounded-full flex items-center justify-center transition-colors glass-frost-circle text-zinc-700">
+                                            <Music className="w-8 h-8" />
+                                        </div>
+                                        <div>
+                                            <p className="text-text-primary font-medium">Список порожній</p>
+                                            <p className="text-sm text-text-secondary">Додайте пісні до цього служіння</p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {currentService.songs.map((song, index) => {
+                                            const originalSong = availableSongs.find(s => s.id === song.songId);
+                                            const hasPdf = originalSong?.hasPdf;
+
+                                            return (
+                                                <SwipeableCard
+                                                    key={`${song.songId}-${index}`}
+                                                    onDelete={() => setSongToDeleteIndex(index)}
+                                                    disabled={!canEdit}
+                                                    className="rounded-3xl"
+                                                >
+                                                    <div className="flex items-center gap-3.5 bg-surface/40 hover:bg-surface/60 border border-border/40 p-3.5 rounded-3xl transition-colors">
+                                                        {/* Minimal rounded number */}
+                                                        <div className="w-7 h-7 rounded-full bg-surface-highlight/50 flex items-center justify-center text-[10px] font-bold text-text-secondary flex-shrink-0">
+                                                            {index + 1}
+                                                        </div>
+
+                                                        <div className="flex-1 min-w-0" onClick={() => handleViewPdf(song.songId)}>
+                                                            <div className="flex items-center gap-2">
+                                                                <h3 className="text-text-primary font-medium text-[16px] truncate">{song.songTitle}</h3>
+                                                                {localCacheStatus[song.songId] && (
+                                                                    <CheckCircle className="w-3.5 h-3.5 text-green-500 fill-green-500/10 flex-shrink-0" />
+                                                                )}
+                                                            </div>
+
+                                                            {/* Sophisticated inline credits */}
+                                                            {(song.performedBy || song.pianist) && (
+                                                                <div className="flex items-center gap-3 mt-1 text-[11px] font-medium">
+                                                                    {song.performedBy && (
+                                                                        <div className="flex items-center gap-1.5 text-indigo-400">
+                                                                            <UserIcon className="w-3 h-3" />
+                                                                            <span>{song.performedBy}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {song.performedBy && song.pianist && (
+                                                                        <div className="w-1 h-1 rounded-full bg-border/50" />
+                                                                    )}
+                                                                    {song.pianist && (
+                                                                        <div className="flex items-center gap-1.5 text-amber-500/90">
+                                                                            <span className="text-[10px]">🎹</span>
+                                                                            <span>{song.pianist}</span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {(canEdit || canEditCredits) && (
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    openEditCredits(index);
+                                                                }}
+                                                                className="w-10 h-10 flex items-center justify-center text-text-secondary hover:text-text-primary bg-surface-highlight/30 hover:bg-surface-highlight/80 rounded-2xl transition-all flex-shrink-0"
+                                                            >
+                                                                <UserIcon className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </SwipeableCard>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                {/* Add Song Button (Bottom) */}
+                                {canEdit && currentService.songs.length > 0 && (
+                                    <button
+                                        onClick={() => setShowAddSong(true)}
+                                        className="w-full py-4 border border-dashed border-border/60 rounded-[28px] text-text-secondary hover:text-text-primary hover:bg-surface-highlight/30 hover:border-border transition-all flex items-center justify-center gap-2 text-sm font-medium"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                        Додати ще пісню
+                                    </button>
+                                )}
                             </div>
-                        </div>
-                    );
-                })()}
+                        )}
+                    </>
+                )}
+
+                {/* ===== CHOIR TAB (Native) or always shown (Web) ===== */}
+                {(!isNative || activeTab === 'choir') && (
+                    <>
+                        {/* Voting Section */}
+                        {isFuture ? (
+                            <div className="bg-surface/30 border border-border/60 rounded-[28px] p-5">
+                                <h3 className="text-xs font-bold text-text-secondary uppercase tracking-[0.15em] mb-4 text-center">Ваша участь</h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        onClick={() => handleVote('present')}
+                                        disabled={votingLoading}
+                                        className={`py-3.5 rounded-2xl border transition-all flex flex-col items-center justify-center gap-2 ${myStatus === 'present'
+                                            ? 'bg-green-500/10 border-green-500/30 shadow-[inset_0_0_20px_rgba(34,197,94,0.05)]'
+                                            : 'bg-surface border-border/50 hover:border-border'
+                                            }`}
+                                    >
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${myStatus === 'present' ? 'bg-green-500 text-black shadow-lg shadow-green-500/20' : 'bg-surface-highlight text-text-secondary'}`}>
+                                            <Check className="w-4 h-4" strokeWidth={3} />
+                                        </div>
+                                        <span className={`text-[13px] font-bold ${myStatus === 'present' ? 'text-green-400' : 'text-text-secondary'}`}>Буду</span>
+                                    </button>
+
+                                    <button
+                                        onClick={() => handleVote('absent')}
+                                        disabled={votingLoading}
+                                        className={`py-3.5 rounded-2xl border transition-all flex flex-col items-center justify-center gap-2 ${myStatus === 'absent'
+                                            ? 'bg-red-500/10 border-red-500/30 shadow-[inset_0_0_20px_rgba(239,68,68,0.05)]'
+                                            : 'bg-surface border-border/50 hover:border-border'
+                                            }`}
+                                    >
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${myStatus === 'absent' ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' : 'bg-surface-highlight text-text-secondary'}`}>
+                                            <X className="w-4 h-4" strokeWidth={3} />
+                                        </div>
+                                        <span className={`text-[13px] font-bold ${myStatus === 'absent' ? 'text-red-400' : 'text-text-secondary'}`}>Не буду</span>
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            /* Past Service Voting Status Check */
+                            <div className="bg-surface/30 border border-border/60 rounded-[24px] p-4 flex items-center gap-4">
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${myStatus === 'present' ? 'bg-green-500/15 text-green-500' :
+                                    myStatus === 'absent' ? 'bg-red-500/15 text-red-500' :
+                                        'bg-surface-highlight text-text-secondary'
+                                    }`}>
+                                    {myStatus === 'present' ? <Check className="w-5 h-5" strokeWidth={2.5} /> :
+                                        myStatus === 'absent' ? <X className="w-5 h-5" strokeWidth={2.5} /> :
+                                            <AlertCircle className="w-5 h-5" />}
+                                </div>
+                                <div>
+                                    <p className="font-bold text-text-primary text-[15px]">
+                                        {myStatus === 'present' ? 'Ви були присутні' :
+                                            myStatus === 'absent' ? 'Ви були відсутні' :
+                                                'Статус не вказано'}
+                                    </p>
+                                    <p className="text-xs text-text-secondary mt-0.5">Голосування завершено</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Attendees Section - Enhanced */}
+                        {(canEdit || canEditAttendance || !isFuture) && (() => {
+                            const confirmedList = choirMembers.filter(m => memberMatchesUid(m, confirmedMembers));
+                            const normalizeVoice = (v: string | undefined) => v?.toLowerCase().trim();
+                            const voiceStats = {
+                                Soprano: confirmedList.filter(m => normalizeVoice(m.voice) === 'soprano').length,
+                                Alto: confirmedList.filter(m => normalizeVoice(m.voice) === 'alto').length,
+                                Tenor: confirmedList.filter(m => normalizeVoice(m.voice) === 'tenor').length,
+                                Bass: confirmedList.filter(m => normalizeVoice(m.voice) === 'bass').length,
+                                Unknown: confirmedList.filter(m => !m.voice || !['soprano', 'alto', 'tenor', 'bass'].includes(normalizeVoice(m.voice)!)).length
+                            };
+
+                            const realUserCount = confirmedList.filter(m => m.hasAccount).length;
+                            const listUserCount = confirmedList.length - realUserCount;
+
+                            return (
+                                <div onClick={() => setShowAttendance(true)} className="bg-surface/30 border border-border/60 rounded-[28px] cursor-pointer hover:border-border/80 transition-colors overflow-hidden relative group">
+                                    <div className="p-5 pb-3 flex justify-between items-center relative z-10">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center">
+                                                <Users className="w-4 h-4 text-indigo-400" />
+                                            </div>
+                                            <span className="text-text-primary font-bold text-[16px]">Учасники</span>
+                                        </div>
+                                        <span className="text-[11px] font-bold text-text-secondary bg-surface-highlight px-3 py-1.5 rounded-full group-hover:bg-surface-highlight/80 transition-colors">Відкрити</span>
+                                    </div>
+
+                                    <div className="px-5 pb-5 space-y-4 relative z-10">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_12px_rgba(34,197,94,0.6)] animate-pulse"></div>
+                                            <span className="text-2xl font-bold text-text-primary leading-none">{confirmedList.length}</span>
+                                            <span className="text-sm font-medium text-text-secondary">всього</span>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-1.5 text-xs">
+                                            {voiceStats.Soprano > 0 && <div className="flex justify-between px-3 py-2 bg-pink-500/5 rounded-xl"><span className="text-text-secondary">Сопрано</span> <span className="font-bold text-pink-400">{voiceStats.Soprano}</span></div>}
+                                            {voiceStats.Alto > 0 && <div className="flex justify-between px-3 py-2 bg-purple-500/5 rounded-xl"><span className="text-text-secondary">Альт</span> <span className="font-bold text-purple-400">{voiceStats.Alto}</span></div>}
+                                            {voiceStats.Tenor > 0 && <div className="flex justify-between px-3 py-2 bg-blue-500/5 rounded-xl"><span className="text-text-secondary">Тенор</span> <span className="font-bold text-blue-400">{voiceStats.Tenor}</span></div>}
+                                            {voiceStats.Bass > 0 && <div className="flex justify-between px-3 py-2 bg-green-500/5 rounded-xl"><span className="text-text-secondary">Бас</span> <span className="font-bold text-green-400">{voiceStats.Bass}</span></div>}
+                                            {voiceStats.Unknown > 0 && <div className="flex justify-between px-3 py-2 bg-surface-highlight/50 rounded-xl"><span className="text-text-secondary">Без партії</span> <span className="font-bold text-text-primary">{voiceStats.Unknown}</span></div>}
+                                        </div>
+
+                                        {absentCount > 0 && (
+                                            <div className="flex items-center gap-2 text-xs text-red-400 mt-2 bg-red-500/5 px-3 py-2 rounded-xl border border-red-500/10">
+                                                <div className="w-6 h-6 rounded-full bg-red-500/10 flex items-center justify-center">
+                                                    <UserX className="w-3 h-3 text-red-400" />
+                                                </div>
+                                                <div>
+                                                    <span className="font-bold">{absentCount}</span>
+                                                    <span className="ml-1 opacity-80">не буде</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })()}
+                    </>
+                )}
             </div>
 
             {/* Modals remain mostly simple, just style updates */}
@@ -1240,13 +1644,53 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                 )
             }
 
+            {/* Add Program Item Modal (Native-only) */}
+            {showAddProgramItem && (
+                <AddProgramItemModal
+                    onAdd={handleAddProgramItem}
+                    onClose={() => setShowAddProgramItem(false)}
+                />
+            )}
+
+            {/* Program Item Delete Confirmation ... (skipped inner parts as they are correct) */}
+            {programItemToDelete && (
+                <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-surface border border-border w-full max-w-xs p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="flex flex-col items-center text-center gap-4">
+                            <div className="w-14 h-14 bg-red-500/10 rounded-full flex items-center justify-center">
+                                <Trash2 className="w-6 h-6 text-red-500" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-text-primary">Видалити пункт?</h3>
+                                <p className="text-text-secondary text-sm mt-1">
+                                    &quot;{programItems.find(p => p.id === programItemToDelete)?.title}&quot; буде видалено з програми.
+                                </p>
+                            </div>
+                            <div className="flex gap-3 w-full mt-2">
+                                <button
+                                    onClick={() => setProgramItemToDelete(null)}
+                                    className="flex-1 py-3 border border-border rounded-xl text-text-primary hover:bg-surface-highlight transition-colors font-medium text-sm"
+                                >
+                                    Скасувати
+                                </button>
+                                <button
+                                    onClick={() => handleRemoveProgramItem(programItemToDelete)}
+                                    className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors text-sm"
+                                >
+                                    Видалити
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
 
-            {/* Offline PDF Modal */}
+            {/* PDF Modal (Reused for both Offline AND Native Inline Viewing) */}
             <OfflinePdfModal
-                isOpen={!!offlineModalSong}
-                onClose={() => setOfflineModalSong(null)}
-                song={offlineModalSong}
+                isOpen={!!previewModalSong}
+                onClose={() => setPreviewModalSong(null)}
+                song={previewModalSong as unknown as SimpleSong}
             />
         </div >
     );

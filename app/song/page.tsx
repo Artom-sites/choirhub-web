@@ -60,7 +60,10 @@ function SongContent() {
     const [isAnnotating, setIsAnnotating] = useState(false);
 
     // iOS detection
-    const isIOS = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
+    const [isIOS, setIsIOS] = useState(false);
+    useEffect(() => {
+        setIsIOS(Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios');
+    }, []);
 
     useEffect(() => {
         if (searchParams.get('archive') === '1') {

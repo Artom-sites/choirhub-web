@@ -7,6 +7,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon, mergeMembers, updateChoir, deleteMyAccount, adminDeleteUser, deleteAdminCode, getChoirNotifications, getChoirUsers, joinChoir, updateMember, claimMember, leaveChoir } from "@/lib/db";
 import { updateAttendanceCache } from "@/lib/attendanceCache";
 import { Capacitor } from "@capacitor/core";
+import { SplashScreen } from "@capacitor/splash-screen";
 import { Service, Choir, UserMembership, UserData, ChoirMember, Permission, AdminCode, StatsSummary } from "@/types";
 import SongList from "@/components/SongList";
 import SwipeableCard from "@/components/SwipeableCard";
@@ -78,6 +79,7 @@ function HomePageContent() {
   const preloaderMinReady = useRef(false);
   const preloaderStartTime = useRef(Date.now());
 
+
   // Min/Max Timing: hide preloader only when BOTH conditions are met
   useEffect(() => {
     if (!isAppReady) return;
@@ -85,9 +87,16 @@ function HomePageContent() {
     const elapsed = Date.now() - preloaderStartTime.current;
     const remaining = Math.max(0, 1200 - elapsed); // Min 1200ms
 
-    const hide = () => {
+    const hide = async () => {
       setPreloaderFading(true); // Start fade-out
       setTimeout(() => setShowPreloader(false), 400); // Remove after fade
+
+      // Hide the native solid dark splash screen now that React is drawn
+      if (Capacitor.isNativePlatform()) {
+        try {
+          await SplashScreen.hide();
+        } catch (e) { }
+      }
     };
 
     if (remaining > 0) {
@@ -211,6 +220,8 @@ function HomePageContent() {
   const [newChoirName, setNewChoirName] = useState("");
   const [newChoirType, setNewChoirType] = useState<'msc' | 'standard' | null>(null);
   const [joinCode, setJoinCode] = useState("");
+  const [joinLastName, setJoinLastName] = useState("");
+  const [joinFirstName, setJoinFirstName] = useState("");
   const [managerLoading, setManagerLoading] = useState(false);
   const [managerError, setManagerError] = useState("");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
@@ -598,9 +609,9 @@ function HomePageContent() {
 
   // Load registered users when Members tab is active (for "Нові користувачі" section)
   useEffect(() => {
-    if (activeTab === 'members' && userData?.choirId) {
+    if (activeTab === 'members' && choir?.id) {
       setLoadingRegisteredUsers(true);
-      getChoirUsers(userData.choirId).then(users => {
+      getChoirUsers(choir.id).then(users => {
         // Client-side sort to avoid needing composite index
         const sorted = users.sort((a, b) => {
           const timeA = new Date(a.createdAt?.seconds ? a.createdAt.seconds * 1000 : a.createdAt || 0).getTime();
@@ -612,13 +623,13 @@ function HomePageContent() {
         const deduped = Array.from(new Map(sorted.map(u => [u.id, u])).values());
 
         setRegisteredUsers(deduped);
-        setLoadingRegisteredUsers(false);
       }).catch((err) => {
         console.error("Error fetching users:", err);
+      }).finally(() => {
         setLoadingRegisteredUsers(false);
       });
     }
-  }, [activeTab, userData?.choirId]);
+  }, [activeTab, choir?.id]);
 
   // Sync selectedService REVERTED due to infinite preloader bug. 
   // We will re-implement safer sync later.
@@ -691,7 +702,7 @@ function HomePageContent() {
 
     await refreshProfile();
     setShowChoirManager(false);
-    // window.location.reload(); // Removed to prevent double loading
+    window.location.reload(); // Restored to ensure full context reset
   };
 
   const handleCreateChoir = async () => {
@@ -720,13 +731,25 @@ function HomePageContent() {
 
   const handleJoinChoir = async () => {
     if (!user || !joinCode || joinCode.length !== 6) return;
+    if (!joinLastName.trim() || !joinFirstName.trim()) {
+      setManagerError("Введіть прізвище та ім'я");
+      return;
+    }
     setManagerLoading(true);
+
+    // Save name to user profile BEFORE joining
+    const fullName = `${joinLastName.trim()} ${joinFirstName.trim()}`;
+    try {
+      await createUser(user.uid, { name: fullName });
+    } catch (e) {
+      console.warn("Failed to save name before join:", e);
+    }
+
     try {
       const result = await joinChoir(joinCode);
       console.log("Joined result:", result);
       await refreshProfile();
 
-      // Check if there are unlinked members to claim
       const unlinked = result?.unlinkedMembers || [];
       console.log("Unlinked members found:", unlinked.length, unlinked);
 
@@ -1151,6 +1174,7 @@ function HomePageContent() {
           canEditCredits={canEditCredits}
           canEditAttendance={canEditAttendance}
           choir={choir}
+          isNativeApp={isNative}
         />
       </main>
     );
@@ -1416,6 +1440,28 @@ function HomePageContent() {
                 <div className="space-y-4">
                   <button onClick={() => { setManagerMode('list'); setManagerError(""); }} className="text-xs text-text-secondary hover:text-text-primary mb-2">← Назад</button>
                   <h3 className="text-xl font-bold text-text-primary">Приєднатись</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider mb-1 block">Прізвище</label>
+                      <input
+                        value={joinLastName}
+                        onChange={e => setJoinLastName(e.target.value)}
+                        placeholder="Шевченко"
+                        className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl placeholder:text-text-secondary"
+                        autoCapitalize="words"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider mb-1 block">Ім'я</label>
+                      <input
+                        value={joinFirstName}
+                        onChange={e => setJoinFirstName(e.target.value)}
+                        placeholder="Тарас"
+                        className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl placeholder:text-text-secondary"
+                        autoCapitalize="words"
+                      />
+                    </div>
+                  </div>
                   <input
                     value={joinCode}
                     onChange={e => setJoinCode(e.target.value.toUpperCase())}
@@ -1426,7 +1472,7 @@ function HomePageContent() {
                   {managerError && <p className="text-red-400 text-xs">{managerError}</p>}
                   <button
                     onClick={handleJoinChoir}
-                    disabled={managerLoading}
+                    disabled={managerLoading || !joinLastName.trim() || !joinFirstName.trim()}
                     className="w-full p-3 bg-primary text-background rounded-xl font-bold hover:opacity-90 disabled:opacity-50"
                   >
                     {managerLoading ? <Loader2 className="animate-spin mx-auto" /> : "Додатись"}
@@ -1912,11 +1958,13 @@ function HomePageContent() {
       {/* Tab Content */}
       <div className="relative pt-[calc(4rem_+_env(safe-area-inset-top))] pb-32 md:pb-24">
         {/* Under Construction Banner - Just a normal block in the flow */}
-        <div className="bg-orange-500/10 border-b border-amber-500/20 py-2 px-4 text-center">
-          <p className="text-[11px] font-medium text-orange-400">
-            🚧 Додаток в розробці — вибачте за можливі незручності
-          </p>
-        </div>
+        {!isNative && (
+          <div className="bg-orange-500/10 border-b border-amber-500/20 py-2 px-4 text-center">
+            <p className="text-[11px] font-medium text-orange-400">
+              🚧 Додаток в розробці — вибачте за можливі незручності
+            </p>
+          </div>
+        )}
         {/* Self-service claim banner for unlinked users */}
         {isUserUnlinked && (
           <div className="mx-4 mt-3 mb-2">
@@ -2099,14 +2147,14 @@ function HomePageContent() {
                   };
 
                   // Unlinked app users: registered users who are NOT linked to any roster member
-                  const unlinkedUsers = canEdit ? registeredUsers.filter(appUser => {
+                  const unlinkedUsers = registeredUsers.filter(appUser => {
                     // If this user's UID is in linkedUids or is a roster member's ID, they're linked
                     if (linkedUids.has(appUser.id)) return false;
                     // If the user IS a visible roster member (has voice, not duplicate), they're established
                     const isEstablished = dedupedMembers.some(m => m.id === appUser.id && !!m.voice && !(m as any).isDuplicate);
                     if (isEstablished) return false;
                     return true;
-                  }) : [];
+                  });
 
                   return (
                     <>
@@ -2120,8 +2168,8 @@ function HomePageContent() {
                         <div className="text-center py-8 text-text-secondary">Нікого не знайдено</div>
                       )}
 
-                      {/* Нові користувачі — unlinked app users */}
-                      {canEdit && unlinkedUsers.length > 0 && (
+                      {/* Нові користувачі — unlinked app users (visible to all members) */}
+                      {unlinkedUsers.length > 0 && (
                         <div className="mt-6">
                           <div className="flex items-center gap-2 mb-3">
                             <Smartphone className="w-4 h-4 text-blue-400" />
@@ -2135,8 +2183,8 @@ function HomePageContent() {
                                 className="px-3 py-2.5 bg-surface rounded-xl flex items-center justify-between group hover:bg-surface-highlight transition-colors"
                               >
                                 <div
-                                  className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
-                                  onClick={() => setLinkingAppUser(appUser)}
+                                  className={`flex items-center gap-3 ${canEdit ? 'cursor-pointer hover:opacity-80' : ''} transition-opacity`}
+                                  onClick={() => canEdit && setLinkingAppUser(appUser)}
                                 >
                                   <div className="w-9 h-9 rounded-full bg-blue-500/15 flex items-center justify-center text-blue-400 font-bold text-xs">
                                     {appUser.name?.[0]?.toUpperCase() || appUser.email?.[0]?.toUpperCase() || '?'}
@@ -2146,29 +2194,28 @@ function HomePageContent() {
                                       {appUser.name || 'Без імені'}
                                       <Smartphone className="w-3 h-3 text-blue-400" />
                                     </div>
-                                    <div className="text-text-secondary text-[11px]">
-                                      {appUser.email}
-                                    </div>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                  <button
-                                    onClick={() => setLinkingAppUser(appUser)}
-                                    className="text-text-secondary/50 hover:text-accent transition-colors p-1.5 hover:bg-accent/10 rounded-lg"
-                                    title="Об'єднати з учасником хору"
-                                  >
-                                    <Link2 className="w-3.5 h-3.5" />
-                                  </button>
-                                  {user?.uid !== appUser.id && (
+                                {canEdit && (
+                                  <div className="flex items-center gap-1">
                                     <button
-                                      onClick={() => setUserToDelete(appUser)}
-                                      className="text-text-secondary/50 hover:text-danger transition-colors p-1.5 hover:bg-danger/10 rounded-lg"
-                                      title="Видалити користувача"
+                                      onClick={() => setLinkingAppUser(appUser)}
+                                      className="text-text-secondary/50 hover:text-accent transition-colors p-1.5 hover:bg-accent/10 rounded-lg"
+                                      title="Об'єднати з учасником хору"
                                     >
-                                      <Trash2 className="w-3.5 h-3.5" />
+                                      <Link2 className="w-3.5 h-3.5" />
                                     </button>
-                                  )}
-                                </div>
+                                    {user?.uid !== appUser.id && (
+                                      <button
+                                        onClick={() => setUserToDelete(appUser)}
+                                        className="text-text-secondary/50 hover:text-danger transition-colors p-1.5 hover:bg-danger/10 rounded-lg"
+                                        title="Видалити користувача"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -2188,23 +2235,24 @@ function HomePageContent() {
         !showAccount && !showChoirManager && !showAddSongModal && !showAddServiceModal && (activeTab === 'home' && canEdit) && (
           <button
             onClick={() => setShowAddServiceModal(true)}
-            className={`app-fab fixed w-[56px] h-[56px] bg-primary text-background rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60] ${isNative
-              ? 'bottom-[calc(3.75rem_+_env(safe-area-inset-bottom))] right-4'
-              : 'bottom-[6.5rem] md:bottom-24 right-6'
-              }`}
+            className="app-fab fixed w-14 h-14 p-0 bg-primary text-background rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60] right-4"
+            style={{
+              bottom: 'var(--fab-bottom)'
+            }}
             title="Додати служіння"
           >
-            <Plus className="w-7 h-7" />
+            <Plus className="w-7 h-7 flex-shrink-0 m-auto inline-block" />
           </button>
         )
       }
 
       {/* Bottom Nav */}
-      <nav className={`app-nav fixed bottom-0 left-0 right-0 bg-surface/90 backdrop-blur-xl px-4 z-50 border-t border-border ${isNative ? 'pb-safe pt-0.5' : 'pt-2 pb-2 md:pt-1 md:pb-1'
-        }`}>
-        <div className={`app-nav-inner max-w-5xl mx-auto flex justify-around items-center relative ${isNative ? 'h-12' : 'h-16 md:h-14'
-          }`}>
-
+      <nav className="app-nav fixed bottom-0 left-0 right-0 bg-surface/90 backdrop-blur-xl z-50 border-t border-border">
+        {/* 56px content zone */}
+        <div
+          className="max-w-5xl mx-auto grid grid-cols-3 px-4"
+          style={{ height: 'var(--nav-height)' }}
+        >
           {[
             { id: 'home', label: 'Служіння', icon: Home },
             { id: 'songs', label: 'Пісні', icon: Music2 },
@@ -2215,16 +2263,21 @@ function HomePageContent() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex flex-col items-center gap-1 flex-1 p-2 transition-colors ${isActive ? 'text-primary' : 'text-text-secondary'}`}
+                className={`grid place-items-center transition-colors ${isActive ? 'text-primary' : 'text-text-secondary'}`}
               >
-                <tab.icon className={`w-6 h-6 transition-all duration-200 ${isActive ? 'stroke-[2.5px]' : ''}`} />
-                <span className={`text-[10px] uppercase tracking-wide transition-all duration-200 ${isActive ? 'font-semibold' : 'font-medium'}`}>
-                  {tab.label}
-                </span>
+                <div className="flex flex-col items-center">
+                  <tab.icon className={`w-[26px] h-[26px] block transition-all duration-200 ${isActive ? 'stroke-[2.5px]' : ''}`} />
+                  <span className={`text-[10px] leading-none uppercase tracking-wide block transition-all duration-200 ${isActive ? 'font-semibold' : 'font-medium'}`}>
+                    {tab.label}
+                  </span>
+                </div>
               </button>
             );
           })}
         </div>
+
+        {/* Safe-area spacer — separate block */}
+        <div style={{ height: 'env(safe-area-inset-bottom)', background: 'inherit' }} />
       </nav>
       {/* Admin Code Creation Modal */}
       <AnimatePresence>

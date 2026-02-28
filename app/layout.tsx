@@ -71,7 +71,7 @@ export default function RootLayout({
     <html lang="uk" suppressHydrationWarning>
       <head>
         <style dangerouslySetInnerHTML={{ __html: `html { background: #09090b; }` }} />
-        <script dangerouslySetInnerHTML={{ __html: `try{if(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform())document.documentElement.classList.add('is-native')}catch(e){}` }} />
+        <script dangerouslySetInnerHTML={{ __html: `try{if(typeof window!=='undefined'&&window.Capacitor&&window.Capacitor.getPlatform&&window.Capacitor.getPlatform()!=='web')document.documentElement.classList.add('is-native');}catch(e){}` }} />
       </head>
       <body
         suppressHydrationWarning

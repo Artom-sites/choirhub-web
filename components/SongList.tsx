@@ -529,7 +529,7 @@ export default function SongList({
 
             {/* Floating Add Button */}
             {canAddSongs && subTab === 'repertoire' && setShowAddModal && !showAddModal && !isOverlayOpen && (
-                <button onClick={() => setShowAddModal(true)} className={`fixed w-[56px] h-[56px] bg-primary text-background rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60] ${isNative ? 'bottom-[calc(3.75rem_+_env(safe-area-inset-bottom))] right-4' : 'bottom-[6.5rem] md:bottom-24 right-6'}`} title="Додати пісню">
+                <button onClick={() => setShowAddModal(true)} className="fixed w-14 h-14 bg-primary text-background rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60] right-4" style={{ bottom: 'var(--fab-bottom)' }} title="Додати пісню">
                     <Plus className="w-7 h-7" />
                 </button>
             )}

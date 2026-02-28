@@ -1,19 +1,14 @@
 {
-    "indexes": [
-        {
-            "collectionGroup": "services",
-            "queryScope": "COLLECTION",
-            "fields": [
-                {
-                    "fieldPath": "absentMembers",
-                    "arrayConfig": "CONTAINS"
-                },
-                {
-                    "fieldPath": "date",
-                    "order": "DESCENDING"
-                }
-            ]
-        }
-    ],
-    "fieldOverrides": []
+  "indexes": [
+    {
+      "collectionGroup": "services",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "absentMembers", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "isFinalized", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
 }

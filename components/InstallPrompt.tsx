@@ -81,7 +81,7 @@ export default function InstallPrompt() {
 
                 <div className="flex items-start gap-4 pr-6">
                     <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shrink-0 shadow-lg">
-                        <img src="/apple-touch-icon.png" alt="Icon" className="w-full h-full rounded-xl object-cover" onError={(e) => (e.currentTarget.src = "/favicon.png")} />
+                        <img src="/icon-192.png" alt="Icon" className="w-full h-full rounded-xl object-cover" onError={(e) => (e.currentTarget.src = "/favicon.png")} />
                     </div>
                     <div>
                         <h4 className="font-bold text-white text-sm mb-1">Інсталюйте застосунок</h4>

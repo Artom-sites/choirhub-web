@@ -13,6 +13,8 @@
   --success: #22c55e;
   --border: rgba(255, 255, 255, 0.1);
   --card-shadow: none;
+  --nav-height: 56px;
+  --fab-bottom: calc(var(--nav-height) + 16px + env(safe-area-inset-bottom));
 }
 
 
