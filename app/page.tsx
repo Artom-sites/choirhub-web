@@ -37,55 +37,25 @@ export default function LandingPage() {
             </header>
 
             {/* Hero Section */}
-            <section className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-4xl mx-auto w-full relative z-10">
-                {/* Decorative background blur */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-primary/20 blur-[100px] rounded-full -z-10 opacity-50 pointer-events-none"></div>
-
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-8 border border-primary/20">
-                    <Music2 className="w-4 h-4" />
-                    <span>Для хористів та регентів</span>
+            <section className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-2xl mx-auto w-full -mt-20">
+                <div className="w-24 h-24 flex items-center justify-center mb-8 shadow-md rounded-[22px] overflow-hidden">
+                    <img src="/apple-touch-icon.png" alt="MyChoir Logo" className="w-full h-full object-cover" />
                 </div>
 
-                <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold mb-6 tracking-tight text-balance leading-tight">
-                    Хорове служіння <br className="hidden sm:block" />
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-500">
-                        на новому рівні
-                    </span>
+                <h1 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight text-text-primary">
+                    MyChoir
                 </h1>
 
-                <p className="text-lg md:text-xl text-text-secondary mb-12 max-w-2xl text-balance leading-relaxed">
-                    MyChoir — це сучасна платформа для управління репертуаром, розкладом служінь, відвідуваністю та швидким доступом до нот.
+                <p className="text-lg md:text-xl text-text-secondary mb-10 text-balance leading-relaxed">
+                    Додаток для організації хорового служіння.<br />Управління репертуаром, розкладом та нотами.
                 </p>
 
-                <div className="flex flex-col sm:flex-row gap-4 w-full justify-center items-center mb-16">
-                    <button
-                        onClick={() => router.push("/setup")}
-                        className="bg-primary text-background px-8 py-4 rounded-2xl font-bold text-lg hover:bg-primary/90 transition-all shadow-xl shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-0.5 w-full sm:w-auto flex items-center justify-center gap-2"
-                    >
-                        Почати користування
-                        <ArrowRight className="w-5 h-5" />
-                    </button>
-                    <button
-                        onClick={() => router.push("/setup")}
-                        className="bg-surface text-text-primary border border-border px-8 py-4 rounded-2xl font-bold text-lg hover:bg-surface-highlight transition-all w-full sm:w-auto"
-                    >
-                        Увійти
-                    </button>
-                </div>
-
-                {/* Feature Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full text-left">
-                    {[
-                        { title: "Репертуар", desc: "Усі пісні, ноти та партитури в одному зручному місці." },
-                        { title: "Відвідуваність", desc: "Швидка статистика та відмітки присутності на репетиціях." },
-                        { title: "Служіння", desc: "Розклад та списки пісень на найближчі служіння." }
-                    ].map((feature, i) => (
-                        <div key={i} className="p-6 rounded-2xl bg-surface border border-border/50 shadow-sm hover:shadow-md transition-shadow">
-                            <h3 className="font-bold text-lg mb-2 text-text-primary">{feature.title}</h3>
-                            <p className="text-text-secondary text-sm">{feature.desc}</p>
-                        </div>
-                    ))}
-                </div>
+                <button
+                    onClick={() => router.push("/setup")}
+                    className="bg-primary text-background px-10 py-4 rounded-xl font-semibold text-lg hover:bg-primary/90 transition-colors w-full sm:w-auto"
+                >
+                    Увійти в систему
+                </button>
             </section>
 
             <InstallPrompt />
