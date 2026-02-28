@@ -349,6 +349,12 @@ export default function PDFViewer({ url, songId, title, onClose, onAddAction, is
                             onLoadError={onDocumentLoadError}
                             loading={null}
                             className="flex flex-col w-full"
+                            options={{
+                                cMapUrl: `https://unpkg.com/pdfjs-dist@5.4.296/cmaps/`,
+                                cMapPacked: true,
+                                standardFontDataUrl: `https://unpkg.com/pdfjs-dist@5.4.296/standard_fonts/`,
+                                useSystemFonts: false,
+                            }}
                         >
                             {Array.from(new Array(numPages), (el, index) => {
                                 const pageNum = index + 1;
