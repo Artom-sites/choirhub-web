@@ -237,13 +237,20 @@ export default function PDFViewer({ url, songId, title, onClose, onAddAction, is
     useEffect(() => {
         const updateWidth = () => {
             if (containerRef.current) {
-                setContainerWidth(containerRef.current.offsetWidth - 20); // Margin
+                const w = containerRef.current.offsetWidth - 20;
+                if (w > 0) setContainerWidth(w);
             }
         };
-        // Initial delay
-        setTimeout(updateWidth, 100);
+        // Measure immediately, then with rAF as fallback
+        updateWidth();
+        requestAnimationFrame(updateWidth);
+        // Also retry after a short delay for layout shifts
+        const timer = setTimeout(updateWidth, 200);
         window.addEventListener("resize", updateWidth);
-        return () => window.removeEventListener("resize", updateWidth);
+        return () => {
+            clearTimeout(timer);
+            window.removeEventListener("resize", updateWidth);
+        };
     }, []);
 
     const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
@@ -335,7 +342,7 @@ export default function PDFViewer({ url, songId, title, onClose, onAddAction, is
                         </div>
                     )}
 
-                    {pdfSource && (
+                    {pdfSource && containerWidth > 0 && (
                         <Document
                             file={pdfSource}
                             onLoadSuccess={onDocumentLoadSuccess}
@@ -355,7 +362,7 @@ export default function PDFViewer({ url, songId, title, onClose, onAddAction, is
                                             onLoadSuccess={onPageLoadSuccess}
                                             renderTextLayer={false}
                                             renderAnnotationLayer={false}
-                                            className="bg-white overflow-hidden w-full"
+                                            className="bg-white w-full"
                                             loading={
                                                 <div className="w-full aspect-[1/1.4] bg-white/5 animate-pulse" />
                                             }
