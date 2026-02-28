@@ -823,6 +823,18 @@ function HomePageContent() {
       const unlinked = result?.unlinkedMembers || [];
       console.log("All members:", allMembers.length, "Unlinked:", unlinked.length);
 
+      // Helper: switch active choir to the newly joined one and reload
+      const switchToNewChoir = async (choirId: string) => {
+        await createUser(user.uid, {
+          choirId: choirId,
+          choirName: result?.choirName || '',
+          role: result?.role || 'member'
+        });
+        await refreshProfile();
+        setShowChoirManager(false);
+        window.location.reload();
+      };
+
       if (allMembers.length > 0 && result?.choirId) {
         const normalize = (name: string) => name.toLowerCase().replace(/\s+/g, ' ').trim();
         const enteredNameNorm = normalize(`${joinLastName} ${joinFirstName}`);
@@ -844,17 +856,18 @@ function HomePageContent() {
           setSelectedClaimId(matchedMember.id);
           setShowChoirManager(false);
           setShowClaimModal(true);
+          // Note: choir switch happens after user confirms claim
         } else {
-          // No match among ANY members — create a new stub
-          console.log("No name match in any members. Auto-creating self-stub");
+          // No match among ANY members — create a new stub and switch
+          console.log("No name match. Auto-creating self-stub and switching to new choir");
           await updateMember(result.choirId, user.uid, { name: fullName });
-          setShowChoirManager(false);
+          await switchToNewChoir(result.choirId);
         }
       } else if (result?.choirId) {
-        // Empty choir — just add self
-        console.log("No members in choir. Auto-creating self-stub");
+        // Empty choir — add self and switch
+        console.log("No members in choir. Auto-creating self-stub and switching");
         await updateMember(result.choirId, user.uid, { name: fullName });
-        setShowChoirManager(false);
+        await switchToNewChoir(result.choirId);
       } else {
         setShowChoirManager(false);
       }
