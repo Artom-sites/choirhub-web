@@ -329,10 +329,7 @@ function HomePageContent() {
       }
 
       // No match -> Update their own auto-created stub with the new name
-      const updatedMembers = currentMembers.map((m: any) =>
-        m.id === user.uid ? { ...m, name: fullName } : m
-      );
-      await updateDoc(choirDocRef, { members: updatedMembers });
+      await updateMember(userData.choirId, user.uid, { name: fullName });
 
       await refreshProfile();
       setShowFinishAppRegistration(false);

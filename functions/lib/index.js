@@ -736,8 +736,19 @@ exports.atomicUpdateMember = functions.https.onCall(async (data, context) => {
             }
         }
     }
-    if (!callerRole || !['admin', 'regent', 'head'].includes(callerRole)) {
+    const isSelfUpdate = memberId === context.auth.uid;
+    const isAdmin = callerRole && ['admin', 'regent', 'head'].includes(callerRole);
+    if (!isAdmin && !isSelfUpdate) {
         throw new functions.https.HttpsError("permission-denied", "Unauthorized");
+    }
+    if (!isAdmin && isSelfUpdate) {
+        // Restrict what a normal user can update on themselves
+        const allowedFields = ['name', 'voice', 'photoURL'];
+        for (const key of Object.keys(updates)) {
+            if (!allowedFields.includes(key)) {
+                throw new functions.https.HttpsError("permission-denied", `Not allowed to update field: ${key}`);
+            }
+        }
     }
     const result = await db.runTransaction(async (transaction) => {
         const choirRef = db.collection("choirs").doc(choirId);
