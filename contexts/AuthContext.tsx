@@ -23,18 +23,6 @@ import { app, auth } from "@/lib/firebase";
 import { getUserProfile, createUser, getChoir } from "@/lib/db";
 import { UserData } from "@/types";
 
-// Helper to generate a random nonce for Apple Sign-In
-function generateNonce(length: number = 32): string {
-    const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
-    let result = '';
-    const values = new Uint32Array(length);
-    crypto.getRandomValues(values);
-    for (let i = 0; i < length; i++) {
-        result += charset[values[i] % charset.length];
-    }
-    return result;
-}
-
 interface AuthContextType {
     user: FirebaseUser | null;
     userData: UserData | null | undefined; // undefined = loading, null = no profile
@@ -150,16 +138,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const provider = new OAuthProvider('apple.com');
                 await signInWithPopup(auth, provider, browserPopupRedirectResolver);
             } else {
-                const rawNonce = generateNonce();
-                const result = await FirebaseAuthentication.signInWithApple({
-                    customParameters: [
-                        { key: "nonce", value: rawNonce }
-                    ]
-                });
+                const result = await FirebaseAuthentication.signInWithApple();
 
+                // Capacitor native Apple Auth returns the raw nonce used during the request
+                // inside `result.credential.nonce`. Firebase needs this as `rawNonce`.
                 const credential = new OAuthProvider('apple.com').credential({
                     idToken: result.credential?.idToken,
-                    rawNonce: rawNonce,
+                    rawNonce: result.credential?.nonce,
                 });
                 await signInWithCredential(auth, credential);
             }
