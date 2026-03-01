@@ -101,12 +101,7 @@ export default function OfflinePdfModal({ isOpen, onClose, song }: OfflinePdfMod
                         </div>
                     </motion.div>
 
-                    {/* Offline indicator */}
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-blue-500/20 border border-blue-500/30 rounded-full">
-                        <span className="text-xs text-blue-400 font-medium">
-                            📴 Офлайн режим
-                        </span>
-                    </div>
+
                 </motion.div>
             )}
         </AnimatePresence>
