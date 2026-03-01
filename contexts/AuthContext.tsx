@@ -138,17 +138,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const provider = new OAuthProvider('apple.com');
                 await signInWithPopup(auth, provider, browserPopupRedirectResolver);
             } else {
-                const result = await FirebaseAuthentication.signInWithApple();
-
-                // Capacitor native Apple Auth internally generates the nonce, hashes it,
-                // and returns the RAW unhashed nonce in the result.
-                // We must pass this to Firebase as rawNonce.
-                const credential = new OAuthProvider('apple.com').credential({
-                    idToken: result.credential?.idToken,
-                    accessToken: result.credential?.accessToken,
-                    rawNonce: result.credential?.nonce,
-                });
-                await signInWithCredential(auth, credential);
+                // With skipNativeAuth: false, the Capacitor Firebase plugin
+                // handles the entire Apple Sign-In flow natively, including
+                // nonce generation, hashing, and Firebase signInWithCredential.
+                // We MUST NOT call signInWithCredential again — Apple tokens
+                // are single-use, and a second call causes "duplicate credential".
+                await FirebaseAuthentication.signInWithApple();
             }
         } catch (error: any) {
             console.error("Error signing in with Apple:", error);
