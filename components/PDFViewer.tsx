@@ -100,27 +100,26 @@ export default function PDFViewer({ url, songId, title, onClose, onAddAction, is
                     url.includes('_capacitor_file_')
                 );
 
-                // 2. First check IndexedDB offline cache (by songId) ONLY if not priority URL
-                if (!isPriorityUrl && songId) {
-                    const offlinePdf = await getOfflinePdf(songId);
-                    if (offlinePdf && active) {
-                        console.log('[PDFViewer] Loaded from IndexedDB offline cache');
-                        setPdfSource(offlinePdf); // This is a data URI
-                        setIsCached(true);
-
-                        return;
-                    }
-                }
-
-                // 2. Check URL-based cache (cache.ts)
-                if (url && !url.startsWith('data:')) {
+                // 2. Check URL-based cache FIRST (unique per part URL)
+                if (url && !isPriorityUrl && !url.startsWith('data:')) {
                     const cachedBlob = await getPdfFromCache(url);
                     if (cachedBlob && active) {
                         const objectUrl = URL.createObjectURL(cachedBlob);
                         setPdfSource(objectUrl);
                         setIsCached(true);
-
                         console.log('[PDFViewer] Loaded from URL cache');
+                        return;
+                    }
+                }
+
+                // 3. Fallback: check IndexedDB offline cache (by songId)
+                // Only use if no URL or URL cache miss — this stores a single PDF per song
+                if (!isPriorityUrl && songId && !url) {
+                    const offlinePdf = await getOfflinePdf(songId);
+                    if (offlinePdf && active) {
+                        console.log('[PDFViewer] Loaded from IndexedDB offline cache');
+                        setPdfSource(offlinePdf);
+                        setIsCached(true);
                         return;
                     }
                 }
