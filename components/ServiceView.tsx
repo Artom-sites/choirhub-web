@@ -825,8 +825,8 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                 </div>
 
                                 {/* Warmup Row */}
-                                <div className="flex items-center gap-3 bg-surface/30 border border-border/60 p-3.5 rounded-3xl transition-colors">
-                                    <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center flex-shrink-0">
+                                <div className="flex items-center gap-2.5 bg-surface/30 border border-border/60 px-3 py-2.5 rounded-2xl transition-colors">
+                                    <div className="w-7 h-7 rounded-full bg-orange-500/10 flex items-center justify-center flex-shrink-0">
                                         <Mic2 className="w-4 h-4 text-orange-400" />
                                     </div>
                                     <div className="flex-1 relative" ref={warmupDropdownRef}>
@@ -835,7 +835,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                             onClick={() => canEdit && setIsWarmupDropdownOpen(!isWarmupDropdownOpen)}
                                         >
                                             <div className="flex items-center gap-2">
-                                                <span className="text-[15px] font-medium text-text-primary">Розспіванка</span>
+                                                <span className="text-[14px] font-medium text-text-primary">Розспіванка</span>
                                             </div>
                                             <div className="flex items-center gap-1.5">
                                                 <span className={`text-[14px] font-medium ${warmupConductor ? 'text-text-secondary' : 'text-text-secondary/40'}`}>
@@ -869,7 +869,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                 </div>
 
                                 {/* Program Items List */}
-                                <div className="space-y-2">
+                                <div className="space-y-1.5">
                                     {[...programItems].sort((a, b) => a.order - b.order).map((item, index) => {
                                         const config = programTypeConfig[item.type];
                                         const isDragged = draggedItemId === item.id;
@@ -881,7 +881,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                                 onDragStart={() => handleDragStart(item.id)}
                                                 onDragOver={(e) => { e.preventDefault(); setDragOverItemId(item.id); }}
                                                 onDragEnd={handleDragEnd}
-                                                className={`flex items-center gap-3 bg-surface/40 hover:bg-surface/60 border p-3.5 rounded-3xl transition-all ${isDragged ? 'opacity-50 scale-95 border-primary/40' :
+                                                className={`flex items-center gap-2.5 bg-surface/40 hover:bg-surface/60 border px-3 py-2.5 rounded-2xl transition-all ${isDragged ? 'opacity-50 scale-95 border-primary/40' :
                                                     isDragOver ? 'border-primary/60 bg-primary/5' :
                                                         'border-border/40'
                                                     }`}
@@ -899,7 +899,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                                 )}
 
                                                 {/* Type Icon */}
-                                                <div className={`w-8 h-8 rounded-full ${config.color} flex items-center justify-center flex-shrink-0`}>
+                                                <div className={`w-7 h-7 rounded-full ${config.color} flex items-center justify-center flex-shrink-0`}>
                                                     {config.icon}
                                                 </div>
 
@@ -909,32 +909,27 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                                     onClick={() => item.songId && handleViewPdf(item.songId, item.title)}
                                                 >
                                                     <div className="flex items-center gap-2">
-                                                        <h3 className="text-text-primary font-bold text-[15px] uppercase tracking-wide truncate">{config.label}</h3>
+                                                        <h3 className="text-text-primary font-bold text-[14px] uppercase tracking-wide truncate">{config.label}</h3>
                                                     </div>
                                                     {item.title.toLowerCase() !== config.label.toLowerCase() && (
-                                                        <p className="text-sm font-medium text-text-secondary mt-0.5 mb-0.5 truncate">{item.title}</p>
+                                                        <p className="text-xs font-medium text-text-secondary truncate">{item.title}</p>
                                                     )}
                                                     {item.performer && (
                                                         <p className="text-xs text-text-secondary/70">{item.performer}</p>
                                                     )}
                                                 </div>
 
-                                                {/* Status Icons */}
+                                                {/* View PDF */}
                                                 {item.songId && (
-                                                    <div className="flex items-center gap-2 flex-shrink-0">
-                                                        {localCacheStatus[item.songId] && (
-                                                            <CheckCircle className="w-4 h-4 text-green-500 fill-green-500/10" />
-                                                        )}
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleViewPdf(item.songId!, item.title);
-                                                            }}
-                                                            className="p-1.5 text-text-secondary hover:text-text-primary transition-colors"
-                                                        >
-                                                            <Eye className="w-5 h-5" />
-                                                        </button>
-                                                    </div>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleViewPdf(item.songId!, item.title);
+                                                        }}
+                                                        className="p-1.5 text-text-secondary hover:text-text-primary transition-colors flex-shrink-0"
+                                                    >
+                                                        <Eye className="w-4.5 h-4.5" />
+                                                    </button>
                                                 )}
 
 
@@ -1078,9 +1073,6 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                                         <div className="flex-1 min-w-0" onClick={() => handleViewPdf(song.songId)}>
                                                             <div className="flex items-center gap-2">
                                                                 <h3 className="text-text-primary font-medium text-[16px] truncate">{song.songTitle}</h3>
-                                                                {localCacheStatus[song.songId] && (
-                                                                    <CheckCircle className="w-3.5 h-3.5 text-green-500 fill-green-500/10 flex-shrink-0" />
-                                                                )}
                                                             </div>
 
                                                             {/* Sophisticated inline credits */}
