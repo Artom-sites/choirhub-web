@@ -132,7 +132,14 @@ function SetupPageContent() {
             await signInWithApple();
         } catch (err: any) {
             console.error(err);
-            if (err.message?.includes("canceled") || err.errorMessage?.includes("canceled")) {
+            // 1001 is the specific error code for user cancellation on iOS Apple Sign In
+            const isCanceled =
+                err.message?.includes("canceled") ||
+                err.errorMessage?.includes("canceled") ||
+                err.message?.includes("error 1001") ||
+                (err.code === "1001");
+
+            if (isCanceled) {
                 console.warn("Sign-in canceled by user");
             } else {
                 alert("Apple Login Error: " + (err.message || JSON.stringify(err)));
