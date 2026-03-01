@@ -20,6 +20,12 @@ public class PencilKitAnnotatorPlugin: CAPPlugin, CAPBridgedPlugin {
     // MARK: - Open Native PDF Viewer
 
     @objc func openNativePdfViewer(_ call: CAPPluginCall) {
+        // Prevent double presentation
+        if currentVC != nil {
+            currentVC?.dismiss(animated: false, completion: nil)
+            currentVC = nil
+        }
+
         guard let partsArray = call.getArray("parts") as? [[String: Any]],
               let songId = call.getString("songId"),
               let userUid = call.getString("userUid") else {
