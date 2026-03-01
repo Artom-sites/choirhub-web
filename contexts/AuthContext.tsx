@@ -138,12 +138,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const provider = new OAuthProvider('apple.com');
                 await signInWithPopup(auth, provider, browserPopupRedirectResolver);
             } else {
-                // With skipNativeAuth: false, the Capacitor Firebase plugin
-                // handles the entire Apple Sign-In flow natively, including
-                // nonce generation, hashing, and Firebase signInWithCredential.
-                // We MUST NOT call signInWithCredential again — Apple tokens
-                // are single-use, and a second call causes "duplicate credential".
-                await FirebaseAuthentication.signInWithApple();
+                // skipNativeAuth: true means the plugin does NOT sign in with Firebase natively.
+                // It only triggers Apple's native Sign-In UI and returns the credential.
+                // We MUST call signInWithCredential ourselves so the JS Firebase SDK
+                // updates its auth state (triggering onAuthStateChanged → navigation).
+                const result = await FirebaseAuthentication.signInWithApple();
+                const credential = new OAuthProvider('apple.com').credential({
+                    idToken: result.credential?.idToken,
+                    rawNonce: result.credential?.nonce,
+                });
+                await signInWithCredential(auth, credential);
             }
         } catch (error: any) {
             console.error("Error signing in with Apple:", error);
