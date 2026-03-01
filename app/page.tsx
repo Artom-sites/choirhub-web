@@ -375,62 +375,130 @@ function SetupPageContent() {
         return (
             <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center p-6 text-center">
                 <div className="flex-1 flex flex-col items-center justify-center w-full max-w-sm">
-                    <div className="w-24 h-24 rounded-[22px] overflow-hidden mb-6 shadow-lg">
+                    <div className="w-20 h-20 rounded-[18px] overflow-hidden mb-5 shadow-lg">
                         <img src="/apple-touch-icon.png" alt="MyChoir" className="w-full h-full object-cover" />
                     </div>
-                    <h1 className="text-4xl font-bold text-text-primary mb-2">MyChoir</h1>
-                    <p className="text-text-secondary mb-2">Ваш хоровий асистент</p>
-                    <p className="text-sm text-text-secondary/70 mb-10 text-balance">
-                        Додаток для організації хорового служіння: репертуар, розклад, ноти та відвідуваність.
-                    </p>
+                    <h1 className="text-3xl font-bold text-text-primary mb-1">MyChoir</h1>
+                    <p className="text-text-secondary text-sm mb-8">Ваш хоровий асистент</p>
 
                     <div className="w-full space-y-3">
-                        <button
-                            onClick={handleGoogleLogin}
-                            disabled={formLoading}
-                            className="w-full py-4 bg-surface-highlight text-text-primary border border-border font-bold rounded-xl flex items-center justify-center gap-3 hover:bg-surface transition-colors disabled:opacity-50"
-                        >
-                            {googleLoading ? (
-                                <Loader2 className="w-5 h-5 animate-spin text-text-primary" />
-                            ) : (
-                                <svg className="w-5 h-5 text-text-primary" viewBox="0 0 24 24">
-                                    <path fill="currentColor" d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z" />
-                                </svg>
-                            )}
-                            {googleLoading ? 'Завантаження...' : 'Увійти через Google'}
-                        </button>
+                        {/* Email/Password Fields */}
+                        {isRegistering && (
+                            <input
+                                value={authName}
+                                onChange={(e) => setAuthName(e.target.value)}
+                                className="w-full px-4 py-3.5 bg-surface border border-border rounded-xl text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+                                placeholder="Ваше ім'я"
+                                autoCapitalize="words"
+                            />
+                        )}
+                        <input
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="w-full px-4 py-3.5 bg-surface border border-border rounded-xl text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+                            placeholder="Email"
+                            autoCapitalize="off"
+                            autoCorrect="off"
+                        />
+                        <div className="relative">
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') handleEmailAuth(); }}
+                                className="w-full px-4 py-3.5 bg-surface border border-border rounded-xl text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all pr-12"
+                                placeholder="Пароль"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-text-secondary hover:text-text-primary transition-colors"
+                            >
+                                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                        </div>
+
+                        {error && (
+                            <p className="text-red-400 text-sm bg-red-400/10 p-3 rounded-lg text-left">{error}</p>
+                        )}
+
+                        {!isRegistering && (
+                            <div className="flex justify-end">
+                                <button
+                                    onClick={() => { setView('reset_password'); setError(''); setResetSent(false); }}
+                                    className="text-xs text-text-secondary hover:text-text-primary transition-colors"
+                                >
+                                    Забули пароль?
+                                </button>
+                            </div>
+                        )}
 
                         <button
-                            onClick={handleAppleLogin}
-                            disabled={formLoading}
-                            className="w-full py-4 bg-black text-white font-bold rounded-xl flex items-center justify-center gap-3 hover:bg-zinc-900 transition-colors disabled:opacity-50 border border-white/10"
+                            onClick={handleEmailAuth}
+                            disabled={formLoading || !email || !password}
+                            className="w-full py-4 bg-text-primary text-background font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all disabled:opacity-40"
                         >
-                            {appleLoading ? (
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                            ) : (
-                                <Apple className="w-5 h-5" />
-                            )}
-                            {appleLoading ? 'Завантаження...' : 'Увійти через Apple'}
+                            {formLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isRegistering ? "Зареєструватися" : "Увійти")}
                         </button>
 
-                        <button
-                            onClick={() => { setView('email_auth'); setIsRegistering(false); setEmail(""); setPassword(""); setAuthName(""); setError(""); }}
-                            disabled={formLoading}
-                            className="w-full py-4 bg-primary text-background font-bold rounded-xl flex items-center justify-center gap-3 hover:opacity-90 transition-colors disabled:opacity-50"
-                        >
-                            <Mail className="w-5 h-5 text-background" />
-                            Увійти через пошту
-                        </button>
+                        {/* Divider */}
+                        <div className="flex items-center gap-3 py-1">
+                            <div className="flex-1 h-px bg-border" />
+                            <span className="text-xs text-text-secondary">або</span>
+                            <div className="flex-1 h-px bg-border" />
+                        </div>
+
+                        {/* Social Buttons */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                onClick={handleGoogleLogin}
+                                disabled={formLoading}
+                                className="py-3.5 bg-surface border border-border rounded-xl flex items-center justify-center gap-2 hover:bg-surface-highlight transition-colors disabled:opacity-50"
+                            >
+                                {googleLoading ? (
+                                    <Loader2 className="w-5 h-5 animate-spin text-text-primary" />
+                                ) : (
+                                    <svg className="w-5 h-5 text-text-primary" viewBox="0 0 24 24">
+                                        <path fill="currentColor" d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z" />
+                                    </svg>
+                                )}
+                                <span className="font-semibold text-text-primary text-sm">Google</span>
+                            </button>
+
+                            <button
+                                onClick={handleAppleLogin}
+                                disabled={formLoading}
+                                className="py-3.5 bg-black text-white rounded-xl flex items-center justify-center gap-2 hover:bg-zinc-900 transition-colors disabled:opacity-50 border border-white/10"
+                            >
+                                {appleLoading ? (
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                ) : (
+                                    <Apple className="w-5 h-5" />
+                                )}
+                                <span className="font-semibold text-sm">Apple</span>
+                            </button>
+                        </div>
+
+                        {/* Toggle Register/Login */}
+                        <div className="pt-2">
+                            <button
+                                onClick={() => { setIsRegistering(!isRegistering); setError(''); }}
+                                className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+                            >
+                                {isRegistering ? "Вже є акаунт? Увійти" : "Немає акаунту? Зареєструватися"}
+                            </button>
+                        </div>
 
                         {urlCode && (
-                            <p className="text-xs text-green-500 mt-2">
+                            <p className="text-xs text-green-500 mt-1">
                                 Посилання на хор знайдено! Увійдіть, щоб продовжити.
                             </p>
                         )}
                     </div>
                 </div>
 
-                <footer className="w-full pt-6 pb-2 flex flex-col items-center gap-3 text-xs text-text-secondary">
+                <footer className="w-full pt-4 pb-2 flex flex-col items-center gap-2 text-xs text-text-secondary">
                     <div className="flex gap-6">
                         <Link href="/terms" className="hover:text-text-primary transition-colors whitespace-nowrap">Умови використання</Link>
                         <Link href="/privacy" className="hover:text-text-primary transition-colors whitespace-nowrap">Політика конфіденційності</Link>
