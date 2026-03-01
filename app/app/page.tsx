@@ -2404,7 +2404,7 @@ function HomePageContent() {
       }
 
       {/* Bottom Nav */}
-      <nav className="app-nav fixed bottom-0 left-0 right-0 bg-surface/90 backdrop-blur-xl z-50 border-t border-border">
+      <nav className="app-nav fixed bottom-0 left-0 right-0 bg-surface z-50 border-t border-border">
         {/* 56px content zone */}
         <div
           className="max-w-5xl mx-auto grid grid-cols-3 px-4"
