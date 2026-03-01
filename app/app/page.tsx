@@ -2434,7 +2434,7 @@ function HomePageContent() {
         </div>
 
         {/* Safe-area spacer — separate block */}
-        <div style={{ height: 'env(safe-area-inset-bottom)', background: 'inherit' }} />
+        <div style={{ height: 'env(safe-area-inset-bottom)', background: 'var(--surface)' }} />
       </nav>
       {/* Admin Code Creation Modal */}
       <AnimatePresence>

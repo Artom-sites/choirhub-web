@@ -226,7 +226,7 @@ function SongContent() {
 
             if (fetched?.hasPdf && (fetched.pdfUrl || fetched.pdfData) && !isCheckingArchive && !isEditing) {
                 if (!isTelegramLink(fetched.pdfUrl || "")) {
-                    if (isIOS) {
+                    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios') {
                         const partsData = (fetched.parts && fetched.parts.length > 0)
                             ? fetched.parts.map(p => ({ name: p.name || 'Part', pdfUrl: p.pdfUrl }))
                             : [{ name: 'Головна', pdfUrl: fetched.pdfUrl || fetched.pdfData! }];
