@@ -23,6 +23,7 @@ import TrashBin from "./TrashBin";
 import Toast from "./Toast";
 import SwipeableCard from "./SwipeableCard";
 import SongSkeleton from "./SongSkeleton";
+import { PencilKitAnnotator } from "@/plugins/PencilKitAnnotator";
 import { hapticLight, hapticSuccess } from "../hooks/useHaptics";
 
 interface SongListProps {
@@ -127,6 +128,24 @@ export default function SongList({
 
     const handleSongClick = (song: SimpleSong) => {
         if (song.hasPdf || effectiveCanAdd) {
+            // iOS: open native PDF viewer directly — no preloader
+            if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios' && song.hasPdf) {
+                const pdfUrl = song.parts?.[0]?.pdfUrl || song.pdfUrl;
+                if (pdfUrl) {
+                    const partsData = (song.parts && song.parts.length > 0)
+                        ? song.parts.map((p: any) => ({ name: p.name || 'Part', pdfUrl: p.pdfUrl }))
+                        : [{ name: 'Головна', pdfUrl }];
+
+                    PencilKitAnnotator.openNativePdfViewer({
+                        parts: partsData,
+                        initialPartIndex: 0,
+                        songId: song.id,
+                        userUid: userData?.id || 'anonymous',
+                        title: song.title,
+                    }).catch(e => console.error('[NativePdf] Error:', e));
+                    return;
+                }
+            }
             router.push(`/song?id=${song.id}`);
         }
     };

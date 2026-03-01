@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import SwipeableCard from "./SwipeableCard";
 
 import OfflinePdfModal from "./OfflinePdfModal";
+import { PencilKitAnnotator } from "@/plugins/PencilKitAnnotator";
 import { useOfflineCache } from "@/hooks/useOfflineCache";
 import AddProgramItemModal from "./AddProgramItemModal";
 
@@ -444,12 +445,34 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
         // Find the full song details to get the PDF URL
         const song = availableSongs.find(s => s.id === songId);
 
+        if (isNative && Capacitor.getPlatform() === 'ios') {
+            // iOS: Open native PDF viewer directly — zero preloader
+            if (song) {
+                const partsData = (song.parts && song.parts.length > 0)
+                    ? song.parts.map((p: any) => ({ name: p.name || 'Part', pdfUrl: p.pdfUrl }))
+                    : [{ name: 'Головна', pdfUrl: song.pdfUrl || '' }];
+
+                if (partsData[0]?.pdfUrl) {
+                    PencilKitAnnotator.openNativePdfViewer({
+                        parts: partsData,
+                        initialPartIndex: 0,
+                        songId,
+                        userUid: userData?.id || 'anonymous',
+                        title: song.title || itemTitle || 'Пісня',
+                    }).catch(e => console.error('[NativePdf] Error:', e));
+                    return;
+                }
+            }
+            // Fallback: if no PDF data, navigate to song page
+            router.push(`/song?id=${songId}`);
+            return;
+        }
+
         if (isNative) {
-            // Native: Always open in the modal to prevent navigation issues and keep service context
+            // Non-iOS native: use preview modal
             if (song) {
                 setPreviewModalSong(song);
             } else {
-                // If song data is not fully loaded, at least show the title (it will gracefully fail to load PDF if URL is missing)
                 setPreviewModalSong({ id: songId, title: itemTitle || "Пісня" });
             }
             return;
