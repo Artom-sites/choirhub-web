@@ -23,6 +23,27 @@ import { app, auth } from "@/lib/firebase";
 import { getUserProfile, createUser, getChoir } from "@/lib/db";
 import { UserData } from "@/types";
 
+// Generate a random raw nonce string
+function generateNonce(length: number = 32): string {
+    const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    let result = '';
+    const values = new Uint32Array(length);
+    crypto.getRandomValues(values);
+    for (let i = 0; i < length; i++) {
+        result += charset[values[i] % charset.length];
+    }
+    return result;
+}
+
+// SHA256 Hash function
+async function sha256(str: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(str);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 interface AuthContextType {
     user: FirebaseUser | null;
     userData: UserData | null | undefined; // undefined = loading, null = no profile
@@ -138,13 +159,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const provider = new OAuthProvider('apple.com');
                 await signInWithPopup(auth, provider, browserPopupRedirectResolver);
             } else {
-                const result = await FirebaseAuthentication.signInWithApple();
+                // Generate a raw nonce
+                const rawNonce = generateNonce();
+                // Hash it
+                const hashedNonce = await sha256(rawNonce);
 
-                // Capacitor native Apple Auth returns the raw nonce used during the request
-                // inside `result.credential.nonce`. Firebase needs this as `rawNonce`.
+                const result = await FirebaseAuthentication.signInWithApple({
+                    customParameters: [
+                        { key: "nonce", value: hashedNonce }
+                    ]
+                });
+
+                // Pass the RAW nonce to Firebase credential (it will verify it against the hash in the token)
                 const credential = new OAuthProvider('apple.com').credential({
                     idToken: result.credential?.idToken,
-                    rawNonce: result.credential?.nonce,
+                    rawNonce: rawNonce,
                 });
                 await signInWithCredential(auth, credential);
             }
