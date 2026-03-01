@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import { X, ChevronLeft } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ChevronLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import PDFViewer from "./PDFViewer";
 
@@ -17,6 +17,13 @@ interface OfflinePdfModalProps {
 }
 
 export default function OfflinePdfModal({ isOpen, onClose, song }: OfflinePdfModalProps) {
+    const [activePartIndex, setActivePartIndex] = useState(0);
+
+    // Reset active part when song changes
+    useEffect(() => {
+        setActivePartIndex(0);
+    }, [song?.id]);
+
     // Prevent body scroll when modal is open
     useEffect(() => {
         if (isOpen) {
@@ -42,8 +49,13 @@ export default function OfflinePdfModal({ isOpen, onClose, song }: OfflinePdfMod
 
     if (!song) return null;
 
-    // Get PDF URL - prefer main pdfUrl, fallback to first part
-    const pdfUrl = song.pdfUrl || song.parts?.[0]?.pdfUrl || "";
+    // Build parts list
+    const parts = (song.parts && song.parts.length > 0)
+        ? song.parts
+        : [{ name: "Головна", pdfUrl: song.pdfUrl || "" }];
+
+    const hasTabs = parts.length > 1;
+    const currentPdfUrl = parts[activePartIndex]?.pdfUrl || "";
 
     return (
         <AnimatePresence>
@@ -67,7 +79,7 @@ export default function OfflinePdfModal({ isOpen, onClose, song }: OfflinePdfMod
                     >
                         <button
                             onClick={onClose}
-                            className="flex items-center gap-1 text-white/80 hover:text-white transition-colors"
+                            className="flex items-center gap-1 text-white/80 hover:text-white transition-colors min-w-[60px]"
                         >
                             <ChevronLeft className="w-5 h-5" />
                             <span className="text-sm">Назад</span>
@@ -77,13 +89,32 @@ export default function OfflinePdfModal({ isOpen, onClose, song }: OfflinePdfMod
                             {song.title}
                         </h2>
 
-                        <button
-                            onClick={onClose}
-                            className="p-2 rounded-full hover:bg-white/10 transition-colors"
-                        >
-                            <X className="w-5 h-5 text-white/80" />
-                        </button>
+                        <div className="min-w-[60px]" />
                     </motion.div>
+
+                    {/* Part Tabs */}
+                    {hasTabs && (
+                        <div className="bg-[#18181b]/95 border-b border-white/10 shrink-0">
+                            <div className="flex gap-2 px-4 py-2 overflow-x-auto no-scrollbar">
+                                {parts.map((part, index) => {
+                                    const name = part.name?.replace(/\.pdf$/i, "") || `Part ${index + 1}`;
+                                    const isActive = index === activePartIndex;
+                                    return (
+                                        <button
+                                            key={index}
+                                            onClick={() => setActivePartIndex(index)}
+                                            className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${isActive
+                                                    ? "bg-white text-black"
+                                                    : "bg-white/10 text-white/60 hover:bg-white/15"
+                                                }`}
+                                        >
+                                            {name}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
 
                     {/* PDF Content */}
                     <motion.div
@@ -94,14 +125,13 @@ export default function OfflinePdfModal({ isOpen, onClose, song }: OfflinePdfMod
                     >
                         <div className="h-full w-full">
                             <PDFViewer
-                                url={pdfUrl}
+                                url={currentPdfUrl}
                                 songId={song.id}
                                 title={song.title}
+                                key={`${song.id}-${activePartIndex}`}
                             />
                         </div>
                     </motion.div>
-
-
                 </motion.div>
             )}
         </AnimatePresence>
