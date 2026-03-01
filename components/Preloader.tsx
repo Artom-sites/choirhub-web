@@ -133,16 +133,7 @@ function StorytellingPreloader() {
         backdropFilter: "blur(8px)",
     };
 
-    const waveContainer: CSSProperties = {
-        position: "absolute",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: 80,
-        opacity: phase >= 1 ? 1 : 0,
-        transform: phase >= 1 ? "translateY(0)" : "translateY(20px)",
-        transition: "all 800ms ease",
-    };
+
 
     return (
         <div style={root}>
@@ -198,15 +189,6 @@ function StorytellingPreloader() {
                 </span>
             </div>
 
-            {/* Wave */}
-            <div style={waveContainer}>
-                <svg viewBox="0 0 1200 120" preserveAspectRatio="none" style={{ width: "100%", height: "100%" }}>
-                    <path
-                        d="M0,60 C200,120 400,0 600,60 C800,120 1000,0 1200,60 L1200,120 L0,120 Z"
-                        fill="rgba(255,255,255,0.03)"
-                    />
-                </svg>
-            </div>
         </div>
     );
 }
