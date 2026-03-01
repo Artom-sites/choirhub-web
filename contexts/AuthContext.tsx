@@ -46,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [userData, setUserData] = useState<UserData | null | undefined>(undefined); // Start as undefined
     const [loading, setLoading] = useState(true);
     const googleLoginLock = useRef(false);
+    const appleLoginLock = useRef(false);
 
     const [fcmToken, setFcmToken] = useState<string | null>(null);
 
@@ -133,6 +134,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     const signInWithApple = async () => {
+        if (appleLoginLock.current) {
+            console.warn("Apple Sign-In is already in progress...");
+            return;
+        }
+        appleLoginLock.current = true;
         try {
             if (Capacitor.getPlatform() === 'web') {
                 const provider = new OAuthProvider('apple.com');
@@ -155,6 +161,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 console.warn("User closed the Apple login popup.");
             }
             throw error;
+        } finally {
+            appleLoginLock.current = false;
         }
     };
 
