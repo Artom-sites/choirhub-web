@@ -446,7 +446,12 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
         const song = availableSongs.find(s => s.id === songId);
 
         if (isNative && Capacitor.getPlatform() === 'ios') {
-            // iOS: Open native PDF viewer directly — zero preloader
+            // iOS offline: use OfflinePdfModal (has IndexedDB cache access)
+            if (!navigator.onLine && song) {
+                setPreviewModalSong(song);
+                return;
+            }
+            // iOS online: Open native PDF viewer directly — zero preloader
             if (song) {
                 const partsData = (song.parts && song.parts.length > 0)
                     ? song.parts.map((p: any) => ({ name: p.name || 'Part', pdfUrl: p.pdfUrl }))

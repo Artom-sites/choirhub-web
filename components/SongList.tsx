@@ -128,8 +128,8 @@ export default function SongList({
 
     const handleSongClick = (song: SimpleSong) => {
         if (song.hasPdf || effectiveCanAdd) {
-            // iOS: open native PDF viewer directly — no preloader
-            if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios' && song.hasPdf) {
+            // iOS online: open native PDF viewer directly — no preloader
+            if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios' && song.hasPdf && navigator.onLine) {
                 const pdfUrl = song.parts?.[0]?.pdfUrl || song.pdfUrl;
                 if (pdfUrl) {
                     const partsData = (song.parts && song.parts.length > 0)
