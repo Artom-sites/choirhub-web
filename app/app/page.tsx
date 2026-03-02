@@ -196,6 +196,7 @@ function HomePageContent() {
   // Cache management
   const [cacheSize, setCacheSize] = useState<{ count: number; sizeBytes: number }>({ count: 0, sizeBytes: 0 });
   const [cacheLimit, setCacheLimitState] = useState('unlimited');
+  const [cacheRetention, setCacheRetentionState] = useState('never');
   const [cacheClearLoading, setCacheClearLoading] = useState(false);
 
   // UI States & Modals
@@ -412,10 +413,11 @@ function HomePageContent() {
       // Load cache stats
       (async () => {
         try {
-          const { getCacheSize, getCacheLimit } = await import('@/lib/offlineDb');
+          const { getCacheSize, getCacheLimit, getCacheRetention } = await import('@/lib/offlineDb');
           const size = await getCacheSize();
           setCacheSize(size);
           setCacheLimitState(getCacheLimit());
+          setCacheRetentionState(getCacheRetention());
         } catch (e) { console.warn('Cache stats load error:', e); }
       })();
 
@@ -2060,6 +2062,35 @@ function HomePageContent() {
                         setCacheSize(newSize);
                       }}
                       className={`py-2 rounded-xl text-xs font-bold transition-all border ${cacheLimit === opt.id
+                        ? 'bg-primary text-background border-primary'
+                        : 'bg-surface-highlight text-text-secondary border-transparent hover:border-border'
+                        }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Retention selector */}
+                <p className="text-xs text-text-secondary mb-2">Видаляти невикористані файли</p>
+                <div className="grid grid-cols-4 gap-1.5 mb-4">
+                  {[
+                    { id: '7d', label: '7 днів' },
+                    { id: '30d', label: '30 днів' },
+                    { id: '90d', label: '90 днів' },
+                    { id: 'never', label: 'Ніколи' },
+                  ].map(opt => (
+                    <button
+                      key={opt.id}
+                      onClick={async () => {
+                        const { setCacheRetention: setRet, enforceLimit: enforce, getCacheSize: getSize } = await import('@/lib/offlineDb');
+                        setRet(opt.id);
+                        setCacheRetentionState(opt.id);
+                        await enforce();
+                        const newSize = await getSize();
+                        setCacheSize(newSize);
+                      }}
+                      className={`py-2 rounded-xl text-xs font-bold transition-all border ${cacheRetention === opt.id
                         ? 'bg-primary text-background border-primary'
                         : 'bg-surface-highlight text-text-secondary border-transparent hover:border-border'
                         }`}

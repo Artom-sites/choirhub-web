@@ -41,6 +41,36 @@ export const getCacheLimitBytes = (): number => {
     return CACHE_LIMITS[getCacheLimit()] || Infinity;
 };
 
+// Retention period — delete files not used in X days
+const CACHE_RETENTION_KEY = 'choirApp_cacheRetention';
+const DEFAULT_RETENTION = 'never'; // never expire by default
+
+/**
+ * Get the user's retention period preference
+ */
+export const getCacheRetention = (): string => {
+    if (typeof window === 'undefined') return DEFAULT_RETENTION;
+    return localStorage.getItem(CACHE_RETENTION_KEY) || DEFAULT_RETENTION;
+};
+
+/**
+ * Set the user's retention period preference
+ */
+export const setCacheRetention = (retention: string): void => {
+    localStorage.setItem(CACHE_RETENTION_KEY, retention);
+};
+
+/**
+ * Get retention period in milliseconds (0 = never)
+ */
+const getRetentionMs = (): number => {
+    const r = getCacheRetention();
+    if (r === '7d') return 7 * 24 * 60 * 60 * 1000;
+    if (r === '30d') return 30 * 24 * 60 * 60 * 1000;
+    if (r === '90d') return 90 * 24 * 60 * 60 * 1000;
+    return 0; // never
+};
+
 interface CachedPdf {
     id: string;              // Song ID
     serviceId: string;       // Service ID for which it was cached
@@ -50,7 +80,8 @@ interface CachedPdf {
         pdfBase64: string;   // PDF data in Base64
     }>;
     cachedAt: number;        // Timestamp when cached
-    expiresAt: number;       // Auto-cleanup timestamp
+    expiresAt: number;       // Legacy — managed by size limit now
+    lastAccessedAt: number;  // Timestamp when last opened
 }
 
 let dbInstance: IDBDatabase | null = null;
@@ -113,7 +144,8 @@ export const savePdf = async (
             title,
             parts,
             cachedAt: now,
-            expiresAt: now + (365 * 24 * 60 * 60 * 1000) // Far future — managed by size limit
+            expiresAt: now + (365 * 24 * 60 * 60 * 1000), // Far future — managed by size limit
+            lastAccessedAt: now
         };
 
         const request = store.put(data);
@@ -137,7 +169,17 @@ export const getPdfParts = async (songId: string): Promise<Array<{ name: string;
 
             request.onsuccess = () => {
                 const result = request.result as CachedPdf | undefined;
-                resolve(result ? result.parts : null);
+                if (result) {
+                    // Update lastAccessedAt silently
+                    try {
+                        const writeTx = db.transaction(STORE_NAME, 'readwrite');
+                        const writeStore = writeTx.objectStore(STORE_NAME);
+                        writeStore.put({ ...result, lastAccessedAt: Date.now() });
+                    } catch (e) { /* silent */ }
+                    resolve(result.parts);
+                } else {
+                    resolve(null);
+                }
             };
             request.onerror = () => reject(request.error);
         });
@@ -358,13 +400,17 @@ export const clearAllCache = async (): Promise<void> => {
  * Enforce cache size limit by removing oldest entries
  */
 export const enforceLimit = async (): Promise<number> => {
+    // First: cleanup by retention period
+    let totalDeleted = await cleanupByRetention();
+
+    // Then: enforce size limit
     const limitBytes = getCacheLimitBytes();
-    if (limitBytes === Infinity) return 0;
+    if (limitBytes === Infinity) return totalDeleted;
 
     const { sizeBytes } = await getCacheSize();
-    if (sizeBytes <= limitBytes) return 0;
+    if (sizeBytes <= limitBytes) return totalDeleted;
 
-    // Get all entries sorted by cachedAt (oldest first)
+    // Get all entries sorted by lastAccessedAt (least recently used first)
     const db = await openDb();
     const allEntries = await new Promise<CachedPdf[]>((resolve, reject) => {
         const tx = db.transaction(STORE_NAME, 'readonly');
@@ -383,22 +429,65 @@ export const enforceLimit = async (): Promise<number> => {
         req.onerror = () => reject(req.error);
     });
 
-    // Sort oldest first
-    allEntries.sort((a, b) => a.cachedAt - b.cachedAt);
+    // Sort by least recently used first
+    allEntries.sort((a, b) => (a.lastAccessedAt || a.cachedAt) - (b.lastAccessedAt || b.cachedAt));
 
     let currentSize = sizeBytes;
-    let deletedCount = 0;
+    let sizeDeleted = 0;
 
     for (const entry of allEntries) {
         if (currentSize <= limitBytes) break;
         const entrySize = entry.parts.reduce((acc, p) => acc + (p.pdfBase64?.length || 0), 0);
         await deletePdf(entry.id);
         currentSize -= entrySize;
-        deletedCount++;
+        sizeDeleted++;
     }
 
-    console.log(`[OfflineCache] Enforced limit: deleted ${deletedCount} oldest entries, freed ${((sizeBytes - currentSize) / 1024 / 1024).toFixed(1)} MB`);
-    return deletedCount;
+    if (sizeDeleted > 0) {
+        console.log(`[OfflineCache] Enforced limit: deleted ${sizeDeleted} LRU entries, freed ${((sizeBytes - currentSize) / 1024 / 1024).toFixed(1)} MB`);
+    }
+    return totalDeleted + sizeDeleted;
+};
+
+/**
+ * Clean up cached files not accessed within the retention period
+ */
+export const cleanupByRetention = async (): Promise<number> => {
+    const retentionMs = getRetentionMs();
+    if (retentionMs === 0) return 0; // never = no cleanup
+
+    const cutoff = Date.now() - retentionMs;
+    const db = await openDb();
+
+    const staleIds = await new Promise<string[]>((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.openCursor();
+        const ids: string[] = [];
+        req.onsuccess = (e) => {
+            const cursor = (e.target as IDBRequest).result;
+            if (cursor) {
+                const data = cursor.value as CachedPdf;
+                const lastUsed = data.lastAccessedAt || data.cachedAt;
+                if (lastUsed < cutoff) {
+                    ids.push(data.id);
+                }
+                cursor.continue();
+            } else {
+                resolve(ids);
+            }
+        };
+        req.onerror = () => reject(req.error);
+    });
+
+    for (const id of staleIds) {
+        await deletePdf(id);
+    }
+
+    if (staleIds.length > 0) {
+        console.log(`[OfflineCache] Retention cleanup: deleted ${staleIds.length} files not used in ${retentionMs / 86400000} days`);
+    }
+    return staleIds.length;
 };
 
 export const getCachedSongsInfo = async (): Promise<Array<{
