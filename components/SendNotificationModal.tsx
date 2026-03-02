@@ -76,32 +76,21 @@ export default function SendNotificationModal({ isOpen, onClose }: SendNotificat
             let text = "";
             let status = 200;
 
-            if (Capacitor.isNativePlatform()) {
-                console.log(`[SendNotification] Using CapacitorHttp for native request`);
-                const response = await CapacitorHttp.post({
-                    url: `${baseUrl}/api/send-notification`,
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${token}`
-                    },
-                    data: payload
-                });
-                status = response.status;
-                // CapacitorHttp gives JSON data directly instead of text if it parsed it
-                text = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
-            } else {
-                console.log(`[SendNotification] Using window.fetch for web request (relative path)`);
-                const response = await fetch(`/api/send-notification`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${token}`
-                    },
-                    body: JSON.stringify(payload)
-                });
-                status = response.status;
-                text = await response.text();
-            }
+            const isNative = Capacitor.isNativePlatform();
+            const fetchUrl = isNative ? `${baseUrl}/api/send-notification` : '/api/send-notification';
+            console.log(`[SendNotification] Using window.fetch for ${isNative ? 'native' : 'web'} request to ${fetchUrl}`);
+
+            const response = await fetch(fetchUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            });
+
+            text = await response.text();
+            status = response.status;
 
             let data: any = {};
             try { data = JSON.parse(text); } catch { data = { error: text || "Невідома помилка сервера" }; }
