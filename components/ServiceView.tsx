@@ -850,7 +850,8 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
             try {
                 await Dialog.alert({ title: 'Помилка друку', message: e?.message || String(e) });
             } catch (_) {
-                window.alert('Print error: ' + (e?.message || String(e)));
+                // Ignore Dialog failure (e.g. not native), do not use window.alert
+                console.error('Print dialog failed for: ' + (e?.message || String(e)));
             }
         }
     };
