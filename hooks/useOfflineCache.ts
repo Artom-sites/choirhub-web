@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from 'react';
-import { savePdf, isCached, getCachedStatus, clearExpired } from '@/lib/offlineDb';
+import { savePdf, isCached, getCachedStatus, enforceLimit } from '@/lib/offlineDb';
 
 interface CacheProgress {
     total: number;
@@ -74,7 +74,7 @@ export function useOfflineCache() {
         songs: SongForCache[]
     ): Promise<boolean> => {
         // Clear expired entries first
-        await clearExpired();
+        await enforceLimit();
 
         // Check which songs need caching
         const songIds = songs.map(s => s.id);

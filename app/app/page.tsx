@@ -32,7 +32,7 @@ import ConfirmationModal from "@/components/ConfirmationModal";
 import {
   Music2, Loader2, Copy, Check, HelpCircle, Mail, Shield,
   LogOut, ChevronLeft, ChevronRight, Home, User, Users, Repeat,
-  PlusCircle, Plus, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor, Scale, Smartphone, RefreshCw, Search, ArrowUpDown, Palette
+  PlusCircle, Plus, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor, Scale, Smartphone, RefreshCw, Search, ArrowUpDown, Palette, HardDrive
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import NotificationPrompt from "@/components/NotificationPrompt";
@@ -192,6 +192,11 @@ function HomePageContent() {
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [registeredUsers, setRegisteredUsers] = useState<any[]>([]);
   const [loadingRegisteredUsers, setLoadingRegisteredUsers] = useState(false);
+
+  // Cache management
+  const [cacheSize, setCacheSize] = useState<{ count: number; sizeBytes: number }>({ count: 0, sizeBytes: 0 });
+  const [cacheLimit, setCacheLimitState] = useState('unlimited');
+  const [cacheClearLoading, setCacheClearLoading] = useState(false);
 
   // UI States & Modals
   const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -403,6 +408,17 @@ function HomePageContent() {
       window.history.pushState({ modal: 'account' }, '');
       const handlePopState = () => setShowAccount(false);
       window.addEventListener('popstate', handlePopState);
+
+      // Load cache stats
+      (async () => {
+        try {
+          const { getCacheSize, getCacheLimit } = await import('@/lib/offlineDb');
+          const size = await getCacheSize();
+          setCacheSize(size);
+          setCacheLimitState(getCacheLimit());
+        } catch (e) { console.warn('Cache stats load error:', e); }
+      })();
+
       return () => window.removeEventListener('popstate', handlePopState);
     }
   }, [showAccount]);
@@ -1982,6 +1998,98 @@ function HomePageContent() {
 
 
                 </div>
+              </div>
+
+              {/* Cache Management */}
+              <div className="bg-surface rounded-2xl p-4 card-shadow">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center">
+                    <HardDrive className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-text-primary font-bold text-sm">Офлайн кеш</p>
+                    <p className="text-xs text-text-secondary">
+                      {cacheSize.count} пісень • {cacheSize.sizeBytes < 1024 * 1024
+                        ? `${(cacheSize.sizeBytes / 1024).toFixed(0)} КБ`
+                        : `${(cacheSize.sizeBytes / 1024 / 1024).toFixed(1)} МБ`}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                {cacheLimit !== 'unlimited' && (() => {
+                  const limitBytes = cacheLimit === '100mb' ? 100 * 1024 * 1024
+                    : cacheLimit === '500mb' ? 500 * 1024 * 1024
+                      : 1024 * 1024 * 1024;
+                  const pct = Math.min((cacheSize.sizeBytes / limitBytes) * 100, 100);
+                  const limitLabel = cacheLimit === '100mb' ? '100 МБ' : cacheLimit === '500mb' ? '500 МБ' : '1 ГБ';
+                  return (
+                    <div className="mb-4">
+                      <div className="flex justify-between text-[11px] text-text-secondary mb-1.5">
+                        <span>{(cacheSize.sizeBytes / 1024 / 1024).toFixed(1)} МБ</span>
+                        <span>{limitLabel}</span>
+                      </div>
+                      <div className="h-2 bg-surface-highlight rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${pct > 90 ? 'bg-red-500' : pct > 70 ? 'bg-yellow-500' : 'bg-blue-500'
+                            }`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Limit selector */}
+                <p className="text-xs text-text-secondary mb-2">Максимальний розмір</p>
+                <div className="grid grid-cols-4 gap-1.5 mb-4">
+                  {[
+                    { id: '100mb', label: '100 МБ' },
+                    { id: '500mb', label: '500 МБ' },
+                    { id: '1gb', label: '1 ГБ' },
+                    { id: 'unlimited', label: 'Безліміт' },
+                  ].map(opt => (
+                    <button
+                      key={opt.id}
+                      onClick={async () => {
+                        const { setCacheLimit: setLimit, enforceLimit: enforce, getCacheSize: getSize } = await import('@/lib/offlineDb');
+                        setLimit(opt.id);
+                        setCacheLimitState(opt.id);
+                        await enforce();
+                        const newSize = await getSize();
+                        setCacheSize(newSize);
+                      }}
+                      className={`py-2 rounded-xl text-xs font-bold transition-all border ${cacheLimit === opt.id
+                        ? 'bg-primary text-background border-primary'
+                        : 'bg-surface-highlight text-text-secondary border-transparent hover:border-border'
+                        }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Clear cache button */}
+                <button
+                  onClick={async () => {
+                    setCacheClearLoading(true);
+                    try {
+                      const { clearAllCache, getCacheSize: getSize } = await import('@/lib/offlineDb');
+                      await clearAllCache();
+                      const newSize = await getSize();
+                      setCacheSize(newSize);
+                    } catch (e) {
+                      console.error('Clear cache error:', e);
+                    } finally {
+                      setCacheClearLoading(false);
+                    }
+                  }}
+                  disabled={cacheClearLoading || cacheSize.count === 0}
+                  className="w-full py-3 text-sm font-medium text-danger hover:bg-danger/10 rounded-xl transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
+                >
+                  {cacheClearLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  Очистити кеш
+                </button>
               </div>
 
 

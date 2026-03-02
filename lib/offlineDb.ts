@@ -8,7 +8,38 @@
 const DB_NAME = 'choirAppOffline';
 const DB_VERSION = 1;
 const STORE_NAME = 'cachedPdfs';
-const CACHE_EXPIRY_DAYS = 7;
+// Cache size limits (in bytes)
+const CACHE_LIMITS: Record<string, number> = {
+    '100mb': 100 * 1024 * 1024,
+    '500mb': 500 * 1024 * 1024,
+    '1gb': 1024 * 1024 * 1024,
+    'unlimited': Infinity
+};
+
+const CACHE_LIMIT_KEY = 'choirApp_cacheLimit';
+const DEFAULT_LIMIT = 'unlimited';
+
+/**
+ * Get the user's cache limit preference
+ */
+export const getCacheLimit = (): string => {
+    if (typeof window === 'undefined') return DEFAULT_LIMIT;
+    return localStorage.getItem(CACHE_LIMIT_KEY) || DEFAULT_LIMIT;
+};
+
+/**
+ * Set the user's cache limit preference
+ */
+export const setCacheLimit = (limit: string): void => {
+    localStorage.setItem(CACHE_LIMIT_KEY, limit);
+};
+
+/**
+ * Get the cache limit in bytes
+ */
+export const getCacheLimitBytes = (): number => {
+    return CACHE_LIMITS[getCacheLimit()] || Infinity;
+};
 
 interface CachedPdf {
     id: string;              // Song ID
@@ -75,7 +106,6 @@ export const savePdf = async (
         const store = transaction.objectStore(STORE_NAME);
 
         const now = Date.now();
-        const expiresAt = now + (CACHE_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
 
         const data: CachedPdf = {
             id: songId,
@@ -83,7 +113,7 @@ export const savePdf = async (
             title,
             parts,
             cachedAt: now,
-            expiresAt
+            expiresAt: now + (365 * 24 * 60 * 60 * 1000) // Far future — managed by size limit
         };
 
         const request = store.put(data);
@@ -107,11 +137,7 @@ export const getPdfParts = async (songId: string): Promise<Array<{ name: string;
 
             request.onsuccess = () => {
                 const result = request.result as CachedPdf | undefined;
-                if (result && result.expiresAt > Date.now()) {
-                    resolve(result.parts);
-                } else {
-                    resolve(null);
-                }
+                resolve(result ? result.parts : null);
             };
             request.onerror = () => reject(request.error);
         });
@@ -135,7 +161,7 @@ export const isCached = async (songId: string): Promise<boolean> => {
 
             request.onsuccess = () => {
                 const result = request.result as CachedPdf | undefined;
-                resolve(result !== undefined && result.expiresAt > Date.now());
+                resolve(result !== undefined);
             };
             request.onerror = () => resolve(false);
         });
@@ -158,11 +184,7 @@ export const getCachedSong = async (songId: string): Promise<CachedPdf | null> =
 
             request.onsuccess = () => {
                 const result = request.result as CachedPdf | undefined;
-                if (result && result.expiresAt > Date.now()) {
-                    resolve(result);
-                } else {
-                    resolve(null);
-                }
+                resolve(result || null);
             };
             request.onerror = () => reject(request.error);
         });
@@ -191,7 +213,7 @@ export const getCachedStatus = async (songIds: string[]): Promise<Record<string,
                 const request = store.get(id);
                 request.onsuccess = () => {
                     const data = request.result as CachedPdf | undefined;
-                    result[id] = data !== undefined && data.expiresAt > now;
+                    result[id] = data !== undefined;
                     completed++;
                     if (completed === songIds.length) {
                         resolve(result);
@@ -332,12 +354,60 @@ export const clearAllCache = async (): Promise<void> => {
 /**
  * Get all cached songs info (without PDF data)
  */
+/**
+ * Enforce cache size limit by removing oldest entries
+ */
+export const enforceLimit = async (): Promise<number> => {
+    const limitBytes = getCacheLimitBytes();
+    if (limitBytes === Infinity) return 0;
+
+    const { sizeBytes } = await getCacheSize();
+    if (sizeBytes <= limitBytes) return 0;
+
+    // Get all entries sorted by cachedAt (oldest first)
+    const db = await openDb();
+    const allEntries = await new Promise<CachedPdf[]>((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.openCursor();
+        const entries: CachedPdf[] = [];
+        req.onsuccess = (e) => {
+            const cursor = (e.target as IDBRequest).result;
+            if (cursor) {
+                entries.push(cursor.value);
+                cursor.continue();
+            } else {
+                resolve(entries);
+            }
+        };
+        req.onerror = () => reject(req.error);
+    });
+
+    // Sort oldest first
+    allEntries.sort((a, b) => a.cachedAt - b.cachedAt);
+
+    let currentSize = sizeBytes;
+    let deletedCount = 0;
+
+    for (const entry of allEntries) {
+        if (currentSize <= limitBytes) break;
+        const entrySize = entry.parts.reduce((acc, p) => acc + (p.pdfBase64?.length || 0), 0);
+        await deletePdf(entry.id);
+        currentSize -= entrySize;
+        deletedCount++;
+    }
+
+    console.log(`[OfflineCache] Enforced limit: deleted ${deletedCount} oldest entries, freed ${((sizeBytes - currentSize) / 1024 / 1024).toFixed(1)} MB`);
+    return deletedCount;
+};
+
 export const getCachedSongsInfo = async (): Promise<Array<{
     id: string;
     serviceId: string;
     title: string;
     cachedAt: number;
     expiresAt: number;
+    sizeBytes: number;
 }>> => {
     const db = await openDb();
 
@@ -352,18 +422,21 @@ export const getCachedSongsInfo = async (): Promise<Array<{
             title: string;
             cachedAt: number;
             expiresAt: number;
+            sizeBytes: number;
         }> = [];
 
         request.onsuccess = (event) => {
             const cursor = (event.target as IDBRequest).result;
             if (cursor) {
                 const data = cursor.value as CachedPdf;
+                const entrySize = data.parts ? data.parts.reduce((acc, p) => acc + (p.pdfBase64?.length || 0), 0) : 0;
                 results.push({
                     id: data.id,
                     serviceId: data.serviceId,
                     title: data.title,
                     cachedAt: data.cachedAt,
-                    expiresAt: data.expiresAt
+                    expiresAt: data.expiresAt,
+                    sizeBytes: entrySize
                 });
                 cursor.continue();
             } else {

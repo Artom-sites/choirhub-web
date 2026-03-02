@@ -159,6 +159,9 @@ export default function SongList({
                                     );
                                     await savePdf(song.id, 'repertoire', song.title, resolvedParts);
                                     console.log(`[OfflineCache] Cached "${song.title}" for offline access`);
+                                    // Enforce size limit
+                                    const { enforceLimit } = await import('@/lib/offlineDb');
+                                    await enforceLimit();
                                 }
                             }
                         }
