@@ -1,7 +1,7 @@
-// MyChoir Service Worker v3
+// MyChoir Service Worker v4
 // Provides offline support by caching app shell and static resources
 
-const CACHE_NAME = 'mychoir-v3';
+const CACHE_NAME = 'mychoir-v4';
 const OFFLINE_URL = '/offline';
 
 // Files to cache on install (app shell)

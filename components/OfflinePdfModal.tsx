@@ -75,17 +75,17 @@ export default function OfflinePdfModal({ isOpen, onClose, song }: OfflinePdfMod
                         initial={{ y: -20, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ delay: 0.1 }}
-                        className="flex items-center justify-between px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 bg-[#18181b]/95 border-b border-white/10 shrink-0"
+                        className="flex items-center justify-between px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 bg-surface border-b border-border shrink-0"
                     >
                         <button
                             onClick={onClose}
-                            className="flex items-center gap-1 text-white/80 hover:text-white transition-colors min-w-[60px]"
+                            className="flex items-center gap-1 text-text-secondary hover:text-text-primary transition-colors min-w-[60px]"
                         >
                             <ChevronLeft className="w-5 h-5" />
                             <span className="text-sm">Назад</span>
                         </button>
 
-                        <h2 className="text-white font-semibold text-base truncate max-w-[60%] text-center">
+                        <h2 className="text-text-primary font-semibold text-base truncate max-w-[60%] text-center">
                             {song.title}
                         </h2>
 
@@ -94,7 +94,7 @@ export default function OfflinePdfModal({ isOpen, onClose, song }: OfflinePdfMod
 
                     {/* Part Tabs */}
                     {hasTabs && (
-                        <div className="bg-[#18181b]/95 border-b border-white/10 shrink-0">
+                        <div className="bg-surface border-b border-border shrink-0">
                             <div className="flex gap-2 px-4 py-2 overflow-x-auto no-scrollbar">
                                 {parts.map((part, index) => {
                                     const name = part.name?.replace(/\.pdf$/i, "") || `Part ${index + 1}`;
@@ -104,8 +104,8 @@ export default function OfflinePdfModal({ isOpen, onClose, song }: OfflinePdfMod
                                             key={index}
                                             onClick={() => setActivePartIndex(index)}
                                             className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${isActive
-                                                    ? "bg-white text-black"
-                                                    : "bg-white/10 text-white/60 hover:bg-white/15"
+                                                ? "bg-text-primary text-surface"
+                                                : "bg-surface-highlight text-text-secondary hover:text-text-primary"
                                                 }`}
                                         >
                                             {name}

@@ -3,6 +3,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { ChoirMember } from "@/types";
 import { X, Merge, AlertTriangle, Loader2, Link2, Search, Check, ChevronDown, Plus, User } from "lucide-react";
+import { Dialog } from '@capacitor/dialog';
 import Fuse from 'fuse.js';
 
 interface MergeMemberModalProps {
@@ -69,7 +70,7 @@ export default function MergeMemberModal({ isOpen, onClose, sourceMember, allMem
             onClose();
         } catch (error) {
             console.error(error);
-            alert(isLink ? "Помилка прив'язки" : "Помилка об'єднання");
+            await Dialog.alert({ title: "Помилка", message: isLink ? "Помилка прив'язки" : "Помилка об'єднання" });
         } finally {
             setLoading(false);
         }

@@ -90,11 +90,26 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ success: true, message: "No devices to send to (0 tokens)" });
         }
 
-        // 4. Send Multicast Message
+        // 4. Send Multicast Message (with APNs payload for iOS system notifications)
         const message = {
             notification: {
                 title: title,
                 body: body,
+            },
+            apns: {
+                payload: {
+                    aps: {
+                        sound: "default",
+                        badge: 1,
+                        "mutable-content": 1,
+                    },
+                },
+            },
+            android: {
+                notification: {
+                    sound: "default",
+                    channelId: "choir_notifications",
+                },
             },
             tokens: uniqueTokens,
         };

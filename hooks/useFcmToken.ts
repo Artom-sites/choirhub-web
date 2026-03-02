@@ -88,8 +88,9 @@ export function useFcmToken() {
 
                 try {
                     if (isNative) {
-                        const { PushNotifications } = await import("@capacitor/push-notifications");
-                        const result = await PushNotifications.checkPermissions();
+                        // Use @capacitor-firebase/messaging for native
+                        const { FirebaseMessaging } = await import("@capacitor-firebase/messaging");
+                        const result = await FirebaseMessaging.checkPermissions();
                         if (result.receive === "granted") status = "granted";
                         else if (result.receive === "denied") status = "denied";
                     } else {
@@ -127,29 +128,28 @@ export function useFcmToken() {
 
         const setupGlobalListeners = async () => {
             try {
-                const { PushNotifications } = await import("@capacitor/push-notifications");
+                const { FirebaseMessaging } = await import("@capacitor-firebase/messaging");
 
                 // CRITICAL: Remove listeners only ONCE globally
-                await PushNotifications.removeAllListeners();
+                await FirebaseMessaging.removeAllListeners();
 
-                // Permanent Listeners
-                await PushNotifications.addListener("pushNotificationReceived", (notification) => {
-                    console.log("[FCM] Foreground:", notification);
+                // Token refresh listener — FCM may rotate tokens
+                await FirebaseMessaging.addListener("tokenReceived", async (event) => {
+                    console.log("[FCM] Token received/refreshed:", event.token?.substring(0, 20) + "...");
+                    handleTokenReceived(event.token);
                 });
 
-                await PushNotifications.addListener("pushNotificationActionPerformed", (action) => {
-                    console.log("[FCM] Action:", action);
+                // Foreground notification listener
+                await FirebaseMessaging.addListener("notificationReceived", (notification) => {
+                    console.log("[FCM] Foreground notification:", notification);
                 });
 
-                // Registration Listener (Handles all token updates)
-                await PushNotifications.addListener("registration", async (registrationToken) => {
-                    console.log("[FCM] Native Registration Success:", registrationToken.value);
-                    handleTokenReceived(registrationToken.value);
+                // Notification action (tap) listener
+                await FirebaseMessaging.addListener("notificationActionPerformed", (action) => {
+                    console.log("[FCM] Notification action:", action);
                 });
 
-                await PushNotifications.addListener("registrationError", (err) => {
-                    console.error("[FCM] Registration Error:", err);
-                });
+                console.log("[FCM] Firebase Messaging listeners set up");
             } catch (err) {
                 console.error("[FCM] Error setting listeners:", err);
                 isListenerSetup = false; // Allow retry if failed
@@ -161,15 +161,8 @@ export function useFcmToken() {
 
 
     // ----------------------------------------
-    // 3. REGISTRATION (Deduplicated)
-    // ----------------------------------------
-    // ----------------------------------------
-    // 3. REGISTRATION (Deduplicated)
-    // ----------------------------------------
-    // ----------------------------------------
     // HELPERS (Hoisted)
     // ----------------------------------------
-
 
     const saveTokenToFirestore = async (t: string, uid: string) => {
         try {
@@ -187,6 +180,7 @@ export function useFcmToken() {
             await registerFn({ token: t });
 
             localStorage.setItem(cacheKey, JSON.stringify({ t, u: uid, ts: Date.now() }));
+            console.log("[FCM] Token saved to Firestore:", t.substring(0, 20) + "...");
         } catch (e) {
             console.error("[FCM] Save to DB failed", e);
         }
@@ -245,13 +239,12 @@ export function useFcmToken() {
                 }
 
                 if (isNative) {
-                    const { PushNotifications } = await import("@capacitor/push-notifications");
+                    const { FirebaseMessaging } = await import("@capacitor-firebase/messaging");
 
                     // 2. Request Permission (if needed)
-                    // We check first to avoid unnecessary prompts if already granted/denied
                     let status = globalPermissionStatus;
                     if (status === 'default') {
-                        const perm = await PushNotifications.requestPermissions();
+                        const perm = await FirebaseMessaging.requestPermissions();
                         status = perm.receive === 'granted' ? 'granted' : 'denied';
                         globalPermissionStatus = status;
                         setPermissionStatus(status);
@@ -261,37 +254,16 @@ export function useFcmToken() {
                         throw new Error("Permission denied");
                     }
 
-                    // 3. Register (Race against timeout)
-                    return new Promise<string | null>((resolve, reject) => {
-                        let isResolved = false;
-                        const timeoutId = setTimeout(() => {
-                            if (!isResolved) {
-                                isResolved = true;
-                                console.warn("[useFcmToken] Registration timeout - likely Simulator");
-                                reject(new Error("Registration timed out"));
-                            }
-                        }, 10000);
+                    // 3. Get FCM Token directly (not APNs token!)
+                    console.log("[FCM] Requesting FCM token...");
+                    const result = await FirebaseMessaging.getToken();
+                    const fcmToken = result.token;
+                    console.log("[FCM] Got FCM token:", fcmToken.substring(0, 30) + "...");
 
-                        const listener = (t: string | null) => {
-                            if (!isResolved && t) {
-                                isResolved = true;
-                                clearTimeout(timeoutId);
-                                resolve(t);
-                            }
-                        };
-                        tokenListeners.add(listener);
-
-                        // Trigger Native Register
-                        PushNotifications.register().catch(e => {
-                            if (!isResolved) {
-                                isResolved = true;
-                                clearTimeout(timeoutId);
-                                reject(e);
-                            }
-                        });
-                    });
+                    await handleTokenReceived(fcmToken);
+                    return fcmToken;
                 } else {
-                    // Web Flow
+                    // Web Flow (unchanged)
                     const perm = await Notification.requestPermission();
                     if (perm !== "granted") throw new Error("Permission denied");
 
@@ -313,10 +285,6 @@ export function useFcmToken() {
             } catch (err: any) {
                 console.error("[useFcmToken] Enable failed:", err);
                 setError(err.message || "Registration failed");
-                // IMPORTANT: Do NOT disable fcm_enabled here? 
-                // If it was a network error, we might want to retry later.
-                // But if permission denied, maybe?
-                // For now, keep preference 'true' so next app start might retry if it was transient.
                 return null;
             } finally {
                 setLoading(false);
@@ -354,18 +322,15 @@ export function useFcmToken() {
             localStorage.removeItem('fcm_reg_cache');
             broadcastPreferenceUpdate(false);
 
-            // 4. Native Unregister? (Optional, usually not needed if we delete from DB)
+            // 4. Delete FCM token on native (proper cleanup)
             if (isNative) {
-                const { PushNotifications } = await import("@capacitor/push-notifications");
-                // Capacitor doesn't expose strict 'unregister' in all versions or it might be buggy.
-                // Simply dropping the token from DB is the standard way to "stop" notifications.
-                await PushNotifications.removeAllListeners();
-                // Restoring listeners is tricky if we re-enable. 
-                // Better to just leave listeners but we simply won't have a valid token in DB.
-
-                // Actually, we SHOULD remove listeners to be clean?
-                // But our useEffect adds them back only on mount.
-                // Let's keep listeners active, just drop the token.
+                try {
+                    const { FirebaseMessaging } = await import("@capacitor-firebase/messaging");
+                    await FirebaseMessaging.deleteToken();
+                    console.log("[FCM] Native token deleted");
+                } catch (e) {
+                    console.warn("[FCM] Failed to delete native token:", e);
+                }
             }
 
         } catch (e) {
@@ -401,9 +366,6 @@ export function useFcmToken() {
             // Wait for init
             await initPromise;
 
-            // Only register if we have permission AND enabled
-            // Actually, if 'fcm_enabled' is true, we should try to register (which asks permission if needed)
-            // But usually 'fcm_enabled' implies we successfully enabled it before.
             console.log("[useFcmToken] Auto-registering...");
             hasAutoRegistered = true;
             enableNotifications("auto-register");
@@ -411,8 +373,6 @@ export function useFcmToken() {
 
         performAutoRegister();
     }, [user?.uid, enableNotifications]);
-
-    // ... Helpers ...
 
 
 

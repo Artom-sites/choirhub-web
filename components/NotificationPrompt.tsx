@@ -41,8 +41,13 @@ export default function NotificationPrompt() {
     }, [permissionStatus, isSupported, isPreferenceEnabled]);
 
     const handleEnable = async () => {
-        await requestPermission("NotificationPrompt");
-        setIsVisible(false);
+        try {
+            await requestPermission("NotificationPrompt");
+        } catch (e) {
+            console.warn("NotificationPrompt enable failed:", e);
+        } finally {
+            setIsVisible(false);
+        }
     };
 
     const handleLater = () => {

@@ -7,6 +7,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon, mergeMembers, updateChoir, deleteMyAccount, adminDeleteUser, deleteAdminCode, getChoirNotifications, getChoirUsers, joinChoir, updateMember, claimMember, leaveChoir } from "@/lib/db";
 import { updateAttendanceCache } from "@/lib/attendanceCache";
 import { Capacitor } from "@capacitor/core";
+import { Dialog } from '@capacitor/dialog';
 import { SplashScreen } from "@capacitor/splash-screen";
 import { Service, Choir, UserMembership, UserData, ChoirMember, Permission, AdminCode, StatsSummary } from "@/types";
 import SongList from "@/components/SongList";
@@ -747,7 +748,7 @@ function HomePageContent() {
       setChoirToLeave(null);
     } catch (e) {
       console.error("Error leaving choir:", e);
-      alert("Не вдалося покинути хор");
+      await Dialog.alert({ title: "Помилка", message: "Не вдалося покинути хор" });
     }
   };
 
@@ -899,11 +900,11 @@ function HomePageContent() {
       console.error("Claim error:", e);
       const msg = e.message || "";
       if (msg.includes("already has an account") || msg.includes("already claimed")) {
-        alert("Цей профіль вже прив'язаний до іншого акаунту. Зверніться до регента для переприв'язки.");
+        await Dialog.alert({ title: "Помилка", message: "Цей профіль вже прив'язаний до іншого акаунту. Зверніться до регента для переприв'язки." });
       } else if (msg.includes("already linked")) {
-        alert("Ваш акаунт вже прив'язаний до іншого учасника.");
+        await Dialog.alert({ title: "Помилка", message: "Ваш акаунт вже прив'язаний до іншого учасника." });
       } else {
-        alert("Помилка прив'язки: " + msg);
+        await Dialog.alert({ title: "Помилка", message: "Помилка прив'язки: " + msg });
       }
     } finally {
       setClaimLoading(false);
@@ -952,7 +953,7 @@ function HomePageContent() {
     const finalName = newName.trim();
 
     if (!finalName.includes(" ")) {
-      alert("Будь ласка, введіть 'Прізвище та Ім'я' через пробіл (наприклад: Шевченко Тарас).");
+      await Dialog.alert({ title: "Помилка", message: "Будь ласка, введіть 'Прізвище та Ім'я' через пробіл (наприклад: Шевченко Тарас)." });
       return;
     }
     const oldName = userData?.name;
@@ -1060,7 +1061,7 @@ function HomePageContent() {
       // await fetchChoirData(); // Listener handles updates 
     } catch (e) {
       console.error(e);
-      alert("Не вдалося об'єднати учасників");
+      await Dialog.alert({ title: "Помилка", message: "Не вдалося об'єднати учасників" });
     }
   };
 
@@ -1112,7 +1113,7 @@ function HomePageContent() {
       setLinkingAppUser(null);
     } catch (e) {
       console.error(e);
-      alert("Не вдалося прив'язати користувача");
+      await Dialog.alert({ title: "Помилка", message: "Не вдалося прив'язати користувача" });
     }
   };
 
@@ -2419,7 +2420,13 @@ function HomePageContent() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => {
+                  if (isActive) {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  } else {
+                    setActiveTab(tab.id as any);
+                  }
+                }}
                 className={`grid place-items-center transition-colors ${isActive ? 'text-primary' : 'text-text-secondary'}`}
               >
                 <div className="flex flex-col items-center">

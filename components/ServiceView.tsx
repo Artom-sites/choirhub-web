@@ -6,9 +6,12 @@ import { addSongToService, removeSongFromService, getChoir, updateService, setSe
 import { updateAttendanceCache } from "@/lib/attendanceCache";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRepertoire } from "@/contexts/RepertoireContext";
-import { ChevronLeft, Eye, X, Plus, Users, UserX, Check, Calendar, Music, UserCheck, AlertCircle, Trash2, User as UserIcon, CloudDownload, CheckCircle, Loader, ChevronDown, Mic2, BookOpen, Hand, Mic, Users2, MoreHorizontal, GripVertical, ListOrdered } from "lucide-react";
+import { ChevronLeft, Eye, X, Plus, Users, UserX, Check, Calendar, Music, UserCheck, AlertCircle, Trash2, User as UserIcon, CloudDownload, CheckCircle, Loader, ChevronDown, Mic2, BookOpen, Hand, Mic, Users2, MoreHorizontal, GripVertical, ListOrdered, Printer } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { StatusBar, Style } from '@capacitor/status-bar';
+import { Share } from '@capacitor/share';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Dialog } from '@capacitor/dialog';
 import { useRouter } from "next/navigation";
 import SwipeableCard from "./SwipeableCard";
 
@@ -776,6 +779,83 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
         await handleDragEnd(); // Re-use the existing drop logic
     };
 
+
+    const handlePrint = async () => {
+        try {
+            const items = programItems.map((item, idx) => {
+                const typeLabel = programTypeConfig[item.type]?.label || 'Інше';
+                let songTitle = '';
+                if (item.title) {
+                    songTitle = item.title;
+                }
+                if ((item as any).type === 'song' && (item as any).songId) {
+                    const found = availableSongs?.find((rs: any) => rs.id === (item as any).songId);
+                    if (found) songTitle = found.title;
+                }
+                // Sub line: song title + credits (skip if same as type label)
+                const subParts: string[] = [];
+                if (songTitle && songTitle.toLowerCase() !== typeLabel.toLowerCase()) subParts.push(songTitle);
+                if (item.conductor) subParts.push('Диригент: ' + item.conductor);
+                if (item.pianist) subParts.push('Піаніст: ' + item.pianist);
+                const subHtml = subParts.length > 0
+                    ? '<div class="sub">' + subParts.join(' · ') + '</div>'
+                    : '';
+                return '<div class="item"><div class="number">' + (idx + 1) + '</div><div class="content"><div class="main">' + typeLabel + '</div>' + subHtml + '</div></div>';
+            }).join('');
+
+            const dateStr = new Date(currentService.date).toLocaleDateString("uk-UA", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+            const timeStr = currentService.time ? ' о ' + currentService.time : '';
+
+            const printContent = '<!DOCTYPE html><html lang="uk"><head><meta charset="utf-8"><title>Програма</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;padding:50px;color:#000;max-width:800px;margin:0 auto}h1{text-align:center;font-size:28px;margin-bottom:6px;font-weight:700}.date{text-align:center;font-size:18px;color:#555;margin-bottom:50px}.item{display:flex;align-items:baseline;gap:20px;margin-bottom:28px}.number{width:32px;text-align:right;font-size:18px;color:#666;line-height:1}.content{flex:1}.main{font-weight:700;font-size:22px}.sub{font-size:18px;color:#444;margin-top:4px}@media print{@page{margin:1.5cm}body{padding:0}}</style></head><body><h1>' + currentService.title + '</h1><div class="date">' + dateStr + timeStr + '</div>' + items + '</body></html>';
+
+            if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios') {
+                const fileName = 'program-' + currentService.id.slice(0, 6) + '.html';
+                const result = await Filesystem.writeFile({
+                    path: fileName,
+                    data: printContent,
+                    directory: Directory.Cache,
+                    encoding: Encoding.UTF8
+                });
+                await Share.share({
+                    title: 'Програма: ' + currentService.title,
+                    url: result.uri,
+                    dialogTitle: 'Друк програми'
+                });
+            } else {
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                document.body.appendChild(iframe);
+                iframe.contentWindow?.document.open();
+                iframe.contentWindow?.document.write(printContent);
+                iframe.contentWindow?.document.close();
+                setTimeout(() => {
+                    iframe.contentWindow?.focus();
+                    iframe.contentWindow?.print();
+                    setTimeout(() => {
+                        if (document.body.contains(iframe)) {
+                            document.body.removeChild(iframe);
+                        }
+                    }, 1000);
+                }, 250);
+            }
+        } catch (e: any) {
+            // Silently ignore share cancellation (user dismissed the sheet)
+            const msg = (e?.message || String(e)).toLowerCase();
+            if (msg.includes('cancel') || msg.includes('abort') || msg.includes('dismiss')) {
+                console.log("[Print] Share dismissed by user");
+                return;
+            }
+            console.error("Print error:", e);
+            try {
+                await Dialog.alert({ title: 'Помилка друку', message: e?.message || String(e) });
+            } catch (_) {
+                window.alert('Print error: ' + (e?.message || String(e)));
+            }
+        }
+    };
+
+
+
     return (
         <div className="pb-32 bg-background min-h-screen">
             {/* Header */}
@@ -789,6 +869,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                 <div className="flex-1">
                     <h1 className="text-xl font-bold text-text-primary leading-tight">{currentService.title}</h1>
                 </div>
+
             </div>
 
             <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
@@ -841,15 +922,24 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                             <div className="space-y-4 pt-2">
                                 <div className="flex items-center justify-between px-1">
                                     <h3 className="text-xs font-bold text-text-secondary uppercase tracking-[0.15em]">Порядок служіння ({programItems.length})</h3>
-                                    {canEdit && (
+                                    <div className="flex items-center gap-2">
                                         <button
-                                            onClick={() => setShowAddProgramItem(true)}
-                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-highlight text-text-primary rounded-full text-xs font-bold hover:bg-surface-highlight/80 transition-colors"
+                                            onClick={handlePrint}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-xs font-bold hover:bg-primary/20 transition-colors"
                                         >
-                                            <Plus className="w-3.5 h-3.5" />
-                                            Додати
+                                            <Printer className="w-3.5 h-3.5" />
+                                            Друк
                                         </button>
-                                    )}
+                                        {canEdit && (
+                                            <button
+                                                onClick={() => setShowAddProgramItem(true)}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-highlight text-text-primary rounded-full text-xs font-bold hover:bg-surface-highlight/80 transition-colors"
+                                            >
+                                                <Plus className="w-3.5 h-3.5" />
+                                                Додати
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {/* Warmup Row */}
@@ -896,12 +986,14 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                     </div>
                                 </div>
 
-                                {/* Program Items List */}
-                                <div className="space-y-1.5">
+                                {/* Program Items List — Timeline Style */}
+                                <div className="relative">
                                     {[...programItems].sort((a, b) => a.order - b.order).map((item, index) => {
                                         const config = programTypeConfig[item.type];
                                         const isDragged = draggedItemId === item.id;
                                         const isDragOver = dragOverItemId === item.id;
+                                        const isLast = index === programItems.length - 1;
+                                        const showSub = item.title && item.title.toLowerCase() !== config.label.toLowerCase();
                                         return (
                                             <div
                                                 key={item.id}
@@ -909,68 +1001,74 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                                 onDragStart={() => handleDragStart(item.id)}
                                                 onDragOver={(e) => { e.preventDefault(); setDragOverItemId(item.id); }}
                                                 onDragEnd={handleDragEnd}
-                                                className={`flex items-center gap-2.5 bg-surface/40 hover:bg-surface/60 border px-3 py-2.5 rounded-2xl transition-all ${isDragged ? 'opacity-50 scale-95 border-primary/40' :
-                                                    isDragOver ? 'border-primary/60 bg-primary/5' :
-                                                        'border-border/40'
+                                                className={`flex items-start gap-4 transition-all relative ${isDragged ? 'opacity-40 scale-[0.98]' :
+                                                    isDragOver ? 'bg-primary/5 rounded-2xl' : ''
                                                     }`}
                                             >
-                                                {/* Drag Handle */}
-                                                {canEdit && (
+                                                {/* Left Column: Number + Timeline */}
+                                                <div className="flex flex-col items-center pt-0.5 flex-shrink-0" style={{ width: 28 }}>
+                                                    <span className="text-[13px] font-bold text-text-secondary/50 tabular-nums">{index + 1}</span>
+                                                    {!isLast && (
+                                                        <div className="w-px flex-1 bg-border/50 mt-2 mb-0" />
+                                                    )}
+                                                </div>
+
+                                                {/* Main Content */}
+                                                <div className={`flex-1 flex items-center gap-3 pb-5 min-w-0 ${!isLast ? '' : ''}`}>
+                                                    {/* Drag Handle */}
+                                                    {canEdit && (
+                                                        <div
+                                                            className="cursor-grab active:cursor-grabbing p-1 -ml-1 select-none flex-shrink-0 opacity-30 hover:opacity-60 transition-opacity"
+                                                            onTouchStart={(e) => handleTouchStart(e, item.id, index)}
+                                                            onTouchMove={handleTouchMove}
+                                                            onTouchEnd={handleTouchEnd}
+                                                        >
+                                                            <GripVertical className="w-4 h-4 text-text-secondary pointer-events-none" />
+                                                        </div>
+                                                    )}
+
+                                                    {/* Icon Dot */}
+                                                    <div className={`w-8 h-8 rounded-xl ${config.color} flex items-center justify-center flex-shrink-0`}>
+                                                        {config.icon}
+                                                    </div>
+
+                                                    {/* Text */}
                                                     <div
-                                                        className="flex flex-col gap-0.5 cursor-grab active:cursor-grabbing p-2 -ml-2 select-none"
-                                                        onTouchStart={(e) => handleTouchStart(e, item.id, index)}
-                                                        onTouchMove={handleTouchMove}
-                                                        onTouchEnd={handleTouchEnd}
+                                                        className="flex-1 min-w-0"
+                                                        onClick={() => item.songId && handleViewPdf(item.songId, item.title)}
                                                     >
-                                                        <GripVertical className="w-4 h-4 text-text-secondary/40 pointer-events-none" />
+                                                        <h3 className="text-[15px] font-bold text-text-primary leading-tight">{config.label}</h3>
+                                                        {showSub && (
+                                                            <p className="text-[13px] text-text-secondary mt-0.5 truncate">{item.title}</p>
+                                                        )}
+                                                        {item.performer && (
+                                                            <p className="text-[12px] text-text-secondary/60 mt-0.5">{item.performer}</p>
+                                                        )}
                                                     </div>
-                                                )}
 
-                                                {/* Type Icon */}
-                                                <div className={`w-7 h-7 rounded-full ${config.color} flex items-center justify-center flex-shrink-0`}>
-                                                    {config.icon}
-                                                </div>
-
-                                                {/* Content */}
-                                                <div
-                                                    className="flex-1 min-w-0"
-                                                    onClick={() => item.songId && handleViewPdf(item.songId, item.title)}
-                                                >
-                                                    <div className="flex items-center gap-2">
-                                                        <h3 className="text-text-primary font-bold text-[14px] uppercase tracking-wide truncate">{config.label}</h3>
+                                                    {/* Actions */}
+                                                    <div className="flex items-center gap-0.5 flex-shrink-0">
+                                                        {item.songId && (
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleViewPdf(item.songId!, item.title);
+                                                                }}
+                                                                className="p-1.5 text-text-secondary/50 hover:text-primary transition-colors"
+                                                            >
+                                                                <Eye className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                        {canEdit && (
+                                                            <button
+                                                                onClick={() => setProgramItemToDelete(item.id)}
+                                                                className="p-1.5 text-text-secondary/20 hover:text-red-400 transition-colors"
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        )}
                                                     </div>
-                                                    {item.title.toLowerCase() !== config.label.toLowerCase() && (
-                                                        <p className="text-xs font-medium text-text-secondary truncate">{item.title}</p>
-                                                    )}
-                                                    {item.performer && (
-                                                        <p className="text-xs text-text-secondary/70">{item.performer}</p>
-                                                    )}
                                                 </div>
-
-                                                {/* View PDF */}
-                                                {item.songId && (
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleViewPdf(item.songId!, item.title);
-                                                        }}
-                                                        className="p-1.5 text-text-secondary hover:text-text-primary transition-colors flex-shrink-0"
-                                                    >
-                                                        <Eye className="w-4.5 h-4.5" />
-                                                    </button>
-                                                )}
-
-
-
-                                                {/* Delete */}
-                                                {canEdit && (
-                                                    <button
-                                                        onClick={() => setProgramItemToDelete(item.id)}
-                                                        className="p-2 text-text-secondary/30 hover:text-red-400 transition-colors"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                )}
                                             </div>
                                         );
                                     })}
@@ -1665,45 +1763,49 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
             }
 
             {/* Add Program Item Modal (Native-only) */}
-            {showAddProgramItem && (
-                <AddProgramItemModal
-                    onAdd={handleAddProgramItem}
-                    onClose={() => setShowAddProgramItem(false)}
-                />
-            )}
+            {
+                showAddProgramItem && (
+                    <AddProgramItemModal
+                        onAdd={handleAddProgramItem}
+                        onClose={() => setShowAddProgramItem(false)}
+                    />
+                )
+            }
 
             {/* Program Item Delete Confirmation ... (skipped inner parts as they are correct) */}
-            {programItemToDelete && (
-                <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-                    <div className="bg-surface border border-border w-full max-w-xs p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
-                        <div className="flex flex-col items-center text-center gap-4">
-                            <div className="w-14 h-14 bg-red-500/10 rounded-full flex items-center justify-center">
-                                <Trash2 className="w-6 h-6 text-red-500" />
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-bold text-text-primary">Видалити пункт?</h3>
-                                <p className="text-text-secondary text-sm mt-1">
-                                    &quot;{programItems.find(p => p.id === programItemToDelete)?.title}&quot; буде видалено з програми.
-                                </p>
-                            </div>
-                            <div className="flex gap-3 w-full mt-2">
-                                <button
-                                    onClick={() => setProgramItemToDelete(null)}
-                                    className="flex-1 py-3 border border-border rounded-xl text-text-primary hover:bg-surface-highlight transition-colors font-medium text-sm"
-                                >
-                                    Скасувати
-                                </button>
-                                <button
-                                    onClick={() => handleRemoveProgramItem(programItemToDelete)}
-                                    className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors text-sm"
-                                >
-                                    Видалити
-                                </button>
+            {
+                programItemToDelete && (
+                    <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+                        <div className="bg-surface border border-border w-full max-w-xs p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
+                            <div className="flex flex-col items-center text-center gap-4">
+                                <div className="w-14 h-14 bg-red-500/10 rounded-full flex items-center justify-center">
+                                    <Trash2 className="w-6 h-6 text-red-500" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-text-primary">Видалити пункт?</h3>
+                                    <p className="text-text-secondary text-sm mt-1">
+                                        &quot;{programItems.find(p => p.id === programItemToDelete)?.title}&quot; буде видалено з програми.
+                                    </p>
+                                </div>
+                                <div className="flex gap-3 w-full mt-2">
+                                    <button
+                                        onClick={() => setProgramItemToDelete(null)}
+                                        className="flex-1 py-3 border border-border rounded-xl text-text-primary hover:bg-surface-highlight transition-colors font-medium text-sm"
+                                    >
+                                        Скасувати
+                                    </button>
+                                    <button
+                                        onClick={() => handleRemoveProgramItem(programItemToDelete)}
+                                        className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors text-sm"
+                                    >
+                                        Видалити
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
 
             {/* PDF Modal (Reused for both Offline AND Native Inline Viewing) */}

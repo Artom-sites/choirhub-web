@@ -69,6 +69,7 @@ export default function PDFViewer({ url, songId, title, onClose, onAddAction, is
     const [triggerClear, setTriggerClear] = useState(0);
     const [triggerUndo, setTriggerUndo] = useState(0);
     const [triggerRedo, setTriggerRedo] = useState(0);
+    const [retryCount, setRetryCount] = useState(0);
 
     // Pinch-to-zoom for annotation mode
     const pinchZoom = usePinchZoom({
@@ -212,7 +213,7 @@ export default function PDFViewer({ url, songId, title, onClose, onAddAction, is
         return () => {
             active = false;
         };
-    }, [url, songId]);
+    }, [url, songId, retryCount]);
 
 
 
@@ -341,7 +342,7 @@ export default function PDFViewer({ url, songId, title, onClose, onAddAction, is
                                 <WifiOff className="w-8 h-8 text-red-400" />
                             </div>
                             <p className="text-red-400 mb-4">{error}</p>
-                            <button onClick={() => window.location.reload()} className="px-6 py-2 bg-black text-white rounded-xl">
+                            <button onClick={() => setRetryCount(p => p + 1)} className="px-6 py-2 bg-black text-white rounded-xl">
                                 Спробувати знову
                             </button>
                         </div>

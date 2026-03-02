@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Capacitor } from "@capacitor/core";
+import { Dialog } from '@capacitor/dialog';
 import { Search, FileText, Music2, ChevronRight, Filter, Plus, Eye, User, Loader2, Trash2, MoreVertical, Library, X } from "lucide-react";
 import { SimpleSong } from "@/types";
 import { CATEGORIES, Category } from "@/lib/themes";
@@ -163,7 +164,7 @@ export default function SongList({
 
         const newSongId = await addSong(userData.choirId, { ...song, addedAt: new Date().toISOString() });
         if (pdfFile) {
-            try { await uploadSongPdf(userData.choirId, newSongId, pdfFile); } catch (e) { console.error(e); alert("Пісню створено, але PDF не завантажився."); }
+            try { await uploadSongPdf(userData.choirId, newSongId, pdfFile); } catch (e) { console.error(e); await Dialog.alert({ title: "Помилка", message: "Пісню створено, але PDF не завантажився." }); }
         }
         await refreshRepertoire();
         if (onRefresh) onRefresh();
@@ -217,7 +218,7 @@ export default function SongList({
             setEditingSong(null);
             await refreshRepertoire();
             if (onRefresh) onRefresh();
-        } catch (e) { console.error(e); alert("Помилка оновлення"); }
+        } catch (e) { console.error(e); await Dialog.alert({ title: "Помилка", message: "Помилка оновлення" }); }
     };
 
     const initiateDelete = (e: React.MouseEvent | null, id: string) => {

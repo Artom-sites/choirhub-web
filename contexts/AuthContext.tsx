@@ -156,10 +156,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 await signInWithCredential(auth, credential);
             }
         } catch (error: any) {
-            console.error("Error signing in with Apple:", error);
-            if (error.code === 'auth/popup-closed-by-user' || error.errorMessage?.includes("canceled")) {
-                console.warn("User closed the Apple login popup.");
+            // 1. Detect Apple Sign-In cancellation natively and in web
+            const errorString = String(error.errorMessage || error.message || error).toLowerCase();
+            const isCanceled =
+                error.code === 'auth/popup-closed-by-user' ||
+                error.code === 1000 ||
+                error.code === '1000' ||
+                errorString.includes("canceled") ||
+                errorString.includes("cancelled") ||
+                errorString.includes("authorizationerror error 1000"); // Typical Capacitor/Apple format
+
+            if (isCanceled) {
+                console.warn("[Auth] User cancelled Apple Sign-In. Ignoring gracefully.");
+                // 2. Do NOT throw the error. Simply return silently to prevent caller's Dialog.alert
+                return;
             }
+
+            // 3. If it's a REAL error (network, invalid nonce, Firebase issue), log and throw
+            console.error("[Auth] Real error signing in with Apple:", error);
             throw error;
         } finally {
             appleLoginLock.current = false;

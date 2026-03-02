@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Bell, BellOff, Loader2, X, Settings, Trash2 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
+import { Dialog } from '@capacitor/dialog';
 import { useAuth } from "@/contexts/AuthContext";
 import { getChoirNotifications, markNotificationAsRead, deleteNotification, setServiceAttendance } from "@/lib/db";
 import { ChoirNotification, Service } from "@/types";
@@ -82,7 +83,7 @@ export default function NotificationsModal({
             setConfirmDeleteId(null);
         } catch (error) {
             console.error("Failed to delete notification:", error);
-            alert("Не вдалося видалити повідомлення");
+            await Dialog.alert({ title: "Помилка", message: "Не вдалося видалити повідомлення" });
         } finally {
             setDeletingId(null);
         }
@@ -95,7 +96,7 @@ export default function NotificationsModal({
             await setServiceAttendance(userData.choirId, serviceId, userData.id, status);
         } catch (error) {
             console.error("Voting failed:", error);
-            alert("Помилка при збереженні відповіді");
+            await Dialog.alert({ title: "Помилка", message: "Помилка при збереженні відповіді" });
         } finally {
             setVotingServiceId(null);
         }

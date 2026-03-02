@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Music2, Check, ExternalLink, User, Mail, Eye, EyeOff, UserX, AlertTriangle, ArrowLeft, LogOut, Loader2, Apple } from "lucide-react";
+import { Dialog } from '@capacitor/dialog';
 import { useAuth } from "@/contexts/AuthContext";
 import { createUser, getChoir, updateChoirMembers, joinChoir, claimMember, createChoir } from "@/lib/db";
 import { Choir, UserData } from "@/types";
@@ -116,7 +117,7 @@ function SetupPageContent() {
             if (err.message?.includes("canceled") || err.errorMessage?.includes("canceled")) {
                 console.warn("Sign-in canceled by user");
             } else {
-                alert("Google Login Error: " + (err.message || JSON.stringify(err)));
+                await Dialog.alert({ title: "Помилка", message: "Google Login Error: " + (err.message || JSON.stringify(err)) });
             }
         } finally {
             setGoogleLoading(false);
@@ -142,7 +143,7 @@ function SetupPageContent() {
             if (isCanceled) {
                 console.warn("Sign-in canceled by user");
             } else {
-                alert("Apple Login Error: " + (err.message || JSON.stringify(err)));
+                await Dialog.alert({ title: "Помилка", message: "Apple Login Error: " + (err.message || JSON.stringify(err)) });
             }
         } finally {
             setAppleLoading(false);
@@ -237,7 +238,7 @@ function SetupPageContent() {
             router.push("/app");
         } catch (err: any) {
             console.error(err);
-            alert("Помилка створення: " + (err.message || JSON.stringify(err)));
+            await Dialog.alert({ title: "Помилка", message: "Помилка створення: " + (err.message || JSON.stringify(err)) });
             setError("Помилка створення. Спробуйте ще раз.");
         } finally {
             setFormLoading(false);
@@ -310,7 +311,7 @@ function SetupPageContent() {
             if (msg.includes("Invalid invite code")) {
                 setError("Невірний код");
             } else if (msg.includes("Already a member")) {
-                alert("Ви вже є учасником цього хору");
+                await Dialog.alert({ title: "Помилка", message: "Ви вже є учасником цього хору" });
                 if (err.details?.unlinkedMembers) {
                     setClaimMembers(err.details.unlinkedMembers);
                     setClaimChoirId(err.details.choirId);
@@ -319,7 +320,7 @@ function SetupPageContent() {
                     router.push("/app");
                 }
             } else {
-                alert("Помилка приєднання: " + msg);
+                await Dialog.alert({ title: "Помилка", message: "Помилка приєднання: " + msg });
                 setError("Помилка приєднання");
             }
         } finally {
@@ -336,7 +337,7 @@ function SetupPageContent() {
             router.push("/app");
         } catch (e: any) {
             console.error("Claim error:", e);
-            alert(e.message || "Помилка прив'язки");
+            await Dialog.alert({ title: "Помилка", message: e.message || "Помилка прив'язки" });
         } finally {
             setClaimLoading(false);
         }
@@ -347,7 +348,7 @@ function SetupPageContent() {
         const finalName = customName.trim();
 
         if (!finalName.includes(" ")) {
-            alert("Будь ласка, введіть 'Прізвище та Ім'я' через пробіл.");
+            await Dialog.alert({ title: "Помилка", message: "Будь ласка, введіть 'Прізвище та Ім'я' через пробіл." });
             return;
         }
 
@@ -372,7 +373,7 @@ function SetupPageContent() {
             router.push("/app");
         } catch (e: any) {
             console.error("Save Name Error:", e);
-            alert("Помилка збереження імені");
+            await Dialog.alert({ title: "Помилка", message: "Помилка збереження імені" });
         } finally {
             setSavingName(false);
         }
@@ -476,14 +477,16 @@ function SetupPageContent() {
                             <button
                                 onClick={handleAppleLogin}
                                 disabled={formLoading}
-                                className="py-3.5 bg-black text-white rounded-xl flex items-center justify-center gap-2 hover:bg-zinc-900 transition-colors disabled:opacity-50 border border-white/10"
+                                className="py-3.5 bg-surface border border-border rounded-xl flex items-center justify-center gap-2 hover:bg-surface-highlight transition-colors disabled:opacity-50"
                             >
                                 {appleLoading ? (
-                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    <Loader2 className="w-5 h-5 animate-spin text-text-primary" />
                                 ) : (
-                                    <Apple className="w-5 h-5" />
+                                    <svg className="w-5 h-5 text-text-primary mb-[2px]" viewBox="0 0 384 512" fill="currentColor">
+                                        <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
+                                    </svg>
                                 )}
-                                <span className="font-semibold text-sm">Apple</span>
+                                <span className="font-semibold text-text-primary text-sm">Apple</span>
                             </button>
                         </div>
 
@@ -505,8 +508,8 @@ function SetupPageContent() {
                     </div>
                 </div>
 
-                <footer className="w-full pt-4 pb-2 flex flex-col items-center gap-2 text-xs text-text-secondary">
-                    <div className="flex gap-6">
+                <footer className="w-full pt-4 pb-2 flex flex-col items-center gap-2 text-xs md:text-sm text-text-secondary">
+                    <div className="flex gap-6 md:gap-8">
                         <Link href="/terms" className="hover:text-text-primary transition-colors whitespace-nowrap">Умови використання</Link>
                         <Link href="/privacy" className="hover:text-text-primary transition-colors whitespace-nowrap">Політика конфіденційності</Link>
                     </div>

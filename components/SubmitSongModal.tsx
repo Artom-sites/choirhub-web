@@ -5,6 +5,7 @@ import { X, Upload, Loader2, Check, ChevronDown } from "lucide-react";
 import { PendingSong } from "@/types";
 import { submitSong } from "@/lib/db";
 import { uploadPendingSongPdf } from "@/lib/storage";
+import { Dialog } from '@capacitor/dialog';
 import { useAuth } from "@/contexts/AuthContext";
 import { OFFICIAL_THEMES } from "@/lib/themes";
 
@@ -129,7 +130,7 @@ export default function SubmitSongModal({ onClose, onSuccess }: Props) {
                 songId = await submitSong(pendingData);
             } catch (err: any) {
                 console.error("Firestore create error:", err);
-                alert("Помилка: не вдалося створити запис. Перевірте інтернет-з'єднання.");
+                await Dialog.alert({ title: "Помилка", message: "Помилка: не вдалося створити запис. Перевірте інтернет-з'єднання." });
                 return;
             }
 
@@ -139,7 +140,7 @@ export default function SubmitSongModal({ onClose, onSuccess }: Props) {
                 downloadUrl = await uploadPendingSongPdf(songId, file);
             } catch (err: any) {
                 console.error("Storage upload error:", err);
-                alert("Помилка завантаження файлу. Спробуйте ще раз.");
+                await Dialog.alert({ title: "Помилка", message: "Помилка завантаження файлу. Спробуйте ще раз." });
                 return;
             }
 
@@ -156,7 +157,7 @@ export default function SubmitSongModal({ onClose, onSuccess }: Props) {
                 });
             } catch (err: any) {
                 console.error("Firestore update error:", err);
-                alert("Помилка: файл завантажено, але не вдалося оновити запис.");
+                await Dialog.alert({ title: "Помилка", message: "Помилка: файл завантажено, але не вдалося оновити запис." });
                 return;
             }
 
@@ -164,7 +165,7 @@ export default function SubmitSongModal({ onClose, onSuccess }: Props) {
             onClose();
         } catch (error: any) {
             console.error("Unexpected error:", error);
-            alert(`Неочікувана помилка: ${error.message || "Спробуйте ще раз"}`);
+            await Dialog.alert({ title: "Помилка", message: `Неочікувана помилка: ${error.message || "Спробуйте ще раз"}` });
         } finally {
             setLoading(false);
         }

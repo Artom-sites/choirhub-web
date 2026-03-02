@@ -8,8 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { updateDoc, doc, arrayRemove } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import ConfirmationModal from "./ConfirmationModal";
-
-
+import { Dialog } from '@capacitor/dialog';
 
 // ... imports
 
@@ -195,7 +194,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
             }
         } catch (e) {
             console.error("Failed to delete conductor:", e);
-            alert("Помилка видалення");
+            await Dialog.alert({ title: "Помилка", message: "Помилка видалення" });
         } finally {
             setConductorToDelete(null);
         }
@@ -218,7 +217,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
             }
         } catch (e) {
             console.error("Failed to delete pianist:", e);
-            alert("Помилка видалення");
+            await Dialog.alert({ title: "Помилка", message: "Помилка видалення" });
         } finally {
             setPianistToDelete(null);
         }

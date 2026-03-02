@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { updateDoc, doc, arrayRemove } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import ConfirmationModal from "./ConfirmationModal";
+import { Dialog } from '@capacitor/dialog';
 
 interface EditSongModalProps {
     isOpen: boolean;
@@ -192,7 +193,7 @@ export default function EditSongModal({
             onClose();
         } catch (err: any) {
             console.error(err);
-            alert("Помилка збереження");
+            await Dialog.alert({ title: "Помилка", message: "Помилка збереження" });
         } finally {
             setLoading(false);
         }
@@ -220,7 +221,7 @@ export default function EditSongModal({
             onClose();
         } catch (e) {
             console.error("Failed to delete conductor:", e);
-            alert("Помилка видалення");
+            await Dialog.alert({ title: "Помилка", message: "Помилка видалення" });
         } finally {
             setConductorToDelete(null);
         }
@@ -249,7 +250,7 @@ export default function EditSongModal({
             onClose();
         } catch (e) {
             console.error("Failed to delete pianist:", e);
-            alert("Помилка видалення");
+            await Dialog.alert({ title: "Помилка", message: "Помилка видалення" });
         } finally {
             setPianistToDelete(null);
         }
