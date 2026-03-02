@@ -129,6 +129,46 @@ export default function SongList({
 
     const handleSongClick = (song: SimpleSong) => {
         if (song.hasPdf || effectiveCanAdd) {
+            // Background cache: silently cache the PDF for offline access
+            if (song.hasPdf) {
+                (async () => {
+                    try {
+                        const { isCached: checkCached, savePdf } = await import('@/lib/offlineDb');
+                        const alreadyCached = await checkCached(song.id);
+                        if (!alreadyCached) {
+                            const pdfUrl = song.parts?.[0]?.pdfUrl || song.pdfUrl;
+                            if (pdfUrl) {
+                                const partsData = (song.parts && song.parts.length > 0)
+                                    ? song.parts.map((p: any) => ({ name: p.name || 'Part', pdfUrl: p.pdfUrl }))
+                                    : [{ name: 'Головна', pdfUrl }];
+                                const validParts = partsData.filter(p => !!p.pdfUrl);
+                                if (validParts.length > 0) {
+                                    console.log(`[OfflineCache] Caching "${song.title}" from repertoire...`);
+                                    const resolvedParts = await Promise.all(
+                                        validParts.map(async (part) => {
+                                            const resp = await fetch(part.pdfUrl as string);
+                                            const blob = await resp.blob();
+                                            const base64 = await new Promise<string>((resolve, reject) => {
+                                                const reader = new FileReader();
+                                                reader.onloadend = () => resolve(reader.result as string);
+                                                reader.onerror = reject;
+                                                reader.readAsDataURL(blob);
+                                            });
+                                            return { name: part.name, pdfBase64: base64 };
+                                        })
+                                    );
+                                    await savePdf(song.id, 'repertoire', song.title, resolvedParts);
+                                    console.log(`[OfflineCache] Cached "${song.title}" for offline access`);
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        // Silent fail — caching is best-effort
+                        console.warn('[OfflineCache] Background cache failed:', e);
+                    }
+                })();
+            }
+
             // iOS online: open native PDF viewer directly — no preloader
             if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios' && song.hasPdf && navigator.onLine) {
                 const pdfUrl = song.parts?.[0]?.pdfUrl || song.pdfUrl;
