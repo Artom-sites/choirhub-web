@@ -1384,7 +1384,7 @@ export const sendNotification = functions.https.onCall(async (data, context) => 
         throw new functions.https.HttpsError("permission-denied", "No permission to send notifications");
     }
 
-    // 2. Fetch Recipients
+    // 2. Fetch Recipients — log per-user token details
     console.log(`[sendNotification] Fetching members for choir: ${choirId}`);
     const choirDoc = await db.collection("choirs").doc(choirId).get();
     const choirData = choirDoc.data();
@@ -1399,23 +1399,38 @@ export const sendNotification = functions.https.onCall(async (data, context) => 
     const userRefs = memberIds.map((id: string) => db.collection("users").doc(id));
     const userDocs = await db.getAll(...userRefs);
 
-    const tokens: string[] = [];
+    // Collect tokens with origin info for debugging
+    const tokenOrigins: { token: string; userId: string; userName: string }[] = [];
     userDocs.forEach(doc => {
         const u = doc.data();
         if (u && u.notificationsEnabled && u.fcmTokens && Array.isArray(u.fcmTokens)) {
-            tokens.push(...u.fcmTokens);
+            for (const t of u.fcmTokens) {
+                tokenOrigins.push({ token: t, userId: doc.id, userName: u.name || "?" });
+            }
         }
     });
 
-    const uniqueTokens = Array.from(new Set(tokens));
-    console.log(`[sendNotification] Total unique tokens: ${uniqueTokens.length}`);
+    // Deduplicate tokens (keep first origin for logging)
+    const seen = new Set<string>();
+    const uniqueOrigins = tokenOrigins.filter(o => {
+        if (seen.has(o.token)) return false;
+        seen.add(o.token);
+        return true;
+    });
+
+    console.log(`[sendNotification] Token breakdown:`);
+    uniqueOrigins.forEach((o, i) => {
+        console.log(`  [${i}] user=${o.userName} (${o.userId.substring(0, 8)}...) token=${o.token.substring(0, 20)}...`);
+    });
+
+    const uniqueTokens = uniqueOrigins.map(o => o.token);
 
     if (uniqueTokens.length === 0) {
         console.warn("[sendNotification] No valid tokens found.");
-        return { success: true, count: 0, failed: 0, message: "No devices to send to" };
+        return { success: true, count: 0, failed: 0, message: "No devices to send to", errors: [] };
     }
 
-    // 3. Send Multicast
+    // 3. Build and log payload
     const message = {
         notification: { title, body },
         apns: {
@@ -1429,11 +1444,34 @@ export const sendNotification = functions.https.onCall(async (data, context) => 
         tokens: uniqueTokens,
     };
 
+    console.log(`[sendNotification] Payload structure:`, JSON.stringify({
+        notification: message.notification,
+        apns: message.apns,
+        android: message.android,
+        tokenCount: uniqueTokens.length
+    }, null, 2));
+
+    // 4. Send
     console.log(`[sendNotification] Sending to ${uniqueTokens.length} devices...`);
     const response = await admin.messaging().sendEachForMulticast(message);
-    console.log(`[sendNotification] Success: ${response.successCount}, Failed: ${response.failureCount}`);
+    console.log(`[sendNotification] Result: successCount=${response.successCount}, failureCount=${response.failureCount}`);
 
-    // 4. Save to Firestore
+    // 5. Detailed per-token response logging
+    const errors: { tokenPrefix: string; user: string; code: string; message: string }[] = [];
+    response.responses.forEach((resp, idx) => {
+        const origin = uniqueOrigins[idx];
+        const tokenPrefix = origin.token.substring(0, 20) + "...";
+        if (resp.success) {
+            console.log(`  ✅ [${idx}] ${origin.userName}: delivered (messageId=${resp.messageId})`);
+        } else {
+            const errCode = resp.error?.code || "unknown";
+            const errMsg = resp.error?.message || "no message";
+            console.error(`  ❌ [${idx}] ${origin.userName}: FAILED code=${errCode} msg=${errMsg}`);
+            errors.push({ tokenPrefix, user: origin.userName, code: errCode, message: errMsg });
+        }
+    });
+
+    // 6. Save to Firestore
     const notificationData: any = {
         title, body, choirId,
         senderId: uid,
@@ -1450,46 +1488,48 @@ export const sendNotification = functions.https.onCall(async (data, context) => 
 
     await db.collection(`choirs/${choirId}/notifications`).add(notificationData);
 
-    // 5. Clean up stale tokens
-    if (response.failureCount > 0) {
-        const tokensToRemove: string[] = [];
-        response.responses.forEach((resp, idx) => {
-            if (!resp.success) {
-                const errCode = resp.error?.code;
-                console.error(`[sendNotification] Token failure ${uniqueTokens[idx].substring(0, 10)}...: ${errCode}`);
-                if (
-                    errCode === 'messaging/registration-token-not-registered' ||
-                    errCode === 'messaging/invalid-registration-token' ||
-                    errCode === 'messaging/invalid-argument'
-                ) {
-                    tokensToRemove.push(uniqueTokens[idx]);
-                }
+    // 7. Clean up stale tokens
+    const tokensToRemove: string[] = [];
+    response.responses.forEach((resp, idx) => {
+        if (!resp.success) {
+            const errCode = resp.error?.code;
+            if (
+                errCode === 'messaging/registration-token-not-registered' ||
+                errCode === 'messaging/invalid-registration-token' ||
+                errCode === 'messaging/invalid-argument'
+            ) {
+                tokensToRemove.push(uniqueTokens[idx]);
             }
-        });
+        }
+    });
 
-        if (tokensToRemove.length > 0) {
-            console.log(`[sendNotification] Cleaning ${tokensToRemove.length} stale tokens...`);
-            const staleSnaps = await Promise.all(
-                tokensToRemove.map(t =>
-                    db.collection("users").where("fcmTokens", "array-contains", t).get()
-                )
-            );
-            const batch = db.batch();
-            let ops = 0;
-            staleSnaps.forEach((snap, i) => {
-                snap.docs.forEach(doc => {
-                    batch.update(doc.ref, {
-                        fcmTokens: admin.firestore.FieldValue.arrayRemove(tokensToRemove[i])
-                    });
-                    ops++;
+    if (tokensToRemove.length > 0) {
+        console.log(`[sendNotification] Cleaning ${tokensToRemove.length} stale tokens...`);
+        const staleSnaps = await Promise.all(
+            tokensToRemove.map(t =>
+                db.collection("users").where("fcmTokens", "array-contains", t).get()
+            )
+        );
+        const batch = db.batch();
+        let ops = 0;
+        staleSnaps.forEach((snap, i) => {
+            snap.docs.forEach(doc => {
+                batch.update(doc.ref, {
+                    fcmTokens: admin.firestore.FieldValue.arrayRemove(tokensToRemove[i])
                 });
+                ops++;
             });
-            if (ops > 0) {
-                await batch.commit();
-                console.log(`[sendNotification] Removed ${tokensToRemove.length} stale tokens from ${ops} docs.`);
-            }
+        });
+        if (ops > 0) {
+            await batch.commit();
+            console.log(`[sendNotification] Removed ${tokensToRemove.length} stale tokens from ${ops} docs.`);
         }
     }
 
-    return { success: true, count: response.successCount, failed: response.failureCount };
+    return {
+        success: true,
+        count: response.successCount,
+        failed: response.failureCount,
+        errors
+    };
 });

@@ -79,6 +79,9 @@ export default function SendNotificationModal({ isOpen, onClose }: SendNotificat
             }
 
             console.log(`[SendNotification] Success: ${data.count} sent, ${data.failed} failed`);
+            if (data.errors && data.errors.length > 0) {
+                console.warn(`[SendNotification] Token errors:`, JSON.stringify(data.errors, null, 2));
+            }
 
             setToast({ message: "Сповіщення надіслано", type: "success" });
 
