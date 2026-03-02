@@ -97,15 +97,19 @@ export async function POST(req: NextRequest) {
                 body: body,
             },
             apns: {
+                headers: {
+                    "apns-priority": "10",
+                    "apns-push-type": "alert",
+                },
                 payload: {
                     aps: {
                         sound: "default",
                         badge: 1,
-                        "mutable-content": 1,
                     },
                 },
             },
             android: {
+                priority: "high" as const,
                 notification: {
                     sound: "default",
                     channelId: "choir_notifications",
@@ -137,14 +141,48 @@ export async function POST(req: NextRequest) {
 
         await db.collection(`choirs/${choirId}/notifications`).add(notificationData);
 
+        // 6. Clean up stale/invalid tokens
         if (response.failureCount > 0) {
-            const failedTokens: string[] = [];
+            const tokensToRemove: string[] = [];
             response.responses.forEach((resp, idx) => {
                 if (!resp.success) {
-                    failedTokens.push(uniqueTokens[idx]);
-                    console.error(`[Notification] Failure for token ${uniqueTokens[idx].substring(0, 10)}...:`, resp.error);
+                    const errCode = resp.error?.code;
+                    console.error(`[Notification] Failure for token ${uniqueTokens[idx].substring(0, 10)}...: ${errCode}`, resp.error?.message);
+                    // Remove tokens that are permanently invalid
+                    if (
+                        errCode === 'messaging/registration-token-not-registered' ||
+                        errCode === 'messaging/invalid-registration-token' ||
+                        errCode === 'messaging/invalid-argument'
+                    ) {
+                        tokensToRemove.push(uniqueTokens[idx]);
+                    }
                 }
             });
+
+            // Batch remove stale tokens from all users
+            if (tokensToRemove.length > 0) {
+                console.log(`[Notification] Cleaning up ${tokensToRemove.length} stale tokens...`);
+                const { FieldValue } = await import("firebase-admin/firestore");
+                const staleSnaps = await Promise.all(
+                    tokensToRemove.map(t =>
+                        db.collection("users").where("fcmTokens", "array-contains", t).get()
+                    )
+                );
+                const batch = db.batch();
+                let batchOps = 0;
+                staleSnaps.forEach((snap, i) => {
+                    snap.docs.forEach(doc => {
+                        batch.update(doc.ref, {
+                            fcmTokens: FieldValue.arrayRemove(tokensToRemove[i])
+                        });
+                        batchOps++;
+                    });
+                });
+                if (batchOps > 0) {
+                    await batch.commit();
+                    console.log(`[Notification] Removed ${tokensToRemove.length} stale tokens from ${batchOps} user docs.`);
+                }
+            }
         }
 
         return NextResponse.json({

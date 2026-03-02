@@ -995,37 +995,71 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                         const isLast = index === programItems.length - 1;
                                         const showSub = item.title && item.title.toLowerCase() !== config.label.toLowerCase();
                                         return (
-                                            <div
-                                                key={item.id}
-                                                draggable={canEdit}
-                                                onDragStart={() => handleDragStart(item.id)}
-                                                onDragOver={(e) => { e.preventDefault(); setDragOverItemId(item.id); }}
-                                                onDragEnd={handleDragEnd}
-                                                className={`flex items-start gap-4 transition-all relative ${isDragged ? 'opacity-40 scale-[0.98]' :
-                                                    isDragOver ? 'bg-primary/5 rounded-2xl' : ''
-                                                    }`}
-                                            >
-                                                {/* Left Column: Number + Timeline */}
-                                                <div className="flex flex-col items-center pt-0.5 flex-shrink-0" style={{ width: 28 }}>
-                                                    <span className="text-[13px] font-bold text-text-secondary/50 tabular-nums">{index + 1}</span>
-                                                    {!isLast && (
-                                                        <div className="w-px flex-1 bg-border/50 mt-2 mb-0" />
-                                                    )}
-                                                </div>
+                                            <div key={item.id} className="relative">
+                                                {/* Insertion Line (above this item when dragging) */}
+                                                {isDragOver && draggedItemId !== item.id && (
+                                                    <div className="absolute top-0 left-8 right-0 z-10 flex items-center">
+                                                        <div className="w-2.5 h-2.5 rounded-full bg-primary border-2 border-primary -ml-1" />
+                                                        <div className="flex-1 h-[2px] bg-primary" />
+                                                    </div>
+                                                )}
+                                                <div
+                                                    draggable={canEdit}
+                                                    onDragStart={() => handleDragStart(item.id)}
+                                                    onDragOver={(e) => { e.preventDefault(); setDragOverItemId(item.id); }}
+                                                    onDragEnd={handleDragEnd}
+                                                    className={`flex items-center gap-3 transition-all relative overflow-hidden ${isDragged ? 'opacity-40 scale-[0.98]' : ''
+                                                        }`}
+                                                    onTouchStart={(e) => {
+                                                        if (!canEdit) return;
+                                                        const touch = e.touches[0];
+                                                        (item as any)._swipeStartX = touch.clientX;
+                                                        (item as any)._swipeStartY = touch.clientY;
+                                                        (item as any)._swipeDir = null;
+                                                    }}
+                                                    onTouchMove={(e) => {
+                                                        if (!canEdit) return;
+                                                        const touch = e.touches[0];
+                                                        const dx = touch.clientX - ((item as any)._swipeStartX || 0);
+                                                        const dy = touch.clientY - ((item as any)._swipeStartY || 0);
 
-                                                {/* Main Content */}
-                                                <div className={`flex-1 flex items-center gap-3 pb-5 min-w-0 ${!isLast ? '' : ''}`}>
-                                                    {/* Drag Handle */}
-                                                    {canEdit && (
-                                                        <div
-                                                            className="cursor-grab active:cursor-grabbing p-1 -ml-1 select-none flex-shrink-0 opacity-30 hover:opacity-60 transition-opacity"
-                                                            onTouchStart={(e) => handleTouchStart(e, item.id, index)}
-                                                            onTouchMove={handleTouchMove}
-                                                            onTouchEnd={handleTouchEnd}
-                                                        >
-                                                            <GripVertical className="w-4 h-4 text-text-secondary pointer-events-none" />
-                                                        </div>
-                                                    )}
+                                                        // Determine swipe direction once
+                                                        if (!(item as any)._swipeDir) {
+                                                            if (Math.abs(dx) > 15 || Math.abs(dy) > 15) {
+                                                                (item as any)._swipeDir = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+                                                            }
+                                                        }
+
+                                                        if ((item as any)._swipeDir === 'h' && dx < -40) {
+                                                            const el = e.currentTarget as HTMLElement;
+                                                            el.style.transform = `translateX(${Math.max(dx, -100)}px)`;
+                                                            el.style.transition = 'none';
+                                                        }
+                                                    }}
+                                                    onTouchEnd={(e) => {
+                                                        if (!canEdit) return;
+                                                        const el = e.currentTarget as HTMLElement;
+                                                        const transform = el.style.transform;
+                                                        const match = transform.match(/translateX\(([-\d.]+)px\)/);
+                                                        const dx = match ? parseFloat(match[1]) : 0;
+
+                                                        if (dx < -70) {
+                                                            // Swiped far enough — delete
+                                                            el.style.transition = 'transform 0.2s, opacity 0.2s';
+                                                            el.style.transform = 'translateX(-100%)';
+                                                            el.style.opacity = '0';
+                                                            setTimeout(() => setProgramItemToDelete(item.id), 200);
+                                                        } else {
+                                                            // Snap back
+                                                            el.style.transition = 'transform 0.2s';
+                                                            el.style.transform = 'translateX(0)';
+                                                        }
+                                                    }}
+                                                >
+                                                    {/* Left Column: Number */}
+                                                    <div className="flex-shrink-0 w-7 text-right">
+                                                        <span className="text-[14px] font-bold text-text-secondary/40 tabular-nums">{index + 1}</span>
+                                                    </div>
 
                                                     {/* Icon Dot */}
                                                     <div className={`w-8 h-8 rounded-xl ${config.color} flex items-center justify-center flex-shrink-0`}>
@@ -1046,29 +1080,42 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                                         )}
                                                     </div>
 
-                                                    {/* Actions */}
-                                                    <div className="flex items-center gap-0.5 flex-shrink-0">
-                                                        {item.songId && (
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleViewPdf(item.songId!, item.title);
-                                                                }}
-                                                                className="p-1.5 text-text-secondary/50 hover:text-primary transition-colors"
-                                                            >
-                                                                <Eye className="w-4 h-4" />
-                                                            </button>
-                                                        )}
-                                                        {canEdit && (
-                                                            <button
-                                                                onClick={() => setProgramItemToDelete(item.id)}
-                                                                className="p-1.5 text-text-secondary/20 hover:text-red-400 transition-colors"
-                                                            >
-                                                                <Trash2 className="w-3.5 h-3.5" />
-                                                            </button>
-                                                        )}
-                                                    </div>
+                                                    {/* View PDF */}
+                                                    {item.songId && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleViewPdf(item.songId!, item.title);
+                                                            }}
+                                                            className="p-1.5 text-text-secondary/40 hover:text-primary transition-colors flex-shrink-0"
+                                                        >
+                                                            <Eye className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+
+                                                    {/* Drag Handle (Right Side) */}
+                                                    {canEdit && (
+                                                        <div
+                                                            className="cursor-grab active:cursor-grabbing p-1.5 select-none flex-shrink-0 opacity-20 hover:opacity-50 active:opacity-70 transition-opacity"
+                                                            onTouchStart={(e) => {
+                                                                e.stopPropagation();
+                                                                handleTouchStart(e, item.id, index);
+                                                            }}
+                                                            onTouchMove={(e) => {
+                                                                e.stopPropagation();
+                                                                handleTouchMove(e);
+                                                            }}
+                                                            onTouchEnd={(e) => {
+                                                                e.stopPropagation();
+                                                                handleTouchEnd();
+                                                            }}
+                                                        >
+                                                            <GripVertical className="w-4 h-4 text-text-secondary pointer-events-none" />
+                                                        </div>
+                                                    )}
                                                 </div>
+                                                {/* Spacer between items */}
+                                                {!isLast && <div className="h-4" />}
                                             </div>
                                         );
                                     })}
