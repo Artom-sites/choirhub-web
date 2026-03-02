@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getServices } from "@/lib/db";
 import { Service } from "@/types";
 import Toast from "./Toast";
+import { Capacitor, CapacitorHttp } from "@capacitor/core";
 
 interface SendNotificationModalProps {
     isOpen: boolean;
@@ -72,20 +73,40 @@ export default function SendNotificationModal({ isOpen, onClose }: SendNotificat
             const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://choirhub.app";
             console.log(`[SendNotification] Sending to ${baseUrl}/api/send-notification from origin ${typeof window !== 'undefined' ? window.location.origin : 'unknown'}`);
 
-            const response = await fetch(`${baseUrl}/api/send-notification`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify(payload)
-            });
+            let text = "";
+            let status = 200;
 
-            const text = await response.text();
+            if (Capacitor.isNativePlatform()) {
+                console.log(`[SendNotification] Using CapacitorHttp for native request`);
+                const response = await CapacitorHttp.post({
+                    url: `${baseUrl}/api/send-notification`,
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    data: payload
+                });
+                status = response.status;
+                // CapacitorHttp gives JSON data directly instead of text if it parsed it
+                text = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+            } else {
+                console.log(`[SendNotification] Using window.fetch for web request`);
+                const response = await fetch(`${baseUrl}/api/send-notification`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+                status = response.status;
+                text = await response.text();
+            }
+
             let data: any = {};
             try { data = JSON.parse(text); } catch { data = { error: text || "Невідома помилка сервера" }; }
 
-            if (!response.ok) {
+            if (status !== 200) {
                 throw new Error(data.error || "Failed to send");
             }
 
