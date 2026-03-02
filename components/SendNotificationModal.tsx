@@ -67,7 +67,12 @@ export default function SendNotificationModal({ isOpen, onClose }: SendNotificat
                 payload.enableVoting = true;
             }
 
-            const response = await fetch("/api/send-notification", {
+            // In native Capacitor apps, relative paths resolve to capacitor://localhost
+            // We must use the absolute URL to hit the production API
+            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://choirhub.app";
+            console.log(`[SendNotification] Sending to ${baseUrl}/api/send-notification from origin ${typeof window !== 'undefined' ? window.location.origin : 'unknown'}`);
+
+            const response = await fetch(`${baseUrl}/api/send-notification`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
