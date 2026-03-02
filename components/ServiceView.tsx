@@ -1033,7 +1033,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                         const isLast = index === programItems.length - 1;
                                         const showSub = item.title && item.title.toLowerCase() !== config.label.toLowerCase();
                                         return (
-                                            <div key={item.id} className="relative w-full mb-2 overflow-hidden rounded-xl">
+                                            <div key={item.id} className="w-full mb-2" style={{ position: 'relative', overflow: 'hidden', borderRadius: '0.75rem' }}>
                                                 {/* Insertion Line (above this item when dragging) */}
                                                 {isDragOver && draggedItemId !== item.id && (
                                                     <div className="absolute -top-[9px] left-8 right-0 z-20 flex items-center pointer-events-none">
@@ -1042,9 +1042,21 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                                     </div>
                                                 )}
 
-                                                {/* Background Delete Button */}
+                                                {/* Background Delete Button — strictly bound to card height */}
                                                 {canEdit && (
-                                                    <div className="absolute top-0 bottom-0 right-0 w-24 bg-red-500 flex items-center justify-center text-white">
+                                                    <div
+                                                        className="bg-red-500 text-white"
+                                                        style={{
+                                                            position: 'absolute',
+                                                            top: 0,
+                                                            bottom: 0,
+                                                            right: 0,
+                                                            width: '6rem',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                        }}
+                                                    >
                                                         <button
                                                             className="flex flex-col items-center justify-center p-2"
                                                             onClick={(e) => {
@@ -1058,15 +1070,16 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                                     </div>
                                                 )}
 
-                                                {/* Foreground Row */}
+                                                {/* Foreground Row — relative z-10, defines the card height */}
                                                 <div
                                                     draggable={canEdit}
                                                     onDragStart={() => handleDragStart(item.id)}
                                                     onDragOver={(e) => { e.preventDefault(); setDragOverItemId(item.id); }}
                                                     onDragEnd={handleDragEnd}
-                                                    className={`w-full flex items-center gap-3 relative bg-background z-10 min-h-16 py-2 select-none [-webkit-touch-callout:none] ${isDragged ? 'opacity-40 scale-[0.98]' : ''
-                                                        }`}
+                                                    className={`w-full flex items-center gap-3 bg-background min-h-16 py-2 select-none [-webkit-touch-callout:none] ${isDragged ? 'opacity-40 scale-[0.98]' : ''}`}
                                                     style={{
+                                                        position: 'relative',
+                                                        zIndex: 10,
                                                         transform: swipedProgramItemId === item.id ? 'translateX(-80px)' : 'translateX(0)',
                                                         transition: 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)'
                                                     }}

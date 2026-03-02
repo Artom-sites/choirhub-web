@@ -179,24 +179,34 @@ export default function SwipeableCard({
 
     return (
         <div
-            className={`relative overflow-hidden isolate ${className}`}
+            className={`relative overflow-hidden ${className}`}
             onClickCapture={handleClickCapture}
             style={{
-                WebkitMaskImage: '-webkit-radial-gradient(white, black)', // Force Safari clipping
-                transform: 'translateZ(0)' // Force hardware acceleration to fix border-radius clipping
+                position: 'relative',
+                overflow: 'hidden',
+                WebkitMaskImage: '-webkit-radial-gradient(white, black)',
+                transform: 'translateZ(0)'
             }}
         >
-            {/* Delete button behind */}
+            {/* Delete action — strictly bound to card height */}
             <div
                 data-delete-action="true"
-                className={`absolute inset-0 flex items-center justify-end pr-6 bg-red-500 cursor-pointer active:bg-red-600 ${backgroundClassName}`}
+                className={`bg-red-500 cursor-pointer active:bg-red-600 ${backgroundClassName}`}
                 style={{
+                    position: 'absolute',
+                    top: 0,
+                    bottom: 0,
+                    right: 0,
+                    left: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    paddingRight: '1.5rem',
                     visibility: translateX < 0 ? 'visible' : 'hidden',
-                    touchAction: 'manipulation', // Eliminate 300ms tap delay
+                    touchAction: 'manipulation',
                 }}
                 onClick={handleDeleteClick}
                 onTouchEnd={(e) => {
-                    // Direct touch handler for reliability on mobile
                     if (isRevealed) {
                         e.stopPropagation();
                         onDelete();
@@ -217,10 +227,12 @@ export default function SwipeableCard({
                 </div>
             </div>
 
-            {/* Main content */}
+            {/* Swipe content — relative z-1, defines card height */}
             <div
-                className={`relative w-full h-full select-none ${contentClassName}`}
+                className={`w-full select-none ${contentClassName}`}
                 style={{
+                    position: 'relative',
+                    zIndex: 1,
                     transform: `translateX(${translateX}px)`,
                     transition: isDragging.current ? 'none' : 'transform 0.2s ease-out',
                     touchAction: 'pan-y'
