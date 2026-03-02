@@ -1044,16 +1044,16 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
 
                                                 {/* Background Delete Button */}
                                                 {canEdit && (
-                                                    <div className="absolute inset-0 right-0 w-24 ml-auto bg-red-500 rounded-lg flex items-center justify-end pr-3 text-white">
+                                                    <div className="absolute right-0 inset-y-0 h-full w-24 bg-red-500 rounded-r-xl flex items-center justify-end pr-3 text-white">
                                                         <button
-                                                            className="h-full flex flex-col items-center justify-center p-2"
+                                                            className="h-full w-full flex flex-col items-center justify-center p-2"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 setProgramItemToDelete(item.id);
                                                             }}
                                                         >
                                                             <Trash2 className="w-5 h-5 mb-1" />
-                                                            <span className="text-[10px] uppercase font-bold tracking-wider">Видалити</span>
+                                                            <span className="text-[10px] uppercase font-bold tracking-wider">Вид.</span>
                                                         </button>
                                                     </div>
                                                 )}
@@ -1064,7 +1064,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                                     onDragStart={() => handleDragStart(item.id)}
                                                     onDragOver={(e) => { e.preventDefault(); setDragOverItemId(item.id); }}
                                                     onDragEnd={handleDragEnd}
-                                                    className={`w-full flex items-center gap-3 relative bg-background z-10 min-h-[64px] py-1 select-none [-webkit-touch-callout:none] ${isDragged ? 'opacity-40 scale-[0.98]' : ''
+                                                    className={`w-full flex items-center gap-3 relative bg-background z-10 min-h-16 py-2 select-none [-webkit-touch-callout:none] ${isDragged ? 'opacity-40 scale-[0.98]' : ''
                                                         }`}
                                                     style={{
                                                         transform: swipedProgramItemId === item.id ? 'translateX(-80px)' : 'translateX(0)',
