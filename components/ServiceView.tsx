@@ -463,7 +463,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                         // Resolve all URLs to base64 so Swift can handle them without network
                         const resolvedParts = await Promise.all(
                             partsData.map(async (p: any) => {
-                                const resolvedUrl = await resolvePdfUrlToBase64(p.pdfUrl, songId);
+                                const resolvedUrl = await resolvePdfUrlToBase64(p.pdfUrl, songId, p.name);
                                 return { ...p, pdfUrl: resolvedUrl };
                             })
                         );

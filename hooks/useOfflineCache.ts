@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from 'react';
-import { savePdf, getPdf, isCached, getCachedStatus, clearExpired } from '@/lib/offlineDb';
+import { savePdf, isCached, getCachedStatus, clearExpired } from '@/lib/offlineDb';
 
 interface CacheProgress {
     total: number;
@@ -14,7 +14,7 @@ interface CacheProgress {
 interface SongForCache {
     id: string;
     title: string;
-    parts?: Array<{ pdfUrl?: string }>;
+    parts?: Array<{ name?: string, pdfUrl?: string }>;
     pdfUrl?: string;
 }
 
@@ -113,19 +113,29 @@ export function useOfflineCache() {
             }));
 
             try {
-                // Get PDF URL from song data
-                const pdfUrl = song.pdfUrl || song.parts?.[0]?.pdfUrl;
+                // Get all parts or fallback to single PDF url
+                const partsData = (song.parts && song.parts.length > 0)
+                    ? song.parts.map(p => ({ name: p.name || 'Part', pdfUrl: p.pdfUrl }))
+                    : [{ name: 'Головна', pdfUrl: song.pdfUrl }];
 
-                if (!pdfUrl) {
+                // Filter out empty urls
+                const validParts = partsData.filter(p => !!p.pdfUrl);
+
+                if (validParts.length === 0) {
                     console.warn(`No PDF URL for song: ${song.title}`);
                     continue;
                 }
 
-                // Fetch and convert to Base64
-                const pdfBase64 = await fetchPdfAsBase64(pdfUrl, signal);
+                // Fetch and convert all parts to Base64 concurrently
+                const resolvedParts = await Promise.all(
+                    validParts.map(async (part) => {
+                        const base64 = await fetchPdfAsBase64(part.pdfUrl as string, signal);
+                        return { name: part.name, pdfBase64: base64 };
+                    })
+                );
 
                 // Save to IndexedDB
-                await savePdf(song.id, serviceId, song.title, pdfBase64);
+                await savePdf(song.id, serviceId, song.title, resolvedParts);
 
                 cachedCount++;
                 setProgress(prev => ({
@@ -154,10 +164,11 @@ export function useOfflineCache() {
     }, []);
 
     /**
-     * Get cached PDF for a song
+     * Get cached PDF parts for a song
      */
-    const getCachedPdf = useCallback(async (songId: string): Promise<string | null> => {
-        return getPdf(songId);
+    const getCachedPdf = useCallback(async (songId: string): Promise<Array<{ name: string; pdfBase64: string }> | null> => {
+        const { getPdfParts } = await import('@/lib/offlineDb');
+        return getPdfParts(songId);
     }, []);
 
     /**

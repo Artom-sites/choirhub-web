@@ -1,5 +1,4 @@
 import { openDB, DBSchema } from 'idb';
-import { getPdf as getOfflinePdf } from './offlineDb';
 
 interface PDFCacheDB extends DBSchema {
     pdfs: {
@@ -91,7 +90,7 @@ export async function getBase64FromBlob(blob: Blob): Promise<string> {
 }
 
 // Intercepts URLs for native viewers. Returns base64 or original URL.
-export async function resolvePdfUrlToBase64(url: string, songId?: string): Promise<string> {
+export async function resolvePdfUrlToBase64(url: string, songId?: string, partName?: string): Promise<string> {
     // Priority 1: Data URLs are ready to go
     if (url.startsWith('data:')) return url;
 
@@ -101,12 +100,20 @@ export async function resolvePdfUrlToBase64(url: string, songId?: string): Promi
         return await getBase64FromBlob(cachedBlob);
     }
 
-    // Priority 3: Fallback to song-level IndexedDB cache
+    // Priority 3: Fallback to song-level IndexedDB cache (multi-part)
     if (songId) {
-        const offlinePdfStr = await getOfflinePdf(songId);
-        // offlinePdf returns a base64 Data URI from FileReader.readAsDataURL
-        if (offlinePdfStr && offlinePdfStr.startsWith('data:')) {
-            return offlinePdfStr;
+        const { getPdfParts } = await import('./offlineDb');
+        const offlineParts = await getPdfParts(songId);
+
+        if (offlineParts && offlineParts.length > 0) {
+            // Find specific part if name is provided, else fallback to the first one
+            const targetPart = partName
+                ? offlineParts.find(p => p.name === partName) || offlineParts[0]
+                : offlineParts[0];
+
+            if (targetPart && targetPart.pdfBase64 && targetPart.pdfBase64.startsWith('data:')) {
+                return targetPart.pdfBase64;
+            }
         }
     }
 

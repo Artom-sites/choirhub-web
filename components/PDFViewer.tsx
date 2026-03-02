@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import { getPdfFromCache, savePdfToCache } from "../lib/cache";
-import { getPdf as getOfflinePdf } from "../lib/offlineDb";
+import { getPdfParts } from "../lib/offlineDb";
 import AnnotationToolbar, { ToolType, EraserSize } from "./AnnotationToolbar";
 import AnnotationCanvas from "./AnnotationCanvas";
 import { usePinchZoom } from "../hooks/usePinchZoom";
@@ -116,12 +116,15 @@ export default function PDFViewer({ url, songId, title, onClose, onAddAction, is
                 // 3. Fallback: check IndexedDB offline cache (by songId)
                 // Only use if no URL or URL cache miss — this stores a single PDF per song
                 if (!isPriorityUrl && songId && !url) {
-                    const offlinePdf = await getOfflinePdf(songId);
-                    if (offlinePdf && active) {
-                        console.log('[PDFViewer] Loaded from IndexedDB offline cache');
-                        setPdfSource(offlinePdf);
-                        setIsCached(true);
-                        return;
+                    const offlineParts = await getPdfParts(songId);
+                    if (offlineParts && offlineParts.length > 0 && active) {
+                        const matchedPart = offlineParts.find(p => p.pdfBase64 && p.pdfBase64.startsWith('data:')) || offlineParts[0];
+                        if (matchedPart && matchedPart.pdfBase64) {
+                            console.log('[PDFViewer] Loaded from IndexedDB offline cache');
+                            setPdfSource(matchedPart.pdfBase64);
+                            setIsCached(true);
+                            return;
+                        }
                     }
                 }
 

@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { getSong, updateSong, uploadSongPdf, deleteSong, getChoir } from "@/lib/db";
 import { getCachedSongs } from "@/lib/offlineDataCache";
-import { getPdf, getCachedSong } from "@/lib/offlineDb";
+import { getPdfParts, getCachedSong } from "@/lib/offlineDb";
 import { SimpleSong } from "@/types";
 import PDFViewer from "@/components/PDFViewer";
 import EditSongModal from "@/components/EditSongModal";
@@ -197,7 +197,7 @@ function SongContent() {
                         id: cachedSong.id,
                         title: cachedSong.title,
                         hasPdf: true,
-                        pdfData: cachedSong.pdfBase64,
+                        pdfData: cachedSong.parts?.[0]?.pdfBase64,
                         category: 'Збережено офлайн',
                     };
                     setIsOfflineMode(true);
@@ -207,14 +207,17 @@ function SongContent() {
             // If we have a fetched song (either from DB or constructed from cache), attach PDF data if available
             if (fetched) {
                 if (offlineData) {
-                    fetched.pdfData = offlineData.pdfBase64;
+                    fetched.pdfData = offlineData.parts?.[0]?.pdfBase64;
                     fetched.hasPdf = true;
                 } else {
-                    // Fallback to legacy getPdf if needed
-                    const cachedPdf = await getPdf(songId);
-                    if (cachedPdf) {
-                        fetched.pdfData = cachedPdf;
-                        fetched.hasPdf = true;
+                    // Fallback to offlineDb parts directly if full song cache wasn't used
+                    const cachedParts = await getPdfParts(songId);
+                    if (cachedParts && cachedParts.length > 0) {
+                        const matchedPart = cachedParts.find(p => p.pdfBase64 && p.pdfBase64.startsWith('data:')) || cachedParts[0];
+                        if (matchedPart && matchedPart.pdfBase64) {
+                            fetched.pdfData = matchedPart.pdfBase64;
+                            fetched.hasPdf = true;
+                        }
                     }
                 }
             }

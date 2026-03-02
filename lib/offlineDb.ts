@@ -14,7 +14,10 @@ interface CachedPdf {
     id: string;              // Song ID
     serviceId: string;       // Service ID for which it was cached
     title: string;           // Song title for display
-    pdfBase64: string;       // PDF data in Base64
+    parts: Array<{
+        name: string;        // Part name (e.g. Головна, Альт)
+        pdfBase64: string;   // PDF data in Base64
+    }>;
     cachedAt: number;        // Timestamp when cached
     expiresAt: number;       // Auto-cleanup timestamp
 }
@@ -63,7 +66,7 @@ export const savePdf = async (
     songId: string,
     serviceId: string,
     title: string,
-    pdfBase64: string
+    parts: Array<{ name: string; pdfBase64: string }>
 ): Promise<void> => {
     const db = await openDb();
 
@@ -78,7 +81,7 @@ export const savePdf = async (
             id: songId,
             serviceId,
             title,
-            pdfBase64,
+            parts,
             cachedAt: now,
             expiresAt
         };
@@ -91,9 +94,9 @@ export const savePdf = async (
 };
 
 /**
- * Get a cached PDF by song ID
+ * Get a cached PDF by song ID (returns array of parts instead of single string)
  */
-export const getPdf = async (songId: string): Promise<string | null> => {
+export const getPdfParts = async (songId: string): Promise<Array<{ name: string; pdfBase64: string }> | null> => {
     try {
         const db = await openDb();
 
@@ -105,7 +108,7 @@ export const getPdf = async (songId: string): Promise<string | null> => {
             request.onsuccess = () => {
                 const result = request.result as CachedPdf | undefined;
                 if (result && result.expiresAt > Date.now()) {
-                    resolve(result.pdfBase64);
+                    resolve(result.parts);
                 } else {
                     resolve(null);
                 }
@@ -299,7 +302,8 @@ export const getCacheSize = async (): Promise<{ count: number; sizeBytes: number
                 count++;
                 const data = cursor.value as CachedPdf;
                 // Base64 is ~33% larger than binary, but this gives a rough estimate
-                sizeBytes += data.pdfBase64.length;
+                const size = data.parts ? data.parts.reduce((acc, part) => acc + (part.pdfBase64?.length || 0), 0) : 0;
+                sizeBytes += size;
                 cursor.continue();
             } else {
                 resolve({ count, sizeBytes });
