@@ -63,6 +63,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
     const [programItems, setProgramItems] = useState<ProgramItem[]>(service.program || []);
     const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
     const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
+    const [swipedProgramItemId, setSwipedProgramItemId] = useState<string | null>(null);
     const [programItemToDelete, setProgramItemToDelete] = useState<string | null>(null);
 
     // Pdf preview modal (previously strictly offline, now universal for native inline view)
@@ -998,20 +999,51 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                             <div key={item.id} className="relative">
                                                 {/* Insertion Line (above this item when dragging) */}
                                                 {isDragOver && draggedItemId !== item.id && (
-                                                    <div className="absolute top-0 left-8 right-0 z-10 flex items-center">
+                                                    <div className="absolute -top-[9px] left-8 right-0 z-20 flex items-center pointer-events-none">
                                                         <div className="w-2.5 h-2.5 rounded-full bg-primary border-2 border-primary -ml-1" />
                                                         <div className="flex-1 h-[2px] bg-primary" />
                                                     </div>
                                                 )}
+
+                                                {/* Background Delete Button */}
+                                                {canEdit && (
+                                                    <div className="absolute inset-y-0 right-0 w-24 bg-red-500 rounded-lg flex items-center justify-end pr-3 text-white">
+                                                        <button
+                                                            className="h-full flex flex-col items-center justify-center p-2"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setProgramItemToDelete(item.id);
+                                                            }}
+                                                        >
+                                                            <Trash2 className="w-5 h-5 mb-1" />
+                                                            <span className="text-[10px] uppercase font-bold tracking-wider">Видалити</span>
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                {/* Foreground Row */}
                                                 <div
                                                     draggable={canEdit}
                                                     onDragStart={() => handleDragStart(item.id)}
                                                     onDragOver={(e) => { e.preventDefault(); setDragOverItemId(item.id); }}
                                                     onDragEnd={handleDragEnd}
-                                                    className={`flex items-center gap-3 transition-all relative overflow-hidden ${isDragged ? 'opacity-40 scale-[0.98]' : ''
+                                                    className={`flex items-center gap-3 relative bg-background z-10 ${isDragged ? 'opacity-40 scale-[0.98]' : ''
                                                         }`}
+                                                    style={{
+                                                        transform: swipedProgramItemId === item.id ? 'translateX(-80px)' : 'translateX(0)',
+                                                        transition: 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)'
+                                                    }}
+                                                    onClick={() => {
+                                                        if (swipedProgramItemId === item.id) {
+                                                            setSwipedProgramItemId(null);
+                                                        }
+                                                    }}
                                                     onTouchStart={(e) => {
                                                         if (!canEdit) return;
+                                                        // Close others
+                                                        if (swipedProgramItemId && swipedProgramItemId !== item.id) {
+                                                            setSwipedProgramItemId(null);
+                                                        }
                                                         const touch = e.touches[0];
                                                         (item as any)._swipeStartX = touch.clientX;
                                                         (item as any)._swipeStartY = touch.clientY;
@@ -1020,7 +1052,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                                     onTouchMove={(e) => {
                                                         if (!canEdit) return;
                                                         const touch = e.touches[0];
-                                                        const dx = touch.clientX - ((item as any)._swipeStartX || 0);
+                                                        let dx = touch.clientX - ((item as any)._swipeStartX || 0);
                                                         const dy = touch.clientY - ((item as any)._swipeStartY || 0);
 
                                                         // Determine swipe direction once
@@ -1030,10 +1062,15 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                                             }
                                                         }
 
-                                                        if ((item as any)._swipeDir === 'h' && dx < -40) {
-                                                            const el = e.currentTarget as HTMLElement;
-                                                            el.style.transform = `translateX(${Math.max(dx, -100)}px)`;
-                                                            el.style.transition = 'none';
+                                                        if ((item as any)._swipeDir === 'h') {
+                                                            if (swipedProgramItemId === item.id) {
+                                                                dx -= 80;
+                                                            }
+                                                            if (dx < 0) {
+                                                                const el = e.currentTarget as HTMLElement;
+                                                                el.style.transform = `translateX(${Math.max(dx, -90)}px)`;
+                                                                el.style.transition = 'none';
+                                                            }
                                                         }
                                                     }}
                                                     onTouchEnd={(e) => {
@@ -1043,16 +1080,16 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                                         const match = transform.match(/translateX\(([-\d.]+)px\)/);
                                                         const dx = match ? parseFloat(match[1]) : 0;
 
-                                                        if (dx < -70) {
-                                                            // Swiped far enough — delete
-                                                            el.style.transition = 'transform 0.2s, opacity 0.2s';
-                                                            el.style.transform = 'translateX(-100%)';
-                                                            el.style.opacity = '0';
-                                                            setTimeout(() => setProgramItemToDelete(item.id), 200);
+                                                        // Clear inline styles so React state transforms apply
+                                                        el.style.transition = '';
+                                                        el.style.transform = '';
+
+                                                        if (dx < -40) {
+                                                            // Keep open
+                                                            setSwipedProgramItemId(item.id);
                                                         } else {
-                                                            // Snap back
-                                                            el.style.transition = 'transform 0.2s';
-                                                            el.style.transform = 'translateX(0)';
+                                                            // Snap closed
+                                                            setSwipedProgramItemId(null);
                                                         }
                                                     }}
                                                 >
@@ -1068,8 +1105,14 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
 
                                                     {/* Text */}
                                                     <div
-                                                        className="flex-1 min-w-0"
-                                                        onClick={() => item.songId && handleViewPdf(item.songId, item.title)}
+                                                        className="flex-1 min-w-0 py-1"
+                                                        onClick={(e) => {
+                                                            if (swipedProgramItemId === item.id) {
+                                                                e.stopPropagation();
+                                                                return;
+                                                            }
+                                                            if (item.songId) handleViewPdf(item.songId, item.title);
+                                                        }}
                                                     >
                                                         <h3 className="text-[15px] font-bold text-text-primary leading-tight">{config.label}</h3>
                                                         {showSub && (
