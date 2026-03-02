@@ -254,13 +254,39 @@ export function useFcmToken() {
                         throw new Error("Permission denied");
                     }
 
-                    // 3. Get FCM Token directly (not APNs token!)
-                    console.log("[FCM] Requesting FCM token...");
-                    const result = await FirebaseMessaging.getToken();
-                    const fcmToken = result.token;
-                    console.log("[FCM] Got FCM token:", fcmToken.substring(0, 30) + "...");
+                    // 3. Wait for tokenReceived listener — do NOT call getToken() directly.
+                    // getToken() races against didRegisterForRemoteNotificationsWithDeviceToken.
+                    // The tokenReceived listener fires only after the native APNs→FCM mapping is complete.
+                    if (globalToken) {
+                        // Token already received by listener
+                        console.log("[FCM] Token already available from listener:", globalToken.substring(0, 20) + "...");
+                        await handleTokenReceived(globalToken);
+                        return globalToken;
+                    }
 
-                    await handleTokenReceived(fcmToken);
+                    // Wait for listener to deliver the token (max 10s)
+                    console.log("[FCM] Waiting for tokenReceived listener...");
+                    const fcmToken = await new Promise<string | null>((resolve) => {
+                        const timeout = setTimeout(() => {
+                            console.warn("[FCM] tokenReceived timeout (10s). Token may arrive later.");
+                            resolve(globalToken); // Return whatever we have (may be null)
+                        }, 10000);
+
+                        // Subscribe to token broadcast
+                        const listener = (token: string | null) => {
+                            if (token) {
+                                clearTimeout(timeout);
+                                tokenListeners.delete(listener);
+                                resolve(token);
+                            }
+                        };
+                        tokenListeners.add(listener);
+                    });
+
+                    if (fcmToken) {
+                        console.log("[FCM] Token received from listener:", fcmToken.substring(0, 20) + "...");
+                        await handleTokenReceived(fcmToken);
+                    }
                     return fcmToken;
                 } else {
                     // Web Flow (unchanged)
