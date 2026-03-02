@@ -1033,7 +1033,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                         const isLast = index === programItems.length - 1;
                                         const showSub = item.title && item.title.toLowerCase() !== config.label.toLowerCase();
                                         return (
-                                            <div key={item.id} className="w-full mb-2">
+                                            <div key={item.id} className="relative w-full mb-2">
                                                 {/* Insertion Line (above this item when dragging) */}
                                                 {isDragOver && draggedItemId !== item.id && (
                                                     <div className="absolute -top-[9px] left-8 right-0 z-20 flex items-center pointer-events-none">
