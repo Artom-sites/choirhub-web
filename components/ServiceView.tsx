@@ -1064,7 +1064,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                                     onDragStart={() => handleDragStart(item.id)}
                                                     onDragOver={(e) => { e.preventDefault(); setDragOverItemId(item.id); }}
                                                     onDragEnd={handleDragEnd}
-                                                    className={`flex items-center gap-3 relative bg-background z-10 select-none [-webkit-touch-callout:none] ${isDragged ? 'opacity-40 scale-[0.98]' : ''
+                                                    className={`flex items-center gap-3 relative bg-background z-10 min-h-[60px] select-none [-webkit-touch-callout:none] ${isDragged ? 'opacity-40 scale-[0.98]' : ''
                                                         }`}
                                                     style={{
                                                         transform: swipedProgramItemId === item.id ? 'translateX(-80px)' : 'translateX(0)',
@@ -1142,7 +1142,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
 
                                                     {/* Text */}
                                                     <div
-                                                        className="flex-1 min-w-0 py-1"
+                                                        className="flex-1 min-w-0"
                                                         onClick={(e) => {
                                                             if (swipedProgramItemId === item.id) {
                                                                 e.stopPropagation();
