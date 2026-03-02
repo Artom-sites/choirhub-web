@@ -15,10 +15,11 @@ import { Dialog } from '@capacitor/dialog';
 import { useRouter } from "next/navigation";
 import SwipeableCard from "./SwipeableCard";
 
+import { resolvePdfUrlToBase64 } from "../lib/cache";
 import OfflinePdfModal from "./OfflinePdfModal";
-import { PencilKitAnnotator } from "@/plugins/PencilKitAnnotator";
 import { useOfflineCache } from "@/hooks/useOfflineCache";
 import AddProgramItemModal from "./AddProgramItemModal";
+import { PencilKitAnnotator } from "@/plugins/PencilKitAnnotator";
 
 interface ServiceViewProps {
     service: Service;
@@ -445,13 +446,46 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
         await removeSongFromService(userData.choirId, currentService.id, updatedSongs);
     };
 
-    const handleViewPdf = (songId: string, itemTitle?: string) => {
+    const handleViewPdf = async (songId: string, itemTitle?: string) => {
         // Find the full song details to get the PDF URL
         const song = availableSongs.find(s => s.id === songId);
 
         if (isNative && Capacitor.getPlatform() === 'ios') {
-            // iOS offline: use OfflinePdfModal (has IndexedDB cache access)
+            // iOS offline fallback: use OfflinePdfModal IF resolving to Base64 fails for some reason
             if (!navigator.onLine && song) {
+                // Determine Parts
+                const partsData = (song.parts && song.parts.length > 0)
+                    ? song.parts.map((p: any) => ({ name: p.name || 'Part', pdfUrl: p.pdfUrl }))
+                    : [{ name: 'Головна', pdfUrl: song.pdfUrl || '' }];
+
+                if (partsData.length > 0 && partsData[0].pdfUrl) {
+                    try {
+                        // Resolve all URLs to base64 so Swift can handle them without network
+                        const resolvedParts = await Promise.all(
+                            partsData.map(async (p: any) => {
+                                const resolvedUrl = await resolvePdfUrlToBase64(p.pdfUrl, songId);
+                                return { ...p, pdfUrl: resolvedUrl };
+                            })
+                        );
+
+                        // Check if we ACTUALLY got offline data (starting with data:)
+                        // or if we failed and got the original remote URL back
+                        if (resolvedParts[0].pdfUrl.startsWith('data:')) {
+                            await PencilKitAnnotator.openNativePdfViewer({
+                                parts: resolvedParts,
+                                initialPartIndex: 0,
+                                songId,
+                                userUid: userData?.id || 'anonymous',
+                                title: song.title || itemTitle || 'Пісня',
+                            });
+                            return;
+                        }
+                    } catch (e) {
+                        console.error('[NativePdfOffline] Failed resolving base64 cache', e);
+                    }
+                }
+
+                // If resolving base64 failed, fallback to the HTML modal (which relies directly on IndexedDB)
                 setPreviewModalSong(song);
                 return;
             }
