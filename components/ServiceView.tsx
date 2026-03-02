@@ -1033,7 +1033,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                         const isLast = index === programItems.length - 1;
                                         const showSub = item.title && item.title.toLowerCase() !== config.label.toLowerCase();
                                         return (
-                                            <div key={item.id} className="w-full mb-2" style={{ position: 'relative', overflow: 'hidden', borderRadius: '0.75rem' }}>
+                                            <div key={item.id} className="w-full mb-2">
                                                 {/* Insertion Line (above this item when dragging) */}
                                                 {isDragOver && draggedItemId !== item.id && (
                                                     <div className="absolute -top-[9px] left-8 right-0 z-20 flex items-center pointer-events-none">
@@ -1042,173 +1042,81 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                                     </div>
                                                 )}
 
-                                                {/* Background Delete Button — strictly bound to card height */}
-                                                {canEdit && (
-                                                    <div
-                                                        className="bg-red-500 text-white"
-                                                        style={{
-                                                            position: 'absolute',
-                                                            top: 0,
-                                                            bottom: 0,
-                                                            right: 0,
-                                                            width: '6rem',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                        }}
-                                                    >
-                                                        <button
-                                                            className="flex flex-col items-center justify-center p-2"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setProgramItemToDelete(item.id);
-                                                            }}
-                                                        >
-                                                            <Trash2 className="w-5 h-5 mb-1" />
-                                                            <span className="text-[10px] uppercase font-bold tracking-wider">Вид.</span>
-                                                        </button>
-                                                    </div>
-                                                )}
-
-                                                {/* Foreground Row — relative z-10, defines the card height */}
-                                                <div
-                                                    draggable={canEdit}
-                                                    onDragStart={() => handleDragStart(item.id)}
-                                                    onDragOver={(e) => { e.preventDefault(); setDragOverItemId(item.id); }}
-                                                    onDragEnd={handleDragEnd}
-                                                    className={`w-full flex items-center gap-3 bg-background min-h-16 py-2 select-none [-webkit-touch-callout:none] ${isDragged ? 'opacity-40 scale-[0.98]' : ''}`}
-                                                    style={{
-                                                        position: 'relative',
-                                                        zIndex: 10,
-                                                        transform: swipedProgramItemId === item.id ? 'translateX(-80px)' : 'translateX(0)',
-                                                        transition: 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)'
-                                                    }}
-                                                    onClick={() => {
-                                                        if (swipedProgramItemId === item.id) {
-                                                            setSwipedProgramItemId(null);
-                                                        }
-                                                    }}
-                                                    onTouchStart={(e) => {
-                                                        if (!canEdit) return;
-                                                        // Close others
-                                                        if (swipedProgramItemId && swipedProgramItemId !== item.id) {
-                                                            setSwipedProgramItemId(null);
-                                                        }
-                                                        const touch = e.touches[0];
-                                                        (item as any)._swipeStartX = touch.clientX;
-                                                        (item as any)._swipeStartY = touch.clientY;
-                                                        (item as any)._swipeDir = null;
-                                                    }}
-                                                    onTouchMove={(e) => {
-                                                        if (!canEdit) return;
-                                                        const touch = e.touches[0];
-                                                        let dx = touch.clientX - ((item as any)._swipeStartX || 0);
-                                                        const dy = touch.clientY - ((item as any)._swipeStartY || 0);
-
-                                                        // Determine swipe direction once
-                                                        if (!(item as any)._swipeDir) {
-                                                            if (Math.abs(dx) > 15 || Math.abs(dy) > 15) {
-                                                                (item as any)._swipeDir = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
-                                                            }
-                                                        }
-
-                                                        if ((item as any)._swipeDir === 'h') {
-                                                            if (swipedProgramItemId === item.id) {
-                                                                dx -= 80;
-                                                            }
-                                                            if (dx < 0) {
-                                                                const el = e.currentTarget as HTMLElement;
-                                                                el.style.transform = `translateX(${Math.max(dx, -90)}px)`;
-                                                                el.style.transition = 'none';
-                                                            }
-                                                        }
-                                                    }}
-                                                    onTouchEnd={(e) => {
-                                                        if (!canEdit) return;
-                                                        const el = e.currentTarget as HTMLElement;
-                                                        const transform = el.style.transform;
-                                                        const match = transform.match(/translateX\(([-\d.]+)px\)/);
-                                                        const dx = match ? parseFloat(match[1]) : 0;
-
-                                                        // Clear inline styles so React state transforms apply
-                                                        el.style.transition = '';
-                                                        el.style.transform = '';
-
-                                                        if (dx < -40) {
-                                                            // Keep open
-                                                            setSwipedProgramItemId(item.id);
-                                                        } else {
-                                                            // Snap closed
-                                                            setSwipedProgramItemId(null);
-                                                        }
-                                                    }}
+                                                <SwipeableCard
+                                                    onDelete={() => setProgramItemToDelete(item.id)}
+                                                    disabled={!canEdit}
+                                                    className="rounded-xl"
+                                                    contentClassName="bg-background"
+                                                    disableFullSwipe={true}
                                                 >
-                                                    {/* Left Column: Number */}
-                                                    <div className="flex-shrink-0 w-7 text-right">
-                                                        <span className="text-[14px] font-bold text-text-secondary/40 tabular-nums">{index + 1}</span>
-                                                    </div>
-
-                                                    {/* Icon Dot */}
-                                                    <div className={`w-8 h-8 rounded-xl ${config.color} flex items-center justify-center flex-shrink-0`}>
-                                                        {config.icon}
-                                                    </div>
-
-                                                    {/* Text */}
                                                     <div
-                                                        className="flex-1 min-w-0"
-                                                        onClick={(e) => {
-                                                            if (swipedProgramItemId === item.id) {
-                                                                e.stopPropagation();
-                                                                return;
-                                                            }
-                                                            if (item.songId) handleViewPdf(item.songId, item.title);
-                                                        }}
+                                                        draggable={canEdit}
+                                                        onDragStart={() => handleDragStart(item.id)}
+                                                        onDragOver={(e) => { e.preventDefault(); setDragOverItemId(item.id); }}
+                                                        onDragEnd={handleDragEnd}
+                                                        className={`w-full flex items-center gap-3 min-h-16 py-2 select-none [-webkit-touch-callout:none] ${isDragged ? 'opacity-40 scale-[0.98]' : ''}`}
                                                     >
-                                                        <h3 className="text-[15px] font-bold text-text-primary leading-tight">{config.label}</h3>
-                                                        {showSub && (
-                                                            <p className="text-[13px] text-text-secondary mt-0.5 truncate">{item.title}</p>
+                                                        {/* Left Column: Number */}
+                                                        <div className="flex-shrink-0 w-7 text-right">
+                                                            <span className="text-[14px] font-bold text-text-secondary/40 tabular-nums">{index + 1}</span>
+                                                        </div>
+
+                                                        {/* Icon Dot */}
+                                                        <div className={`w-8 h-8 rounded-xl ${config.color} flex items-center justify-center flex-shrink-0`}>
+                                                            {config.icon}
+                                                        </div>
+
+                                                        {/* Text */}
+                                                        <div
+                                                            className="flex-1 min-w-0"
+                                                            onClick={(e) => {
+                                                                if (item.songId) handleViewPdf(item.songId, item.title);
+                                                            }}
+                                                        >
+                                                            <h3 className="text-[15px] font-bold text-text-primary leading-tight">{config.label}</h3>
+                                                            {showSub && (
+                                                                <p className="text-[13px] text-text-secondary mt-0.5 truncate">{item.title}</p>
+                                                            )}
+                                                            {item.performer && (
+                                                                <p className="text-[12px] text-text-secondary/60 mt-0.5">{item.performer}</p>
+                                                            )}
+                                                        </div>
+
+                                                        {/* View PDF */}
+                                                        {item.songId && (
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleViewPdf(item.songId!, item.title);
+                                                                }}
+                                                                className="p-1.5 text-text-secondary/40 hover:text-primary transition-colors flex-shrink-0"
+                                                            >
+                                                                <Eye className="w-4 h-4" />
+                                                            </button>
                                                         )}
-                                                        {item.performer && (
-                                                            <p className="text-[12px] text-text-secondary/60 mt-0.5">{item.performer}</p>
+
+                                                        {/* Drag Handle (Right Side) */}
+                                                        {canEdit && (
+                                                            <div
+                                                                className="cursor-grab active:cursor-grabbing p-1.5 select-none flex-shrink-0 opacity-20 hover:opacity-50 active:opacity-70 transition-opacity"
+                                                                onTouchStart={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleTouchStart(e, item.id, index);
+                                                                }}
+                                                                onTouchMove={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleTouchMove(e);
+                                                                }}
+                                                                onTouchEnd={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleTouchEnd();
+                                                                }}
+                                                            >
+                                                                <GripVertical className="w-4 h-4 text-text-secondary pointer-events-none" />
+                                                            </div>
                                                         )}
                                                     </div>
-
-                                                    {/* View PDF */}
-                                                    {item.songId && (
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleViewPdf(item.songId!, item.title);
-                                                            }}
-                                                            className="p-1.5 text-text-secondary/40 hover:text-primary transition-colors flex-shrink-0"
-                                                        >
-                                                            <Eye className="w-4 h-4" />
-                                                        </button>
-                                                    )}
-
-                                                    {/* Drag Handle (Right Side) */}
-                                                    {canEdit && (
-                                                        <div
-                                                            className="cursor-grab active:cursor-grabbing p-1.5 select-none flex-shrink-0 opacity-20 hover:opacity-50 active:opacity-70 transition-opacity"
-                                                            onTouchStart={(e) => {
-                                                                e.stopPropagation();
-                                                                handleTouchStart(e, item.id, index);
-                                                            }}
-                                                            onTouchMove={(e) => {
-                                                                e.stopPropagation();
-                                                                handleTouchMove(e);
-                                                            }}
-                                                            onTouchEnd={(e) => {
-                                                                e.stopPropagation();
-                                                                handleTouchEnd();
-                                                            }}
-                                                        >
-                                                            <GripVertical className="w-4 h-4 text-text-secondary pointer-events-none" />
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                {/* Spacer between items */}
-                                                {!isLast && <div className="h-4" />}
+                                                </SwipeableCard>
                                             </div>
                                         );
                                     })}
