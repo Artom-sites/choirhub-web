@@ -34,7 +34,9 @@ service cloud.firestore {
 
     // 1. Users Collection
     match /users/{userId} {
-      allow read: if request.auth.uid == userId || isSuperAdmin();
+      // Allow read if querying by choirId that the user is a member of, or if it's their own doc
+      allow read: if request.auth.uid == userId || isSuperAdmin() || 
+                     (request.query.limit <= 1000 && isMemberOfChoir(resource.data.choirId));
       // Allow update ONLY if NOT modifying sensitive fields (memberships, choirId, role, email)
       allow update: if (request.auth.uid == userId || isSuperAdmin()) &&
                        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['memberships', 'email']));

@@ -4,13 +4,22 @@ import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 
+const corsHeaders = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+    return NextResponse.json({}, { headers: corsHeaders });
+}
 export async function POST(req: NextRequest) {
     try {
         const { title = "", body, choirId, serviceId, serviceName, enableVoting } = await req.json();
         const authHeader = req.headers.get("Authorization");
 
         if (!authHeader?.startsWith("Bearer ")) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
         }
 
         const token = authHeader.split("Bearer ")[1];
@@ -19,7 +28,7 @@ export async function POST(req: NextRequest) {
         if (!adminApp) {
             return NextResponse.json(
                 { error: "Firebase Admin not configured" },
-                { status: 500 }
+                { status: 500, headers: corsHeaders }
             );
         }
 
@@ -36,7 +45,7 @@ export async function POST(req: NextRequest) {
         const membership = userData?.memberships?.find((m: any) => m.choirId === choirId);
 
         if (!membership) {
-            return NextResponse.json({ error: "Not a member of this choir" }, { status: 403 });
+            return NextResponse.json({ error: "Not a member of this choir" }, { status: 403, headers: corsHeaders });
         }
 
         // Check role or permissions
@@ -50,7 +59,7 @@ export async function POST(req: NextRequest) {
         const hasPermission = userData?.permissions?.includes('notify_members');
 
         if (!isRegent && !hasPermission) {
-            return NextResponse.json({ error: "Permission denied" }, { status: 403 });
+            return NextResponse.json({ error: "Permission denied" }, { status: 403, headers: corsHeaders });
         }
 
         // 3. Fetch Recipients
@@ -59,7 +68,7 @@ export async function POST(req: NextRequest) {
         const choirData = choirDoc.data();
         if (!choirData) {
             console.error("[Notification] Choir not found");
-            return NextResponse.json({ error: "Choir not found" }, { status: 404 });
+            return NextResponse.json({ error: "Choir not found" }, { status: 404, headers: corsHeaders });
         }
 
         const memberIds = (choirData.members || []).map((m: any) => m.id);
@@ -87,7 +96,7 @@ export async function POST(req: NextRequest) {
 
         if (uniqueTokens.length === 0) {
             console.warn("[Notification] No valid tokens found. Aborting send.");
-            return NextResponse.json({ success: true, message: "No devices to send to (0 tokens)" });
+            return NextResponse.json({ success: true, message: "No devices to send to (0 tokens)" }, { headers: corsHeaders });
         }
 
         // 4. Send Multicast Message (with APNs payload for iOS system notifications)
@@ -189,10 +198,10 @@ export async function POST(req: NextRequest) {
             success: true,
             count: response.successCount,
             failed: response.failureCount
-        });
+        }, { headers: corsHeaders });
 
     } catch (error: any) {
         console.error("[Notification] Critical error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: error.message }, { status: 500, headers: corsHeaders });
     }
 }
