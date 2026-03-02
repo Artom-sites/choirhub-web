@@ -1033,7 +1033,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                         const isLast = index === programItems.length - 1;
                                         const showSub = item.title && item.title.toLowerCase() !== config.label.toLowerCase();
                                         return (
-                                            <div key={item.id} className="relative">
+                                            <div key={item.id} className="relative w-full mb-2">
                                                 {/* Insertion Line (above this item when dragging) */}
                                                 {isDragOver && draggedItemId !== item.id && (
                                                     <div className="absolute -top-[9px] left-8 right-0 z-20 flex items-center pointer-events-none">
@@ -1044,7 +1044,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
 
                                                 {/* Background Delete Button */}
                                                 {canEdit && (
-                                                    <div className="absolute inset-y-0 right-0 w-24 bg-red-500 rounded-lg flex items-center justify-end pr-3 text-white">
+                                                    <div className="absolute inset-0 right-0 w-24 ml-auto bg-red-500 rounded-lg flex items-center justify-end pr-3 text-white">
                                                         <button
                                                             className="h-full flex flex-col items-center justify-center p-2"
                                                             onClick={(e) => {
@@ -1064,7 +1064,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                                     onDragStart={() => handleDragStart(item.id)}
                                                     onDragOver={(e) => { e.preventDefault(); setDragOverItemId(item.id); }}
                                                     onDragEnd={handleDragEnd}
-                                                    className={`flex items-center gap-3 relative bg-background z-10 min-h-[60px] select-none [-webkit-touch-callout:none] ${isDragged ? 'opacity-40 scale-[0.98]' : ''
+                                                    className={`w-full flex items-center gap-3 relative bg-background z-10 min-h-[64px] py-1 select-none [-webkit-touch-callout:none] ${isDragged ? 'opacity-40 scale-[0.98]' : ''
                                                         }`}
                                                     style={{
                                                         transform: swipedProgramItemId === item.id ? 'translateX(-80px)' : 'translateX(0)',
