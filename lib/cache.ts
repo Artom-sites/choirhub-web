@@ -104,15 +104,9 @@ export async function resolvePdfUrlToBase64(url: string, songId?: string): Promi
     // Priority 3: Fallback to song-level IndexedDB cache
     if (songId) {
         const offlinePdfStr = await getOfflinePdf(songId);
-        // offlinePdf returns a blob URL which we just fetch back as blob
-        if (offlinePdfStr && offlinePdfStr.startsWith('blob:')) {
-            try {
-                const res = await fetch(offlinePdfStr);
-                const blob = await res.blob();
-                return await getBase64FromBlob(blob);
-            } catch (e) {
-                console.error("[Cache] Failed to fetch offline db blob URL:", e);
-            }
+        // offlinePdf returns a base64 Data URI from FileReader.readAsDataURL
+        if (offlinePdfStr && offlinePdfStr.startsWith('data:')) {
+            return offlinePdfStr;
         }
     }
 

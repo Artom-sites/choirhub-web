@@ -451,7 +451,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
         const song = availableSongs.find(s => s.id === songId);
 
         if (isNative && Capacitor.getPlatform() === 'ios') {
-            // iOS offline fallback: use OfflinePdfModal IF resolving to Base64 fails for some reason
+            // iOS offline: try to resolve to Base64 using cache
             if (!navigator.onLine && song) {
                 // Determine Parts
                 const partsData = (song.parts && song.parts.length > 0)
@@ -469,7 +469,6 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                         );
 
                         // Check if we ACTUALLY got offline data (starting with data:)
-                        // or if we failed and got the original remote URL back
                         if (resolvedParts[0].pdfUrl.startsWith('data:')) {
                             await PencilKitAnnotator.openNativePdfViewer({
                                 parts: resolvedParts,
@@ -485,8 +484,11 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                     }
                 }
 
-                // If resolving base64 failed, fallback to the HTML modal (which relies directly on IndexedDB)
-                setPreviewModalSong(song);
+                // If resolving base64 failed, the file is not cached for offline.
+                await Dialog.alert({
+                    title: 'Помилка Кешу',
+                    message: 'Файл не збережений для офлайн-перегляду. Підключіться до інтернету, щоб завантажити його або натисніть кнопку кешування.'
+                });
                 return;
             }
             // iOS online: Open native PDF viewer directly — zero preloader
