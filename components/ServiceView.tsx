@@ -776,16 +776,17 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
     // Touch-based reorder for mobile using the Grip icon
     const handleTouchStart = (e: React.TouchEvent, itemId: string, index: number) => {
         if (!canEdit) return;
+        e.preventDefault(); // Prevent scroll from starting
         touchStartY.current = e.touches[0].clientY;
         touchStartOrder.current = index;
         setDraggedItemId(itemId);
         dragItemRef.current = itemId;
-        // Optionally prevent scrolling while dragging the grip
         document.body.style.overflow = 'hidden';
     };
 
     const handleTouchMove = (e: React.TouchEvent) => {
         if (!draggedItemId || !canEdit) return;
+        e.preventDefault(); // Block page scroll while dragging
 
         const currentY = e.touches[0].clientY;
         const diffY = currentY - touchStartY.current;
@@ -1098,7 +1099,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                                         {/* Drag Handle (Right Side) */}
                                                         {canEdit && (
                                                             <div
-                                                                className="cursor-grab active:cursor-grabbing p-1.5 select-none flex-shrink-0 opacity-20 hover:opacity-50 active:opacity-70 transition-opacity"
+                                                                className="cursor-grab active:cursor-grabbing p-1.5 select-none flex-shrink-0 opacity-20 hover:opacity-50 active:opacity-70 transition-opacity touch-none"
                                                                 onTouchStart={(e) => {
                                                                     e.stopPropagation();
                                                                     handleTouchStart(e, item.id, index);
