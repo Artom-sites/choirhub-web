@@ -764,7 +764,7 @@ function HomePageContent() {
 
     await refreshProfile();
     setShowChoirManager(false);
-    window.location.reload(); // Restored to ensure full context reset
+    router.replace('/app');
   };
 
   const handleCreateChoir = async () => {
@@ -780,7 +780,7 @@ function HomePageContent() {
 
       await refreshProfile();
       setShowChoirManager(false);
-      window.location.reload(); // Force reload to ensure all contexts pick up the new choir
+      router.replace('/app');
     } catch (e: any) {
       console.error("Error creating choir:", e);
       setManagerError("Помилка створення хору: " + (e.message || "Невідома помилка"));
@@ -818,7 +818,7 @@ function HomePageContent() {
         await refreshProfile();
         setShowChoirManager(false);
         setJoinCode(""); setJoinLastName(""); setJoinFirstName("");
-        window.location.reload();
+        router.replace('/app');
         return;
       }
 
@@ -851,12 +851,12 @@ function HomePageContent() {
         } else {
           await updateMember(result.choirId, user.uid, { name: fullName });
           setShowChoirManager(false);
-          window.location.reload();
+          router.replace('/app');
         }
       } else if (result?.choirId) {
         await updateMember(result.choirId, user.uid, { name: fullName });
         setShowChoirManager(false);
-        window.location.reload();
+        router.replace('/app');
       } else {
         setShowChoirManager(false);
       }
@@ -895,7 +895,7 @@ function HomePageContent() {
       setManagerError("");
 
       setClaimChoirId(null);
-      window.location.reload();
+      router.replace('/app');
     } catch (e: any) {
       console.error("Claim error:", e);
       const msg = e.message || "";

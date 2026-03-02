@@ -7,7 +7,7 @@ export default function OfflinePage() {
     const router = useRouter();
 
     const handleRefresh = () => {
-        window.location.reload();
+        router.refresh();
     };
 
     const handleGoToService = () => {
