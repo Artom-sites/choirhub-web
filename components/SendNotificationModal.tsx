@@ -90,8 +90,8 @@ export default function SendNotificationModal({ isOpen, onClose }: SendNotificat
                 // CapacitorHttp gives JSON data directly instead of text if it parsed it
                 text = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
             } else {
-                console.log(`[SendNotification] Using window.fetch for web request`);
-                const response = await fetch(`${baseUrl}/api/send-notification`, {
+                console.log(`[SendNotification] Using window.fetch for web request (relative path)`);
+                const response = await fetch(`/api/send-notification`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
