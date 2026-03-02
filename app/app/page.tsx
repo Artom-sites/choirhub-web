@@ -349,17 +349,28 @@ function HomePageContent() {
   //  EFFECTS & NAVIGATION
   // ------------------------------------------------------------------
 
-  // Notifications Check
+  // Notifications Check — real-time listener
   useEffect(() => {
-    if (userData?.choirId) {
-      getChoirNotifications(userData.choirId).then(notifs => {
-        if (userData.id) {
-          const unread = notifs.filter((n: any) => !n.readBy?.includes(userData.id));
-          setUnreadNotifications(unread.length);
-        }
+    if (!userData?.choirId || !userData?.id) return;
+
+    const q = query(
+      firestoreCollection(db, `choirs/${userData.choirId}/notifications`),
+      orderBy("createdAt", "desc"),
+      limit(100)
+    );
+
+    const unsub = onSnapshot(q, (snapshot) => {
+      const unread = snapshot.docs.filter(doc => {
+        const data = doc.data();
+        return !data.readBy?.includes(userData.id);
       });
-    }
-  }, [userData?.choirId, userData?.id, showNotificationModal]);
+      setUnreadNotifications(unread.length);
+    }, (error) => {
+      console.error("[Notifications] onSnapshot error:", error);
+    });
+
+    return () => unsub();
+  }, [userData?.choirId, userData?.id]);
 
   // Tab Navigation
   const activeTabRaw = searchParams.get('tab');
