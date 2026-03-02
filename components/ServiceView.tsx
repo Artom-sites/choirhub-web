@@ -1033,7 +1033,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                         const isLast = index === programItems.length - 1;
                                         const showSub = item.title && item.title.toLowerCase() !== config.label.toLowerCase();
                                         return (
-                                            <div key={item.id} className="relative w-full mb-2">
+                                            <div key={item.id} className="relative w-full mb-2 overflow-hidden rounded-xl">
                                                 {/* Insertion Line (above this item when dragging) */}
                                                 {isDragOver && draggedItemId !== item.id && (
                                                     <div className="absolute -top-[9px] left-8 right-0 z-20 flex items-center pointer-events-none">
@@ -1044,9 +1044,9 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
 
                                                 {/* Background Delete Button */}
                                                 {canEdit && (
-                                                    <div className="absolute right-0 inset-y-0 h-full w-24 bg-red-500 rounded-r-xl flex items-center justify-end pr-3 text-white">
+                                                    <div className="absolute top-0 bottom-0 right-0 w-24 bg-red-500 flex items-center justify-center text-white">
                                                         <button
-                                                            className="h-full w-full flex flex-col items-center justify-center p-2"
+                                                            className="flex flex-col items-center justify-center p-2"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 setProgramItemToDelete(item.id);
