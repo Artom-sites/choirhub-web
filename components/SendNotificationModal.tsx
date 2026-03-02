@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { Loader2, Send } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getServices } from "@/lib/db";
+import { getServices, functions } from "@/lib/db";
 import { Service } from "@/types";
 import Toast from "./Toast";
-import { Capacitor, CapacitorHttp } from "@capacitor/core";
+import { httpsCallable } from "firebase/functions";
 
 interface SendNotificationModalProps {
     isOpen: boolean;
@@ -68,36 +68,17 @@ export default function SendNotificationModal({ isOpen, onClose }: SendNotificat
                 payload.enableVoting = true;
             }
 
-            // In native Capacitor apps, relative paths resolve to capacitor://localhost
-            // We must use the absolute URL to hit the production API
-            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://choirhub.app";
-            console.log(`[SendNotification] Sending to ${baseUrl}/api/send-notification from origin ${typeof window !== 'undefined' ? window.location.origin : 'unknown'}`);
+            // Use Firebase Cloud Function (httpsCallable) — bypasses CORS/CDN entirely
+            console.log(`[SendNotification] Calling sendNotification Cloud Function`);
+            const sendNotificationFn = httpsCallable(functions, 'sendNotification');
+            const result = await sendNotificationFn(payload);
+            const data = result.data as any;
 
-            let text = "";
-            let status = 200;
-
-            const isNative = Capacitor.isNativePlatform();
-            const fetchUrl = isNative ? `${baseUrl}/api/send-notification` : '/api/send-notification';
-            console.log(`[SendNotification] Using window.fetch for ${isNative ? 'native' : 'web'} request to ${fetchUrl}`);
-
-            const response = await fetch(fetchUrl, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify(payload)
-            });
-
-            text = await response.text();
-            status = response.status;
-
-            let data: any = {};
-            try { data = JSON.parse(text); } catch { data = { error: text || "Невідома помилка сервера" }; }
-
-            if (status !== 200) {
+            if (!data.success) {
                 throw new Error(data.error || "Failed to send");
             }
+
+            console.log(`[SendNotification] Success: ${data.count} sent, ${data.failed} failed`);
 
             setToast({ message: "Сповіщення надіслано", type: "success" });
 

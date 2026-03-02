@@ -34,7 +34,7 @@ var __rest = (this && this.__rest) || function (s, e) {
     return t;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fixUserData = exports.backfillStats = exports.onServiceWrite = exports.cleanupOldNotifications = exports.generateUploadUrl = exports.registerFcmToken = exports.migrateAllClaims = exports.atomicUpdateMember = exports.claimMember = exports.atomicMergeMembers = exports.adminDeleteUser = exports.atomicDeleteSelf = exports.atomicLeaveChoir = exports.atomicJoinChoir = exports.atomicCreateChoir = exports.forceSyncClaims = void 0;
+exports.sendNotification = exports.fixUserData = exports.backfillStats = exports.onServiceWrite = exports.cleanupOldNotifications = exports.generateUploadUrl = exports.registerFcmToken = exports.migrateAllClaims = exports.atomicUpdateMember = exports.claimMember = exports.atomicMergeMembers = exports.adminDeleteUser = exports.atomicDeleteSelf = exports.atomicLeaveChoir = exports.atomicJoinChoir = exports.atomicCreateChoir = exports.forceSyncClaims = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const client_s3_1 = require("@aws-sdk/client-s3");
@@ -1161,5 +1161,124 @@ exports.fixUserData = functions.https.onCall(async (data, context) => {
         message: `Role set to ${newRole}. ${memberInfo}`,
         userData: { name: userData.name, email: userData.email, choirId }
     };
+});
+/**
+ * sendNotification
+ * Sends push notifications to all choir members via FCM.
+ * Called via httpsCallable from the client — bypasses CORS/CDN entirely.
+ */
+exports.sendNotification = functions.https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError("unauthenticated", "Must be logged in");
+    }
+    const uid = context.auth.uid;
+    const { title = "", body, choirId, serviceId, serviceName, enableVoting } = data;
+    if (!body || !choirId) {
+        throw new functions.https.HttpsError("invalid-argument", "body and choirId are required");
+    }
+    // 1. Check Permissions
+    const userDoc = await db.collection("users").doc(uid).get();
+    const userData = userDoc.data();
+    if (!userData) {
+        throw new functions.https.HttpsError("not-found", "User not found");
+    }
+    const membership = (userData.memberships || []).find((m) => m.choirId === choirId);
+    if (!membership) {
+        throw new functions.https.HttpsError("permission-denied", "Not a member of this choir");
+    }
+    const isRegent = membership.role === 'regent' || membership.role === 'head';
+    const hasPermission = (userData.permissions || []).includes('notify_members');
+    if (!isRegent && !hasPermission) {
+        throw new functions.https.HttpsError("permission-denied", "No permission to send notifications");
+    }
+    // 2. Fetch Recipients
+    console.log(`[sendNotification] Fetching members for choir: ${choirId}`);
+    const choirDoc = await db.collection("choirs").doc(choirId).get();
+    const choirData = choirDoc.data();
+    if (!choirData) {
+        throw new functions.https.HttpsError("not-found", "Choir not found");
+    }
+    const memberIds = (choirData.members || []).map((m) => m.id);
+    console.log(`[sendNotification] Found ${memberIds.length} members in choir.`);
+    const userRefs = memberIds.map((id) => db.collection("users").doc(id));
+    const userDocs = await db.getAll(...userRefs);
+    const tokens = [];
+    userDocs.forEach(doc => {
+        const u = doc.data();
+        if (u && u.notificationsEnabled && u.fcmTokens && Array.isArray(u.fcmTokens)) {
+            tokens.push(...u.fcmTokens);
+        }
+    });
+    const uniqueTokens = Array.from(new Set(tokens));
+    console.log(`[sendNotification] Total unique tokens: ${uniqueTokens.length}`);
+    if (uniqueTokens.length === 0) {
+        console.warn("[sendNotification] No valid tokens found.");
+        return { success: true, count: 0, failed: 0, message: "No devices to send to" };
+    }
+    // 3. Send Multicast
+    const message = {
+        notification: { title, body },
+        apns: {
+            headers: { "apns-priority": "10", "apns-push-type": "alert" },
+            payload: { aps: { sound: "default", badge: 1 } },
+        },
+        android: {
+            priority: "high",
+            notification: { sound: "default", channelId: "choir_notifications" },
+        },
+        tokens: uniqueTokens,
+    };
+    console.log(`[sendNotification] Sending to ${uniqueTokens.length} devices...`);
+    const response = await admin.messaging().sendEachForMulticast(message);
+    console.log(`[sendNotification] Success: ${response.successCount}, Failed: ${response.failureCount}`);
+    // 4. Save to Firestore
+    const notificationData = {
+        title, body, choirId,
+        senderId: uid,
+        senderName: userData.name || "Regent",
+        createdAt: new Date().toISOString(),
+        readBy: [uid]
+    };
+    if (enableVoting && serviceId && serviceName) {
+        notificationData.serviceId = serviceId;
+        notificationData.serviceName = serviceName;
+        notificationData.enableVoting = enableVoting;
+    }
+    await db.collection(`choirs/${choirId}/notifications`).add(notificationData);
+    // 5. Clean up stale tokens
+    if (response.failureCount > 0) {
+        const tokensToRemove = [];
+        response.responses.forEach((resp, idx) => {
+            var _a;
+            if (!resp.success) {
+                const errCode = (_a = resp.error) === null || _a === void 0 ? void 0 : _a.code;
+                console.error(`[sendNotification] Token failure ${uniqueTokens[idx].substring(0, 10)}...: ${errCode}`);
+                if (errCode === 'messaging/registration-token-not-registered' ||
+                    errCode === 'messaging/invalid-registration-token' ||
+                    errCode === 'messaging/invalid-argument') {
+                    tokensToRemove.push(uniqueTokens[idx]);
+                }
+            }
+        });
+        if (tokensToRemove.length > 0) {
+            console.log(`[sendNotification] Cleaning ${tokensToRemove.length} stale tokens...`);
+            const staleSnaps = await Promise.all(tokensToRemove.map(t => db.collection("users").where("fcmTokens", "array-contains", t).get()));
+            const batch = db.batch();
+            let ops = 0;
+            staleSnaps.forEach((snap, i) => {
+                snap.docs.forEach(doc => {
+                    batch.update(doc.ref, {
+                        fcmTokens: admin.firestore.FieldValue.arrayRemove(tokensToRemove[i])
+                    });
+                    ops++;
+                });
+            });
+            if (ops > 0) {
+                await batch.commit();
+                console.log(`[sendNotification] Removed ${tokensToRemove.length} stale tokens from ${ops} docs.`);
+            }
+        }
+    }
+    return { success: true, count: response.successCount, failed: response.failureCount };
 });
 //# sourceMappingURL=index.js.map
