@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Music2, Check, ExternalLink, User, Mail, Eye, EyeOff, UserX, AlertTriangle, ArrowLeft, LogOut, Loader2, Apple } from "lucide-react";
+import { Capacitor } from '@capacitor/core';
 import { Dialog } from '@capacitor/dialog';
 import { useAuth } from "@/contexts/AuthContext";
 import { createUser, getChoir, updateChoirMembers, joinChoir, claimMember, createChoir } from "@/lib/db";
@@ -24,7 +25,7 @@ import Preloader from "@/components/Preloader";
 
 function SetupPageContent() {
     const router = useRouter();
-    const { user, userData, loading: authLoading, signInWithGoogle, signInWithApple, signInWithEmail, signUpWithEmail, resetPassword, refreshProfile, isGuest, signOut } = useAuth();
+    const { user, userData, loading: authLoading, signInWithGoogle, signInWithApple, signInWithEmail, signUpWithEmail, resetPassword, refreshProfile, isGuest, signOut, pendingCredential, existingMethod, clearPendingCredential } = useAuth();
 
     const searchParams = useSearchParams();
     const urlCode = searchParams.get('code');
@@ -61,8 +62,10 @@ function SetupPageContent() {
     const [claimLoading, setClaimLoading] = useState(false);
     const [selectedClaimId, setSelectedClaimId] = useState<string | null>(null);
     const [showNameInput, setShowNameInput] = useState(false);
-    const [customName, setCustomName] = useState("");
+    const [customFirstName, setCustomFirstName] = useState("");
+    const [customLastName, setCustomLastName] = useState("");
     const [savingName, setSavingName] = useState(false);
+    const [namePromptReason, setNamePromptReason] = useState<'claim' | 'create' | 'join' | null>(null);
 
     // (Removed checkingProfile state - now handled by AuthContext undefined state)
 
@@ -97,6 +100,10 @@ function SetupPageContent() {
     // We remove (user && !userData) because that is the state of a NEW user who needs to see this page.
     // Prevent flash: Wait while auth is loading OR profile is loading (undefined)
     if (authLoading || userData === undefined || (user && userData?.choirId)) {
+        // Hide standard web preloader on native, relying on the native splash screen instead
+        if (typeof window !== 'undefined' && Capacitor.isNativePlatform()) {
+            return null;
+        }
         return <Preloader />;
     }
 
@@ -229,6 +236,15 @@ function SetupPageContent() {
         setFormLoading(true);
         setError("");
 
+        // Prevent generic "User" or missing name on creation
+        const currentName = user.displayName || userData?.name || "";
+        if (!currentName || currentName.trim() === "User" || !currentName.includes(" ")) {
+            setFormLoading(false);
+            setNamePromptReason('create');
+            setShowNameInput(true);
+            return;
+        }
+
         try {
             await createChoir(choirName, choirType);
 
@@ -261,8 +277,16 @@ function SetupPageContent() {
 
         setFormLoading(true);
         setError("");
+        // Pre-validate name or prompt if missing/generic
+        const currentName = user.displayName || userData?.name || "";
+        if (!currentName || currentName.trim() === "User" || !currentName.includes(" ")) {
+            setFormLoading(false);
+            setNamePromptReason('join');
+            setShowNameInput(true);
+            return;
+        }
 
-        // Save name to user profile BEFORE joining
+        // Save typed name (from the explicit join input fields) to user profile BEFORE joining
         const fullName = `${joinLastName.trim()} ${joinFirstName.trim()}`;
         try {
             await createUser(user.uid, { name: fullName });
@@ -344,33 +368,57 @@ function SetupPageContent() {
     };
 
     const handleSaveCustomName = async () => {
-        if (!customName.trim() || !user || !claimChoirId) return;
-        const finalName = customName.trim();
+        if (!customFirstName.trim() || !customLastName.trim() || !user || !namePromptReason) return;
 
-        if (!finalName.includes(" ")) {
-            await Dialog.alert({ title: "Помилка", message: "Будь ласка, введіть 'Прізвище та Ім'я' через пробіл." });
-            return;
-        }
+        // Ensure standard "Last First" format uniformly for stats and display
+        const finalName = `${customLastName.trim()} ${customFirstName.trim()}`;
 
         setSavingName(true);
         try {
-            // 1. Update User Profile
+            // 1. Update User Profile globally
             await createUser(user.uid, { name: finalName });
 
-            // 2. Update Choir Member
-            // We need to fetch current members first
-            const choirDocRef = doc(db, "choirs", claimChoirId);
-            const choirSnap = await getDoc(choirDocRef);
-            if (choirSnap.exists()) {
-                const cData = choirSnap.data() as Choir;
-                const updatedMembers = (cData.members || []).map(m =>
-                    m.id === user.uid ? { ...m, name: finalName } : m
-                );
-                await updateDoc(choirDocRef, { members: updatedMembers });
+            if (namePromptReason === 'claim' && claimChoirId) {
+                // We are updating the claimed member entry directly
+                const choirDocRef = doc(db, "choirs", claimChoirId);
+                const choirSnap = await getDoc(choirDocRef);
+                if (choirSnap.exists()) {
+                    const cData = choirSnap.data() as Choir;
+                    const updatedMembers = (cData.members || []).map(m =>
+                        m.id === user.uid ? { ...m, name: finalName } : m
+                    );
+                    await updateDoc(choirDocRef, { members: updatedMembers });
+                }
+                setShowNameInput(false);
+                await refreshProfile();
+                router.push("/app");
+            } else if (namePromptReason === 'create') {
+                // Resume the create flow
+                setShowNameInput(false);
+                await createChoir(choirName, choirType as "msc" | "standard");
+                await refreshProfile();
+                router.push("/app");
+            } else if (namePromptReason === 'join') {
+                // Resume the join flow
+                setShowNameInput(false);
+                let isAlreadyMember = false;
+                try {
+                    await joinChoir(inviteCode);
+                } catch (jnErr: any) {
+                    if (jnErr.message?.includes("Already a member")) {
+                        isAlreadyMember = true;
+                    } else {
+                        throw jnErr;
+                    }
+                }
+
+                if (isAlreadyMember) {
+                    await Dialog.alert({ title: "Інформація", message: "Ви вже є учасником цього хору. Дані оновлено." });
+                }
+                await refreshProfile();
+                router.push("/app");
             }
 
-            await refreshProfile();
-            router.push("/app");
         } catch (e: any) {
             console.error("Save Name Error:", e);
             await Dialog.alert({ title: "Помилка", message: "Помилка збереження імені" });
@@ -450,6 +498,22 @@ function SetupPageContent() {
                             {formLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isRegistering ? "Зареєструватися" : "Увійти")}
                         </button>
 
+                        {pendingCredential && (
+                            <div className="bg-primary/10 border border-primary/30 p-3 rounded-xl text-left">
+                                <p className="text-xs text-text-primary font-bold mb-1">Завершіть прив'язку</p>
+                                <p className="text-[11px] text-text-secondary leading-tight">
+                                    Будь ласка, увійдіть через {existingMethod === 'google.com' ? 'Google' : existingMethod === 'apple.com' ? 'Apple' : 'ваш основний метод'}, щоб ми могли об'єднати акаунти.
+                                </p>
+                                <button
+                                    onClick={clearPendingCredential}
+                                    type="button"
+                                    className="text-[10px] text-text-secondary hover:text-text-primary underline mt-2"
+                                >
+                                    Скасувати прив'язку
+                                </button>
+                            </div>
+                        )}
+
                         {/* Divider */}
                         <div className="flex items-center gap-3 py-1">
                             <div className="flex-1 h-px bg-border" />
@@ -462,7 +526,7 @@ function SetupPageContent() {
                             <button
                                 onClick={handleGoogleLogin}
                                 disabled={formLoading}
-                                className="py-3.5 bg-surface border border-border rounded-xl flex items-center justify-center gap-2 hover:bg-surface-highlight transition-colors disabled:opacity-50"
+                                className="relative py-3.5 bg-surface border border-border rounded-xl flex items-center justify-center gap-2 hover:bg-surface-highlight transition-colors disabled:opacity-50"
                             >
                                 {googleLoading ? (
                                     <Loader2 className="w-5 h-5 animate-spin text-text-primary" />
@@ -472,12 +536,17 @@ function SetupPageContent() {
                                     </svg>
                                 )}
                                 <span className="font-semibold text-text-primary text-sm">Google</span>
+                                {pendingCredential && existingMethod === 'google.com' && (
+                                    <div className="absolute -top-2 -right-1 bg-primary text-background text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm animate-bounce">
+                                        РЕКОМЕНДОВАНО
+                                    </div>
+                                )}
                             </button>
 
                             <button
                                 onClick={handleAppleLogin}
                                 disabled={formLoading}
-                                className="py-3.5 bg-surface border border-border rounded-xl flex items-center justify-center gap-2 hover:bg-surface-highlight transition-colors disabled:opacity-50"
+                                className="relative py-3.5 bg-surface border border-border rounded-xl flex items-center justify-center gap-2 hover:bg-surface-highlight transition-colors disabled:opacity-50"
                             >
                                 {appleLoading ? (
                                     <Loader2 className="w-5 h-5 animate-spin text-text-primary" />
@@ -487,6 +556,11 @@ function SetupPageContent() {
                                     </svg>
                                 )}
                                 <span className="font-semibold text-text-primary text-sm">Apple</span>
+                                {pendingCredential && existingMethod === 'apple.com' && (
+                                    <div className="absolute -top-2 -right-1 bg-primary text-background text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm animate-bounce">
+                                        РЕКОМЕНДОВАНО
+                                    </div>
+                                )}
                             </button>
                         </div>
 
@@ -686,6 +760,7 @@ function SetupPageContent() {
                             >
                                 Приєднатися {urlCode ? '' : 'за кодом'}
                             </button>
+
                         </div>
 
                         <button
@@ -893,16 +968,24 @@ function SetupPageContent() {
 
                             <div className="space-y-4">
                                 <input
-                                    value={customName}
-                                    onChange={(e) => setCustomName(e.target.value)}
-                                    placeholder="Прізвище Ім'я (наприклад: Шевченко Тарас)"
+                                    value={customLastName}
+                                    onChange={(e) => setCustomLastName(e.target.value)}
+                                    placeholder="Прізвище (напр. Шевченко)"
                                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:border-primary/50"
                                     autoFocus
+                                    autoCapitalize="words"
+                                />
+                                <input
+                                    value={customFirstName}
+                                    onChange={(e) => setCustomFirstName(e.target.value)}
+                                    placeholder="Ім'я (напр. Тарас)"
+                                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:border-primary/50"
+                                    autoCapitalize="words"
                                 />
 
                                 <button
                                     onClick={handleSaveCustomName}
-                                    disabled={savingName || !customName.trim()}
+                                    disabled={savingName || !customFirstName.trim() || !customLastName.trim()}
                                     className="w-full py-4 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-all flex justify-center shadow-lg disabled:opacity-50"
                                 >
                                     {savingName ? (
@@ -915,6 +998,8 @@ function SetupPageContent() {
                         </div>
                     </div>
                 )}
+
+
             </div>
         </div>
     );
@@ -922,7 +1007,7 @@ function SetupPageContent() {
 
 export default function SetupPage() {
     return (
-        <Suspense fallback={<Preloader />}>
+        <Suspense fallback={typeof window !== 'undefined' && Capacitor.isNativePlatform() ? null : <Preloader />}>
             <SetupPageContent />
         </Suspense>
     );

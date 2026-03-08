@@ -1,10 +1,32 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, ListObjectsV2Command, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 admin.initializeApp();
 const db = admin.firestore();
+db.settings({ ignoreUndefinedProperties: true });
+
+// --- DUPLICATE EMAIL DETECTION ---
+/**
+ * Warns when a new users/{uid} document has an email that already exists.
+ * This is a safety net — the frontend should prevent duplicates via account linking.
+ */
+exports.onUserProfileCreated = functions.firestore
+    .document('users/{uid}')
+    .onCreate(async (snap, context) => {
+        const data = snap.data();
+        const email = data?.email;
+        if (!email || email.endsWith('@privaterelay.appleid.com')) return;
+
+        const existing = await db.collection('users')
+            .where('email', '==', email).get();
+
+        if (existing.size > 1) {
+            const uids = existing.docs.map(d => d.id);
+            console.warn(`⚠️ DUPLICATE EMAIL DETECTED: "${email}" has ${existing.size} user docs: [${uids.join(', ')}]`);
+        }
+    });
 
 // --- CLAIMS UTILITY ---
 
@@ -108,6 +130,8 @@ export const atomicCreateChoir = functions.https.onCall(async (data, context) =>
         memberCode,
         regentCode,
         ownerId: userId,
+        creatorId: userId,
+        formerAdmins: [userId],
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         regents: [userData.name || "Head"],
         members: [{
@@ -117,7 +141,8 @@ export const atomicCreateChoir = functions.https.onCall(async (data, context) =>
             role: 'head',
             hasAccount: true,
             accountUid: userId
-        }]
+        }],
+        membersCount: 1
     };
     batch.set(choirRef, choirData);
 
@@ -308,6 +333,16 @@ export const atomicJoinChoir = functions.https.onCall(async (data, context) => {
 
 
 
+        const choirUpdates: any = {
+            emptySince: admin.firestore.FieldValue.delete(),
+            deletionStage: admin.firestore.FieldValue.delete(),
+            deletionScheduledAt: admin.firestore.FieldValue.delete()
+        };
+
+        if (['head', 'regent', 'admin'].includes(newRole)) {
+            choirUpdates.formerAdmins = admin.firestore.FieldValue.arrayUnion(userId);
+        }
+
         if (memberIndex >= 0) {
             const updatedMembers = [...members];
             updatedMembers[memberIndex] = {
@@ -316,8 +351,24 @@ export const atomicJoinChoir = functions.https.onCall(async (data, context) => {
                 permissions: uniquePermissions,
                 hasAccount: true
             };
-            transaction.update(choirRef, { members: updatedMembers });
+            choirUpdates.members = updatedMembers;
+            choirUpdates.membersCount = updatedMembers.length;
+        } else if (members.length === 0) {
+            // Resurrect empty choir
+            const newMember = {
+                id: userId,
+                name: userData.name || "Користувач",
+                photoURL: userData.photoURL || null,
+                role: newRole,
+                hasAccount: true,
+                accountUid: userId
+            };
+            choirUpdates.members = [newMember];
+            choirUpdates.membersCount = 1;
+        } else {
+            choirUpdates.membersCount = members.length;
         }
+        transaction.update(choirRef, choirUpdates);
         // If memberIndex < 0: user is new → NO entry created in members[]
 
         // Collect unlinked members for client-side "Claim Member" UI
@@ -377,7 +428,15 @@ export const atomicLeaveChoir = functions.https.onCall(async (data, context) => 
         // --- WRITES ---
         // 1. Update Choir
         if (updatedMembers.length !== members.length) {
-            transaction.update(choirRef, { members: updatedMembers });
+            const choirUpdates: any = {
+                members: updatedMembers,
+                membersCount: updatedMembers.length
+            };
+            if (updatedMembers.length === 0) {
+                choirUpdates.emptySince = admin.firestore.FieldValue.serverTimestamp();
+                choirUpdates.deletionStage = "empty";
+            }
+            transaction.update(choirRef, choirUpdates);
         }
 
         // 2. Update User
@@ -448,21 +507,35 @@ export const atomicDeleteSelf = functions.https.onCall(async (_data, context) =>
                 const choirData = choirSnap.data()!;
                 const currentMembers = choirData.members || [];
 
+                // If they are the ONLY member, completely remove them so the choir becomes empty.
+                // Otherwise, mark them as hasAccount: false so regents see they left.
+                let updatedMembers;
+                if (currentMembers.length === 1 && (currentMembers[0].id === userId || currentMembers[0].accountUid === userId)) {
+                    updatedMembers = [];
+                } else {
+                    updatedMembers = currentMembers.map((m: any) => {
+                        // Check strict ID match OR linked account match
+                        if (m.id === userId || m.accountUid === userId) {
+                            // Keep member but remove account link
+                            const { accountUid, fcmTokens, ...rest } = m;
+                            return {
+                                ...rest,
+                                hasAccount: false
+                            };
+                        }
+                        return m;
+                    });
+                }
 
-
-                const updatedMembers = currentMembers.map((m: any) => {
-                    // Check strict ID match OR linked account match
-                    if (m.id === userId || m.accountUid === userId) {
-                        // Keep member but remove account link
-                        const { accountUid, fcmTokens, ...rest } = m;
-                        return {
-                            ...rest,
-                            hasAccount: false
-                        };
-                    }
-                    return m;
-                });
-                batch.update(choirRef, { members: updatedMembers });
+                const choirUpdates: any = {
+                    members: updatedMembers,
+                    membersCount: updatedMembers.length
+                };
+                if (updatedMembers.length === 0) {
+                    choirUpdates.emptySince = admin.firestore.FieldValue.serverTimestamp();
+                    choirUpdates.deletionStage = "empty";
+                }
+                batch.update(choirRef, choirUpdates);
             }
 
             const memberRef = choirRef.collection("members").doc(userId);
@@ -582,7 +655,15 @@ export const adminDeleteUser = functions.https.onCall(async (data, context) => {
                     }
                     return m;
                 });
-                batch.update(choirRef, { members: updatedMembers });
+                const choirUpdates: any = {
+                    members: updatedMembers,
+                    membersCount: updatedMembers.length
+                };
+                if (updatedMembers.length === 0) {
+                    choirUpdates.emptySince = admin.firestore.FieldValue.serverTimestamp();
+                    choirUpdates.deletionStage = "empty";
+                }
+                batch.update(choirRef, choirUpdates);
             }
 
             const memberRef = choirRef.collection("members").doc(targetUid);
@@ -665,11 +746,13 @@ export const atomicMergeMembers = functions.https.onCall(async (data, context) =
         // Transfer account data from source to target if source had an account
         if (fromMember?.hasAccount) {
             updatedMembers = updatedMembers.map((m: any) => {
-                if (m.id === toMemberId && !m.hasAccount) {
+                if (m.id === toMemberId) { // Removed && !m.hasAccount check
                     return {
                         ...m,
                         hasAccount: true,
-                        linkedUserIds: [...(m.linkedUserIds || []), fromMemberId]
+                        // Ensure accountUid is set so that isUserUnlinked doesn't fail
+                        accountUid: m.accountUid || m.id,
+                        linkedUserIds: [...(m.linkedUserIds || []), fromMemberId, fromMember.accountUid].filter(Boolean)
                     };
                 }
                 return m;
@@ -827,6 +910,345 @@ export const claimMember = functions.https.onCall(async (data, context) => {
 });
 
 /**
+ * mergeAccounts
+ * Merges two Firebase user accounts (primaryUid absorbs secondaryUid).
+ *
+ * SAFETY GUARANTEES:
+ * - Entire operation inside Firestore transaction (atomic)
+ * - Idempotent: secondary missing → return success
+ * - No partial migration: any failure aborts everything
+ * - primaryUid !== secondaryUid enforced
+ * - Caller must own one UID OR have custom claim isSuperAdmin
+ */
+export const mergeAccounts = functions.https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError("unauthenticated", "Must be logged in");
+    }
+
+    const callerUid = context.auth.uid;
+    const { primaryUid, secondaryUid } = data;
+
+    // ── INPUT VALIDATION ──
+    if (!primaryUid || typeof primaryUid !== "string") {
+        throw new functions.https.HttpsError("invalid-argument", "primaryUid is required");
+    }
+    if (!secondaryUid || typeof secondaryUid !== "string") {
+        throw new functions.https.HttpsError("invalid-argument", "secondaryUid is required");
+    }
+    if (primaryUid === secondaryUid) {
+        throw new functions.https.HttpsError("invalid-argument", "primaryUid and secondaryUid must differ");
+    }
+
+    // ── AUTH CHECK: caller must own one of the two accounts ──
+    // During the explicit merge flow, the user may be signed in as either account.
+    // Both cases are safe: the user is voluntarily merging their own accounts.
+    if (callerUid !== primaryUid && callerUid !== secondaryUid) {
+        throw new functions.https.HttpsError(
+            "permission-denied",
+            "Caller must be signed in as one of the accounts being merged"
+        );
+    }
+
+    const ROLE_RANK: Record<string, number> = { member: 0, regent: 1, head: 2 };
+
+    // ── Pre-transaction reads: find services referencing secondaryUid ──
+    // Firestore transactions can only read docs by reference, not run queries,
+    // so we identify affected service docs first, then read/write them in the txn.
+    const allChoirIds = new Set<string>();
+
+    // Gather choir IDs from both user docs (outside txn, for service discovery only)
+    const [prePrimarySnap, preSecondarySnap] = await Promise.all([
+        db.collection("users").doc(primaryUid).get(),
+        db.collection("users").doc(secondaryUid).get(),
+    ]);
+
+    if (!preSecondarySnap.exists) {
+        console.log(`mergeAccounts: secondary ${secondaryUid} already gone — idempotent success`);
+        return { success: true, alreadyMerged: true };
+    }
+
+    const prePrimary = prePrimarySnap.data() || {};
+    const preSecondary = preSecondarySnap.data() || {};
+    for (const m of (prePrimary.memberships || [])) {
+        if (m.choirId) allChoirIds.add(m.choirId);
+    }
+    for (const m of (preSecondary.memberships || [])) {
+        if (m.choirId) allChoirIds.add(m.choirId);
+    }
+    if (prePrimary.choirId) allChoirIds.add(prePrimary.choirId);
+    if (preSecondary.choirId) allChoirIds.add(preSecondary.choirId);
+
+    // Find service docs that reference secondaryUid in attendance arrays
+    const affectedServiceRefs: FirebaseFirestore.DocumentReference[] = [];
+    for (const cid of allChoirIds) {
+        const servicesSnap = await db.collection(`choirs/${cid}/services`).get();
+        for (const sDoc of servicesSnap.docs) {
+            const sData = sDoc.data();
+            const confirmed = sData.confirmedMembers || [];
+            const absent = sData.absentMembers || [];
+            if (confirmed.includes(secondaryUid) || absent.includes(secondaryUid)) {
+                affectedServiceRefs.push(sDoc.ref);
+            }
+        }
+    }
+
+    // ── TRANSACTION ──
+    const result = await db.runTransaction(async (transaction) => {
+        // Read BOTH user docs AND ALL referenced docs upfront to satisfy Firestore "Reads before Writes" transaction rule
+        const primaryRef = db.collection("users").doc(primaryUid);
+        const secondaryRef = db.collection("users").doc(secondaryUid);
+
+        const choirRefs = Array.from(allChoirIds).map((cid) => db.collection("choirs").doc(cid));
+
+        const [primarySnap, secondarySnap, choirSnaps, serviceSnaps] = await Promise.all([
+            transaction.get(primaryRef),
+            transaction.get(secondaryRef),
+            Promise.all(choirRefs.map((r) => transaction.get(r))),
+            Promise.all(affectedServiceRefs.map((r) => transaction.get(r))),
+        ]);
+
+        // Idempotent: secondary gone between pre-check and txn start
+        if (!secondarySnap.exists) {
+            return { success: true, alreadyMerged: true };
+        }
+
+        const secondary = secondarySnap.data()!;
+        let primary: any = {};
+        let isNewPrimary = false;
+
+        if (!primarySnap.exists) {
+            console.log(`[mergeAccounts] Primary doc missing for ${primaryUid}. Auto-creating during merge.`);
+            isNewPrimary = true;
+            primary = {
+                id: primaryUid,
+                // Inherit basic profile info from the google account if Apple profile doesn't exist yet
+                name: secondary.name || "User",
+                email: secondary.email || "",
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            };
+        } else {
+            primary = primarySnap.data()!;
+        }
+
+        // ── MERGE USER FIELDS ──
+        // 1. fcmTokens: union + dedupe
+        const mergedFcmTokens = [...new Set([
+            ...(primary.fcmTokens || []),
+            ...(secondary.fcmTokens || []),
+        ])];
+
+        // 2. memberships: union by choirId (primary wins on conflict)
+        const membershipMap = new Map<string, any>();
+        for (const m of (secondary.memberships || [])) {
+            if (m.choirId) membershipMap.set(m.choirId, m);
+        }
+        for (const m of (primary.memberships || [])) {
+            if (m.choirId) membershipMap.set(m.choirId, m); // primary overwrites
+        }
+        const mergedMemberships = Array.from(membershipMap.values());
+
+        // 3. permissions: union + dedupe
+        const mergedPermissions = [...new Set([
+            ...(primary.permissions || []),
+            ...(secondary.permissions || []),
+        ])];
+
+        // 4. role: highest privilege wins
+        const pRank = ROLE_RANK[primary.role] ?? 0;
+        const sRank = ROLE_RANK[secondary.role] ?? 0;
+        const mergedRole = sRank > pRank ? secondary.role : primary.role;
+
+        // 5. photoURL: keep primary, fallback to secondary
+        const mergedPhoto = primary.photoURL || secondary.photoURL || null;
+
+        // 6. notificationsEnabled: OR
+        const mergedNotificationsEnabled =
+            !!(primary.notificationsEnabled || secondary.notificationsEnabled);
+
+        // ── CALCULATIONS FOR CHOIRS ──
+        interface ChoirUpdate {
+            ref: FirebaseFirestore.DocumentReference;
+            members: any[];
+        }
+        const choirUpdates: ChoirUpdate[] = [];
+
+        for (let i = 0; i < choirRefs.length; i++) {
+            const snap = choirSnaps[i];
+            if (!snap.exists) continue;
+            const cData = snap.data()!;
+            const members = cData.members || [];
+            let changed = false;
+
+            const updatedMembers = members.map((m: any) => {
+                if (m.id === secondaryUid || m.accountUid === secondaryUid) {
+                    changed = true;
+                    return {
+                        ...m,
+                        id: m.id === secondaryUid ? primaryUid : m.id,
+                        accountUid: primaryUid,
+                        linkedUserIds: [...new Set([
+                            ...(m.linkedUserIds || []).filter((id: string) => id !== secondaryUid),
+                            primaryUid,
+                        ])],
+                        hasAccount: true,
+                    };
+                }
+                if ((m.linkedUserIds || []).includes(secondaryUid)) {
+                    changed = true;
+                    return {
+                        ...m,
+                        linkedUserIds: [
+                            ...(m.linkedUserIds || []).filter((id: string) => id !== secondaryUid),
+                            primaryUid,
+                        ],
+                    };
+                }
+                return m;
+            });
+
+            // Deduplicate: if primary now has multiple member entries, mark extras
+            const primaryEntries = updatedMembers.filter(
+                (m: any) => m.id === primaryUid || m.accountUid === primaryUid
+            );
+            let finalMembers = updatedMembers;
+            if (primaryEntries.length > 1) {
+                let kept = false;
+                finalMembers = updatedMembers.map((m: any) => {
+                    if (m.id === primaryUid || m.accountUid === primaryUid) {
+                        if (!kept) { kept = true; return m; }
+                        return { ...m, isDuplicate: true };
+                    }
+                    return m;
+                });
+                changed = true;
+            }
+
+            if (changed) {
+                choirUpdates.push({
+                    ref: choirRefs[i],
+                    members: JSON.parse(JSON.stringify(finalMembers))
+                });
+            }
+        }
+
+        // ── CALCULATIONS FOR SERVICES ──
+        interface ServiceUpdate {
+            ref: FirebaseFirestore.DocumentReference;
+            confirmedMembers: string[];
+            absentMembers: string[];
+        }
+        const serviceUpdates: ServiceUpdate[] = [];
+
+        for (let i = 0; i < affectedServiceRefs.length; i++) {
+            const sSnap = serviceSnaps[i];
+            const sRef = affectedServiceRefs[i];
+            if (!sSnap.exists) continue;
+
+            const sData = sSnap.data()!;
+            let newConfirmed = [...(sData.confirmedMembers || [])];
+            let newAbsent = [...(sData.absentMembers || [])];
+            let changed = false;
+
+            if (newConfirmed.includes(secondaryUid)) {
+                newConfirmed = newConfirmed.filter((id: string) => id !== secondaryUid);
+                if (!newConfirmed.includes(primaryUid)) newConfirmed.push(primaryUid);
+                changed = true;
+            }
+            if (newAbsent.includes(secondaryUid)) {
+                newAbsent = newAbsent.filter((id: string) => id !== secondaryUid);
+                if (!newAbsent.includes(primaryUid)) newAbsent.push(primaryUid);
+                changed = true;
+            }
+
+            if (changed) {
+                serviceUpdates.push({
+                    ref: sRef,
+                    confirmedMembers: newConfirmed,
+                    absentMembers: newAbsent
+                });
+            }
+        }
+
+        // ── APPLY WRITES IN ORDER ──
+
+        // Calculate active choir inheritance
+        let mergedChoirId = primary.choirId;
+        let mergedChoirName = primary.choirName;
+        if (!mergedChoirId && secondary.choirId) {
+            mergedChoirId = secondary.choirId;
+            mergedChoirName = secondary.choirName;
+        }
+
+        // WRITE 1: update primary user doc
+        const primaryUpdateObj: any = {
+            fcmTokens: JSON.parse(JSON.stringify(mergedFcmTokens)),
+            memberships: JSON.parse(JSON.stringify(mergedMemberships)),
+            permissions: JSON.parse(JSON.stringify(mergedPermissions)),
+            notificationsEnabled: mergedNotificationsEnabled,
+        };
+        if (mergedRole !== undefined) primaryUpdateObj.role = mergedRole;
+        if (mergedPhoto) primaryUpdateObj.photoURL = mergedPhoto;
+        if (mergedChoirId) primaryUpdateObj.choirId = mergedChoirId;
+        if (mergedChoirName) primaryUpdateObj.choirName = mergedChoirName;
+
+        if (isNewPrimary) {
+            transaction.set(primaryRef, { ...primary, ...primaryUpdateObj });
+        } else {
+            transaction.update(primaryRef, primaryUpdateObj);
+        }
+
+        // WRITE 2: update affected choirs
+        for (const update of choirUpdates) {
+            transaction.update(update.ref, { members: update.members });
+        }
+
+        // WRITE 3: update affected services
+        for (const update of serviceUpdates) {
+            transaction.update(update.ref, {
+                confirmedMembers: update.confirmedMembers,
+                absentMembers: update.absentMembers,
+            });
+        }
+
+        // WRITE 4: backup secondary user (safety snapshot)
+        const backupRef = db.collection("mergeBackups").doc(secondaryUid);
+        transaction.set(backupRef, {
+            ...secondary,
+            mergedInto: primaryUid,
+            mergedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        // WRITE 5: audit log
+        const logRef = db.collection("mergeLogs").doc();
+        transaction.set(logRef, {
+            primaryUid,
+            secondaryUid,
+            status: "success",
+            mergedMemberships: mergedMemberships.length,
+            migratedServices: serviceUpdates.length,
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        // WRITE 6: sync secondary user doc (DO NOT DELETE)
+        transaction.update(secondaryRef, {
+            memberships: JSON.parse(JSON.stringify(mergedMemberships)),
+            linkedTo: primaryUid,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        return {
+            success: true,
+            alreadyMerged: false,
+            mergedMemberships: mergedMemberships.length,
+            migratedServices: serviceUpdates.length,
+        };
+    });
+
+    console.log(`✅ mergeAccounts: ${secondaryUid} → ${primaryUid}`, result);
+    return result;
+});
+
+/**
  * atomicUpdateMember
  * Updates a choir member's details (role, voice, name).
  * Syncs changes to the User document if the member has an account.
@@ -926,7 +1348,20 @@ export const atomicUpdateMember = functions.https.onCall(async (data, context) =
         }
 
         // Update Choir Doc
-        transaction.update(choirRef, { members: updatedMembers });
+        const choirUpdates: any = {
+            members: updatedMembers,
+            membersCount: updatedMembers.length
+        };
+
+        if (updates.role && ['head', 'regent', 'admin'].includes(updates.role)) {
+            choirUpdates.formerAdmins = admin.firestore.FieldValue.arrayUnion(memberId);
+        }
+        if (updatedMembers.length > 0) {
+            choirUpdates.emptySince = admin.firestore.FieldValue.delete();
+            choirUpdates.deletionStage = admin.firestore.FieldValue.delete();
+            choirUpdates.deletionScheduledAt = admin.firestore.FieldValue.delete();
+        }
+        transaction.update(choirRef, choirUpdates);
 
         // If member has account, sync to User Doc
         if (targetUserDoc?.exists && newMember.hasAccount) {
@@ -957,7 +1392,13 @@ export const atomicUpdateMember = functions.https.onCall(async (data, context) =
             if (targetUserData.choirId === choirId) {
                 userUpdates.role = newMember.role;
                 if (updates.voice !== undefined) userUpdates.voice = newMember.voice;
-                if (updates.name !== undefined) userUpdates.name = newMember.name;
+
+                // Only update global name if the user is updating themselves
+                // Regents updating a member's name should only affect the choir roster
+                if (updates.name !== undefined && isSelfUpdate) {
+                    userUpdates.name = newMember.name;
+                }
+
                 if (updates.permissions) {
                     userUpdates.permissions = updates.permissions;
                 }
@@ -1277,7 +1718,6 @@ export const cleanupOldNotifications = functions.pubsub
             console.error("[cleanupOldNotifications] Error:", error);
         }
     });
-
 // --- STATISTICS AGGREGATION ---
 export { onServiceWrite } from "./statsAggregator";
 export { backfillStats } from "./backfillStats";
@@ -1431,8 +1871,24 @@ export const sendNotification = functions.https.onCall(async (data, context) => 
     }
 
     // 3. Build and log payload
+    const choirName = choirData.name || "ChoirHub";
+    const senderName = userData.name || "Regent";
+
+    // Format: "[Choir Name] Title" or just "Choir Name"
+    const pushTitle = title.trim() ? `[${choirName}] ${title.trim()}` : choirName;
+
+    // Format: "SenderName: Body" (unless title is missing, then maybe just body, but let's be consistent)
+    const pushBody = `${senderName}: ${body.trim()}`;
+
     const message = {
-        notification: { title, body },
+        notification: {
+            title: pushTitle,
+            body: pushBody
+        },
+        data: {
+            route: '/notifications',
+            choirId: choirId
+        },
         apns: {
             headers: { "apns-priority": "10", "apns-push-type": "alert" },
             payload: { aps: { sound: "default", badge: 1 } },
@@ -1533,3 +1989,295 @@ export const sendNotification = functions.https.onCall(async (data, context) => 
         errors
     };
 });
+
+// --- SAFE INACTIVE CHOIR CLEANUP SYSTEM ---
+
+const DRY_RUN = true; // When true, Stage 4 logs but does NOT delete anything
+
+const EMPTY_GRACE_DAYS = 60;
+const WARNING_GRACE_DAYS = 7;
+const ARCHIVE_GRACE_DAYS = 30;
+const MAX_DELETIONS_PER_RUN = 5;
+
+/**
+ * processInactiveChoirs
+ * State machine to safely clean up abandoned/empty choirs.
+ * Runs once a day. Max 5 choirs processed per run to prevent timeout/quota issues.
+ */
+export const processInactiveChoirs = functions.pubsub
+    .schedule("every 24 hours")
+    .onRun(async (context) => {
+        const runTimestamp = admin.firestore.FieldValue.serverTimestamp();
+        let processedCount = 0;
+
+        async function checkKillSwitch() {
+            const doc = await db.collection("systemSettings").doc("cleanup").get();
+            if (!doc.exists || doc.data()?.enabled !== true) {
+                throw new Error("Cleanup disabled via kill switch");
+            }
+        }
+
+        // Check initially
+        await checkKillSwitch();
+
+        // --- STAGE 4: PERMANENT DELETE (from archivedChoirs) ---
+        // Do this first to free up space.
+        await checkKillSwitch();
+
+        const archiveThreshold = admin.firestore.Timestamp.fromDate(new Date(Date.now() - ARCHIVE_GRACE_DAYS * 24 * 60 * 60 * 1000));
+        const toDeleteSnap = await db.collection("archivedChoirs")
+            .where("deletionStage", "==", "archived")
+            .where("archivedAt", "<", archiveThreshold)
+            .orderBy("archivedAt", "asc")
+            .limit(MAX_DELETIONS_PER_RUN)
+            .get();
+
+        for (const doc of toDeleteSnap.docs) {
+            if (processedCount >= MAX_DELETIONS_PER_RUN) break;
+            const choirId = doc.id;
+            const data = doc.data();
+
+            console.log(JSON.stringify({
+                stage: "HARD_DELETE_ATTEMPT",
+                choirId,
+                membersCount: data.membersCount,
+                deletionStage: data.deletionStage,
+                emptySince: data.emptySince?.toDate(),
+                archivedAt: data.archivedAt?.toDate(),
+                timestamp: new Date().toISOString()
+            }));
+
+            // Multi-Layer Safety Gate
+            if (
+                data.membersCount !== 0 ||
+                data.deletionStage !== "archived" ||
+                !data.emptySince ||
+                !data.archivedAt ||
+                data.archivedAt.toMillis() >= archiveThreshold.toMillis()
+            ) {
+                console.log(`[STAGE 4 ABORT] Choir ${choirId} failed safety gate.`);
+                continue;
+            }
+
+            // --- DRY RUN GUARD ---
+            if (DRY_RUN) {
+                console.log("[STAGE 4] DRY RUN ACTIVE — No permanent deletion executed");
+                console.log(JSON.stringify({
+                    dryRun: true,
+                    choirId,
+                    membersCount: data.membersCount,
+                    deletionStage: data.deletionStage,
+                    emptySince: data.emptySince?.toDate(),
+                    archivedAt: data.archivedAt?.toDate(),
+                    wouldDeleteR2: true,
+                    wouldDeleteFirestore: true,
+                    timestamp: new Date().toISOString()
+                }));
+                processedCount++;
+                continue;
+            }
+
+            console.log(`[STAGE 4] Permanently deleting archived choir: ${choirId}`);
+
+            await checkKillSwitch(); // Right before R2
+
+            // 1. Delete associated R2 storage directory
+            // This will THROW if it fails. We want that so Firestore delete doesn't run.
+            await deleteR2Directory(`choirs/${choirId}/`);
+
+            await checkKillSwitch(); // Right before Firestore delete
+
+            // 2. Delete ALL subcollections deeply
+            // `firebase-admin` supports recursive delete:
+            await db.recursiveDelete(db.collection("archivedChoirs").doc(choirId));
+            console.log(`[STAGE 4] Successfully deleted archived choir ${choirId}`);
+            processedCount++;
+        }
+
+        if (processedCount >= MAX_DELETIONS_PER_RUN) return null;
+
+        // --- STAGE 2 & 3: SCHEDULED -> ARCHIVE ---
+        await checkKillSwitch();
+
+        const scheduledThreshold = admin.firestore.Timestamp.fromDate(new Date(Date.now() - WARNING_GRACE_DAYS * 24 * 60 * 60 * 1000));
+        const toArchiveSnap = await db.collection("choirs")
+            .where("membersCount", "==", 0)
+            .where("deletionStage", "==", "scheduled")
+            .where("deletionScheduledAt", "<", scheduledThreshold)
+            .orderBy("deletionScheduledAt", "asc")
+            .limit(MAX_DELETIONS_PER_RUN - processedCount)
+            .get();
+
+        for (const doc of toArchiveSnap.docs) {
+            if (processedCount >= MAX_DELETIONS_PER_RUN) break;
+            const choirId = doc.id;
+
+            // RE-VALIDATE IN TRANSACTION
+            await db.runTransaction(async (transaction) => {
+                const liveSnap = await transaction.get(doc.ref);
+                if (!liveSnap.exists) return;
+                const data = liveSnap.data()!;
+
+                // ABORT check
+                if (data.membersCount !== 0 || data.deletionStage !== "scheduled") {
+                    console.log(`[STAGE 2/3 ABORT] Choir ${choirId} changed state. membersCount=${data.membersCount}, stage=${data.deletionStage}`);
+                    return;
+                }
+
+                console.log(`[STAGE 2/3] Archiving choir: ${choirId}`);
+
+                // STAGE 3: COPY TO ARCHIVED (Metadata only)
+                const archiveRef = db.collection("archivedChoirs").doc(choirId);
+                const archivedData = {
+                    ...data,
+                    deletionStage: "archived",
+                    archivedAt: runTimestamp
+                };
+                transaction.set(archiveRef, archivedData);
+
+                // STAGE 3: DELETE ORIGINAL DOC (Keep subcollections dangling, they'll be deleted in STAGE 4 along with archive copy)
+                transaction.delete(doc.ref);
+            });
+            processedCount++;
+        }
+
+        if (processedCount >= MAX_DELETIONS_PER_RUN) return null;
+
+        // --- STAGE 1: EMPTY -> SCHEDULED ---
+        await checkKillSwitch();
+
+        const emptyThreshold = admin.firestore.Timestamp.fromDate(new Date(Date.now() - EMPTY_GRACE_DAYS * 24 * 60 * 60 * 1000));
+        const toScheduleSnap = await db.collection("choirs")
+            .where("membersCount", "==", 0)
+            .where("deletionStage", "==", "empty")
+            .where("emptySince", "<", emptyThreshold)
+            .orderBy("emptySince", "asc")
+            .limit(MAX_DELETIONS_PER_RUN - processedCount)
+            .get();
+
+        for (const doc of toScheduleSnap.docs) {
+            if (processedCount >= MAX_DELETIONS_PER_RUN) break;
+            const choirId = doc.id;
+            const choirName = doc.data().name || "Unknown";
+
+            // Validate via transaction
+            await db.runTransaction(async (transaction) => {
+                const liveSnap = await transaction.get(doc.ref);
+                if (!liveSnap.exists) return;
+                const data = liveSnap.data()!;
+
+                if (data.membersCount !== 0 || data.deletionStage !== "empty") {
+                    return;
+                }
+
+                console.log(`[STAGE 1] Scheduling choir for deletion: ${choirId}`);
+                transaction.update(doc.ref, {
+                    deletionStage: "scheduled",
+                    deletionScheduledAt: runTimestamp
+                });
+            });
+
+            // SEND NOTIFICATIONS
+            // Load deterministic targets instead of querying the global users collection
+            const liveChoirSnap = await db.collection("choirs").doc(choirId).get();
+            const liveChoirData = liveChoirSnap.data() || {};
+
+            const targetIds = new Set<string>();
+            if (liveChoirData.creatorId) targetIds.add(liveChoirData.creatorId);
+            if (Array.isArray(liveChoirData.formerAdmins)) {
+                liveChoirData.formerAdmins.forEach((id: string) => targetIds.add(id));
+            }
+
+            const tokens: string[] = [];
+
+            // Load explicitly targeted users safely
+            for (const adminId of targetIds) {
+                try {
+                    const adminDoc = await db.collection("users").doc(adminId).get();
+                    if (!adminDoc.exists) continue;
+
+                    const t = adminDoc.data()?.fcmTokens || [];
+                    tokens.push(...t);
+
+                    // Write in-app notification
+                    await db.collection(`users/${adminId}/notifications`).add({
+                        title: "⚠️ Видалення хору",
+                        body: `Ваш хор '${choirName}' буде видалено через 7 днів через неактивність. Додайте хоча б одного учасника, щоб скасувати видалення.`,
+                        type: "alert",
+                        read: false,
+                        createdAt: runTimestamp,
+                        choirId: choirId
+                    });
+                } catch (e) {
+                    console.error(`Failed to process notification for former admin ${adminId}:`, e);
+                }
+            }
+
+            if (tokens.length > 0) {
+                const uniqueTokens = [...new Set(tokens)];
+                try {
+                    await admin.messaging().sendEachForMulticast({
+                        tokens: uniqueTokens,
+                        notification: {
+                            title: "⚠️ Хор під загрозою видалення",
+                            body: `Хор '${choirName}' буде видалено через 7 днів. Додайте учасника, щоб скасувати!`
+                        }
+                    });
+                } catch (e) {
+                    console.error(`Failed to send push notifications for scheduled deletion of ${choirId}:`, e);
+                }
+            }
+
+            processedCount++;
+        }
+
+        return null;
+    });
+
+/**
+ * Helper to delete an entire folder from R2 bucket.
+ */
+async function deleteR2Directory(prefix: string): Promise<void> {
+    const bucketName = process.env.R2_BUCKET_NAME;
+    if (!bucketName) {
+        console.warn("deleteR2Directory: R2_BUCKET_NAME not set. Skipping.");
+        return;
+    }
+
+    const r2Client = new S3Client({
+        region: "auto",
+        endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+        credentials: {
+            accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+            secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!
+        }
+    });
+
+    // Loop to handle pagination if there are more than 1000 objects
+    let isTruncated = true;
+    let continuationToken: string | undefined = undefined;
+
+    while (isTruncated) {
+        const listCommand: ListObjectsV2Command = new ListObjectsV2Command({
+            Bucket: bucketName,
+            Prefix: prefix,
+            ContinuationToken: continuationToken
+        });
+        const listResponse = await r2Client.send(listCommand);
+
+        const objects = listResponse.Contents;
+        if (objects && objects.length > 0) {
+            const deleteCommand = new DeleteObjectsCommand({
+                Bucket: bucketName,
+                Delete: {
+                    Objects: objects.map(o => ({ Key: o.Key }))
+                }
+            });
+            await r2Client.send(deleteCommand);
+            console.log(`deleteR2Directory: Deleted ${objects.length} files from ${prefix}`);
+        }
+
+        isTruncated = listResponse.IsTruncated || false;
+        continuationToken = listResponse.NextContinuationToken;
+    }
+}

@@ -56,9 +56,16 @@ if (typeof window !== "undefined") {
 // Helper function to get messaging instance (for use in hooks)
 export const getMessagingInstance = async (): Promise<Messaging | null> => {
     if (typeof window === "undefined") return null;
+    if (messaging) return messaging;
     const supported = await isMessagingSupported();
     if (!supported) return null;
-    return getMessaging(app);
+    try {
+        messaging = getMessaging(app);
+        return messaging;
+    } catch (e) {
+        console.warn("[Firebase] Messaging init failed:", e);
+        return null;
+    }
 };
 
 export { app, db, auth, storage, messaging, getToken, onMessage, functions };

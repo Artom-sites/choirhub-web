@@ -7,7 +7,18 @@ export interface PencilKitAnnotatorPlugin {
         songId: string;
         userUid: string;
         title?: string;
-    }): Promise<void>;
+        isArchive?: boolean;
+    }): Promise<{ action: string }>;
+
+    addListener(
+        eventName: 'onArchiveAdd',
+        listenerFunc: (info: { songId: string }) => void
+    ): Promise<import('@capacitor/core').PluginListenerHandle> & import('@capacitor/core').PluginListenerHandle;
+
+    addListener(
+        eventName: 'onSettingsTapped',
+        listenerFunc: (info: { songId: string }) => void
+    ): Promise<import('@capacitor/core').PluginListenerHandle> & import('@capacitor/core').PluginListenerHandle;
 }
 
 export const PencilKitAnnotator = registerPlugin<PencilKitAnnotatorPlugin>('PencilKitAnnotator');

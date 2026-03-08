@@ -15,12 +15,16 @@ import {
     User as FirebaseUser,
     signInWithCredential,
     OAuthProvider,
-    browserPopupRedirectResolver
+    browserPopupRedirectResolver,
+    linkWithCredential,
+    fetchSignInMethodsForEmail,
+    AuthCredential
 } from "firebase/auth";
 import { Capacitor } from "@capacitor/core";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { app, auth } from "@/lib/firebase";
 import { getUserProfile, createUser, getChoir } from "@/lib/db";
+import { getFunctions, httpsCallable } from "firebase/functions";
 import { UserData } from "@/types";
 
 interface AuthContextType {
@@ -37,6 +41,10 @@ interface AuthContextType {
     refreshProfile: () => Promise<void>;
     isGuest: boolean;
     setFcmToken: (token: string | null) => void;
+    updateActiveChoir: (choirId: string) => Promise<void>;
+    pendingCredential: AuthCredential | null;
+    existingMethod: string | null;
+    clearPendingCredential: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -47,8 +55,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [loading, setLoading] = useState(true);
     const googleLoginLock = useRef(false);
     const appleLoginLock = useRef(false);
+    const skipAutoCreate = useRef(false);
 
     const [fcmToken, setFcmToken] = useState<string | null>(null);
+    const [pendingCredential, setPendingCredential] = useState<AuthCredential | null>(null);
+    const [existingMethod, setExistingMethod] = useState<string | null>(null);
 
     useEffect(() => {
 
@@ -65,6 +76,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
                     if (profile) {
                         setUserData(profile);
+                    } else if (skipAutoCreate.current) {
+                        // Account linking in progress — DO NOT create a new users/{uid}
+                        console.log("[Auth] skipAutoCreate is set — not creating profile for:", firebaseUser.uid);
+                        skipAutoCreate.current = false;
+                        setUserData(null);
                     } else if (!firebaseUser.isAnonymous) {
                         // Auto-create profile for Google/Apple/Email users on first login
                         console.log("Creating profile for new user:", firebaseUser.uid);
@@ -94,6 +110,83 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         return () => unsubscribe();
     }, []);
+
+    // Helper to handle account-exists-with-different-credential
+    const handleAccountLinkingError = async (error: any) => {
+        if (error.code === 'auth/account-exists-with-different-credential') {
+            const email = error.customData?.email;
+            const pendingCred = error.credential;
+
+            // Apple relay emails are unique per app — email-based linking won't work
+            if (email?.endsWith('@privaterelay.appleid.com')) {
+                console.warn("[Auth] Apple relay email detected — skipping linking flow");
+                const { Dialog } = await import("@capacitor/dialog");
+                await Dialog.alert({
+                    title: "Приватний Apple Email",
+                    message: "Оскільки ви використали приватну адресу під час реєстрації, система не змогла автоматично розпізнати попередні акаунти."
+                });
+                return;
+            }
+
+            if (pendingCred && email) {
+                // Prevent auto-creation of users/{uid} when user re-logs with existing provider
+                skipAutoCreate.current = true;
+                setPendingCredential(pendingCred);
+                try {
+                    const methods = await fetchSignInMethodsForEmail(auth, email);
+                    const method = methods[0]; // e.g., 'google.com' or 'apple.com'
+                    setExistingMethod(method);
+
+                    let providerName = 'іншим методом';
+                    if (method === 'google.com') providerName = 'Google';
+                    else if (method === 'apple.com') providerName = 'Apple';
+                    else if (method === 'password') providerName = 'Email/Пароль';
+
+                    const { Dialog } = await import("@capacitor/dialog");
+                    await Dialog.alert({
+                        title: "Акаунт вже існує",
+                        message: `Ви вже заходили в систему через ${providerName} з цією поштою (${email}). Будь ласка, увійдіть спочатку через ${providerName}, і ми автоматично додамо цей спосіб входу.`
+                    });
+                } catch (e) {
+                    console.error("Error fetching methods:", e);
+                    // fetchSignInMethodsForEmail can fail due to email enumeration protection
+                    // Still show a generic dialog
+                    const { Dialog } = await import("@capacitor/dialog");
+                    await Dialog.alert({
+                        title: "Акаунт вже існує",
+                        message: `Акаунт з цією поштою (${email}) вже існує. Увійдіть через попередній метод (Google, Apple, або Email), і ми автоматично додамо новий спосіб входу.`
+                    });
+                }
+            }
+        }
+    };
+
+    // Auto-link after successful login with existing provider
+    useEffect(() => {
+        if (user && pendingCredential) {
+            console.log("[Auth] Attempting to link pending credential to current user...");
+            linkWithCredential(user, pendingCredential)
+                .then(async () => {
+                    console.log("[Auth] Successfully linked account!");
+                    setPendingCredential(null);
+                    setExistingMethod(null);
+                    // Reload existing profile — don't create a new one
+                    await user.getIdToken(true);
+                    await loadUserProfile(user.uid);
+                })
+                .catch((error) => {
+                    if (error.code === 'auth/credential-already-in-use') {
+                        console.warn("[Auth] Credential already linked to another account.");
+                    } else if (error.code === 'auth/provider-already-linked') {
+                        console.warn("[Auth] Provider already linked to this account.");
+                    } else {
+                        console.error("[Auth] Error linking credential:", error);
+                    }
+                    setPendingCredential(null);
+                    setExistingMethod(null);
+                });
+        }
+    }, [user, pendingCredential]);
 
     const loadUserProfile = async (uid: string) => {
         const profile = await getUserProfile(uid);
@@ -126,6 +219,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.error("Error signing in with Google:", error);
             if (error.code === 'auth/popup-closed-by-user' || error.errorMessage?.includes("canceled")) {
                 console.warn("User closed the Google login popup or browser blocked it.");
+            } else if (error.code === 'auth/account-exists-with-different-credential') {
+                await handleAccountLinkingError(error);
             }
             throw error;
         } finally {
@@ -140,6 +235,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         appleLoginLock.current = true;
         try {
+            // One-time warning about Private Relay / Hide My Email
+            const { Preferences } = await import('@capacitor/preferences');
+            const { value: hasSeenWarning } = await Preferences.get({ key: 'apple_relay_warning_seen' });
+
+            if (!hasSeenWarning) {
+                const { Dialog } = await import('@capacitor/dialog');
+                const { value } = await Dialog.confirm({
+                    title: "Порада щодо Apple ID",
+                    message: "Якщо ви вже раніше входили іншим методом і ваші пошти однакові, то НЕ використовуйте підміну пошти для того, щоб зберегти та синхронізувати інформацію.",
+                    okButtonTitle: "Зрозуміло",
+                    cancelButtonTitle: "Скасувати"
+                });
+
+                if (!value) {
+                    appleLoginLock.current = false;
+                    return; // User cancelled before even triggering the sheet
+                }
+
+                // Mark as seen so they aren't bothered again on this device
+                await Preferences.set({ key: 'apple_relay_warning_seen', value: 'true' });
+            }
+
             if (Capacitor.getPlatform() === 'web') {
                 const provider = new OAuthProvider('apple.com');
                 await signInWithPopup(auth, provider, browserPopupRedirectResolver);
@@ -174,6 +291,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             // 3. If it's a REAL error (network, invalid nonce, Firebase issue), log and throw
             console.error("[Auth] Real error signing in with Apple:", error);
+            if (error.code === 'auth/account-exists-with-different-credential') {
+                await handleAccountLinkingError(error);
+            }
             throw error;
         } finally {
             appleLoginLock.current = false;
@@ -206,8 +326,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             // Reload user data to ensure context updates
             await loadUserProfile(userCredential.user.uid);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error signing up with Email:", error);
+            if (error.code === 'auth/email-already-in-use') {
+                try {
+                    const methods = await fetchSignInMethodsForEmail(auth, email);
+                    if (methods.length > 0) {
+                        const method = methods[0];
+                        let providerName = 'іншим методом';
+                        if (method === 'google.com') providerName = 'Google';
+                        else if (method === 'apple.com') providerName = 'Apple';
+
+                        const { Dialog } = await import("@capacitor/dialog");
+                        await Dialog.alert({
+                            title: "Акаунт вже існує",
+                            message: `Ця пошта вже зареєстрована через ${providerName}. Будь ласка, увійдіть через ${providerName}.`
+                        });
+                    }
+                } catch (e) {
+                    console.error("Error fetching methods in signup:", e);
+                }
+            }
             throw error;
         }
     };
@@ -258,6 +397,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    const updateActiveChoir = async (choirId: string) => {
+        if (!user || !userData) return;
+        const membership = (userData.memberships || []).find((m: any) => m.choirId === choirId);
+        if (!membership) throw new Error("User is not a member of this choir");
+
+        try {
+            const { doc, updateDoc, getFirestore } = await import("firebase/firestore");
+            const db = getFirestore(app);
+            await updateDoc(doc(db, "users", user.uid), {
+                choirId: membership.choirId,
+                choirName: membership.choirName,
+                role: membership.role,
+                updatedAt: new Date().toISOString()
+            });
+
+            // Reload user data to ensure context updates
+            await loadUserProfile(user.uid);
+
+            // Force claims refresh
+            await user.getIdToken(true);
+        } catch (error) {
+            console.error("Error updating active choir:", error);
+            throw error;
+        }
+    };
+
+
     return (
         <AuthContext.Provider value={{
             user,
@@ -278,7 +444,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 }
             },
             isGuest: user?.isAnonymous ?? false,
-            setFcmToken // Exposed for useFcmToken hook
+            setFcmToken, // Exposed for useFcmToken hook
+            updateActiveChoir,
+            pendingCredential,
+            existingMethod,
+            clearPendingCredential: () => {
+                setPendingCredential(null);
+                setExistingMethod(null);
+            },
         }}>
             {children}
         </AuthContext.Provider>

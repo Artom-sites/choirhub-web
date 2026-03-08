@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Capacitor } from "@capacitor/core";
 import { Dialog } from '@capacitor/dialog';
@@ -12,7 +12,7 @@ import { Virtuoso, TableVirtuoso } from 'react-virtuoso';
 import Fuse from 'fuse.js';
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { addSong, uploadSongPdf, deleteSong, addKnownConductor, updateSong, softDeleteLocalSong, restoreLocalSong } from "@/lib/db";
+import { addSong, uploadSongPdf, uploadSongParts, deleteSong, addKnownConductor, updateSong, softDeleteLocalSong, restoreLocalSong } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRepertoire } from "@/contexts/RepertoireContext";
 import AddSongModal from "./AddSongModal";
@@ -71,6 +71,7 @@ export default function SongList({
     const [deletingSongId, setDeletingSongId] = useState<string | null>(null);
     const [toast, setToast] = useState<{ message: string; type: "success" | "error"; actionLabel?: string; onAction?: () => void } | null>(null);
     const [isNative, setIsNative] = useState(false);
+    const editClickGuardRef = useRef(false);
 
     useEffect(() => {
         setIsNative(Capacitor.isNativePlatform());
@@ -113,7 +114,25 @@ export default function SongList({
     const filteredSongs = useMemo(() => {
         let results = songs;
         if (search.trim()) {
-            results = fuse.search(search).map(r => r.item);
+            const query = search.trim().toLowerCase();
+            const fuseResults = fuse.search(search).map(r => r.item);
+
+            // Tier 1: Title starts with the search term
+            const startsWithMatches = songs
+                .filter(s => s.title.toLowerCase().startsWith(query))
+                .sort((a, b) => a.title.localeCompare(b.title, 'uk'));
+            const startsWithIds = new Set(startsWithMatches.map(s => s.id));
+
+            // Tier 2: Title contains the search term (but doesn't start with it)
+            const containsMatches = songs
+                .filter(s => !startsWithIds.has(s.id) && s.title.toLowerCase().includes(query))
+                .sort((a, b) => a.title.localeCompare(b.title, 'uk'));
+            const containsIds = new Set(containsMatches.map(s => s.id));
+
+            // Tier 3: Other fuzzy matches from Fuse.js
+            const fuzzyMatches = fuseResults.filter(s => !startsWithIds.has(s.id) && !containsIds.has(s.id));
+
+            results = [...startsWithMatches, ...containsMatches, ...fuzzyMatches];
         }
         if (selectedCategory !== "All") {
             results = results.filter(s => s.category === selectedCategory);
@@ -128,6 +147,11 @@ export default function SongList({
     const songsWithPdf = songs.filter(s => s.hasPdf).length;
 
     const handleSongClick = (song: SimpleSong) => {
+        // Guard: skip if three-dots (edit) button was just tapped
+        if (editClickGuardRef.current) {
+            editClickGuardRef.current = false;
+            return;
+        }
         if (song.hasPdf || effectiveCanAdd) {
             // Background cache: silently cache the PDF for offline access
             if (song.hasPdf) {
@@ -172,29 +196,49 @@ export default function SongList({
                 })();
             }
 
-            // iOS online: open native PDF viewer directly — no preloader
-            if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios' && song.hasPdf && navigator.onLine) {
-                const pdfUrl = song.parts?.[0]?.pdfUrl || song.pdfUrl;
-                if (pdfUrl) {
-                    const partsData = (song.parts && song.parts.length > 0)
-                        ? song.parts.map((p: any) => ({ name: p.name || 'Part', pdfUrl: p.pdfUrl }))
-                        : [{ name: 'Головна', pdfUrl }];
+            // iOS native: open native PDF viewer (works both online and offline)
+            if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios' && song.hasPdf) {
+                (async () => {
+                    try {
+                        // Try IndexedDB cache first (works offline)
+                        const { getPdfParts } = await import('@/lib/offlineDb');
+                        const cachedParts = await getPdfParts(song.id);
 
-                    PencilKitAnnotator.openNativePdfViewer({
-                        parts: partsData,
-                        initialPartIndex: 0,
-                        songId: song.id,
-                        userUid: userData?.id || 'anonymous',
-                        title: song.title,
-                    }).catch(e => console.error('[NativePdf] Error:', e));
-                    return;
-                }
+                        let partsData: { name: string; pdfUrl: string }[];
+
+                        if (cachedParts && cachedParts.length > 0) {
+                            // Use cached base64 data — works offline
+                            partsData = cachedParts.map(p => ({ name: p.name || 'Головна', pdfUrl: p.pdfBase64 }));
+                        } else {
+                            // Use remote URLs — requires internet
+                            const pdfUrl = song.parts?.[0]?.pdfUrl || song.pdfUrl;
+                            if (!pdfUrl) {
+                                router.push(`/song?id=${song.id}`);
+                                return;
+                            }
+                            partsData = (song.parts && song.parts.length > 0)
+                                ? song.parts.map((p: any) => ({ name: p.name || 'Part', pdfUrl: p.pdfUrl }))
+                                : [{ name: 'Головна', pdfUrl }];
+                        }
+
+                        await PencilKitAnnotator.openNativePdfViewer({
+                            parts: partsData,
+                            initialPartIndex: 0,
+                            songId: song.id,
+                            userUid: userData?.id || 'anonymous',
+                            title: song.title,
+                        });
+                    } catch (e) {
+                        console.error('[NativePdf] Error:', e);
+                    }
+                })();
+                return;
             }
             router.push(`/song?id=${song.id}`);
         }
     };
 
-    const handleAddSong = async (song: Omit<SimpleSong, 'id' | 'addedBy' | 'addedAt'>, pdfFile?: File): Promise<void> => {
+    const handleAddSong = async (song: Omit<SimpleSong, 'id' | 'addedBy' | 'addedAt'>, pdfFiles?: { name: string; file: File }[]): Promise<void> => {
         if (!userData?.choirId) return;
         const normalizedTitle = song.title.trim().toLowerCase();
         const duplicate = songs.find((s: SimpleSong) => s.title.trim().toLowerCase() === normalizedTitle);
@@ -206,8 +250,14 @@ export default function SongList({
         }
 
         const newSongId = await addSong(userData.choirId, { ...song, addedAt: new Date().toISOString() });
-        if (pdfFile) {
-            try { await uploadSongPdf(userData.choirId, newSongId, pdfFile); } catch (e) { console.error(e); await Dialog.alert({ title: "Помилка", message: "Пісню створено, але PDF не завантажився." }); }
+        if (pdfFiles && pdfFiles.length > 0) {
+            try {
+                if (pdfFiles.length === 1) {
+                    await uploadSongPdf(userData.choirId, newSongId, pdfFiles[0].file);
+                } else {
+                    await uploadSongParts(userData.choirId, newSongId, pdfFiles);
+                }
+            } catch (e) { console.error(e); await Dialog.alert({ title: "Помилка", message: "Пісню створено, але PDF не завантажився." }); }
         }
         await refreshRepertoire();
         if (onRefresh) onRefresh();
@@ -250,7 +300,10 @@ export default function SongList({
 
     const handleEditClick = (e: React.MouseEvent, song: SimpleSong) => {
         e.preventDefault(); e.stopPropagation();
-        router.push(`/song?id=${song.id}&edit=1`);
+        editClickGuardRef.current = true;
+        // Reset guard after a tick in case handleSongClick doesn't fire
+        setTimeout(() => { editClickGuardRef.current = false; }, 100);
+        router.push(`/song?id=${song.id}&info=1`);
     };
 
     const handleEditSave = async (updates: Partial<SimpleSong>) => {
@@ -328,7 +381,7 @@ export default function SongList({
 
             {/* Catalog View */}
             {choirType !== 'standard' && (
-                <div className={subTab === 'catalog' ? 'block h-full' : 'hidden'}>
+                <div data-subtab="catalog" className={subTab === 'catalog' ? 'block h-full' : 'hidden'}>
                     <GlobalArchive
                         isOverlayOpen={isOverlayOpen}
                         onAddSong={canAddSongs ? async (globalSong) => {
@@ -481,23 +534,25 @@ export default function SongList({
                                         itemContent={(index, song) => {
                                             if (!song) return null;
                                             return (
-                                                <SwipeableCard key={song.id} disabled={!effectiveCanAdd} onDelete={() => initiateDelete(null, song.id)} className="border-b border-border/30" contentClassName="bg-background" disableFullSwipe={true}>
-                                                    <div className="grid grid-cols-[1fr_180px_180px_60px] gap-4 py-3 pl-0 pr-4 hover:bg-surface items-center cursor-pointer transition-colors relative z-10" onClick={() => handleSongClick(song)}>
-                                                        <div className="flex items-center gap-3 min-w-0">
-                                                            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-text-primary">
-                                                                {song.hasPdf ? <Eye className="w-4 h-4 text-background" /> : <FileText className="w-4 h-4 text-background" />}
+                                                <div style={{ minHeight: '40px' }}>
+                                                    <SwipeableCard key={song.id} disabled={!effectiveCanAdd} onDelete={() => initiateDelete(null, song.id)} className="border-b border-border/30" contentClassName="bg-background" disableFullSwipe={true}>
+                                                        <div className="grid grid-cols-[1fr_180px_180px_60px] gap-4 py-3 pl-0 pr-4 hover:bg-surface items-center cursor-pointer transition-colors relative z-10" onClick={() => handleSongClick(song)}>
+                                                            <div className="flex items-center gap-3 min-w-0">
+                                                                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-text-primary">
+                                                                    {song.hasPdf ? <Eye className="w-4 h-4 text-background" /> : <FileText className="w-4 h-4 text-background" />}
+                                                                </div>
+                                                                <p className="font-semibold text-text-primary truncate">{song.title}</p>
                                                             </div>
-                                                            <p className="font-semibold text-text-primary truncate">{song.title}</p>
+                                                            <div className="truncate"><span className="text-sm text-text-secondary">{song.category}</span></div>
+                                                            <div className="truncate">
+                                                                {song.conductor ? <div className="flex items-center gap-1.5 text-sm text-primary font-medium"><User className="w-3.5 h-3.5" /><span>{song.conductor}</span></div> : <span className="text-sm text-text-secondary/50">—</span>}
+                                                            </div>
+                                                            <div className="flex justify-end">
+                                                                {effectiveCanAdd && <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleEditClick(e, song); }} className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface transition-colors" title="Детальніше"><MoreVertical className="w-5 h-5" /></button>}
+                                                            </div>
                                                         </div>
-                                                        <div className="truncate"><span className="text-sm text-text-secondary">{song.category}</span></div>
-                                                        <div className="truncate">
-                                                            {song.conductor ? <div className="flex items-center gap-1.5 text-sm text-primary font-medium"><User className="w-3.5 h-3.5" /><span>{song.conductor}</span></div> : <span className="text-sm text-text-secondary/50">—</span>}
-                                                        </div>
-                                                        <div className="flex justify-end">
-                                                            {effectiveCanAdd && <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleEditClick(e, song); }} className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface transition-colors" title="Детальніше"><MoreVertical className="w-5 h-5" /></button>}
-                                                        </div>
-                                                    </div>
-                                                </SwipeableCard>
+                                                    </SwipeableCard>
+                                                </div>
                                             );
                                         }}
                                     />
@@ -513,30 +568,27 @@ export default function SongList({
                                         itemContent={(index, song) => {
                                             if (!song) return <div style={{ height: 60 }} />;
                                             return (
-                                                <SwipeableCard key={song.id} disabled={!effectiveCanAdd} onDelete={() => initiateDelete(null, song.id)} className="border-b border-border/30" contentClassName="bg-background" backgroundClassName="rounded-2xl" disableFullSwipe={!Capacitor.isNativePlatform()}>
-                                                    <div onClick={() => handleSongClick(song)} className="flex items-center gap-3 py-3 px-0 bg-background cursor-pointer relative z-10">
-                                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-text-primary">
-                                                            {song.hasPdf ? <Eye className="w-5 h-5 text-background" /> : <FileText className="w-5 h-5 text-background" />}
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="font-semibold text-text-primary truncate">{song.title}</p>
-                                                            <div className="flex items-center gap-1.5 mt-0.5">
-                                                                {song.conductor && <span className="text-xs text-primary font-medium flex items-center gap-1"><User className="w-3 h-3" />{song.conductor}</span>}
-                                                                {song.conductor && <span className="text-xs text-text-secondary">•</span>}
-                                                                <span className="text-xs text-text-secondary">{song.category}</span>
+                                                <div style={{ minHeight: '60px' }}>
+                                                    <SwipeableCard key={song.id} disabled={!effectiveCanAdd} onDelete={() => initiateDelete(null, song.id)} className="border-b border-border/30" contentClassName="bg-background" backgroundClassName="rounded-2xl" disableFullSwipe={!Capacitor.isNativePlatform()}>
+                                                        <div onClick={() => handleSongClick(song)} className="flex items-center gap-3 py-3 px-0 bg-background cursor-pointer relative z-10">
+                                                            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-text-primary">
+                                                                {song.hasPdf ? <Eye className="w-5 h-5 text-background" /> : <FileText className="w-5 h-5 text-background" />}
                                                             </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="font-semibold text-text-primary truncate">{song.title}</p>
+                                                                <div className="flex items-center gap-1.5 mt-0.5">
+                                                                    {song.conductor && <span className="text-xs text-primary font-medium flex items-center gap-1"><User className="w-3 h-3" />{song.conductor}</span>}
+                                                                    {song.conductor && <span className="text-xs text-text-secondary">•</span>}
+                                                                    <span className="text-xs text-text-secondary">{song.category}</span>
+                                                                </div>
+                                                            </div>
+                                                            {effectiveCanAdd && <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleEditClick(e, song); }} className="p-2 rounded-lg text-text-secondary hover:text-text-primary active:scale-95 transition-transform" title="Детальніше"><MoreVertical className="w-5 h-5" /></button>}
                                                         </div>
-                                                        {effectiveCanAdd && <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleEditClick(e, song); }} className="p-2 rounded-lg text-text-secondary hover:text-text-primary active:scale-95 transition-transform" title="Детальніше"><MoreVertical className="w-5 h-5" /></button>}
-                                                    </div>
-                                                </SwipeableCard>
+                                                    </SwipeableCard>
+                                                </div>
                                             )
                                         }}
                                     />
-                                </div>
-                            )}
-                            {choirType !== 'standard' && subTab === 'catalog' && (
-                                <div className="absolute inset-0 bg-background overflow-hidden">
-                                    <GlobalArchive onAddSong={handleAddSong} isOverlayOpen={isOverlayOpen} initialSearchQuery={pendingArchiveQuery} />
                                 </div>
                             )}
                         </>
@@ -592,7 +644,7 @@ export default function SongList({
 
             {/* Floating Add Button */}
             {canAddSongs && subTab === 'repertoire' && setShowAddModal && !showAddModal && !isOverlayOpen && (
-                <button onClick={() => setShowAddModal(true)} className="fixed w-14 h-14 bg-primary text-background rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60] right-4" style={{ bottom: 'var(--fab-bottom)' }} title="Додати пісню">
+                <button onClick={() => setShowAddModal(true)} className="app-fab fixed w-14 h-14 bg-primary text-background rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60] right-4" style={{ bottom: 'var(--fab-bottom)' }} title="Додати пісню">
                     <Plus className="w-7 h-7" />
                 </button>
             )}

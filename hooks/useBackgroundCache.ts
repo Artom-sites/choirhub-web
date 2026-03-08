@@ -6,6 +6,7 @@ import { getUpcomingServices, getSongsByIds } from '@/lib/db';
 import { useOfflineCache } from './useOfflineCache';
 import { useRepertoire } from '@/contexts/RepertoireContext';
 import { useRouter } from 'next/navigation';
+import { Capacitor } from '@capacitor/core';
 
 /**
  * Background caching hook that automatically caches 
@@ -22,8 +23,9 @@ export function useBackgroundCache() {
     const hasRunRef = useRef(false);
 
     useEffect(() => {
-        // Only run once per session, when user is logged in
+        // Only run once per session, when user is logged in, and only on native
         if (!userData?.choirId || hasRunRef.current) return;
+        if (!Capacitor.isNativePlatform()) return;
         if (progress.isRunning) return; // Don't start if already caching
 
         hasRunRef.current = true;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, Plus, Loader2, Upload, Check, ChevronDown, Trash2, User, Library, Search } from "lucide-react";
+import { X, Plus, Loader2, Upload, Check, ChevronDown, Trash2, User, Library, Search, FileText } from "lucide-react";
 import { SimpleSong } from "@/types";
 import { CATEGORIES } from "@/lib/themes";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,7 +15,7 @@ import { Dialog } from '@capacitor/dialog';
 interface AddSongModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onAdd: (song: Omit<SimpleSong, 'id' | 'addedBy' | 'addedAt'>, pdfFile?: File) => Promise<void>;
+    onAdd: (song: Omit<SimpleSong, 'id' | 'addedBy' | 'addedAt'>, pdfFiles?: { name: string; file: File }[]) => Promise<void>;
     regents: string[];
     knownConductors: string[];
     knownCategories: string[];
@@ -44,8 +44,9 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
     const [isPianistDropdownOpen, setIsPianistDropdownOpen] = useState(false);
     const pianistDropdownRef = useRef<HTMLDivElement>(null);
 
-    const [pdfFile, setPdfFile] = useState<File | null>(null);
+    const [pdfFiles, setPdfFiles] = useState<{ name: string; file: File }[]>([]);
     const [loading, setLoading] = useState(false);
+    const addFileInputRef = useRef<HTMLInputElement>(null);
     const [error, setError] = useState(""); // State for error messages
 
     // Conductor Dropdown State
@@ -148,8 +149,8 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                 category: finalCategory,
                 conductor: finalConductor,
                 pianist: finalPianist || undefined,
-                hasPdf: !!pdfFile,
-            }, pdfFile || undefined);
+                hasPdf: pdfFiles.length > 0,
+            }, pdfFiles.length > 0 ? pdfFiles : undefined);
 
             handleClose();
         } catch (err: any) {
@@ -171,7 +172,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
         setShowCustomInput(allConductors.length === 0);
         setShowCustomPianist(false);
         setShowCustomCategory(false);
-        setPdfFile(null);
+        setPdfFiles([]);
         setError("");
         onClose();
     };
@@ -496,56 +497,67 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                                 )}
                             </div>
 
-                            {/* PDF File + Archive Search */}
+                            {/* PDF Files (Parts) */}
                             <div>
                                 <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                                    PDF Файл (опціонально)
+                                    PDF Файли (опціонально)
                                 </label>
-                                <div className="flex gap-2">
-                                    <div className="relative group flex-1 min-w-0">
-                                        <input
-                                            type="file"
-                                            accept=".pdf"
-                                            onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
-                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                        />
-                                        <div className={`w-full px-4 py-3.5 bg-surface-highlight border-2 border-dashed rounded-xl flex items-center justify-center gap-3 transition-all group-hover:border-primary/50 group-hover:bg-surface ${pdfFile ? 'border-primary/30 bg-primary/5' : 'border-border'}`}>
-                                            {pdfFile ? (
-                                                <>
-                                                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
-                                                        <Check className="w-4 h-4" />
-                                                    </div>
-                                                    <div className="text-left flex-1 min-w-0">
-                                                        <p className="text-sm font-medium text-text-primary truncate">
-                                                            {pdfFile.name}
-                                                        </p>
-                                                        <p className="text-xs text-text-secondary">
-                                                            {(pdfFile.size / 1024 / 1024).toFixed(2)} MB
-                                                        </p>
-                                                    </div>
-                                                    <button
-                                                        type="button"
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            setPdfFile(null);
-                                                        }}
-                                                        className="p-2 hover:bg-red-500/10 text-text-secondary hover:text-red-500 rounded-lg transition-colors z-20"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <div className="w-8 h-8 rounded-full bg-surface flex items-center justify-center text-text-secondary group-hover:text-primary group-hover:scale-110 transition-all">
-                                                        <Upload className="w-4 h-4" />
-                                                    </div>
-                                                    <span className="text-sm font-medium text-text-secondary group-hover:text-text-primary transition-colors">
-                                                        Завантажити PDF
-                                                    </span>
-                                                </>
-                                            )}
-                                        </div>
+
+                                {/* Added files list */}
+                                {pdfFiles.length > 0 && (
+                                    <div className="space-y-2 mb-3">
+                                        {pdfFiles.map((pf, idx) => (
+                                            <div key={idx} className="flex items-center gap-2 px-3 py-2.5 bg-surface-highlight rounded-xl border border-border">
+                                                <FileText className="w-4 h-4 text-primary shrink-0" />
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-medium text-text-primary truncate">{pf.name}</p>
+                                                    <p className="text-xs text-text-secondary truncate">{pf.file.name} · {(pf.file.size / 1024 / 1024).toFixed(2)} MB</p>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setPdfFiles(prev => prev.filter((_, i) => i !== idx))}
+                                                    className="p-1.5 text-text-secondary hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        ))}
                                     </div>
+                                )}
+
+                                <input
+                                    ref={addFileInputRef}
+                                    type="file"
+                                    accept=".pdf,application/pdf"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            const defaultName = pdfFiles.length === 0 ? 'Головна' : '';
+                                            const name = pdfFiles.length === 0
+                                                ? defaultName
+                                                : (prompt('Назва партії (напр. Сопрано, Альт):') || '').trim();
+                                            if (pdfFiles.length === 0 || name) {
+                                                setPdfFiles(prev => [...prev, { name: name || 'Головна', file }]);
+                                            }
+                                        }
+                                        e.target.value = '';
+                                    }}
+                                />
+
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => addFileInputRef.current?.click()}
+                                        className="flex-1 px-4 py-3.5 bg-surface-highlight border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-3 transition-all hover:border-primary/50 hover:bg-surface group"
+                                    >
+                                        <div className="w-8 h-8 rounded-full bg-surface flex items-center justify-center text-text-secondary group-hover:text-primary group-hover:scale-110 transition-all">
+                                            {pdfFiles.length > 0 ? <Plus className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
+                                        </div>
+                                        <span className="text-sm font-medium text-text-secondary group-hover:text-text-primary transition-colors">
+                                            {pdfFiles.length > 0 ? 'Ще один файл' : 'Завантажити PDF'}
+                                        </span>
+                                    </button>
 
                                     {/* Archive Search Button */}
                                     {onSearchArchive && (
@@ -555,7 +567,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                                                 handleClose();
                                                 onSearchArchive(title);
                                             }}
-                                            className="w-16 h-16 flex-shrink-0 bg-surface-highlight border border-border rounded-xl flex items-center justify-center text-text-secondary hover:text-primary hover:border-primary/30 hover:bg-surface transition-all"
+                                            className="w-16 flex-shrink-0 bg-surface-highlight border border-border rounded-xl flex items-center justify-center text-text-secondary hover:text-primary hover:border-primary/30 hover:bg-surface transition-all"
                                             title="Знайти в Архіві МХО"
                                         >
                                             <Search className="w-5 h-5" />

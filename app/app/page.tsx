@@ -26,17 +26,15 @@ import ThemeSettings from "@/components/ThemeSettings";
 import LegalModal from "@/components/LegalModal";
 import SupportModal from "@/components/SupportModal";
 import HelpModal from "@/components/HelpModal";
-import NotificationsModal from "@/components/NotificationsModal";
 import DeleteAccountModal from "@/components/DeleteAccountModal";
 import ConfirmationModal from "@/components/ConfirmationModal";
 import {
   Music2, Loader2, Copy, Check, HelpCircle, Mail, Shield,
   LogOut, ChevronLeft, ChevronRight, Home, User, Users, Repeat,
-  PlusCircle, Plus, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor, Scale, Smartphone, RefreshCw, Search, ArrowUpDown, Palette, HardDrive
+  PlusCircle, Plus, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor, Scale, Smartphone, RefreshCw, Search, ArrowUpDown, Palette, HardDrive, AlertTriangle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import NotificationPrompt from "@/components/NotificationPrompt";
-import SendNotificationModal from "@/components/SendNotificationModal";
 import { collection as firestoreCollection, addDoc, getDocs, getDoc, where, query, doc, updateDoc, arrayUnion, onSnapshot, orderBy, limit, startAfter, QueryDocumentSnapshot } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { db, functions } from "@/lib/firebase";
@@ -47,9 +45,68 @@ import { useBackgroundCache } from "@/hooks/useBackgroundCache";
 
 function HomePageContent() {
   const router = useRouter();
+
   const searchParams = useSearchParams();
-  const { user, userData, loading: authLoading, signOut, refreshProfile, isGuest } = useAuth();
+  const { user, userData, loading: authLoading, signOut, refreshProfile, isGuest, updateActiveChoir } = useAuth();
   const { theme, setTheme } = useTheme();
+
+  // Handle push notification tap routing globally
+  useEffect(() => {
+    const processRoute = async (payloadRaw: any) => {
+      try {
+        const payload = typeof payloadRaw === 'string' ? JSON.parse(payloadRaw) : payloadRaw;
+        const targetRoute = payload.route || '/notifications';
+        const targetChoirId = payload.choirId;
+
+        // Switch active choir if a valid choirId was provided via push payload
+        if (targetChoirId && userData) {
+          const isMember = (userData.memberships || []).some((m: any) => m.choirId === targetChoirId);
+          if (isMember && userData.choirId !== targetChoirId) {
+            console.log(`[AppRouter] Switching active choir context for push tap to: ${targetChoirId}`);
+            // This is async but we don't necessarily need to block UI, 
+            // though blocking would ensure data represents new choir before render.
+            await updateActiveChoir(targetChoirId);
+          }
+        }
+
+        try {
+          router.push(targetRoute);
+        } catch (err) {
+          window.location.href = targetRoute;
+        }
+      } catch (e) {
+        // Fallback for old strings
+        const fallbackRoute = typeof payloadRaw === 'string' ? payloadRaw : '/notifications';
+        try {
+          router.push(fallbackRoute);
+        } catch (err) {
+          window.location.href = fallbackRoute;
+        }
+      }
+    };
+
+    // 1. Check if app started from a push tap
+    setTimeout(() => {
+      const pendingRoute = localStorage.getItem('pendingNotificationRoute');
+      if (pendingRoute && userData) {
+        console.log("[AppRouter] Found pending notification route:", pendingRoute);
+        localStorage.removeItem('pendingNotificationRoute');
+        processRoute(pendingRoute);
+      }
+    }, 100);
+
+    // 2. Listen for push tap while app is open
+    const handlePushRoute = (e: any) => {
+      if (e.detail && userData) {
+        console.log("[AppRouter] Push route event received:", e.detail);
+        localStorage.removeItem('pendingNotificationRoute'); // clear if exists
+        processRoute(e.detail);
+      }
+    };
+
+    window.addEventListener('app-push-route', handlePushRoute);
+    return () => window.removeEventListener('app-push-route', handlePushRoute);
+  }, [router, userData, updateActiveChoir]);
 
   // Global FCM Token Sync
   const {
@@ -75,7 +132,7 @@ function HomePageContent() {
   // App Readiness
   const [isAppReady, setIsAppReady] = useState(false);
   const [isNative, setIsNative] = useState(false);
-  const [showPreloader, setShowPreloader] = useState(true);
+  const [showPreloader, setShowPreloader] = useState(false);
   const [preloaderFading, setPreloaderFading] = useState(false);
   const preloaderMinReady = useRef(false);
   const preloaderStartTime = useRef(Date.now());
@@ -195,8 +252,8 @@ function HomePageContent() {
 
   // Cache management
   const [cacheSize, setCacheSize] = useState<{ count: number; sizeBytes: number }>({ count: 0, sizeBytes: 0 });
-  const [cacheLimit, setCacheLimitState] = useState('unlimited');
-  const [cacheRetention, setCacheRetentionState] = useState('never');
+  const [cacheLimit, setCacheLimitState] = useState('100');
+  const [cacheRetention, setCacheRetentionState] = useState('30');
   const [cacheClearLoading, setCacheClearLoading] = useState(false);
 
   // UI States & Modals
@@ -217,7 +274,6 @@ function HomePageContent() {
   const [legalInitialView, setLegalInitialView] = useState<'main' | 'privacy' | 'terms'>('main');
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showSendNotificationModal, setShowSendNotificationModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showAddServiceModal, setShowAddServiceModal] = useState(false);
   const [showAddSongModal, setShowAddSongModal] = useState(false);
@@ -244,10 +300,12 @@ function HomePageContent() {
   const [newAdminLabel, setNewAdminLabel] = useState("");
   const [selectedPermissions, setSelectedPermissions] = useState<Permission[]>([]);
   const [creatingAdminCode, setCreatingAdminCode] = useState(false);
-  const [newName, setNewName] = useState("");
+  const [newFirstName, setNewFirstName] = useState("");
+  const [newLastName, setNewLastName] = useState("");
   const [savingName, setSavingName] = useState(false);
   const [editChoirName, setEditChoirName] = useState("");
   const [savingChoirSettings, setSavingChoirSettings] = useState(false);
+  const [uploadingIcon, setUploadingIcon] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserData | null>(null);
   const [choirToLeave, setChoirToLeave] = useState<{ id: string, name: string } | null>(null);
 
@@ -402,6 +460,30 @@ function HomePageContent() {
   };
 
   const [memberFilter, setMemberFilter] = useState('');
+
+  // Native FAB tap → open correct modal based on active tab and sub-tab
+  useEffect(() => {
+    const handler = () => {
+      if (activeTab === 'home') {
+        setShowAddServiceModal(true);
+      } else if (activeTab === 'songs') {
+        // Check if user is on the archive (catalog) sub-tab or repertoire sub-tab
+        // The archive sub-tab has GlobalArchive which listens for its own event
+        const isOnArchiveTab = document.querySelector('[data-subtab="catalog"]')?.classList.contains('block');
+        if (isOnArchiveTab) {
+          // Let GlobalArchive handle this
+          window.dispatchEvent(new CustomEvent('nativeFABPressed:archive'));
+        } else {
+          setShowAddSongModal(true);
+        }
+      } else if (activeTab === 'members') {
+        setEditingMember(null);
+        setShowEditMemberModal(true);
+      }
+    };
+    window.addEventListener('nativeFABPressed', handler);
+    return () => window.removeEventListener('nativeFABPressed', handler);
+  }, [activeTab]);
 
   // Handle Android back gesture
   useEffect(() => {
@@ -809,6 +891,10 @@ function HomePageContent() {
 
       await refreshProfile();
       setShowChoirManager(false);
+      // Show name entry modal so admin can set proper "Прізвище Ім'я"
+      setJoinLastName('');
+      setJoinFirstName('');
+      setShowFinishAppRegistration(true);
       router.replace('/app');
     } catch (e: any) {
       console.error("Error creating choir:", e);
@@ -978,13 +1064,8 @@ function HomePageContent() {
   };
 
   const handleSaveName = async () => {
-    if (!newName.trim() || !user) return;
-    const finalName = newName.trim();
-
-    if (!finalName.includes(" ")) {
-      await Dialog.alert({ title: "Помилка", message: "Будь ласка, введіть 'Прізвище та Ім'я' через пробіл (наприклад: Шевченко Тарас)." });
-      return;
-    }
+    if (!newFirstName.trim() || !newLastName.trim() || !user) return;
+    const finalName = `${newLastName.trim()} ${newFirstName.trim()}`;
     const oldName = userData?.name;
     setSavingName(true);
     try {
@@ -1012,7 +1093,8 @@ function HomePageContent() {
 
       // await fetchChoirData(); // Listener handles updates
       setShowEditName(false);
-      setNewName("");
+      setNewFirstName("");
+      setNewLastName("");
     } catch (err) {
       console.error("Failed to update name:", err);
     } finally {
@@ -1029,10 +1111,14 @@ function HomePageContent() {
       // We extract what we want to update.
       const updates: Record<string, any> = {
         name: member.name,
-        voice: member.voice,
         role: member.role,
         isDuplicate: false // Always clear isDuplicate when admin explicitly saves
       };
+
+      // Only add voice if it's explicitly set to avoid Firestore 'undefined' errors
+      if (member.voice) {
+        updates.voice = member.voice;
+      }
 
       // Generate a deduplicated list of current members (just in case)
       const dedupedCurrent = Array.from(new Map((choir.members || []).map(m => [m.id, m])).values());
@@ -1049,9 +1135,12 @@ function HomePageContent() {
         setChoir({ ...choir, members: updatedMembers });
       } else {
         // Adding new manual member — ensure no isDuplicate flag
-        const cleanMember = { ...member };
-        delete (cleanMember as any).isDuplicate;
-        updatedMembers.push(cleanMember);
+        const cleanMember: Record<string, any> = { ...member };
+        delete cleanMember.isDuplicate;
+        if (cleanMember.voice === undefined) {
+          delete cleanMember.voice;
+        }
+        updatedMembers.push(cleanMember as ChoirMember);
         await updateChoirMembers(userData.choirId, updatedMembers);
         setChoir({ ...choir, members: updatedMembers });
       }
@@ -1074,11 +1163,12 @@ function HomePageContent() {
       const updatedMembers = (choir.members || [])
         .filter(m => m.id !== mergingMember.id)
         .map(m => {
-          if (m.id === targetMemberId && fromMember?.hasAccount && !m.hasAccount) {
+          if (m.id === targetMemberId && fromMember?.hasAccount) {
             return {
               ...m,
               hasAccount: true,
-              linkedUserIds: [...(m.linkedUserIds || []), fromMember.id]
+              accountUid: (m as any).accountUid || m.id,
+              linkedUserIds: [...(m.linkedUserIds || []), ...new Set([fromMember.id, (fromMember as any).accountUid].filter(Boolean))]
             };
           }
           return m;
@@ -1163,8 +1253,13 @@ function HomePageContent() {
 
   const handleRemoveMember = async (memberId: string) => {
     if (!choir || !userData?.choirId) return;
-    // Don't allow removing yourself or the head
-    if (memberId === user?.uid) return;
+    const memberToRemove = choir.members?.find(m => m.id === memberId);
+
+    // Don't allow removing yourself
+    if (memberId === user?.uid || (memberToRemove?.linkedUserIds || []).includes(user?.uid || "") || (memberToRemove as any)?.accountUid === user?.uid) {
+      console.warn("User attempted to remove themselves.");
+      return;
+    }
 
     const updatedMembers = (choir.members || []).filter(m => m.id !== memberId);
 
@@ -1214,34 +1309,89 @@ function HomePageContent() {
   const canManageServices = canEdit || (userData?.permissions?.includes('manage_services') ?? false);
 
   // Handle choir icon upload
-  const handleIconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !userData?.choirId || !canEdit) return;
+  const handleIconUpload = async () => {
+    if (!userData?.choirId || !canEdit) return;
 
     try {
+      let file: File | null = null;
+
+      if (Capacitor.isNativePlatform()) {
+        const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
+
+        const image = await Camera.getPhoto({
+          quality: 80,
+          allowEditing: true,
+          resultType: CameraResultType.Uri,
+          source: CameraSource.Photos
+        });
+
+        if (image.webPath) {
+          console.log('[Icon Upload] Got image webPath:', image.webPath);
+          setUploadingIcon(true);
+          const response = await fetch(image.webPath);
+          const blob = await response.blob();
+          console.log('[Icon Upload] Blob size:', blob.size, 'type:', blob.type);
+          file = new File([blob], "icon.jpg", { type: "image/jpeg" });
+        }
+      } else {
+        // Fallback for web: dynamically create and click an input
+        file = await new Promise((resolve) => {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = 'image/*';
+          input.onchange = (e: any) => resolve(e.target.files?.[0] || null);
+          input.click();
+        });
+      }
+
+      if (!file) { setUploadingIcon(false); return; }
+
+      setUploadingIcon(true);
+      console.log('[Icon Upload] Uploading file, size:', file.size);
       const url = await uploadChoirIcon(userData.choirId, file);
-      setChoir(prev => prev ? { ...prev, icon: url } : null);
+      console.log('[Icon Upload] Upload complete, URL:', url);
+      // Add cache-busting param so the browser doesn't serve the old cached image
+      const cacheBustedUrl = url.includes('?') ? `${url}&t=${Date.now()}` : `${url}?t=${Date.now()}`;
+      setChoir(prev => prev ? { ...prev, icon: cacheBustedUrl } : null);
     } catch (err) {
-      console.error("Failed to update icon:", err);
+      console.error("[Icon Upload] Failed:", err);
+    } finally {
+      setUploadingIcon(false);
     }
   };
+
+  // Sync Native FAB Visibility
+  useEffect(() => {
+    if (!isNative || typeof window === 'undefined') return;
+    try {
+      if ((window as any).webkit?.messageHandlers?.fabVisibility) {
+        // Only regents and heads should see the native FAB
+        (window as any).webkit.messageHandlers.fabVisibility.postMessage(canEdit ? 'show' : 'hide');
+      }
+    } catch (e) {
+      console.warn("Error sending fabVisibility message", e);
+    }
+  }, [isNative, canEdit, activeTab]);
 
   // ------------------------------------------------------------------
   //  APP READY CHECK
   // ------------------------------------------------------------------
   // Preloader overlay (renders on top, fades out when ready)
   // This replaces the old early-return pattern for smoother transition.
-  const preloaderOverlay = showPreloader ? (
+  const preloaderOverlay = (typeof window !== 'undefined' && Capacitor.isNativePlatform()) ? null : (showPreloader ? (
     <div
       className={`fixed inset-0 z-[9999] transition-opacity duration-400 ${preloaderFading ? 'opacity-0 pointer-events-none' : 'opacity-100'
         }`}
     >
       <Preloader />
     </div>
-  ) : null;
+  ) : null);
 
   // If data isn't ready yet, show preloader as full-screen (no content behind)
   if (!isAppReady) {
+    if (typeof window !== 'undefined' && Capacitor.isNativePlatform()) {
+      return null;
+    }
     return <>{preloaderOverlay || <Preloader />}</>;
   }
 
@@ -1293,7 +1443,12 @@ function HomePageContent() {
     );
   };
 
-  if (authLoading) return <Preloader />;
+  if (authLoading) {
+    if (typeof window !== 'undefined' && Capacitor.isNativePlatform()) {
+      return null;
+    }
+    return <Preloader />;
+  }
 
   // If viewing a specific service, render ServiceView full screen
   if (selectedService) {
@@ -1396,7 +1551,8 @@ function HomePageContent() {
               {/* Choir Icon */}
               <div className="flex flex-col items-center mb-6">
                 <button
-                  onClick={() => iconInputRef.current?.click()}
+                  onClick={handleIconUpload}
+                  disabled={uploadingIcon}
                   className="w-24 h-24 bg-surface-highlight rounded-2xl flex items-center justify-center border border-border overflow-hidden relative group cursor-pointer hover:border-primary/30 transition-colors"
                 >
                   {choir?.icon ? (
@@ -1404,11 +1560,43 @@ function HomePageContent() {
                   ) : (
                     <span className="text-4xl text-text-primary font-bold">{choir?.name?.[0]?.toUpperCase() || "C"}</span>
                   )}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                    <Camera className="w-6 h-6 text-white" />
-                  </div>
+                  {uploadingIcon ? (
+                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                      <Loader2 className="w-7 h-7 text-white animate-spin" />
+                    </div>
+                  ) : (
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                      <Camera className="w-6 h-6 text-white" />
+                    </div>
+                  )}
                 </button>
-                <p className="text-text-secondary text-xs mt-2">Натисніть, щоб змінити фото</p>
+                <p className="text-text-secondary text-xs mt-2">{uploadingIcon ? 'Завантаження...' : 'Натисніть, щоб змінити фото'}</p>
+                {choir?.icon && !uploadingIcon && (
+                  <button
+                    onClick={async () => {
+                      if (!userData?.choirId) return;
+                      const confirmed = await Dialog.confirm({
+                        title: 'Видалити фото?',
+                        message: 'Ви впевнені, що хочете видалити фото хору?',
+                        okButtonTitle: 'Видалити',
+                        cancelButtonTitle: 'Скасувати'
+                      });
+                      if (!confirmed.value) return;
+
+                      try {
+                        // Cast to any to bypass Partial<Choir> strict typing for null
+                        await updateChoir(userData.choirId, { icon: null } as any);
+                        setChoir(prev => prev ? { ...prev, icon: undefined } : null);
+                      } catch (err) {
+                        console.error("Failed to delete choir icon:", err);
+                      }
+                    }}
+                    className="mt-3 flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 font-medium p-2 rounded-lg hover:bg-red-500/10 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Видалити фото
+                  </button>
+                )}
               </div>
 
               {/* Choir Name */}
@@ -1632,7 +1820,7 @@ function HomePageContent() {
           onClose={() => setShowEditMemberModal(false)}
           member={editingMember}
           onSave={handleSaveMember}
-          onDelete={handleRemoveMember}
+          onDelete={(editingMember?.id === user?.uid || (editingMember?.linkedUserIds || []).includes(user?.uid || "") || (editingMember as any)?.accountUid === user?.uid) ? undefined : handleRemoveMember}
           onMergeClick={(member) => {
             setEditingMember(null);
             setShowEditMemberModal(false);
@@ -1892,7 +2080,12 @@ function HomePageContent() {
                     <div className="flex items-center gap-2">
                       <h3 className="text-xl font-bold text-text-primary">{userData?.name}</h3>
                       <button
-                        onClick={() => { setNewName(userData?.name || ""); setShowEditName(true); }}
+                        onClick={() => {
+                          const parts = userData?.name?.split(" ") || [];
+                          setNewLastName(parts[0] || "");
+                          setNewFirstName(parts.slice(1).join(" ") || "");
+                          setShowEditName(true);
+                        }}
                         className="p-1.5 rounded-full hover:bg-surface-highlight transition-colors text-text-secondary hover:text-text-primary"
                       >
                         <Pencil className="w-4 h-4" />
@@ -1944,10 +2137,10 @@ function HomePageContent() {
                           <div className="flex items-center gap-3">
                             <code className="text-base font-mono font-medium text-text-primary">{choir.memberCode}</code>
                             <button
-                              onClick={() => copyCode(`https://${window.location.host}/?code=${choir.memberCode}`)}
+                              onClick={() => copyCode(`https://mychoir.vercel.app/?code=${choir.memberCode}`)}
                               className="text-text-secondary hover:text-accent transition-colors"
                             >
-                              {copiedCode === `https://${window.location.host}/?code=${choir.memberCode}`
+                              {copiedCode === `https://mychoir.vercel.app/?code=${choir.memberCode}`
                                 ? <Check className="w-5 h-5 text-success" />
                                 : <Copy className="w-5 h-5" />}
                             </button>
@@ -1960,10 +2153,10 @@ function HomePageContent() {
                           <div className="flex items-center gap-3">
                             <code className="text-base font-mono font-medium text-text-primary">{choir.regentCode}</code>
                             <button
-                              onClick={() => copyCode(`https://${window.location.host}/?code=${choir.regentCode}`)}
+                              onClick={() => copyCode(`https://mychoir.vercel.app/?code=${choir.regentCode}`)}
                               className="text-text-secondary hover:text-accent transition-colors"
                             >
-                              {copiedCode === `https://${window.location.host}/?code=${choir.regentCode}`
+                              {copiedCode === `https://mychoir.vercel.app/?code=${choir.regentCode}`
                                 ? <Check className="w-5 h-5 text-success" />
                                 : <Copy className="w-5 h-5" />}
                             </button>
@@ -1977,10 +2170,10 @@ function HomePageContent() {
                             <div className="flex items-center gap-3">
                               <code className="text-base font-mono font-medium text-text-primary">{ac.code}</code>
                               <button
-                                onClick={() => copyCode(`https://${window.location.host}/?code=${ac.code}`)}
+                                onClick={() => copyCode(`https://mychoir.vercel.app/?code=${ac.code}`)}
                                 className="text-text-secondary hover:text-accent transition-colors"
                               >
-                                {copiedCode === `https://${window.location.host}/?code=${ac.code}`
+                                {copiedCode === `https://mychoir.vercel.app/?code=${ac.code}`
                                   ? <Check className="w-5 h-5 text-success" />
                                   : <Copy className="w-5 h-5" />}
                               </button>
@@ -2002,128 +2195,114 @@ function HomePageContent() {
                 </div>
               </div>
 
-              {/* Cache Management */}
-              <div className="bg-surface rounded-2xl p-4 card-shadow">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center">
-                    <HardDrive className="w-5 h-5" />
+              {/* Cache Management - only on native app */}
+              {isNative && (
+                <div className="bg-surface rounded-2xl p-4 card-shadow mt-6">
+                  {/* Header row with icon, title, stats, and clear button */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
+                      <HardDrive className="w-4.5 h-4.5 text-blue-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-bold text-text-primary">Офлайн кеш</h3>
+                      <p className="text-xs text-text-secondary">
+                        {cacheSize.count} пісень • {cacheSize.sizeBytes < 1024 * 1024
+                          ? `${(cacheSize.sizeBytes / 1024).toFixed(0)} КБ`
+                          : `${(cacheSize.sizeBytes / 1024 / 1024).toFixed(1)} МБ`}
+                      </p>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        setCacheClearLoading(true);
+                        try {
+                          const { clearAllCache, getCacheSize: getSize } = await import('@/lib/offlineDb');
+                          await clearAllCache();
+                          const newSize = await getSize();
+                          setCacheSize(newSize);
+                        } catch (e) {
+                          console.error('Clear cache error:', e);
+                        } finally {
+                          setCacheClearLoading(false);
+                        }
+                      }}
+                      disabled={cacheClearLoading || cacheSize.count === 0}
+                      className="px-3 py-1.5 text-xs font-semibold text-danger bg-danger/8 rounded-lg hover:bg-danger/15 transition-colors disabled:opacity-30 flex items-center gap-1.5"
+                    >
+                      {cacheClearLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                      Очистити
+                    </button>
                   </div>
-                  <div>
-                    <p className="text-text-primary font-bold text-sm">Офлайн кеш</p>
-                    <p className="text-xs text-text-secondary">
-                      {cacheSize.count} пісень • {cacheSize.sizeBytes < 1024 * 1024
-                        ? `${(cacheSize.sizeBytes / 1024).toFixed(0)} КБ`
-                        : `${(cacheSize.sizeBytes / 1024 / 1024).toFixed(1)} МБ`}
-                    </p>
-                  </div>
-                </div>
 
-                {/* Progress bar */}
-                {cacheLimit !== 'unlimited' && (() => {
-                  const limitBytes = cacheLimit === '100mb' ? 100 * 1024 * 1024
-                    : cacheLimit === '500mb' ? 500 * 1024 * 1024
-                      : 1024 * 1024 * 1024;
-                  const pct = Math.min((cacheSize.sizeBytes / limitBytes) * 100, 100);
-                  const limitLabel = cacheLimit === '100mb' ? '100 МБ' : cacheLimit === '500mb' ? '500 МБ' : '1 ГБ';
-                  return (
-                    <div className="mb-4">
-                      <div className="flex justify-between text-[11px] text-text-secondary mb-1.5">
-                        <span>{(cacheSize.sizeBytes / 1024 / 1024).toFixed(1)} МБ</span>
-                        <span>{limitLabel}</span>
-                      </div>
-                      <div className="h-2 bg-surface-highlight rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-500 ${pct > 90 ? 'bg-red-500' : pct > 70 ? 'bg-yellow-500' : 'bg-blue-500'
-                            }`}
-                          style={{ width: `${pct}%` }}
-                        />
+                  {/* Compact limit selector — pill buttons */}
+                  <div className="space-y-3">
+                    <div>
+                      <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Максимум</span>
+                      <div className="flex gap-1.5 mt-1.5">
+                        {[
+                          { label: '100 МБ', value: '100' },
+                          { label: '500 МБ', value: '500' },
+                          { label: '1 ГБ', value: '1000' },
+                          { label: '∞', value: 'unlimited' },
+                        ].map(opt => {
+                          const isActive = cacheLimit === opt.value || (opt.value === 'unlimited' && cacheLimit === 'unlimited');
+                          return (
+                            <button
+                              key={opt.value}
+                              onClick={async () => {
+                                setCacheLimitState(opt.value);
+                                const { setCacheLimit: setLimit, enforceLimit: enforce, getCacheSize: getSize } = await import('@/lib/offlineDb');
+                                setLimit(opt.value);
+                                await enforce();
+                                const newSize = await getSize();
+                                setCacheSize(newSize);
+                              }}
+                              className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${isActive
+                                ? 'bg-primary text-background shadow-sm'
+                                : 'bg-surface-highlight text-text-secondary hover:text-text-primary'
+                                }`}
+                            >
+                              {opt.label}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
-                  );
-                })()}
 
-                {/* Limit selector */}
-                <p className="text-xs text-text-secondary mb-2">Максимальний розмір</p>
-                <div className="grid grid-cols-4 gap-1.5 mb-4">
-                  {[
-                    { id: '100mb', label: '100 МБ' },
-                    { id: '500mb', label: '500 МБ' },
-                    { id: '1gb', label: '1 ГБ' },
-                    { id: 'unlimited', label: 'Безліміт' },
-                  ].map(opt => (
-                    <button
-                      key={opt.id}
-                      onClick={async () => {
-                        const { setCacheLimit: setLimit, enforceLimit: enforce, getCacheSize: getSize } = await import('@/lib/offlineDb');
-                        setLimit(opt.id);
-                        setCacheLimitState(opt.id);
-                        await enforce();
-                        const newSize = await getSize();
-                        setCacheSize(newSize);
-                      }}
-                      className={`py-2 rounded-xl text-xs font-bold transition-all border ${cacheLimit === opt.id
-                        ? 'bg-primary text-background border-primary'
-                        : 'bg-surface-highlight text-text-secondary border-transparent hover:border-border'
-                        }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
+                    <div>
+                      <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Автовидалення</span>
+                      <div className="flex gap-1.5 mt-1.5">
+                        {[
+                          { label: '7 д', value: '7' },
+                          { label: '30 д', value: '30' },
+                          { label: '90 д', value: '90' },
+                          { label: 'Ніколи', value: 'never' },
+                        ].map(opt => {
+                          const isActive = cacheRetention === opt.value || (opt.value === '7' && cacheRetention === '7d') || (opt.value === '30' && cacheRetention === '30d') || (opt.value === '90' && cacheRetention === '90d');
+                          return (
+                            <button
+                              key={opt.value}
+                              onClick={async () => {
+                                setCacheRetentionState(opt.value);
+                                const { setCacheRetention: setRet, enforceLimit: enforce, getCacheSize: getSize } = await import('@/lib/offlineDb');
+                                setRet(opt.value);
+                                await enforce();
+                                const newSize = await getSize();
+                                setCacheSize(newSize);
+                              }}
+                              className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${isActive
+                                ? 'bg-primary text-background shadow-sm'
+                                : 'bg-surface-highlight text-text-secondary hover:text-text-primary'
+                                }`}
+                            >
+                              {opt.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-
-                {/* Retention selector */}
-                <p className="text-xs text-text-secondary mb-2">Видаляти невикористані файли</p>
-                <div className="grid grid-cols-4 gap-1.5 mb-4">
-                  {[
-                    { id: '7d', label: '7 днів' },
-                    { id: '30d', label: '30 днів' },
-                    { id: '90d', label: '90 днів' },
-                    { id: 'never', label: 'Ніколи' },
-                  ].map(opt => (
-                    <button
-                      key={opt.id}
-                      onClick={async () => {
-                        const { setCacheRetention: setRet, enforceLimit: enforce, getCacheSize: getSize } = await import('@/lib/offlineDb');
-                        setRet(opt.id);
-                        setCacheRetentionState(opt.id);
-                        await enforce();
-                        const newSize = await getSize();
-                        setCacheSize(newSize);
-                      }}
-                      className={`py-2 rounded-xl text-xs font-bold transition-all border ${cacheRetention === opt.id
-                        ? 'bg-primary text-background border-primary'
-                        : 'bg-surface-highlight text-text-secondary border-transparent hover:border-border'
-                        }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Clear cache button */}
-                <button
-                  onClick={async () => {
-                    setCacheClearLoading(true);
-                    try {
-                      const { clearAllCache, getCacheSize: getSize } = await import('@/lib/offlineDb');
-                      await clearAllCache();
-                      const newSize = await getSize();
-                      setCacheSize(newSize);
-                    } catch (e) {
-                      console.error('Clear cache error:', e);
-                    } finally {
-                      setCacheClearLoading(false);
-                    }
-                  }}
-                  disabled={cacheClearLoading || cacheSize.count === 0}
-                  className="w-full py-3 text-sm font-medium text-danger hover:bg-danger/10 rounded-xl transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
-                >
-                  {cacheClearLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                  Очистити кеш
-                </button>
-              </div>
-
-
+              )}
 
 
               {/* Про застосунок Section */}
@@ -2198,13 +2377,6 @@ function HomePageContent() {
           {/* Left: Logo + Title */}
           <div className="flex items-center gap-3 shrink-0">
             {/* Logo - clickable to change icon (for regent/head only) */}
-            <input
-              type="file"
-              ref={iconInputRef}
-              className="hidden"
-              accept="image/*"
-              onChange={handleIconUpload}
-            />
             <button
               onClick={() => {
                 if (canEdit) {
@@ -2238,7 +2410,7 @@ function HomePageContent() {
           <div className="flex items-center gap-2 shrink-0">
             {/* Notification Bell */}
             <button
-              onClick={() => setShowNotificationModal(true)}
+              onClick={() => router.push('/notifications')}
               className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-surface-highlight transition-colors relative"
               title="Сповіщення"
             >
@@ -2340,16 +2512,7 @@ function HomePageContent() {
                   >
                     <BarChart2 className="w-4 h-4" />
                   </button>
-                  {(canEdit || userData?.permissions?.includes('notify_members')) && (
-                    <button
-                      onClick={() => setShowSendNotificationModal(true)}
-                      className="w-9 h-9 bg-surface border border-border rounded-xl flex items-center justify-center text-text-secondary hover:text-primary transition-colors"
-                      title="Надіслати сповіщення"
-                    >
-                      <Bell className="w-4 h-4" />
-                    </button>
-                  )}
-                  {canEdit && (
+                  {canEdit && !isNative && (
                     <button
                       onClick={() => { setEditingMember(null); setShowEditMemberModal(true); }}
                       className="flex items-center gap-1.5 px-3 py-2 bg-primary text-background rounded-xl text-xs font-bold hover:opacity-90 transition-colors"
@@ -2700,36 +2863,45 @@ function HomePageContent() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                      Ваше ім'я
+                      Прізвище
                     </label>
                     <input
                       type="text"
-                      value={newName}
-                      onChange={(e) => setNewName(e.target.value)}
-                      placeholder="Прізвище Ім'я (наприклад: Шевченко Тарас)"
+                      value={newLastName}
+                      onChange={(e) => setNewLastName(e.target.value)}
+                      placeholder="Прізвище (напр. Шевченко)"
                       className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl focus:outline-none focus:border-primary/50 text-text-primary placeholder:text-text-secondary"
                       autoFocus
+                      autoCapitalize="words"
                     />
                   </div>
-
-                  <button
-                    onClick={handleSaveName}
-                    disabled={savingName || !newName.trim()}
-                    className="w-full py-4 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {savingName ? <Loader2 className="animate-spin" /> : "Зберегти"}
-                  </button>
+                  <div>
+                    <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                      Ім'я
+                    </label>
+                    <input
+                      type="text"
+                      value={newFirstName}
+                      onChange={(e) => setNewFirstName(e.target.value)}
+                      placeholder="Ім'я (напр. Тарас)"
+                      className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl focus:outline-none focus:border-primary/50 text-text-primary placeholder:text-text-secondary"
+                      autoCapitalize="words"
+                    />
+                  </div>
                 </div>
+
+                <button
+                  onClick={handleSaveName}
+                  disabled={savingName || !newFirstName.trim() || !newLastName.trim()}
+                  className="w-full py-4 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {savingName ? <Loader2 className="animate-spin" /> : "Зберегти"}
+                </button>
               </motion.div>
             </motion.div>
           )
         }
       </AnimatePresence>
-
-      <SendNotificationModal
-        isOpen={showSendNotificationModal}
-        onClose={() => setShowSendNotificationModal(false)}
-      />
 
       {/* Merge Member Modal */}
       {
@@ -2786,21 +2958,6 @@ function HomePageContent() {
       {/* Notifications Permission Prompt */}
       <NotificationPrompt />
 
-      {/* Notifications Modal */}
-      <NotificationsModal
-        isOpen={showNotificationModal}
-        onClose={() => setShowNotificationModal(false)}
-        canDelete={canEdit || (userData?.permissions?.includes('notify_members') ?? false)}
-        services={services}
-        permissionStatus={permissionStatus}
-        requestPermission={() => requestPermission("NotificationsModal")}
-        unsubscribe={() => unsubscribe("NotificationsModal")}
-        isSupported={isSupported}
-        isGranted={isGranted}
-        isPreferenceEnabled={isPreferenceEnabled}
-        fcmLoading={fcmLoading}
-      />
-
       {/* Account sub-modals (portaled to document.body) */}
       <LegalModal
         isOpen={showLegalModal}
@@ -2850,7 +3007,7 @@ function HomePageContent() {
 
 export default function HomePage() {
   return (
-    <Suspense fallback={<Preloader />}>
+    <Suspense fallback={typeof window !== 'undefined' && Capacitor.isNativePlatform() ? null : <Preloader />}>
       <HomePageContent />
     </Suspense>
   );

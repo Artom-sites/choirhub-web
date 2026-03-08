@@ -8,16 +8,8 @@
 const DB_NAME = 'choirAppOffline';
 const DB_VERSION = 1;
 const STORE_NAME = 'cachedPdfs';
-// Cache size limits (in bytes)
-const CACHE_LIMITS: Record<string, number> = {
-    '100mb': 100 * 1024 * 1024,
-    '500mb': 500 * 1024 * 1024,
-    '1gb': 1024 * 1024 * 1024,
-    'unlimited': Infinity
-};
-
 const CACHE_LIMIT_KEY = 'choirApp_cacheLimit';
-const DEFAULT_LIMIT = 'unlimited';
+const DEFAULT_LIMIT = '100'; // 100MB by default
 
 /**
  * Get the user's cache limit preference
@@ -38,12 +30,23 @@ export const setCacheLimit = (limit: string): void => {
  * Get the cache limit in bytes
  */
 export const getCacheLimitBytes = (): number => {
-    return CACHE_LIMITS[getCacheLimit()] || Infinity;
+    const limit = getCacheLimit();
+    if (limit === 'unlimited') return Infinity;
+    if (limit === '1gb') return 1024 * 1024 * 1024; // legacy
+    if (limit === '500mb') return 500 * 1024 * 1024; // legacy
+    if (limit === '50mb') return 50 * 1024 * 1024; // legacy
+
+    // Parse new "100" format representing MB
+    const parsed = parseInt(limit, 10);
+    if (!isNaN(parsed) && parsed > 0) {
+        return parsed * 1024 * 1024;
+    }
+    return 100 * 1024 * 1024; // default 100MB fallback
 };
 
 // Retention period — delete files not used in X days
 const CACHE_RETENTION_KEY = 'choirApp_cacheRetention';
-const DEFAULT_RETENTION = 'never'; // never expire by default
+const DEFAULT_RETENTION = '30'; // 30 days by default
 
 /**
  * Get the user's retention period preference
@@ -65,10 +68,16 @@ export const setCacheRetention = (retention: string): void => {
  */
 const getRetentionMs = (): number => {
     const r = getCacheRetention();
-    if (r === '7d') return 7 * 24 * 60 * 60 * 1000;
-    if (r === '30d') return 30 * 24 * 60 * 60 * 1000;
-    if (r === '90d') return 90 * 24 * 60 * 60 * 1000;
-    return 0; // never
+    if (r === 'never') return 0;
+    if (r === '7d') return 7 * 24 * 60 * 60 * 1000; // legacy
+    if (r === '30d') return 30 * 24 * 60 * 60 * 1000; // legacy
+    if (r === '90d') return 90 * 24 * 60 * 60 * 1000; // legacy
+
+    const parsed = parseInt(r, 10);
+    if (!isNaN(parsed) && parsed > 0) {
+        return parsed * 24 * 60 * 60 * 1000;
+    }
+    return 30 * 24 * 60 * 60 * 1000; // default 30 days fallback
 };
 
 interface CachedPdf {

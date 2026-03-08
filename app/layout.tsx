@@ -70,20 +70,30 @@ export default function RootLayout({
   return (
     <html lang="uk" suppressHydrationWarning>
       <head>
-        <style dangerouslySetInnerHTML={{ __html: `html { background: #09090b; }` }} />
+        <style dangerouslySetInnerHTML={{
+          __html: `
+          html { background: #09090b; }
+          html.is-native .app-nav,
+          html.is-native .app-fab,
+          html.is-native .storytelling-preloader {
+            display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+          }
+        ` }} />
         <script dangerouslySetInnerHTML={{
           __html: `
-          try{
-            if(typeof window!=='undefined'&&window.Capacitor&&window.Capacitor.getPlatform&&window.Capacitor.getPlatform()!=='web') {
+          try {
+            if (location.protocol === 'capacitor:') {
               document.documentElement.classList.add('is-native');
-              // Nuke service workers on native to prevent stale UI
               if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                  for(let registration of registrations) { registration.unregister(); }
+                navigator.serviceWorker.getRegistrations().then(function(regs) {
+                  for(var i=0; i<regs.length; i++) { regs[i].unregister(); }
                 });
               }
             }
-          }catch(e){}
+          } catch(e) {}
         ` }} />
       </head>
       <body

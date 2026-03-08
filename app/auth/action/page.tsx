@@ -7,6 +7,7 @@ import { app } from "@/lib/firebase";
 import { Loader2, Check, AlertTriangle, Eye, EyeOff, Lock, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import Preloader from "@/components/Preloader";
+import { Capacitor } from "@capacitor/core";
 
 function AuthActionContent() {
     const searchParams = useSearchParams();
@@ -75,6 +76,7 @@ function AuthActionContent() {
     };
 
     if (loading) {
+        if (typeof window !== 'undefined' && Capacitor.isNativePlatform()) return null;
         return <Preloader />;
     }
 
@@ -184,7 +186,7 @@ function AuthActionContent() {
 
 export default function AuthActionPage() {
     return (
-        <Suspense fallback={<Preloader />}>
+        <Suspense fallback={typeof window !== 'undefined' && Capacitor.isNativePlatform() ? null : <Preloader />}>
             <AuthActionContent />
         </Suspense>
     );

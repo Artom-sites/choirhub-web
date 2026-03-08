@@ -70,7 +70,7 @@ export interface ServiceSong {
 }
 
 // Program Item Types (Native-only service order feature)
-export type ProgramItemType = 'choir' | 'verse' | 'prayer' | 'sermon' | 'congregation' | 'solo' | 'ensemble' | 'other';
+export type ProgramItemType = 'choir' | 'verse' | 'prayer' | 'reading' | 'sermon' | 'congregation' | 'solo' | 'ensemble' | 'announcement' | 'other';
 
 export interface ProgramItem {
     id: string;              // Unique ID (nanoid or crypto.randomUUID)
@@ -87,6 +87,7 @@ export interface ProgramItem {
 
 export interface Service {
     id: string;
+    type?: 'service' | 'rehearsal';
     date: string;
     time?: string; // HH:MM format, e.g. "10:00"
     title: string;
@@ -132,8 +133,9 @@ export type SyncPriority = 'critical' | 'high' | 'low';
 export type SongSource = 'global' | 'local';
 
 export interface SongPart {
+    id?: string;            // UUID — used by local songs for R2 key management
     name: string;           // "Партитура", "Скрипка", "Сопрано"
-    pdfUrl: string;         // Supabase Storage URL
+    pdfUrl: string;         // R2 / Supabase Storage URL
     fileSize?: number;      // Bytes, for cache management
 }
 

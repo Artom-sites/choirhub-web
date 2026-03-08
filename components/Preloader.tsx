@@ -136,7 +136,7 @@ function StorytellingPreloader() {
 
 
     return (
-        <div style={root}>
+        <div style={root} className="storytelling-preloader">
             <div style={bg} />
 
             {/* Staff Lines */}

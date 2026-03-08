@@ -145,8 +145,17 @@ export function useFcmToken() {
                 });
 
                 // Notification action (tap) listener
-                await FirebaseMessaging.addListener("notificationActionPerformed", (action) => {
-                    console.log("[FCM] Notification action:", action);
+                const { PushNotifications } = await import('@capacitor/push-notifications');
+                await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+                    console.log("[FCM] Push Notification tap action:", action);
+                    const data = action.notification.data || {};
+                    const route = data.route || '/notifications';
+                    const choirId = data.choirId || null;
+
+                    const payload = { route, choirId };
+                    // Store route for App to pick up once mounted
+                    localStorage.setItem('pendingNotificationRoute', JSON.stringify(payload));
+                    window.dispatchEvent(new CustomEvent('app-push-route', { detail: payload }));
                 });
 
                 console.log("[FCM] Firebase Messaging listeners set up");
@@ -156,7 +165,27 @@ export function useFcmToken() {
             }
         };
 
-        setupGlobalListeners();
+        const setupWebListeners = () => {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.addEventListener('message', (event) => {
+                    if (event.data && event.data.type === 'NOTIFICATION_CLICK') {
+                        const data = event.data.notification?.data || {};
+                        const route = data.route || '/notifications';
+                        const choirId = data.choirId || null;
+
+                        const payload = { route, choirId };
+                        localStorage.setItem('pendingNotificationRoute', JSON.stringify(payload));
+                        window.dispatchEvent(new CustomEvent('app-push-route', { detail: payload }));
+                    }
+                });
+            }
+        };
+
+        if (isNative) {
+            setupGlobalListeners();
+        } else {
+            setupWebListeners();
+        }
     }, [isNative]);
 
 

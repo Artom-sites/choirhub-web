@@ -62,9 +62,11 @@ export default function ServiceList({
 
     // Create form
     const [newTitle, setNewTitle] = useState("Співанка");
+    const [newType, setNewType] = useState<'service' | 'rehearsal'>('rehearsal');
     const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
     const [newTime, setNewTime] = useState("10:00");
     const [newWarmupConductor, setNewWarmupConductor] = useState("");
+    const [showCustomWarmup, setShowCustomWarmup] = useState(false);
     const [regents, setRegents] = useState<string[]>([]);
 
     useEffect(() => {
@@ -73,6 +75,7 @@ export default function ServiceList({
             if (c) {
                 const list = Array.from(new Set([
                     ...(c.regents || []),
+                    ...(c.knownConductors || []),
                     ...(c.members?.filter(m => m.role === 'regent' || m.role === 'head').map(m => m.name) || [])
                 ])).filter(Boolean);
                 setRegents(list);
@@ -119,6 +122,7 @@ export default function ServiceList({
         try {
             const serviceData: any = {
                 title: newTitle,
+                type: newType,
                 date: newDate,
                 songs: []
             };
@@ -129,9 +133,11 @@ export default function ServiceList({
 
             setShowCreateModal(false);
             setNewTitle("Співанка");
+            setNewType('rehearsal');
             setNewDate(new Date().toISOString().split('T')[0]);
             setNewTime("10:00");
             setNewWarmupConductor("");
+            setShowCustomWarmup(false);
         } catch (error) {
             console.error("Failed to create service:", error);
         } finally {
@@ -387,6 +393,34 @@ export default function ServiceList({
                         </div>
 
                         <div className="space-y-4">
+                            {/* Type Toggle */}
+                            <div className="flex bg-surface-highlight border border-border rounded-xl p-1 gap-1 w-full">
+                                <button
+                                    onClick={() => {
+                                        setNewType('service');
+                                        if (newTitle === "Співанка" || newTitle === "Репетиція") setNewTitle("Служіння");
+                                    }}
+                                    className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${newType === 'service'
+                                        ? 'bg-primary text-background shadow-sm'
+                                        : 'text-text-secondary hover:text-text-primary'
+                                        }`}
+                                >
+                                    Служіння
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setNewType('rehearsal');
+                                        if (newTitle === "Служіння") setNewTitle("Співанка");
+                                    }}
+                                    className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${newType === 'rehearsal'
+                                        ? 'bg-primary text-background shadow-sm'
+                                        : 'text-text-secondary hover:text-text-primary'
+                                        }`}
+                                >
+                                    Репетиція
+                                </button>
+                            </div>
+
                             <div>
                                 <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Назва</label>
                                 <input
@@ -436,17 +470,50 @@ export default function ServiceList({
                             <div>
                                 <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Хто проводить розспіванку</label>
                                 <div className="relative w-full">
-                                    <select
-                                        value={newWarmupConductor}
-                                        onChange={(e) => setNewWarmupConductor(e.target.value)}
-                                        className="w-full h-12 pl-4 pr-10 bg-surface-highlight border border-border rounded-xl text-text-primary text-base appearance-none focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                                    >
-                                        <option value="">Не вказано</option>
-                                        {regents.map((name, i) => (
-                                            <option key={i} value={name}>{name}</option>
-                                        ))}
-                                    </select>
-                                    <Mic2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary pointer-events-none" />
+                                    {!showCustomWarmup ? (
+                                        <>
+                                            <select
+                                                value={newWarmupConductor}
+                                                onChange={(e) => {
+                                                    if (e.target.value === '__ADD_NEW__') {
+                                                        setShowCustomWarmup(true);
+                                                        setNewWarmupConductor('');
+                                                    } else {
+                                                        setNewWarmupConductor(e.target.value);
+                                                    }
+                                                }}
+                                                className="w-full h-12 pl-4 pr-10 bg-surface-highlight border border-border rounded-xl text-text-primary text-base appearance-none focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
+                                            >
+                                                <option value="">Не вказано</option>
+                                                {regents.map((name, i) => (
+                                                    <option key={i} value={name}>{name}</option>
+                                                ))}
+                                                {newWarmupConductor && !regents.includes(newWarmupConductor) && (
+                                                    <option value={newWarmupConductor}>{newWarmupConductor}</option>
+                                                )}
+                                                <option value="__ADD_NEW__">➕ Новий регент...</option>
+                                            </select>
+                                            <Mic2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary pointer-events-none" />
+                                        </>
+                                    ) : (
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="text"
+                                                value={newWarmupConductor}
+                                                onChange={(e) => setNewWarmupConductor(e.target.value)}
+                                                placeholder="Новий регент"
+                                                className="flex-1 h-12 pl-4 pr-4 bg-surface-highlight border border-primary/50 rounded-xl text-text-primary text-base focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                                                autoFocus
+                                            />
+                                            <button
+                                                onClick={() => setShowCustomWarmup(false)}
+                                                className="p-3 text-text-secondary hover:text-text-primary bg-surface-highlight rounded-xl border border-border"
+                                                title="Скасувати"
+                                            >
+                                                <X className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

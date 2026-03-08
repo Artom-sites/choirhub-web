@@ -218,6 +218,12 @@ export default function NotificationsModal({
                                             </div>
                                         )}
 
+                                        <div className="flex items-center mb-2">
+                                            <span className="text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-md">
+                                                {userData?.choirName || "Хор"}
+                                            </span>
+                                        </div>
+
                                         <div className="flex items-start justify-between mb-1">
                                             <h4 className="font-bold text-text-primary flex-1">{n.title}</h4>
                                             <div className="flex items-center gap-1 flex-shrink-0 ml-2">
@@ -257,34 +263,42 @@ export default function NotificationsModal({
                                                     const isPresent = userData?.id ? service.confirmedMembers?.includes(userData.id) : false;
                                                     const isAbsent = userData?.id ? service.absentMembers?.includes(userData.id) : false;
 
+                                                    const [sy, sm, sd] = service.date.split('-').map(Number);
+                                                    const serviceDate = new Date(sy, sm - 1, sd).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
+
                                                     return (
-                                                        <div className="flex items-center gap-2">
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    if (!isPresent) handleVote(n.serviceId!, 'present');
-                                                                }}
-                                                                disabled={votingServiceId === n.serviceId || isPresent}
-                                                                className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors ${isPresent
-                                                                    ? 'bg-primary text-background cursor-default'
-                                                                    : 'bg-surface border border-accent/20 text-accent hover:bg-accent/10 active:scale-95'
-                                                                    }`}
-                                                            >
-                                                                {votingServiceId === n.serviceId && !isPresent && !isAbsent ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Буду"}
-                                                            </button>
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    if (!isAbsent) handleVote(n.serviceId!, 'absent');
-                                                                }}
-                                                                disabled={votingServiceId === n.serviceId || isAbsent}
-                                                                className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors ${isAbsent
-                                                                    ? 'bg-red-500 text-white cursor-default'
-                                                                    : 'bg-surface border border-red-500/20 text-red-500 hover:bg-red-500/10 active:scale-95'
-                                                                    }`}
-                                                            >
-                                                                {votingServiceId === n.serviceId && !isPresent && !isAbsent ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Не буду"}
-                                                            </button>
+                                                        <div className="space-y-2">
+                                                            <p className="text-[11px] text-text-secondary font-medium">
+                                                                🗓 {service.title} — {serviceDate}{service.time ? `, ${service.time}` : ''}
+                                                            </p>
+                                                            <div className="flex items-center gap-2">
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        if (!isPresent) handleVote(n.serviceId!, 'present');
+                                                                    }}
+                                                                    disabled={votingServiceId === n.serviceId || isPresent}
+                                                                    className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors ${isPresent
+                                                                        ? 'bg-primary text-background cursor-default'
+                                                                        : 'bg-surface border border-accent/20 text-accent hover:bg-accent/10 active:scale-95'
+                                                                        }`}
+                                                                >
+                                                                    {votingServiceId === n.serviceId && !isPresent && !isAbsent ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Буду"}
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        if (!isAbsent) handleVote(n.serviceId!, 'absent');
+                                                                    }}
+                                                                    disabled={votingServiceId === n.serviceId || isAbsent}
+                                                                    className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors ${isAbsent
+                                                                        ? 'bg-red-500 text-white cursor-default'
+                                                                        : 'bg-surface border border-red-500/20 text-red-500 hover:bg-red-500/10 active:scale-95'
+                                                                        }`}
+                                                                >
+                                                                    {votingServiceId === n.serviceId && !isPresent && !isAbsent ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Не буду"}
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     );
                                                 })()}

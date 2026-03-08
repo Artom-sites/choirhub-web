@@ -12,6 +12,7 @@ import { OFFICIAL_THEMES } from "@/lib/themes";
 import { Search, Music, Users, User, Loader2, FolderOpen, Plus, Eye, FileText, ChevronDown, Filter, X, LayoutGrid, Music2, Mic2, Sparkles, ShieldAlert, Check, Library, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import PDFViewer from "./PDFViewer";
+import { PencilKitAnnotator } from "@/plugins/PencilKitAnnotator";
 import ConfirmationModal from "./ConfirmationModal";
 import Preloader from "./Preloader";
 import Fuse from "fuse.js";
@@ -120,11 +121,38 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
         setIsNative(Capacitor.isNativePlatform());
     }, []);
 
+    // Check if user is Admin/Moderator (Exclusive to artemdula0@gmail.com)
+    const isModerator = userData?.email === "artemdula0@gmail.com";
+    // Allow Regents and Heads to submit
+    const canSubmit = userData?.role === 'head' || userData?.role === 'regent';
+
     // Submission & Moderation
     const [showSubmitModal, setShowSubmitModal] = useState(false);
     const [pendingSongs, setPendingSongs] = useState<PendingSong[]>([]);
     const [isModerationMode, setIsModerationMode] = useState(false);
     const [moderationLoading, setModerationLoading] = useState(false);
+
+    // Native FAB tap → open submit modal when on archive tab
+    useEffect(() => {
+        const handler = () => {
+            if (canSubmit && !isModerationMode) {
+                setShowSubmitModal(true);
+            }
+        };
+        window.addEventListener('nativeFABPressed:archive', handler);
+        return () => window.removeEventListener('nativeFABPressed:archive', handler);
+    }, [canSubmit, isModerationMode]);
+
+    // Force native overlay re-check when SubmitSongModal closes
+    useEffect(() => {
+        if (!showSubmitModal) {
+            // Small delay to let React finish DOM updates
+            const t = setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('forceCheckOverlays'));
+            }, 100);
+            return () => clearTimeout(t);
+        }
+    }, [showSubmitModal]);
 
     // Custom Modal State
     const [approveModal, setApproveModal] = useState<{ isOpen: boolean; song: PendingSong | null; loading: boolean }>({ isOpen: false, song: null, loading: false });
@@ -161,10 +189,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
         setStatusBarStyle();
     }, [previewSong]);
 
-    // Check if user is Admin/Moderator (Exclusive to artemdula0@gmail.com)
-    const isModerator = userData?.email === "artemdula0@gmail.com";
-    // Allow Regents and Heads to submit
-    const canSubmit = userData?.role === 'head' || userData?.role === 'regent';
+    // (isModerator and canSubmit declared above, before the FAB useEffect)
 
     // Total songs count for display
     const [totalSongsCount, setTotalSongsCount] = useState<number>(0);
@@ -433,9 +458,26 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
         }
 
         if (searchQuery.trim() && fuseInstance) {
+            const query = searchQuery.trim().toLowerCase();
             // Fuse search on STATIC INDEX (all songs)
-            const fuseResults = fuseInstance.search(searchQuery, { limit: 200 });
-            results = fuseResults.map(r => r.item);
+            const fuseResults = fuseInstance.search(searchQuery, { limit: 200 }).map(r => r.item);
+
+            // Tier 1: Title starts with the search term
+            const startsWithMatches = songs
+                .filter(s => s.title.toLowerCase().startsWith(query))
+                .sort((a, b) => a.title.localeCompare(b.title, 'uk'));
+            const startsWithIds = new Set(startsWithMatches.map(s => s.id));
+
+            // Tier 2: Title contains the search term (but doesn't start with it)
+            const containsMatches = songs
+                .filter(s => !startsWithIds.has(s.id) && s.title.toLowerCase().includes(query))
+                .sort((a, b) => a.title.localeCompare(b.title, 'uk'));
+            const containsIds = new Set(containsMatches.map(s => s.id));
+
+            // Tier 3: Other fuzzy matches from Fuse.js
+            const fuzzyMatches = fuseResults.filter(s => !startsWithIds.has(s.id) && !containsIds.has(s.id));
+
+            results = [...startsWithMatches, ...containsMatches, ...fuzzyMatches];
 
             // Apply other filters to these search results
             if (selectedCategory === 'new') {
@@ -491,6 +533,82 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
     }, [filteredSongs]);
 
     const visibleSongs = filteredSongs.slice(0, displayedCount);
+
+    useEffect(() => {
+        if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'ios') return;
+
+        const listener = PencilKitAnnotator.addListener('onArchiveAdd', async (info: { songId: string; partIndex?: number }) => {
+            const songToFind = filteredSongs.find(s => s.id === info.songId || s.sourceId === info.songId);
+            if (songToFind && onAddSong) {
+                hapticLight();
+
+                let finalSong = songToFind;
+                if ((!songToFind.parts || songToFind.parts.length === 0) && songToFind.id) {
+                    try {
+                        const full = await getGlobalSong(songToFind.id);
+                        if (full) finalSong = full;
+                    } catch (e) {
+                        console.error("Failed to fetch full song details", e);
+                    }
+                }
+
+                if (info.partIndex !== undefined && finalSong.parts && finalSong.parts.length > info.partIndex) {
+                    const singlePartSong: GlobalSong = {
+                        ...finalSong,
+                        parts: [finalSong.parts[info.partIndex]],
+                    };
+                    onAddSong(singlePartSong);
+                } else {
+                    onAddSong(finalSong);
+                }
+
+                hapticSuccess();
+            }
+        });
+
+        return () => {
+            listener.then(l => l.remove());
+        };
+    }, [filteredSongs]);
+
+    const handlePreviewClick = async (song: GlobalSong) => {
+        let finalSong = song;
+
+        if (song.id && (
+            (!song.parts && song.partsCount && song.partsCount > 0) ||
+            (song.parts && song.parts.length < (song.partsCount || 0))
+        )) {
+            setIsPreviewLoading(true);
+            try {
+                const full = await getGlobalSong(song.id);
+                if (full) {
+                    finalSong = full;
+                }
+            } catch (e) {
+                console.error("Failed to fetch full song for preview", e);
+            } finally {
+                setIsPreviewLoading(false);
+            }
+        }
+
+        if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios' && (finalSong.pdfUrl || (finalSong.parts && finalSong.parts.length > 0))) {
+            const partsData = (finalSong.parts && finalSong.parts.length > 0)
+                ? finalSong.parts.map(p => ({ name: p.name || 'Part', pdfUrl: p.pdfUrl }))
+                : [{ name: 'Головна', pdfUrl: finalSong.pdfUrl || '' }];
+
+            PencilKitAnnotator.openNativePdfViewer({
+                parts: partsData,
+                initialPartIndex: 0,
+                songId: finalSong.id || finalSong.sourceId || 'archive-song',
+                userUid: user?.uid || 'anonymous',
+                title: finalSong.title,
+                isArchive: !!onAddSong
+            }).catch(e => console.error('[NativePdf] Error:', e));
+        } else {
+            setPreviewSong(finalSong);
+            setPreviewPartIndex(0);
+        }
+    };
 
     const handleAddSongWrapper = (song: GlobalSong) => {
         if (onAddSong) {
@@ -848,23 +966,9 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                 {visibleSongs.map((song) => (
                                     <tr
                                         key={song.id || song.sourceId}
-                                        onClick={async () => {
-                                            setPreviewSong(song);
-                                            setPreviewPartIndex(0);
-                                            if (song.id && (
-                                                (!song.parts && song.partsCount && song.partsCount > 0) ||
-                                                (song.parts && song.parts.length < (song.partsCount || 0))
-                                            )) {
-                                                setIsPreviewLoading(true);
-                                                try {
-                                                    const full = await getGlobalSong(song.id);
-                                                    if (full) setPreviewSong(full);
-                                                } catch (e) {
-                                                    console.error("Failed to fetch full song", e);
-                                                } finally {
-                                                    setIsPreviewLoading(false);
-                                                }
-                                            }
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            handlePreviewClick(song);
                                         }}
                                         className="border-b border-border/50 hover:bg-surface-highlight cursor-pointer transition-colors group"
                                     >
@@ -921,27 +1025,9 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                 <div
                                     key={song.id || song.sourceId}
                                     className="flex items-center gap-3 py-3 border-b border-border/30 cursor-pointer active:bg-surface-highlight transition-colors group"
-                                    onClick={async () => {
-                                        setPreviewSong(song);
-                                        setPreviewPartIndex(0);
-
-                                        // Lazy load full details if index data is incomplete
-                                        if (song.id && (
-                                            (!song.parts && song.partsCount && song.partsCount > 0) ||
-                                            (song.parts && song.parts.length < (song.partsCount || 0))
-                                        )) {
-                                            setIsPreviewLoading(true);
-                                            try {
-                                                const full = await getGlobalSong(song.id);
-                                                if (full) {
-                                                    setPreviewSong(full);
-                                                }
-                                            } catch (e) {
-                                                console.error("Failed to fetch full song for preview", e);
-                                            } finally {
-                                                setIsPreviewLoading(false);
-                                            }
-                                        }
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        handlePreviewClick(song);
                                     }}
                                 >
                                     <div className="w-10 h-10 rounded-xl bg-text-primary flex items-center justify-center flex-shrink-0">
@@ -1008,6 +1094,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
             <AnimatePresence>
                 {previewSong && (
                     <motion.div
+                        key="preview-overlay"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -1218,7 +1305,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                 canSubmit && !isModerationMode && !showSubmitModal && !isOverlayOpen && (
                     <button
                         onClick={() => setShowSubmitModal(true)}
-                        className="fixed w-14 h-14 bg-primary text-background rounded-full shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40 right-4"
+                        className="app-fab fixed w-14 h-14 bg-primary text-background rounded-full shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40 right-4"
                         style={{ bottom: 'var(--fab-bottom)' }}
                         title="Запропонувати пісню"
                     >

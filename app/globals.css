@@ -309,3 +309,21 @@ nav.neu-flat {
 .recharts-wrapper svg *:focus {
   outline: none !important;
 }
+
+/* --- iOS Native App Overrides --- */
+/* Completely hide web UI elements replaced by native equivalents */
+html.is-native .app-nav,
+html.is-native .app-fab,
+html.is-native .storytelling-preloader {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Make sure header is solid on native so scrolling text doesn't show behind the iOS status bar time */
+html.is-native header.fixed {
+  background: var(--surface) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}

@@ -17,7 +17,8 @@ import {
     arrayUnion,
     arrayRemove,
     deleteField,
-    Query
+    Query,
+    runTransaction
 } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { db, functions, auth } from "./firebase";
@@ -106,7 +107,7 @@ export async function deleteSong(choirId: string, songId: string): Promise<void>
         // Soft delete
         const docRef = doc(db, `choirs/${choirId}/songs`, songId);
         await updateDoc(docRef, {
-            deletedAt: serverTimestamp(),
+            deletedAt: new Date().toISOString(),
             updatedAt: serverTimestamp()
         });
     } catch (error) {
@@ -285,17 +286,20 @@ export async function updateSong(choirId: string, songId: string, updates: Parti
     }
 }
 
-import { uploadPdf as uploadPdfToR2 } from "./storage";
+import { uploadPdf as uploadPdfToR2, uploadSongPartPdf, deleteSongPartPdf } from "./storage";
+import { SongPart } from "@/types";
 
 export async function uploadSongPdf(choirId: string, songId: string, file: File | Blob): Promise<string> {
     try {
-        // Upload to R2 Storage
-        const downloadUrl = await uploadPdfToR2(choirId, songId, file);
+        // Upload to R2 Storage using UUID-based part key
+        const partId = crypto.randomUUID();
+        const downloadUrl = await uploadSongPartPdf(choirId, songId, partId, file);
 
-        // Update the song document in Firestore with the URL
+        // Update the song document with both pdfUrl (legacy) and parts[] (new)
         await updateSong(choirId, songId, {
             hasPdf: true,
-            pdfUrl: downloadUrl
+            pdfUrl: downloadUrl,
+            parts: [{ id: partId, name: 'Головна', pdfUrl: downloadUrl }]
         });
 
         return downloadUrl;
@@ -303,6 +307,77 @@ export async function uploadSongPdf(choirId: string, songId: string, file: File 
         console.error("Error uploading PDF:", error);
         throw error;
     }
+}
+
+/**
+ * Upload multiple PDF parts for a song using transaction to prevent race conditions.
+ * Appends to existing parts array — never overwrites.
+ */
+export async function uploadSongParts(
+    choirId: string,
+    songId: string,
+    partsToUpload: { name: string; file: File }[]
+): Promise<SongPart[]> {
+    const songRef = doc(db, `choirs/${choirId}/songs`, songId);
+
+    // Upload files first (outside transaction — R2 uploads are idempotent)
+    const uploadedParts: SongPart[] = [];
+    for (const item of partsToUpload) {
+        const partId = crypto.randomUUID();
+        const pdfUrl = await uploadSongPartPdf(choirId, songId, partId, item.file);
+        uploadedParts.push({ id: partId, name: item.name, pdfUrl });
+    }
+
+    // Update Firestore atomically via transaction
+    return await runTransaction(db, async (tx) => {
+        const snap = await tx.get(songRef);
+        if (!snap.exists()) throw new Error("Song not found");
+
+        const existingParts: SongPart[] = snap.data().parts || [];
+        const updatedParts = [...existingParts, ...uploadedParts];
+
+        tx.update(songRef, {
+            hasPdf: true,
+            parts: updatedParts,
+            pdfUrl: updatedParts[0]?.pdfUrl,  // backward compat
+            updatedAt: serverTimestamp()
+        });
+
+        return updatedParts;
+    });
+}
+
+/**
+ * Delete a single part from a song.
+ * Uses transaction to ensure atomicity, then cleans up R2.
+ */
+export async function deleteSongPart(
+    choirId: string,
+    songId: string,
+    partId: string
+): Promise<void> {
+    const songRef = doc(db, `choirs/${choirId}/songs`, songId);
+
+    await runTransaction(db, async (tx) => {
+        const snap = await tx.get(songRef);
+        if (!snap.exists()) throw new Error("Song not found");
+
+        const existingParts: SongPart[] = snap.data().parts || [];
+        const updatedParts = existingParts.filter(p => p.id !== partId);
+
+        if (updatedParts.length === 0) {
+            throw new Error("Cannot delete last part");
+        }
+
+        tx.update(songRef, {
+            parts: updatedParts,
+            pdfUrl: updatedParts[0]?.pdfUrl,  // backward compat
+            updatedAt: serverTimestamp()
+        });
+    });
+
+    // Best-effort R2 cleanup (after successful Firestore update)
+    await deleteSongPartPdf(choirId, songId, partId);
 }
 
 // ============ SERVICES ============
@@ -607,8 +682,10 @@ export async function uploadChoirIcon(choirId: string, file: File | Blob): Promi
 export async function updateChoirMembers(choirId: string, members: any[]): Promise<void> {
     try {
         const docRef = doc(db, "choirs", choirId);
+        // Strip out 'undefined' values which cause Firebase invalid-argument errors
+        const safeMembers = JSON.parse(JSON.stringify(members));
         await updateDoc(docRef, {
-            members: members
+            members: safeMembers
         });
     } catch (error) {
         console.error("Error updating choir members:", error);
@@ -660,6 +737,18 @@ export async function addKnownCategory(choirId: string, category: string): Promi
         });
     } catch (error) {
         console.error("Error adding known category:", error);
+        throw error;
+    }
+}
+
+export async function removeKnownCategory(choirId: string, category: string): Promise<void> {
+    try {
+        const docRef = doc(db, "choirs", choirId);
+        await updateDoc(docRef, {
+            knownCategories: arrayRemove(category)
+        });
+    } catch (error) {
+        console.error("Error removing known category:", error);
         throw error;
     }
 }
@@ -858,7 +947,7 @@ export async function getChoirUsers(choirId: string): Promise<UserData[]> {
     try {
         // Query the real users collection — find all users linked to this choir
         const usersRef = collection(db, "users");
-        const q = query(usersRef, where("choirId", "==", choirId));
+        const q = query(usersRef, where("choirId", "==", choirId), limit(1000));
         const snapshot = await getDocs(q);
 
         return snapshot.docs.map(doc => {
@@ -1307,7 +1396,7 @@ export async function softDeleteLocalSong(choirId: string, songId: string, userI
     try {
         const docRef = doc(db, `choirs/${choirId}/songs`, songId); // Corrected collection
         await updateDoc(docRef, {
-            deletedAt: serverTimestamp(),
+            deletedAt: new Date().toISOString(),
             updatedAt: serverTimestamp(),
             deletedBy: userId
         });
@@ -1349,7 +1438,14 @@ export async function getDeletedSongs(choirId: string): Promise<SimpleSong[]> {
             limit(200)
         );
         const snapshot = await safeGetDocs(q, `getDeletedSongs(${choirId})`, 200);
-        return snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as SimpleSong[];
+        return snapshot.docs.map(d => {
+            const data = d.data();
+            // Convert Firestore Timestamp to ISO string if needed (legacy data compatibility)
+            const deletedAt = data.deletedAt?.toDate?.()
+                ? data.deletedAt.toDate().toISOString()
+                : data.deletedAt;
+            return { id: d.id, ...data, deletedAt } as SimpleSong;
+        });
     } catch (error) {
         console.error("Error getting deleted songs:", error);
         return [];

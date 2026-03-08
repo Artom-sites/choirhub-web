@@ -3,6 +3,7 @@
 import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Preloader from "@/components/Preloader";
+import { Capacitor } from "@capacitor/core";
 
 function SetupRedirectContent() {
     const router = useRouter();
@@ -19,12 +20,13 @@ function SetupRedirectContent() {
         }
     }, [router, searchParams]);
 
+    if (typeof window !== 'undefined' && Capacitor.isNativePlatform()) return null;
     return <Preloader />;
 }
 
 export default function SetupRedirect() {
     return (
-        <Suspense fallback={<Preloader />}>
+        <Suspense fallback={typeof window !== 'undefined' && Capacitor.isNativePlatform() ? null : <Preloader />}>
             <SetupRedirectContent />
         </Suspense>
     );

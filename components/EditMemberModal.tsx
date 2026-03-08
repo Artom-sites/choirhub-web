@@ -19,6 +19,7 @@ export default function EditMemberModal({ isOpen, onClose, member, onSave, onDel
     const [role, setRole] = useState<UserRole>('member');
     const [voice, setVoice] = useState<string>("");
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     useEffect(() => {
@@ -31,24 +32,34 @@ export default function EditMemberModal({ isOpen, onClose, member, onSave, onDel
             setRole('member');
             setVoice("");
         }
+        setError(null);
     }, [member, isOpen]);
 
     if (!isOpen) return null;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name.trim()) return;
+        setError(null);
+        if (!name.trim()) {
+            setError("Введіть ім'я учасника");
+            return;
+        }
+        if (role === 'member' && !voice) {
+            setError("Будь ласка, оберіть партію (голос)");
+            return;
+        }
         setLoading(true);
         try {
             await onSave({
                 id: member?.id || `manual_${Date.now()}`,
                 name: name.trim(),
                 role,
-                voice: voice as any || undefined
+                voice: voice ? (voice as any) : undefined
             });
             onClose();
-        } catch (error) {
-            console.error(error);
+        } catch (err: any) {
+            console.error(err);
+            setError(err.message || "Сталася помилка при збереженні");
         } finally {
             setLoading(false);
         }
@@ -127,6 +138,12 @@ export default function EditMemberModal({ isOpen, onClose, member, onSave, onDel
                                 ))}
                             </div>
                         </div>
+
+                        {error && (
+                            <div className="text-red-500 text-sm bg-red-500/10 p-3 rounded-xl mt-4">
+                                {error}
+                            </div>
+                        )}
 
                         <div className="flex gap-3 mt-6">
                             {isEditing && onDelete && (
