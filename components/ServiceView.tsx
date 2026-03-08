@@ -139,8 +139,8 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
     useEffect(() => {
         if (choir) {
             setChoirMembers(filterRosterMembers(choir.members || []));
-            if (choir.knownConductors) setKnownConductors(choir.knownConductors);
-            if (choir.knownPianists) setKnownPianists(choir.knownPianists);
+            if (choir.knownConductors) setKnownConductors(Array.from(new Set(choir.knownConductors)));
+            if (choir.knownPianists) setKnownPianists(Array.from(new Set(choir.knownPianists)));
             setMembersLoading(false);
         }
     }, [choir]);
@@ -159,8 +159,8 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                     if (fetchedChoir?.members) {
                         setChoirMembers(filterRosterMembers(fetchedChoir.members));
                     }
-                    if (fetchedChoir?.knownConductors) setKnownConductors(fetchedChoir.knownConductors);
-                    if (fetchedChoir?.knownPianists) setKnownPianists(fetchedChoir.knownPianists);
+                    if (fetchedChoir?.knownConductors) setKnownConductors(Array.from(new Set(fetchedChoir.knownConductors)));
+                    if (fetchedChoir?.knownPianists) setKnownPianists(Array.from(new Set(fetchedChoir.knownPianists)));
                 } catch (e) {
                     console.error("Error fetching choir details:", e);
                 } finally {
@@ -172,8 +172,8 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
     }, [userData?.choirId, choir]);
 
     // Song credits state
-    const [knownConductors, setKnownConductors] = useState<string[]>(choir?.knownConductors || []);
-    const [knownPianists, setKnownPianists] = useState<string[]>(choir?.knownPianists || []);
+    const [knownConductors, setKnownConductors] = useState<string[]>(Array.from(new Set(choir?.knownConductors || [])));
+    const [knownPianists, setKnownPianists] = useState<string[]>(Array.from(new Set(choir?.knownPianists || [])));
     const [editingSongIndex, setEditingSongIndex] = useState<number | null>(null);
     const [tempConductor, setTempConductor] = useState("");
     const [tempPianist, setTempPianist] = useState("");
