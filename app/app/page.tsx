@@ -2233,71 +2233,133 @@ function HomePageContent() {
                     </button>
                   </div>
 
-                  {/* Compact limit selector — pill buttons */}
-                  <div className="space-y-3">
+                  {/* Compact sliders */}
+                  <div className="space-y-4">
+                    {/* Limit slider */}
                     <div>
-                      <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Максимум</span>
-                      <div className="flex gap-1.5 mt-1.5">
-                        {[
-                          { label: '100 МБ', value: '100' },
-                          { label: '500 МБ', value: '500' },
-                          { label: '1 ГБ', value: '1000' },
-                          { label: '∞', value: 'unlimited' },
-                        ].map(opt => {
-                          const isActive = cacheLimit === opt.value || (opt.value === 'unlimited' && cacheLimit === 'unlimited');
-                          return (
-                            <button
-                              key={opt.value}
-                              onClick={async () => {
-                                setCacheLimitState(opt.value);
-                                const { setCacheLimit: setLimit, enforceLimit: enforce, getCacheSize: getSize } = await import('@/lib/offlineDb');
-                                setLimit(opt.value);
-                                await enforce();
-                                const newSize = await getSize();
-                                setCacheSize(newSize);
-                              }}
-                              className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${isActive
-                                ? 'bg-primary text-background shadow-sm'
-                                : 'bg-surface-highlight text-text-secondary hover:text-text-primary'
-                                }`}
-                            >
-                              {opt.label}
-                            </button>
-                          );
-                        })}
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Максимум</span>
+                        <span className="text-xs font-bold text-text-primary bg-surface-highlight px-2 py-0.5 rounded-md">
+                          {(() => {
+                            if (cacheLimit === 'unlimited') return 'Безліміт';
+                            if (cacheLimit === '1gb') return '1 ГБ';
+                            if (cacheLimit === '500mb') return '500 МБ';
+                            if (cacheLimit === '50mb') return '50 МБ';
+                            const n = parseInt(cacheLimit, 10);
+                            return !isNaN(n) ? `${n} МБ` : '100 МБ';
+                          })()}
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min="50"
+                        max="1050"
+                        step="50"
+                        value={(() => {
+                          if (cacheLimit === 'unlimited') return 1050;
+                          if (cacheLimit === '1gb') return 1000;
+                          if (cacheLimit === '500mb') return 500;
+                          if (cacheLimit === '50mb') return 50;
+                          const n = parseInt(cacheLimit, 10);
+                          return !isNaN(n) ? n : 100;
+                        })()}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10);
+                          const newLimit = val > 1000 ? 'unlimited' : String(val);
+                          setCacheLimitState(newLimit);
+                        }}
+                        onPointerUp={async (e) => {
+                          const val = parseInt((e.target as HTMLInputElement).value, 10);
+                          const newLimit = val > 1000 ? 'unlimited' : String(val);
+                          const { setCacheLimit: setLimit, enforceLimit: enforce, getCacheSize: getSize } = await import('@/lib/offlineDb');
+                          setLimit(newLimit);
+                          await enforce();
+                          const newSize = await getSize();
+                          setCacheSize(newSize);
+                        }}
+                        style={{
+                          background: (() => {
+                            const val = (() => {
+                              if (cacheLimit === 'unlimited') return 1050;
+                              if (cacheLimit === '1gb') return 1000;
+                              if (cacheLimit === '500mb') return 500;
+                              if (cacheLimit === '50mb') return 50;
+                              const n = parseInt(cacheLimit, 10);
+                              return !isNaN(n) ? n : 100;
+                            })();
+                            const pct = ((val - 50) / (1050 - 50)) * 100;
+                            return `linear-gradient(to right, var(--primary) ${pct}%, var(--surface-highlight) ${pct}%)`;
+                          })()
+                        }}
+                        className="w-full accent-primary h-2 rounded-lg appearance-none cursor-pointer"
+                      />
+                      <div className="flex justify-between text-[10px] text-text-secondary/50 mt-1 px-0.5">
+                        <span>50 МБ</span>
+                        <span>Безліміт</span>
                       </div>
                     </div>
 
+                    {/* Retention slider */}
                     <div>
-                      <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Автовидалення</span>
-                      <div className="flex gap-1.5 mt-1.5">
-                        {[
-                          { label: '7 д', value: '7' },
-                          { label: '30 д', value: '30' },
-                          { label: '90 д', value: '90' },
-                          { label: 'Ніколи', value: 'never' },
-                        ].map(opt => {
-                          const isActive = cacheRetention === opt.value || (opt.value === '7' && cacheRetention === '7d') || (opt.value === '30' && cacheRetention === '30d') || (opt.value === '90' && cacheRetention === '90d');
-                          return (
-                            <button
-                              key={opt.value}
-                              onClick={async () => {
-                                setCacheRetentionState(opt.value);
-                                const { setCacheRetention: setRet, enforceLimit: enforce, getCacheSize: getSize } = await import('@/lib/offlineDb');
-                                setRet(opt.value);
-                                await enforce();
-                                const newSize = await getSize();
-                                setCacheSize(newSize);
-                              }}
-                              className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${isActive
-                                ? 'bg-primary text-background shadow-sm'
-                                : 'bg-surface-highlight text-text-secondary hover:text-text-primary'
-                                }`}
-                            >
-                              {opt.label}
-                            </button>
-                          );
-                        })}
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Автовидалення</span>
+                        <span className="text-xs font-bold text-text-primary bg-surface-highlight px-2 py-0.5 rounded-md">
+                          {(() => {
+                            if (cacheRetention === 'never') return 'Ніколи';
+                            if (cacheRetention === '7d') return '7 днів';
+                            if (cacheRetention === '30d') return '30 днів';
+                            if (cacheRetention === '90d') return '90 днів';
+                            const n = parseInt(cacheRetention, 10);
+                            return !isNaN(n) ? `${n} днів` : '30 днів';
+                          })()}
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min="1"
+                        max="185"
+                        step="1"
+                        value={(() => {
+                          if (cacheRetention === 'never') return 185;
+                          if (cacheRetention === '7d') return 7;
+                          if (cacheRetention === '30d') return 30;
+                          if (cacheRetention === '90d') return 90;
+                          const n = parseInt(cacheRetention, 10);
+                          return !isNaN(n) ? n : 30;
+                        })()}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10);
+                          const newRet = val > 180 ? 'never' : String(val);
+                          setCacheRetentionState(newRet);
+                        }}
+                        onPointerUp={async (e) => {
+                          const val = parseInt((e.target as HTMLInputElement).value, 10);
+                          const newRet = val > 180 ? 'never' : String(val);
+                          const { setCacheRetention: setRet, enforceLimit: enforce, getCacheSize: getSize } = await import('@/lib/offlineDb');
+                          setRet(newRet);
+                          await enforce();
+                          const newSize = await getSize();
+                          setCacheSize(newSize);
+                        }}
+                        style={{
+                          background: (() => {
+                            const val = (() => {
+                              if (cacheRetention === 'never') return 185;
+                              if (cacheRetention === '7d') return 7;
+                              if (cacheRetention === '30d') return 30;
+                              if (cacheRetention === '90d') return 90;
+                              const n = parseInt(cacheRetention, 10);
+                              return !isNaN(n) ? n : 30;
+                            })();
+                            const pct = ((val - 1) / (185 - 1)) * 100;
+                            return `linear-gradient(to right, var(--primary) ${pct}%, var(--surface-highlight) ${pct}%)`;
+                          })()
+                        }}
+                        className="w-full accent-primary h-2 rounded-lg appearance-none cursor-pointer"
+                      />
+                      <div className="flex justify-between text-[10px] text-text-secondary/50 mt-1 px-0.5">
+                        <span>1 день</span>
+                        <span>Ніколи</span>
                       </div>
                     </div>
                   </div>
