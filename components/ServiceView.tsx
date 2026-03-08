@@ -1207,12 +1207,12 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                 {/* SONGS LIST (REHEARSAL VIEW PROGRAM TAB) */}
                 {(!isServiceType && activeTab === 'program') && (
                     <div className="mt-8 space-y-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
+                        <div className="flex items-center justify-between gap-3 px-1">
                             <h2 className="text-xs font-bold text-text-secondary uppercase tracking-[0.15em]">Пісні ({currentService.songs.length})</h2>
                             {canEdit && (
                                 <button
                                     onClick={() => setShowAddSong(true)}
-                                    className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 bg-surface-highlight text-text-primary rounded-full text-xs font-bold hover:bg-surface-highlight/80 transition-colors"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-highlight text-text-primary rounded-full text-xs font-bold hover:bg-surface-highlight/80 transition-colors"
                                 >
                                     <Plus className="w-3.5 h-3.5" />
                                     Додати
