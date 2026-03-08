@@ -1718,6 +1718,150 @@ export const cleanupOldNotifications = functions.pubsub
             console.error("[cleanupOldNotifications] Error:", error);
         }
     });
+
+// --- AUTO ATTENDANCE REMINDERS ---
+// Runs daily at 9:00 AM Kyiv time. Finds services in the next 24h,
+// sends a push reminder to members who haven't voted yet.
+export const sendAttendanceReminders = functions.pubsub
+    .schedule("0 9 * * *")
+    .timeZone("Europe/Kyiv")
+    .onRun(async () => {
+        const now = new Date();
+        const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+        // Format as YYYY-MM-DD for comparison with service.date
+        const todayStr = now.toISOString().split("T")[0];
+        const tomorrowStr = tomorrow.toISOString().split("T")[0];
+
+        console.log(`[AttendanceReminder] Checking services between ${todayStr} and ${tomorrowStr}`);
+
+        try {
+            const choirsSnap = await db.collection("choirs").get();
+            let totalNotified = 0;
+
+            for (const choirDoc of choirsSnap.docs) {
+                const choirData = choirDoc.data();
+                const choirId = choirDoc.id;
+                const choirName = choirData.name || "Хор";
+                const members = choirData.members || [];
+
+                if (members.length === 0) continue;
+
+                // Find services happening tomorrow (within 24h window)
+                const servicesSnap = await db.collection(`choirs/${choirId}/services`)
+                    .where("date", ">=", todayStr)
+                    .where("date", "<=", tomorrowStr)
+                    .get();
+
+                if (servicesSnap.empty) continue;
+
+                for (const serviceDoc of servicesSnap.docs) {
+                    const service = serviceDoc.data();
+                    const serviceTitle = service.title || "Служіння";
+                    const serviceDate = service.date;
+
+                    // Skip past services (today's services that already happened)
+                    if (serviceDate === todayStr && service.time) {
+                        const [h, m] = service.time.split(":").map(Number);
+                        const serviceTime = new Date(now);
+                        serviceTime.setHours(h, m, 0, 0);
+                        if (serviceTime <= now) continue;
+                    }
+
+                    // Find pending members (not in confirmed or absent)
+                    const confirmed = new Set(service.confirmedMembers || []);
+                    const absent = new Set(service.absentMembers || []);
+
+                    const pendingMemberIds = members
+                        .filter((m: any) => m.id && !confirmed.has(m.id) && !absent.has(m.id))
+                        .map((m: any) => m.id);
+
+                    if (pendingMemberIds.length === 0) continue;
+
+                    // Collect FCM tokens for pending members
+                    const tokens: string[] = [];
+                    const batchSize = 10;
+                    for (let i = 0; i < pendingMemberIds.length; i += batchSize) {
+                        const batch = pendingMemberIds.slice(i, i + batchSize);
+                        const userRefs = batch.map((id: string) => db.collection("users").doc(id));
+                        const userDocs = await db.getAll(...userRefs);
+
+                        userDocs.forEach(doc => {
+                            const u = doc.data();
+                            if (u && u.notificationsEnabled && u.fcmTokens && Array.isArray(u.fcmTokens)) {
+                                tokens.push(...u.fcmTokens);
+                            }
+                        });
+                    }
+
+                    const uniqueTokens = [...new Set(tokens)];
+                    if (uniqueTokens.length === 0) continue;
+
+                    // Build the date label
+                    const isToday = serviceDate === todayStr;
+                    const dateLabel = isToday ? "Сьогодні" : "Завтра";
+
+                    const message = {
+                        notification: {
+                            title: `📋 ${choirName}`,
+                            body: `${dateLabel} ${serviceTitle.toLowerCase()} — не забудьте проголосувати!`
+                        },
+                        data: {
+                            route: '/app',
+                            choirId: choirId
+                        },
+                        apns: {
+                            headers: { "apns-priority": "5", "apns-push-type": "alert" },
+                            payload: { aps: { sound: "default" } },
+                        },
+                        android: {
+                            priority: "normal" as const,
+                            notification: { sound: "default", channelId: "choir_notifications" },
+                        },
+                        tokens: uniqueTokens,
+                    };
+
+                    const response = await admin.messaging().sendEachForMulticast(message);
+                    totalNotified += response.successCount;
+
+                    console.log(`[AttendanceReminder] ${choirName} / "${serviceTitle}" (${serviceDate}): ` +
+                        `${pendingMemberIds.length} pending, ${uniqueTokens.length} tokens, ` +
+                        `${response.successCount} sent, ${response.failureCount} failed`);
+
+                    // Clean stale tokens
+                    const staleTokens: string[] = [];
+                    response.responses.forEach((resp, idx) => {
+                        if (!resp.success) {
+                            const code = resp.error?.code;
+                            if (code === 'messaging/registration-token-not-registered' ||
+                                code === 'messaging/invalid-registration-token') {
+                                staleTokens.push(uniqueTokens[idx]);
+                            }
+                        }
+                    });
+
+                    if (staleTokens.length > 0) {
+                        const batch = db.batch();
+                        for (const token of staleTokens) {
+                            const snap = await db.collection("users")
+                                .where("fcmTokens", "array-contains", token)
+                                .get();
+                            snap.docs.forEach(doc => {
+                                batch.update(doc.ref, {
+                                    fcmTokens: admin.firestore.FieldValue.arrayRemove(token)
+                                });
+                            });
+                        }
+                        await batch.commit();
+                    }
+                }
+            }
+
+            console.log(`[AttendanceReminder] Done. Total notifications sent: ${totalNotified}`);
+        } catch (error) {
+            console.error("[AttendanceReminder] Error:", error);
+        }
+    });
 // --- STATISTICS AGGREGATION ---
 export { onServiceWrite } from "./statsAggregator";
 export { backfillStats } from "./backfillStats";
