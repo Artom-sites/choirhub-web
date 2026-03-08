@@ -135,6 +135,47 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
         }
     }, [service, isNative, availableSongs, userData?.choirId, isServiceType]);
 
+    // Push service data to iOS widgets (native only)
+    useEffect(() => {
+        if (!isNative || !Capacitor.isNativePlatform()) return;
+        const pushWidgetData = async () => {
+            try {
+                const WidgetData = (await import('@/plugins/WidgetDataPlugin')).default;
+                const songTitles = currentService.songs.map(s => {
+                    const full = availableSongs.find(a => a.id === s.songId);
+                    return full?.title || s.songTitle || 'Невідома пісня';
+                });
+                const userId = userData?.id || '';
+                const confirmed = currentService.confirmedMembers || [];
+                const absent = currentService.absentMembers || [];
+                const total = choirMembers.length;
+                let voteStatus: 'confirmed' | 'absent' | 'pending' = 'pending';
+                if (confirmed.includes(userId)) voteStatus = 'confirmed';
+                else if (absent.includes(userId)) voteStatus = 'absent';
+
+                await WidgetData.updateServiceData({
+                    title: currentService.title,
+                    date: currentService.date,
+                    time: currentService.time || '',
+                    type: currentService.type || 'service',
+                    serviceId: currentService.id,
+                    choirId: userData?.choirId || '',
+                    choirName: choir?.name || 'MyChoir',
+                    voteStatus,
+                    confirmedCount: confirmed.length,
+                    pendingCount: Math.max(0, total - confirmed.length - absent.length),
+                    absentCount: absent.length,
+                    totalMembers: total,
+                    songs: songTitles,
+                    userId,
+                });
+            } catch (e) {
+                // Widget plugin not available — ignore silently
+            }
+        };
+        pushWidgetData();
+    }, [currentService, choirMembers, availableSongs, isNative, userData, choir]);
+
     // Sync choir data updates
     useEffect(() => {
         if (choir) {

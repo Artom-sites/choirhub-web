@@ -5,6 +5,7 @@ class MyBridgeViewController: CAPBridgeViewController {
 
     override open func capacitorDidLoad() {
         bridge?.registerPluginInstance(PencilKitAnnotatorPlugin())
+        bridge?.registerPluginInstance(WidgetDataPlugin())
     }
 
     override func viewDidLoad() {
