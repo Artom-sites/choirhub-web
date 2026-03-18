@@ -573,9 +573,38 @@ function SongContent() {
     };
 
     if (loading) {
-        // On native, the native PDF viewer covers the screen — render nothing.
-        if (typeof window !== 'undefined' && Capacitor.isNativePlatform()) return null;
-        return <Preloader />;
+        return (
+            <div className="min-h-screen bg-background relative overflow-x-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] text-text-primary">
+                {/* Skeleton Header */}
+                <div className="sticky top-0 z-20 bg-surface/80 backdrop-blur-md border-b border-border px-4 py-3 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] flex items-center justify-between">
+                    <div className="w-10 h-10 bg-surface-highlight rounded-full animate-pulse" />
+                    <div className="flex gap-2">
+                        <div className="w-10 h-10 bg-surface-highlight rounded-full animate-pulse" />
+                        <div className="w-10 h-10 bg-surface-highlight rounded-full animate-pulse" />
+                    </div>
+                </div>
+
+                <div className="md:max-w-3xl lg:max-w-4xl mx-auto px-4 py-6 space-y-6">
+                    {/* Skeleton Title & Info */}
+                    <div className="space-y-4">
+                        <div className="w-3/4 h-10 bg-surface-highlight rounded-xl animate-pulse" />
+                        <div className="flex gap-2">
+                            <div className="w-24 h-6 bg-surface-highlight rounded-full animate-pulse" />
+                            <div className="w-32 h-6 bg-surface-highlight rounded-full animate-pulse" />
+                        </div>
+                    </div>
+
+                    {/* Skeleton Meta Cards */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="h-20 bg-surface-highlight rounded-2xl animate-pulse" />
+                        <div className="h-20 bg-surface-highlight rounded-2xl animate-pulse" />
+                    </div>
+
+                    {/* Skeleton PDF Block */}
+                    <div className="h-48 bg-surface-highlight rounded-[24px] animate-pulse" />
+                </div>
+            </div>
+        );
     }
 
     if (!song) {
