@@ -14,6 +14,8 @@ import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Dialog } from '@capacitor/dialog';
 import { useRouter } from "next/navigation";
 import SwipeableCard, { SwipeableCardRef } from "./SwipeableCard";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 
 import { resolvePdfUrlToBase64 } from "../lib/cache";
 import OfflinePdfModal from "./OfflinePdfModal";
@@ -989,37 +991,70 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
             const dateStr = new Date(currentService.date).toLocaleDateString("uk-UA", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
             const timeStr = currentService.time ? ' о ' + currentService.time : '';
 
-            const printContent = '<!DOCTYPE html><html lang="uk"><head><meta charset="utf-8"><title>Програма</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;padding:50px;color:#000;max-width:800px;margin:0 auto}h1{text-align:center;font-size:28px;margin-bottom:6px;font-weight:700}.date{text-align:center;font-size:18px;color:#555;margin-bottom:50px}.item{display:flex;align-items:baseline;gap:20px;margin-bottom:28px}.number{width:32px;text-align:right;font-size:18px;color:#666;line-height:1}.content{flex:1}.main{font-weight:700;font-size:22px}.sub{font-size:18px;color:#444;margin-top:4px}@media print{@page{margin:1.5cm}body{padding:0}}</style></head><body><h1>' + currentService.title + '</h1><div class="date">' + dateStr + timeStr + '</div>' + items + '</body></html>';
+            const printHtml = `
+                <div style="width: 800px; padding: 60px; background: white; color: black; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                    <style>
+                        .item { display: flex; align-items: baseline; gap: 24px; margin-bottom: 32px; }
+                        .number { width: 36px; text-align: right; font-size: 22px; color: #666; line-height: 1; font-weight: 500; }
+                        .content { flex: 1; }
+                        .main { font-weight: 700; font-size: 26px; line-height: 1.2; }
+                        .sub { font-size: 20px; color: #444; margin-top: 8px; line-height: 1.3; }
+                    </style>
+                    <h1 style="text-align: center; font-size: 34px; margin-bottom: 12px; font-weight: 700;">${currentService.title}</h1>
+                    <div style="text-align: center; font-size: 20px; color: #555; margin-bottom: 60px;">${dateStr}${timeStr}</div>
+                    ${items}
+                </div>
+            `;
 
-            if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios') {
-                const fileName = 'program-' + currentService.id.slice(0, 6) + '.html';
-                const result = await Filesystem.writeFile({
-                    path: fileName,
-                    data: printContent,
-                    directory: Directory.Cache,
-                    encoding: Encoding.UTF8
+            const container = document.createElement('div');
+            container.style.position = 'absolute';
+            container.style.left = '-9999px';
+            container.style.top = '0';
+            container.innerHTML = printHtml;
+            document.body.appendChild(container);
+
+            try {
+                const canvas = await html2canvas(container, {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: '#ffffff'
                 });
-                await Share.share({
-                    title: 'Програма: ' + currentService.title,
-                    url: result.uri,
-                    dialogTitle: 'Друк програми'
+
+                const imgData = canvas.toDataURL('image/jpeg', 0.98);
+                
+                const pdf = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'px',
+                    format: [canvas.width / 2, canvas.height / 2]
                 });
-            } else {
-                const iframe = document.createElement('iframe');
-                iframe.style.display = 'none';
-                document.body.appendChild(iframe);
-                iframe.contentWindow?.document.open();
-                iframe.contentWindow?.document.write(printContent);
-                iframe.contentWindow?.document.close();
-                setTimeout(() => {
-                    iframe.contentWindow?.focus();
-                    iframe.contentWindow?.print();
-                    setTimeout(() => {
-                        if (document.body.contains(iframe)) {
-                            document.body.removeChild(iframe);
-                        }
-                    }, 1000);
-                }, 250);
+
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                
+                pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+
+                if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios') {
+                    const pdfBase64 = pdf.output('datauristring').split(',')[1];
+                    const fileName = 'program-' + currentService.id.slice(0, 6) + '.pdf';
+                    
+                    const result = await Filesystem.writeFile({
+                        path: fileName,
+                        data: pdfBase64,
+                        directory: Directory.Cache,
+                    });
+                    
+                    await Share.share({
+                        title: 'Програма: ' + currentService.title,
+                        url: result.uri,
+                        dialogTitle: 'Друк програми'
+                    });
+                } else {
+                    pdf.save('program-' + currentService.id.slice(0, 6) + '.pdf');
+                }
+            } finally {
+                if (document.body.contains(container)) {
+                    document.body.removeChild(container);
+                }
             }
         } catch (e: any) {
             // Silently ignore share cancellation (user dismissed the sheet)
