@@ -977,8 +977,6 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                 const subParts: string[] = [];
                 if (subtitleText) subParts.push(subtitleText);
                 if (item.performer) subParts.push(item.performer);
-                if (item.conductor) subParts.push('Дир: ' + item.conductor);
-                if (item.pianist) subParts.push('Акомп: ' + item.pianist);
                 if (item.note) subParts.push('(' + item.note + ')');
 
                 const subHtml = subParts.length > 0
