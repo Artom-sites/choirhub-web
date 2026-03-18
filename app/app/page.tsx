@@ -2189,7 +2189,7 @@ function HomePageContent() {
               </button>
             </div>
 
-            <div className="max-w-xl mx-auto w-full h-full flex flex-col p-6 overflow-y-auto">
+            <div className="md:max-w-3xl lg:max-w-4xl mx-auto w-full h-full flex flex-col p-6 overflow-y-auto pb-safe">
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-3xl font-bold text-text-primary tracking-tight">Акаунт</h2>
 

@@ -1040,7 +1040,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
 
             </div>
 
-            <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
+            <div className="md:max-w-3xl lg:max-w-4xl mx-auto px-4 py-6 space-y-6">
 
 
                 {/* ===== TAB BAR ===== */}
