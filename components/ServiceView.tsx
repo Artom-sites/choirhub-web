@@ -1084,25 +1084,35 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
             }
 
             const container = document.createElement('div');
-            container.style.position = 'absolute';
-            container.style.left = '-9999px';
-            container.style.top = '0';
+            // Use fixed positioning inside viewport to prevent aggressive iOS off-screen culling 
+            container.style.position = 'fixed';
+            container.style.left = '0px';
+            container.style.top = '0px';
+            container.style.zIndex = '-9999'; // Hide behind app content
+            container.style.pointerEvents = 'none';
             container.innerHTML = printHtml;
             document.body.appendChild(container);
 
             try {
+                // Short wait to ensure DOM has computed layout
+                await new Promise(resolve => setTimeout(resolve, 50));
+
                 const canvas = await html2canvas(container, {
                     scale: 2,
                     useCORS: true,
                     backgroundColor: '#ffffff'
                 });
 
+                if (!canvas.width || !canvas.height) {
+                    throw new Error("HTML2Canvas повернув порожнє полотно (ширина або висота 0).");
+                }
+
                 const imgData = canvas.toDataURL('image/jpeg', 0.98);
                 
                 const pdf = new jsPDF({
                     orientation: pdfOrientation,
                     unit: 'px',
-                    format: [canvas.width / 2, canvas.height / 2]
+                    format: [Math.max(1, canvas.width / 2), Math.max(1, canvas.height / 2)]
                 });
 
                 const pdfWidth = pdf.internal.pageSize.getWidth();
