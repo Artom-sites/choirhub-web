@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon, mergeMembers, updateChoir, deleteMyAccount, adminDeleteUser, deleteAdminCode, getChoirNotifications, getChoirUsers, joinChoir, updateMember, claimMember, leaveChoir } from "@/lib/db";
 import { updateAttendanceCache } from "@/lib/attendanceCache";
+import { App } from '@capacitor/app';
 import { Capacitor } from "@capacitor/core";
 import { Dialog } from '@capacitor/dialog';
 import { SplashScreen } from "@capacitor/splash-screen";
@@ -30,25 +31,38 @@ import DeleteAccountModal from "@/components/DeleteAccountModal";
 import ConfirmationModal from "@/components/ConfirmationModal";
 import {
   Music2, Loader2, Copy, Check, HelpCircle, Mail, Shield,
-  LogOut, ChevronLeft, ChevronRight, Home, User, Users, Repeat,
+  LogOut, ChevronLeft, ChevronRight, House, User, Users, Repeat,
   PlusCircle, Plus, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor, Scale, Smartphone, RefreshCw, Search, ArrowUpDown, Palette, HardDrive, AlertTriangle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import NotificationPrompt from "@/components/NotificationPrompt";
 import { collection as firestoreCollection, addDoc, getDocs, getDoc, where, query, doc, updateDoc, arrayUnion, onSnapshot, orderBy, limit, startAfter, QueryDocumentSnapshot } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
-import { db, functions } from "@/lib/firebase";
+import { getFirestoreLazy, getFunctionsLazy } from "@/lib/firebase";
+const db = getFirestoreLazy();
+const functions = getFunctionsLazy();
 import { useFcmToken } from "@/hooks/useFcmToken";
 import { useServiceWorker } from "@/hooks/useServiceWorker";
 import { useBackgroundCache } from "@/hooks/useBackgroundCache";
 
 
+const FilledHouseIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className={className} xmlns="http://www.w3.org/2000/svg">
+    <path d="M12 2.5 L2 11 h3 v9 a1 1 0 001 1 h4 v-7 h4 v7 h4 a1 1 0 001-1 v-9 h3 L12 2.5z" />
+  </svg>
+);
+
 function HomePageContent() {
   const router = useRouter();
 
   const searchParams = useSearchParams();
-  const { user, userData, loading: authLoading, signOut, refreshProfile, isGuest, updateActiveChoir } = useAuth();
+  const { user, userData, loading: authLoading, signOut, refreshProfile, isGuest, updateActiveChoir, linkWithGoogle, linkWithApple } = useAuth();
   const { theme, setTheme } = useTheme();
+
+  // Startup timing diagnostic
+  const startupT0 = useRef(Date.now());
+  const st = (label: string) => console.log(`[Startup] ${label} +${Date.now() - startupT0.current}ms`);
+  useEffect(() => { st('React mount'); }, []);
 
   // Handle push notification tap routing globally
   useEffect(() => {
@@ -132,36 +146,19 @@ function HomePageContent() {
   // App Readiness
   const [isAppReady, setIsAppReady] = useState(false);
   const [isNative, setIsNative] = useState(false);
-  const [showPreloader, setShowPreloader] = useState(false);
-  const [preloaderFading, setPreloaderFading] = useState(false);
+  const [isSwitchingChoir, setIsSwitchingChoir] = useState(false);
   const preloaderMinReady = useRef(false);
   const preloaderStartTime = useRef(Date.now());
 
 
-  // Min/Max Timing: hide preloader only when BOTH conditions are met
+  // Log when app data is fully ready and hide native splash screen
   useEffect(() => {
     if (!isAppReady) return;
-
-    const elapsed = Date.now() - preloaderStartTime.current;
-    const remaining = Math.max(0, 1200 - elapsed); // Min 1200ms
-
-    const hide = async () => {
-      setPreloaderFading(true); // Start fade-out
-      setTimeout(() => setShowPreloader(false), 400); // Remove after fade
-
-      // Hide the native solid dark splash screen now that React is drawn
-      if (Capacitor.isNativePlatform()) {
-        try {
-          await SplashScreen.hide();
-        } catch (e) { }
-      }
-    };
-
-    if (remaining > 0) {
-      const timer = setTimeout(hide, remaining);
-      return () => clearTimeout(timer);
-    } else {
-      hide();
+    st('isAppReady=true — content loaded');
+    if (Capacitor.isNativePlatform()) {
+      requestAnimationFrame(() => {
+        SplashScreen.hide().then(() => st('SplashScreen hidden, app visible')).catch(() => {});
+      });
     }
   }, [isAppReady]);
 
@@ -227,6 +224,84 @@ function HomePageContent() {
   };
   // Data States
   const [activeServices, setActiveServices] = useState<{ upcoming: Service[], recentPast: Service[] }>({ upcoming: [], recentPast: [] });
+
+  // Widget Voting Sync State Refs
+  const voteSyncRefs = useRef({ 
+    choirId: userData?.choirId, 
+    isPolling: false,
+    hasInitialRun: false 
+  });
+  
+  // Update volatile dependencies linearly on render
+  useEffect(() => {
+    voteSyncRefs.current.choirId = userData?.choirId;
+  }, [userData?.choirId]);
+
+  // Widget Voting Sync Effect
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    const syncPendingVotes = async () => {
+      if (voteSyncRefs.current.isPolling) return;
+      voteSyncRefs.current.isPolling = true;
+
+      try {
+        const { default: WidgetData } = await import('@/plugins/WidgetDataPlugin');
+        const { votes } = await WidgetData.getPendingVotes();
+        if (votes && votes.length > 0) {
+          console.log("[WidgetSync] Found pending votes from widget:", votes.length);
+          const { setServiceAttendance } = await import('@/lib/db');
+          const auth = (await import('@/lib/firebase')).getAuthLazy();
+          const userId = auth?.currentUser?.uid;
+          
+          const currentChoirId = voteSyncRefs.current.choirId;
+          if (!userId || !currentChoirId) return;
+
+          const m = await import('@/lib/widgetSync');
+          m.suspendWidgetSync(5000); 
+
+          for (const vote of votes) {
+            try {
+              // Widget sends "confirmed"/"absent", setServiceAttendance expects "present"/"absent"
+              const dbAction: 'present' | 'absent' = (vote.action === 'confirmed' || vote.action === 'present') ? 'present' : 'absent';
+              const widgetStatus: 'confirmed' | 'absent' = dbAction === 'present' ? 'confirmed' : 'absent';
+              console.log(`[WidgetSync] Syncing vote for service ${vote.serviceId}: widget=${vote.action} → db=${dbAction} → track=${widgetStatus}`);
+              // Route vote to the choir that actually owns this service (from last widget payload)
+              const voteChoirId = m.lastPayloadServiceMap[vote.serviceId] || currentChoirId;
+              console.log(`[WidgetSync:Vote] Target choirId=${voteChoirId} (from ${m.lastPayloadServiceMap[vote.serviceId] ? 'payload-map' : 'active-choir'}), serviceId=${vote.serviceId}, action=${dbAction}`);
+              await setServiceAttendance(voteChoirId, vote.serviceId, userId, dbAction);
+              console.log(`[WidgetSync:Vote] Write succeeded for service ${vote.serviceId} (Global update complete).`);
+              m.trackVotedService(vote.serviceId, widgetStatus);
+            } catch (err) {
+              console.error(`[WidgetSync] Failed to sync vote for service ${vote.serviceId}`, err);
+            }
+          }
+        }
+      } catch (e) {
+        console.error("[WidgetSync] Error polling pending votes:", e);
+      } finally {
+        voteSyncRefs.current.isPolling = false;
+      }
+    };
+
+    // Sync on initial load
+    if (!voteSyncRefs.current.hasInitialRun) {
+      voteSyncRefs.current.hasInitialRun = true;
+      syncPendingVotes();
+    }
+
+    // Sync when app comes to foreground
+    const handleAppState = App.addListener('appStateChange', (state) => {
+      if (state.isActive) {
+        syncPendingVotes();
+      }
+    });
+
+    return () => {
+      handleAppState.then(sub => sub.remove());
+    };
+  }, []);
+
   const [pastServices, setPastServices] = useState<Service[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [lastVisibleHistory, setLastVisibleHistory] = useState<QueryDocumentSnapshot | null>(null);
@@ -548,8 +623,34 @@ function HomePageContent() {
 
         {/* Name & info */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[13px] font-semibold text-text-primary truncate">{member.name}</span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[13px] font-semibold text-text-primary truncate min-w-[50px]">{member.name}</span>
+            {/* Role badge */}
+            {(() => {
+              const label = member.roleLabel || (member.role === 'head' ? 'Керівник' : member.role === 'regent' ? 'Регент' : null);
+              if (!label) return null;
+              
+              let colorClass = "bg-indigo-500/15 text-indigo-400 border-indigo-500/20";
+              const lowerLabel = label.toLowerCase();
+              
+              if (lowerLabel.includes('керівник')) {
+                colorClass = "bg-orange-500/15 text-orange-400 border-orange-500/20";
+              } else if (lowerLabel.includes('регент')) {
+                colorClass = "bg-purple-500/15 text-purple-400 border-purple-500/20";
+              } else if (lowerLabel.includes('акомпаніатор')) {
+                colorClass = "bg-blue-500/15 text-blue-400 border-blue-500/20";
+              }
+
+              return (
+                <span className={`inline-block text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-md border flex-shrink-0 ${colorClass}`}>
+                  {label}
+                </span>
+              );
+            })()}
+            {/* "Я" badge */}
+            {(member.id === user?.uid || member.accountUid === user?.uid) && (
+              <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/20 flex-shrink-0">Я</span>
+            )}
             {member.hasAccount && <Smartphone className="w-3 h-3 text-blue-400 flex-shrink-0" />}
           </div>
           {/* Mini attendance bar */}
@@ -598,7 +699,11 @@ function HomePageContent() {
   // ------------------------------------------------------------------
   useEffect(() => {
     // 1. Wait for Auth Context or Profile Loading
-    if (authLoading || userData === undefined) return;
+    if (authLoading || userData === undefined) {
+      st(`Core init waiting: authLoading=${authLoading} userData=${userData === undefined ? 'undefined' : 'present'}`);
+      return;
+    }
+    st(`Auth resolved: user=${!!user} choirId=${userData?.choirId}`);
 
     // 2. Unauthenticated -> Redirect to Setup
     if (!user || !userData?.choirId) {
@@ -628,23 +733,23 @@ function HomePageContent() {
     let choirLoaded = false;
 
     const checkReady = () => {
-      // console.log('Checks:', { servicesLoaded, choirLoaded });
+      st(`checkReady: services=${servicesLoaded} choir=${choirLoaded}`);
       if (servicesLoaded && choirLoaded) {
-        // console.log('App Ready!');
+        st('App Ready — both loaded');
         setIsAppReady(true);
+        setIsSwitchingChoir(false);
       }
     };
 
-    // Calculate 7 days ago for "Active Window"
+    // Calculate 90 days ago for "Active Window"
+    // Expanded from 7→90 days so MemberStatsModal can compute
+    // 14/30/90-day attendance stats from the same realtime data
+    // without additional Firestore reads (~25-30 docs for 2x/week rehearsals).
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const sevenDaysAgo = new Date(today);
-    sevenDaysAgo.setDate(today.getDate() - 7);
-    const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]; // Compare as YYYY-MM-DD string if needed, or ISO
-
-    // We use ISO string date in DB usually? Type says string. 
-    // Assuming date format is YYYY-MM-DD or ISO. 
-    // If it's YYYY-MM-DD, ISO string comparison works for > date.
+    const ninetyDaysAgo = new Date(today);
+    ninetyDaysAgo.setDate(today.getDate() - 90);
+    const ninetyDaysAgoStr = ninetyDaysAgo.toISOString().split('T')[0];
 
     // ACTIVE WINDOW LISTENER (Realtime)
 
@@ -663,7 +768,7 @@ function HomePageContent() {
 
     const qServices = query(
       firestoreCollection(db, `choirs/${choirId}/services`),
-      where("date", ">=", sevenDaysAgoStr),
+      where("date", ">=", ninetyDaysAgoStr),
       orderBy("date", "asc")
     );
 
@@ -682,6 +787,17 @@ function HomePageContent() {
       // Update Active Services State
       const newState = { upcoming, recentPast };
       setActiveServices(newState);
+
+      // Sync widget data from ALL user's choirs (initial load + realtime)
+      import('@/lib/widgetSync').then(m => {
+        m.resumeWidgetSync(); // Always resume if snapshot fired (assured fresh data)
+        m.syncWidgetAllChoirs(
+          [...upcoming, ...recentPast],
+          null, // DO NOT pass the async 'choir' state object to avoid stale names during switch
+          userData?.memberships || [],
+          choirId // Pass the strictly derived choirId from the snapshot scope
+        );
+      }).catch(console.error);
 
       // Update Cache
       localStorage.setItem(CACHE_KEY, JSON.stringify(newState));
@@ -865,7 +981,7 @@ function HomePageContent() {
 
   const handleSwitchChoir = async (membership: UserMembership) => {
     if (!user) return;
-    setIsAppReady(false);
+    setIsSwitchingChoir(true);
 
     await createUser(user.uid, {
       choirId: membership.choirId,
@@ -874,6 +990,7 @@ function HomePageContent() {
     });
 
     await refreshProfile();
+    setShowAccount(false);
     setShowChoirManager(false);
     router.replace('/app');
   };
@@ -890,6 +1007,7 @@ function HomePageContent() {
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       await refreshProfile();
+      setShowAccount(false);
       setShowChoirManager(false);
       // Show name entry modal so admin can set proper "Прізвище Ім'я"
       setJoinLastName('');
@@ -931,6 +1049,7 @@ function HomePageContent() {
       if (result?.message === "Already a member" && result?.choirId) {
         await createUser(user.uid, { choirId: result.choirId });
         await refreshProfile();
+        setShowAccount(false);
         setShowChoirManager(false);
         setJoinCode(""); setJoinLastName(""); setJoinFirstName("");
         router.replace('/app');
@@ -961,18 +1080,22 @@ function HomePageContent() {
           setClaimMembers([matchedMember]);
           setClaimChoirId(result.choirId);
           setSelectedClaimId(matchedMember.id);
+          setShowAccount(false);
           setShowChoirManager(false);
           setShowClaimModal(true);
         } else {
           await updateMember(result.choirId, user.uid, { name: fullName });
+          setShowAccount(false);
           setShowChoirManager(false);
           router.replace('/app');
         }
       } else if (result?.choirId) {
         await updateMember(result.choirId, user.uid, { name: fullName });
+        setShowAccount(false);
         setShowChoirManager(false);
         router.replace('/app');
       } else {
+        setShowAccount(false);
         setShowChoirManager(false);
       }
     } catch (e: any) {
@@ -1079,10 +1202,10 @@ function HomePageContent() {
         await updateMember(userData.choirId, user.uid, { name: finalName });
 
         // If I am a regent, update the regents list (requires admin)
-        const oldName = userData?.name;
         if (oldName && choir.regents?.includes(oldName)) {
           const updatedRegents = choir.regents.map((r: string) => r === oldName ? finalName : r);
           try {
+            const { doc, updateDoc } = await import("firebase/firestore");
             const choirRef = doc(db, "choirs", userData.choirId);
             await updateDoc(choirRef, { regents: updatedRegents });
           } catch (e) {
@@ -1091,7 +1214,7 @@ function HomePageContent() {
         }
       }
 
-      // await fetchChoirData(); // Listener handles updates
+      await refreshProfile();
       setShowEditName(false);
       setNewFirstName("");
       setNewLastName("");
@@ -1373,26 +1496,9 @@ function HomePageContent() {
     }
   }, [isNative, canEdit, activeTab]);
 
-  // ------------------------------------------------------------------
-  //  APP READY CHECK
-  // ------------------------------------------------------------------
-  // Preloader overlay (renders on top, fades out when ready)
-  // This replaces the old early-return pattern for smoother transition.
-  const preloaderOverlay = (typeof window !== 'undefined' && Capacitor.isNativePlatform()) ? null : (showPreloader ? (
-    <div
-      className={`fixed inset-0 z-[9999] transition-opacity duration-400 ${preloaderFading ? 'opacity-0 pointer-events-none' : 'opacity-100'
-        }`}
-    >
-      <Preloader />
-    </div>
-  ) : null);
-
-  // If data isn't ready yet, show preloader as full-screen (no content behind)
+  // As requested, return null immediately for fastest possible transition without a skeleton
   if (!isAppReady) {
-    if (typeof window !== 'undefined' && Capacitor.isNativePlatform()) {
-      return null;
-    }
-    return <>{preloaderOverlay || <Preloader />}</>;
+    return null;
   }
 
 
@@ -1444,7 +1550,9 @@ function HomePageContent() {
   };
 
   if (authLoading) {
-    if (typeof window !== 'undefined' && Capacitor.isNativePlatform()) {
+    // Return null entirely on native to avoid any flash of the web preloader. 
+    // The native Capacitor Splash Screen is covering the screen during this time.
+    if (Capacitor.isNativePlatform() || (typeof window !== 'undefined' && window.location.protocol === 'capacitor:')) {
       return null;
     }
     return <Preloader />;
@@ -1476,6 +1584,22 @@ function HomePageContent() {
 
       <InstallPrompt />
 
+      {/* Choir Switching Overlay */}
+      <AnimatePresence>
+        {isSwitchingChoir && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center p-4"
+          >
+            <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
+            <h2 className="text-xl font-bold text-text-primary mb-2">Перемикання хору</h2>
+            <p className="text-sm text-text-secondary text-center">Будь ласка, зачекайте...</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Logout Confirmation Modal */}
       <AnimatePresence>
         {showLogoutConfirm && (
@@ -1483,7 +1607,7 @@ function HomePageContent() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
             onClick={(e) => { e.stopPropagation(); setShowLogoutConfirm(false); }}
           >
             <motion.div
@@ -1612,26 +1736,54 @@ function HomePageContent() {
               </div>
 
               {/* Save Button */}
-              <button
-                onClick={async () => {
-                  if (!userData?.choirId || !editChoirName.trim()) return;
-                  setSavingChoirSettings(true);
-                  try {
-                    await updateChoir(userData.choirId, { name: editChoirName.trim() });
-                    setChoir(prev => prev ? { ...prev, name: editChoirName.trim() } : null);
-                    setShowChoirSettings(false);
-                  } catch (err) {
-                    console.error("Failed to update choir:", err);
-                  } finally {
-                    setSavingChoirSettings(false);
-                  }
-                }}
-                disabled={savingChoirSettings || !editChoirName.trim()}
-                className="w-full py-3 bg-primary text-background rounded-xl font-bold hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {savingChoirSettings && <Loader2 className="w-4 h-4 animate-spin" />}
-                Зберегти
-              </button>
+              <div className="mt-8 pt-2 border-t border-border/10">
+                <button
+                  onClick={async () => {
+                    if (!userData?.choirId || !editChoirName.trim()) return;
+                    setSavingChoirSettings(true);
+                    try {
+                      await updateChoir(userData.choirId, { name: editChoirName.trim() });
+                      
+                      if (user?.uid) {
+                        const { doc, getDoc, updateDoc, getFirestore } = await import("firebase/firestore");
+                        const { app } = await import("@/lib/firebase");
+                        const db = getFirestore(app);
+                        const userRef = doc(db, "users", user.uid);
+                        const userDocSize = await getDoc(userRef);
+
+                        if (userDocSize.exists()) {
+                          const data = userDocSize.data();
+                          const profileUpdates: any = {};
+
+                          if (data.choirId === userData.choirId) {
+                            profileUpdates.choirName = editChoirName.trim();
+                          }
+
+                          if (Object.keys(profileUpdates).length > 0) {
+                            await updateDoc(userRef, profileUpdates);
+                            console.log("[Choir Settings] Synced choirName to profile");
+                          }
+                        }
+                      }
+
+                      // Force immediate local update for both header and sidebar
+                      setChoir(prev => prev ? { ...prev, name: editChoirName.trim() } : null);
+                      await refreshProfile();
+                      
+                      setShowChoirSettings(false);
+                    } catch (err) {
+                      console.error("Failed to update choir:", err);
+                    } finally {
+                      setSavingChoirSettings(false);
+                    }
+                  }}
+                  disabled={savingChoirSettings || !editChoirName.trim()}
+                  className="w-full py-4 bg-primary text-background rounded-2xl font-bold hover:opacity-90 transition-all shadow-lg active:scale-[0.98] flex items-center justify-center gap-2"
+                >
+                  {savingChoirSettings && <Loader2 className="w-5 h-5 animate-spin" />}
+                  Зберегти зміни
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
@@ -1644,7 +1796,8 @@ function HomePageContent() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+            style={{ zIndex: 100 }}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
@@ -1652,7 +1805,7 @@ function HomePageContent() {
               exit={{ scale: 0.95, opacity: 0 }}
               className="bg-surface card-shadow w-full max-w-sm p-6 rounded-3xl shadow-2xl overflow-hidden relative"
             >
-              <button onClick={() => { setShowChoirManager(false); setShowAccount(true); setManagerMode('list'); setManagerError(""); }} className="absolute top-4 right-4 p-2 text-text-secondary hover:text-text-primary">
+              <button onClick={() => { setShowChoirManager(false); setManagerMode('list'); setManagerError(""); }} className="absolute top-4 right-4 p-2 text-text-secondary hover:text-text-primary">
                 <X className="w-5 h-5" />
               </button>
 
@@ -2023,8 +2176,8 @@ function HomePageContent() {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-0 z-[60] flex flex-col bg-background"
-            style={{ background: 'var(--background)' }}
+            className="fixed inset-0 flex flex-col bg-background"
+            style={{ background: 'var(--background)', zIndex: 90 }}
           >
             <div className="p-4 border-b border-border pt-[calc(1rem_+_env(safe-area-inset-top))]" style={{ background: 'var(--surface)' }}>
               <button
@@ -2101,7 +2254,7 @@ function HomePageContent() {
                 <div className="bg-surface rounded-2xl p-4 card-shadow">
                   {/* Change Choir Button */}
                   <button
-                    onClick={() => { setShowAccount(false); setManagerMode('list'); setJoinCode(''); setJoinLastName(''); setJoinFirstName(''); setManagerError(''); setShowChoirManager(true); }}
+                    onClick={() => { setManagerMode('list'); setJoinCode(''); setJoinLastName(''); setJoinFirstName(''); setManagerError(''); setShowChoirManager(true); }}
                     className="w-full flex items-center justify-between py-2 transition-all group"
                   >
                     <div className="flex items-center gap-3">
@@ -2193,6 +2346,7 @@ function HomePageContent() {
 
 
                 </div>
+
               </div>
 
               {/* Cache Management - only on native app */}
@@ -2371,13 +2525,24 @@ function HomePageContent() {
               <div className="mt-8">
                 <p className="text-sm text-text-secondary mb-4">Про застосунок</p>
 
-                <a
-                  href="mailto:artom.devv@gmail.com?subject=ChoirHub%20Підтримка"
+                <button
+                  onClick={async () => {
+                    const { Dialog } = await import('@capacitor/dialog');
+                    const { value } = await Dialog.confirm({
+                      title: 'Написати лист',
+                      message: 'Відкрити поштовий додаток для зв\'язку з підтримкою?',
+                      okButtonTitle: 'Відкрити',
+                      cancelButtonTitle: 'Скасувати',
+                    });
+                    if (value) {
+                      window.location.href = 'mailto:artom.devv@gmail.com?subject=ChoirHub%20Підтримка';
+                    }
+                  }}
                   className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
                 >
                   <Mail className="w-5 h-5 text-text-secondary" />
                   <span>Підтримка та зворотний зв'язок</span>
-                </a>
+                </button>
 
                 <button
                   onClick={() => { setLegalInitialView('main'); setShowLegalModal(true); }}
@@ -2459,7 +2624,10 @@ function HomePageContent() {
                 </div>
               )}
             </button>
-            <div>
+            <div
+              onClick={() => setShowChoirManager(true)}
+              className="cursor-pointer hover:opacity-80 transition-opacity"
+            >
               <h1 className="text-lg font-bold text-text-primary leading-tight">
                 {choir?.name || "ChoirHub"}
               </h1>
@@ -2787,7 +2955,7 @@ function HomePageContent() {
           style={{ height: 'var(--nav-height)' }}
         >
           {[
-            { id: 'home', label: 'Служіння', icon: Home },
+            { id: 'home', label: 'Служіння', icon: FilledHouseIcon },
             { id: 'songs', label: 'Пісні', icon: Music2 },
             { id: 'members', label: 'Учасники', icon: Users }
           ].map((tab) => {
@@ -2826,7 +2994,7 @@ function HomePageContent() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+              className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
             >
               <motion.div
                 initial={{ scale: 0.95, opacity: 0 }}
@@ -2902,7 +3070,7 @@ function HomePageContent() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+              className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
               onClick={() => setShowEditName(false)}
             >
               <motion.div
@@ -2913,7 +3081,7 @@ function HomePageContent() {
                 onClick={e => e.stopPropagation()}
               >
                 <div className="flex justify-between items-start mb-6">
-                  <h3 className="text-xl font-bold text-text-primary">Змінити ім'я</h3>
+                <h3 className="text-xl font-bold text-text-primary">Змінити ім'я</h3>
                   <button
                     onClick={() => setShowEditName(false)}
                     className="p-1 text-text-secondary hover:text-text-primary transition-colors"
@@ -2952,13 +3120,15 @@ function HomePageContent() {
                   </div>
                 </div>
 
-                <button
-                  onClick={handleSaveName}
-                  disabled={savingName || !newFirstName.trim() || !newLastName.trim()}
-                  className="w-full py-4 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {savingName ? <Loader2 className="animate-spin" /> : "Зберегти"}
-                </button>
+                <div className="mt-8 pt-2 border-t border-border/10">
+                  <button
+                    onClick={handleSaveName}
+                    disabled={savingName || !newFirstName.trim() || !newLastName.trim()}
+                    className="w-full py-4 bg-primary text-background font-bold rounded-2xl hover:opacity-90 transition-all shadow-lg active:scale-[0.98] flex items-center justify-center gap-2"
+                  >
+                    {savingName ? <Loader2 className="animate-spin w-5 h-5" /> : "Зберегти ім'я"}
+                  </button>
+                </div>
               </motion.div>
             </motion.div>
           )

@@ -8,6 +8,10 @@ import { useRepertoire } from "@/contexts/RepertoireContext";
 interface AddProgramItemModalProps {
     onAdd: (item: Omit<ProgramItem, 'id' | 'order'>) => void;
     onClose: () => void;
+    /** If provided, the modal opens in "edit" mode with pre-filled values */
+    editItem?: ProgramItem;
+    /** Called when saving in edit mode */
+    onEdit?: (item: ProgramItem) => void;
 }
 
 const ITEM_TYPES: { type: ProgramItemType; label: string; icon: React.ReactNode; color: string }[] = [
@@ -21,42 +25,71 @@ const ITEM_TYPES: { type: ProgramItemType; label: string; icon: React.ReactNode;
     { type: 'other', label: 'Інше', icon: <MoreHorizontal className="w-4 h-4" />, color: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30' },
 ];
 
-export default function AddProgramItemModal({ onAdd, onClose }: AddProgramItemModalProps) {
-    const [selectedType, setSelectedType] = useState<ProgramItemType>('choir');
-    const [title, setTitle] = useState("");
-    const [performer, setPerformer] = useState("");
+export default function AddProgramItemModal({ onAdd, onClose, editItem, onEdit }: AddProgramItemModalProps) {
+    const isEditMode = !!editItem;
+    const [selectedType, setSelectedType] = useState<ProgramItemType>(editItem?.type || 'choir');
+    const [title, setTitle] = useState(editItem?.title || "");
+    const [performer, setPerformer] = useState(editItem?.performer || "");
     const [linkedSong, setLinkedSong] = useState<SimpleSong | null>(null);
     const [showSongPicker, setShowSongPicker] = useState(false);
     const [songSearch, setSongSearch] = useState("");
-    const { songs } = useRepertoire();
+    const { songs: rawSongs } = useRepertoire();
+    const songs = rawSongs || [];
+
+    // In edit mode, try to find the linked song from repertoire
+    useEffect(() => {
+        if (editItem?.songId && (songs || []).length > 0) {
+            const found = songs.find(s => s.id === editItem.songId);
+            if (found) setLinkedSong(found);
+        }
+    }, [editItem, songs]);
 
     // When type is 'choir' and a song is selected, auto-fill title
     useEffect(() => {
-        if (linkedSong) {
+        if (linkedSong && !isEditMode) {
             setTitle(linkedSong.title);
         }
     }, [linkedSong]);
 
-    const filteredSongs = songs.filter(s =>
+    const filteredSongs = (songs || []).filter(s =>
         s.title.toLowerCase().includes(songSearch.toLowerCase())
     );
 
     const typeConfig = ITEM_TYPES.find(t => t.type === selectedType)!;
 
     const handleSubmit = () => {
-        const payload: Omit<ProgramItem, 'id' | 'order'> = {
-            type: selectedType,
-            title: title.trim() || typeConfig.label,
-        };
+        if (isEditMode && editItem && onEdit) {
+            const updated: ProgramItem = {
+                ...editItem,
+                type: selectedType,
+                title: title.trim() || typeConfig.label,
+                performer: performer.trim() || undefined,
+                songId: linkedSong?.id || editItem.songId,
+                songTitle: linkedSong?.title || editItem.songTitle,
+                conductor: linkedSong?.conductor || editItem.conductor,
+                pianist: linkedSong?.pianist || editItem.pianist,
+            };
+            // If song was unlinked
+            if (!linkedSong && editItem.songId) {
+                delete updated.songId;
+                delete updated.songTitle;
+            }
+            onEdit(updated);
+        } else {
+            const payload: Omit<ProgramItem, 'id' | 'order'> = {
+                type: selectedType,
+                title: title.trim() || typeConfig.label,
+            };
 
-        const cleanedPerformer = performer.trim();
-        if (cleanedPerformer) payload.performer = cleanedPerformer;
-        if (linkedSong?.id) payload.songId = linkedSong.id;
-        if (linkedSong?.title) payload.songTitle = linkedSong.title;
-        if (linkedSong?.conductor) payload.conductor = linkedSong.conductor;
-        if (linkedSong?.pianist) payload.pianist = linkedSong.pianist;
+            const cleanedPerformer = performer.trim();
+            if (cleanedPerformer) payload.performer = cleanedPerformer;
+            if (linkedSong?.id) payload.songId = linkedSong.id;
+            if (linkedSong?.title) payload.songTitle = linkedSong.title;
+            if (linkedSong?.conductor) payload.conductor = linkedSong.conductor;
+            if (linkedSong?.pianist) payload.pianist = linkedSong.pianist;
 
-        onAdd(payload);
+            onAdd(payload);
+        }
     };
 
     return (
@@ -67,7 +100,7 @@ export default function AddProgramItemModal({ onAdd, onClose }: AddProgramItemMo
             >
                 {/* Header */}
                 <div className="flex items-center justify-between mb-5">
-                    <h2 className="text-lg font-bold text-text-primary">Додати пункт</h2>
+                    <h2 className="text-lg font-bold text-text-primary">{isEditMode ? 'Редагувати пункт' : 'Додати пункт'}</h2>
                     <button onClick={onClose} className="p-2 text-text-secondary hover:text-text-primary rounded-full hover:bg-surface-highlight transition-colors">
                         <X className="w-5 h-5" />
                     </button>
@@ -92,6 +125,7 @@ export default function AddProgramItemModal({ onAdd, onClose }: AddProgramItemMo
                                     key={song.id}
                                     onClick={() => {
                                         setLinkedSong(song);
+                                        setTitle(song.title);
                                         setShowSongPicker(false);
                                     }}
                                     className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-surface-highlight transition-colors flex items-center gap-3"
@@ -124,6 +158,12 @@ export default function AddProgramItemModal({ onAdd, onClose }: AddProgramItemMo
                                 <button
                                     key={type}
                                     onClick={() => {
+                                        // If title matches the current type label (auto-generated), update to new label
+                                        const oldTypeConfig = ITEM_TYPES.find(t => t.type === selectedType);
+                                        if (!title.trim() || title.trim() === oldTypeConfig?.label) {
+                                            const newConfig = ITEM_TYPES.find(t => t.type === type);
+                                            setTitle(newConfig?.label || '');
+                                        }
                                         setSelectedType(type);
                                         // Clear linked song if switching away from choir/congregation
                                         if (type !== 'choir' && type !== 'congregation') setLinkedSong(null);
@@ -185,7 +225,7 @@ export default function AddProgramItemModal({ onAdd, onClose }: AddProgramItemMo
                             onClick={handleSubmit}
                             className="w-full py-4 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                         >
-                            Додати
+                            {isEditMode ? 'Зберегти' : 'Додати'}
                         </button>
                     </div>
                 )}

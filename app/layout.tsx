@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { RepertoireProvider } from "@/contexts/RepertoireContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { ChoirProvider } from "@/contexts/ChoirContext";
 import ClientErrorBoundary from "@/components/ClientErrorBoundary";
 import "./globals.css";
 
@@ -56,8 +57,9 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 5, // Allow zooming for accessibility
-  userScalable: true,
+  minimumScale: 1, // Prevent iOS background launch zoom bug
+  maximumScale: 1, // Disable auto-zooming natively
+  userScalable: false, // Prevent iOS input zoom strictly
   themeColor: "#000000",
   viewportFit: "cover",
 };
@@ -102,11 +104,13 @@ export default function RootLayout({
       >
         <ClientErrorBoundary>
           <AuthProvider>
-            <RepertoireProvider>
-              <ThemeProvider>
-                {children}
-              </ThemeProvider>
-            </RepertoireProvider>
+            <ChoirProvider>
+              <RepertoireProvider>
+                <ThemeProvider>
+                  {children}
+                </ThemeProvider>
+              </RepertoireProvider>
+            </ChoirProvider>
           </AuthProvider>
         </ClientErrorBoundary>
       </body>

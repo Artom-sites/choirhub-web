@@ -3,7 +3,7 @@ import React from 'react';
 export default function PrivacyText() {
     return (
         <>
-            <p className="text-xs text-text-secondary">Останнє оновлення: 13 лютого 2026</p>
+            <p className="text-xs text-text-secondary">Останнє оновлення: 10 березня 2026</p>
 
             {/* 1. Introduction */}
             <section className="space-y-3">
@@ -48,8 +48,8 @@ export default function PrivacyText() {
                 <h4 className="text-sm font-semibold text-text-primary mt-2">3.2. Дані хору</h4>
                 <ul className="list-disc pl-5 space-y-1 text-sm text-text-secondary">
                     <li>Членство у хорах</li>
-                    <li>Роль (хорист, регент, адміністратор)</li>
-                    <li>Вокальна партія (Сопрано, Альт, Тенор, Бас)</li>
+                    <li>Роль (включаючи кастомні ролі)</li>
+                    <li>Вокальна партія (включаючи нестандартні та кастомні партії)</li>
                 </ul>
 
                 <h4 className="text-sm font-semibold text-text-primary mt-2">3.3. Контент</h4>
@@ -62,8 +62,8 @@ export default function PrivacyText() {
 
                 <h4 className="text-sm font-semibold text-text-primary mt-2">3.4. Дані активності</h4>
                 <ul className="list-disc pl-5 space-y-1 text-sm text-text-secondary">
-                    <li>Відвідування служінь та репетицій</li>
-                    <li>Статистика присутності</li>
+                    <li>Відвідування служінь та репетицій (вручну або через опитування)</li>
+                    <li>Агрегована статистика присутності та найпопулярніших пісень</li>
                 </ul>
 
                 <h4 className="text-sm font-semibold text-text-primary mt-2">3.5. Технічні дані</h4>

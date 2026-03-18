@@ -2,10 +2,9 @@
 
 import { X, Calendar, Check, AlertCircle, Loader2 } from "lucide-react";
 import { ChoirMember, Service, StatsSummary } from "@/types";
-import { useEffect, useState, useMemo } from "react";
-import { getMemberAbsences } from "@/lib/db";
+import { useState, useMemo } from "react";
 
-type Period = '30' | '90' | 'all';
+type Period = '14' | '30' | '90' | 'all';
 
 const voiceLabels: Record<string, string> = {
     Soprano: 'Сопрано', Alto: 'Альт', Tenor: 'Тенор', Bass: 'Бас',
@@ -26,36 +25,73 @@ interface Props {
     globalStats?: StatsSummary | null;
 }
 
-export default function MemberStatsModal({ member, choirId, onClose, globalStats }: Props) {
-    const [absences, setAbsences] = useState<Service[]>([]);
-    const [loadingAbsences, setLoadingAbsences] = useState(true);
+export default function MemberStatsModal({ member, services, choirId, onClose, globalStats }: Props) {
     const [period, setPeriod] = useState<Period>('all');
 
-    useEffect(() => {
-        if (!choirId || !member.id) return;
-        setLoadingAbsences(true);
-        getMemberAbsences(choirId, member.id).then(data => {
-            // Only count absences from finalized services (matches backend aggregation logic)
-            const finalizedAbsences = data.filter(service => service.isFinalized);
-            setAbsences(finalizedAbsences);
-            setLoadingAbsences(false);
-        }).catch(() => {
-            setLoadingAbsences(false);
+    // ── Calculate stats for selected period from services prop ──
+    // services prop now contains ~90 days of data (realtime listener expanded
+    // from 7→90 days in app/page.tsx), so no extra Firestore reads needed.
+    //
+    // ⚠️ NOTE: This duplicates the attendance counting logic from
+    // functions/src/statsAggregator.ts (calculateStats). If the backend
+    // rules change, this must be updated in sync.
+    const { stats, filteredAbsences, totalServicesInPeriod } = useMemo(() => {
+        const today = new Date().toISOString().split('T')[0];
+
+        // Determine cutoff
+        let cutoffStr = '1970-01-01';
+        if (period !== 'all') {
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - parseInt(period));
+            cutoffStr = cutoff.toISOString().split('T')[0];
+        }
+
+        // All non-deleted services in the period
+        const servicesInPeriod = services.filter(s => {
+            if (s.deletedAt) return false;
+            if (s.date < cutoffStr) return false;
+            return true;
         });
-    }, [choirId, member.id]);
 
-    const stats = globalStats?.memberStats?.[member.id] || {
-        attendanceRate: 100, presentCount: 0, absentCount: 0, servicesWithRecord: 0
-    };
+        // Services with attendance data (finalized OR past with records)
+        const withAttendance = servicesInPeriod.filter(s => {
+            const hasAttendance = (s.confirmedMembers || []).length > 0 ||
+                                  (s.absentMembers || []).length > 0;
+            if (!hasAttendance) return false;
+            return s.isFinalized || s.date < today;
+        });
 
-    const filteredAbsences = useMemo(() => {
-        if (period === 'all') return absences;
-        const days = parseInt(period);
-        const cutoff = new Date();
-        cutoff.setDate(cutoff.getDate() - days);
-        const cutoffStr = cutoff.toISOString().split('T')[0];
-        return absences.filter(a => a.date >= cutoffStr);
-    }, [absences, period]);
+        let presentCount = 0;
+        let absentCount = 0;
+        let servicesWithRecord = 0;
+        const absenceList: Service[] = [];
+
+        for (const s of withAttendance) {
+            const isPresent = (s.confirmedMembers || []).includes(member.id);
+            const isAbsent = (s.absentMembers || []).includes(member.id);
+            if (isPresent) {
+                presentCount++;
+                servicesWithRecord++;
+            } else if (isAbsent) {
+                absentCount++;
+                servicesWithRecord++;
+                absenceList.push(s);
+            }
+        }
+
+        const attendanceRate = servicesWithRecord > 0
+            ? Math.round((presentCount / servicesWithRecord) * 100)
+            : 100;
+
+        // Sort absences by date descending (newest first)
+        absenceList.sort((a, b) => b.date.localeCompare(a.date));
+
+        return {
+            stats: { presentCount, absentCount, servicesWithRecord, attendanceRate },
+            filteredAbsences: absenceList,
+            totalServicesInPeriod: servicesInPeriod.length,
+        };
+    }, [services, period, member.id]);
 
     const formatDate = (dateStr: string) => {
         const [y, m, d] = dateStr.split('-').map(Number);
@@ -67,8 +103,11 @@ export default function MemberStatsModal({ member, choirId, onClose, globalStats
         });
     };
 
-    const periodLabels: Record<Period, string> = { '30': '30 дн', '90': '90 дн', 'all': 'Весь час' };
+    const periodLabels: Record<Period, string> = { '14': '2 тижні', '30': '30 дн', '90': '90 дн', 'all': 'Весь час' };
     const vc = voiceColors[member.voice || ''];
+    const isCustomVoice = member.voice && !voiceColors[member.voice];
+    const avatarBg = vc ? `${vc.bg} ${vc.text}` : isCustomVoice ? 'bg-teal-500/15 text-teal-400' : 'bg-surface-highlight text-text-primary';
+    const avatarLetter = member.voice ? member.voice[0].toUpperCase() : (member.name?.[0]?.toUpperCase() || '?');
     const attendanceColor = stats.attendanceRate >= 80 ? '#4ade80' : stats.attendanceRate >= 50 ? '#fbbf24' : '#f87171';
 
     return (
@@ -83,18 +122,13 @@ export default function MemberStatsModal({ member, choirId, onClose, globalStats
                 {/* Header */}
                 <div className="flex items-center justify-between mb-5">
                     <div className="flex items-center gap-3">
-                        <div className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm ${vc ? `${vc.bg} ${vc.text}` : 'bg-surface-highlight text-text-primary'
-                            }`}>
-                            {member.photoURL ? (
-                                <img src={member.photoURL} alt={member.name} className="w-full h-full object-cover rounded-full" />
-                            ) : (
-                                member.voice ? member.voice[0] : (member.name?.[0]?.toUpperCase() || '?')
-                            )}
+                        <div className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm ${avatarBg}`}>
+                            {avatarLetter}
                         </div>
                         <div>
                             <h3 className="text-base font-bold text-text-primary">{member.name}</h3>
                             <p className="text-xs text-text-secondary">
-                                {voiceLabels[member.voice || ''] || 'Без голосу'} • {member.role === 'regent' ? 'Регент' : member.role === 'head' ? 'Керівник' : 'Хорист'}
+                                {voiceLabels[member.voice || ''] || member.voice || 'Без голосу'} • {member.roleLabel || (member.role === 'regent' ? 'Регент' : member.role === 'head' ? 'Керівник' : 'Хорист')}
                             </p>
                         </div>
                     </div>
@@ -134,7 +168,7 @@ export default function MemberStatsModal({ member, choirId, onClose, globalStats
                         <div className="col-span-2">
                             <span className="text-[11px] text-text-secondary">
                                 {stats.servicesWithRecord > 0
-                                    ? `${stats.servicesWithRecord} з ${globalStats?.totalServices || 0} служінь`
+                                    ? `${stats.servicesWithRecord} з ${totalServicesInPeriod} служінь`
                                     : 'Немає даних'
                                 }
                             </span>
@@ -144,7 +178,7 @@ export default function MemberStatsModal({ member, choirId, onClose, globalStats
 
                 {/* Period Filter */}
                 <div className="flex gap-1 p-0.5 bg-surface-highlight rounded-lg mb-3">
-                    {(['30', '90', 'all'] as Period[]).map(p => (
+                    {(['14', '30', '90', 'all'] as Period[]).map(p => (
                         <button
                             key={p}
                             onClick={() => setPeriod(p)}
@@ -160,11 +194,7 @@ export default function MemberStatsModal({ member, choirId, onClose, globalStats
 
                 {/* Absences List */}
                 <div className="flex-1 overflow-y-auto -mx-1 px-1">
-                    {loadingAbsences ? (
-                        <div className="flex justify-center py-8">
-                            <Loader2 className="w-6 h-6 text-primary animate-spin" />
-                        </div>
-                    ) : filteredAbsences.length > 0 ? (
+                    {filteredAbsences.length > 0 ? (
                         <div className="space-y-1">
                             {filteredAbsences.map(absence => (
                                 <div
@@ -188,16 +218,10 @@ export default function MemberStatsModal({ member, choirId, onClose, globalStats
                             <p className="text-sm font-medium">Чудова відвідуваність!</p>
                             <p className="text-xs mt-0.5 opacity-60">Немає жодних пропусків</p>
                         </div>
-                    ) : absences.length > 0 && filteredAbsences.length === 0 ? (
+                    ) : (
                         <div className="text-center py-6 text-text-secondary">
                             <Check className="w-10 h-10 mx-auto mb-2 text-primary/50" />
                             <p className="text-sm font-medium">Немає пропусків за цей період</p>
-                        </div>
-                    ) : (
-                        <div className="text-center py-6 text-text-secondary">
-                            <AlertCircle className="w-10 h-10 mx-auto mb-2 text-orange-400/50" />
-                            <p className="text-sm font-medium">{stats.absentCount} пропусків зафіксовано</p>
-                            <p className="text-xs mt-0.5 opacity-60">Деталі завантажуються...</p>
                         </div>
                     )}
                 </div>

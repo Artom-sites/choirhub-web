@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ChoirMember, UserRole } from "@/types";
-import { X, Trash2, Save, Merge } from "lucide-react";
+import { X, Trash2, Save, Merge, Plus } from "lucide-react";
 import ConfirmationModal from "./ConfirmationModal";
 
 interface EditMemberModalProps {
@@ -17,25 +17,56 @@ interface EditMemberModalProps {
 export default function EditMemberModal({ isOpen, onClose, member, onSave, onDelete, onMergeClick }: EditMemberModalProps) {
     const [name, setName] = useState("");
     const [role, setRole] = useState<UserRole>('member');
+    const [roleLabel, setRoleLabel] = useState("");
+    const [showCustomRole, setShowCustomRole] = useState(false);
     const [voice, setVoice] = useState<string>("");
+    const [showCustomVoice, setShowCustomVoice] = useState(false);
+    const [customVoice, setCustomVoice] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+    const standardVoices = ['Soprano', 'Alto', 'Tenor', 'Bass'];
+    const voiceLabels: Record<string, string> = {
+        Soprano: 'Сопрано',
+        Alto: 'Альт',
+        Tenor: 'Тенор',
+        Bass: 'Бас'
+    };
 
     useEffect(() => {
         if (member) {
             setName(member.name);
             setRole(member.role);
-            setVoice(member.voice || "");
+            setRoleLabel(member.roleLabel || "");
+            setShowCustomRole(!!(member.roleLabel && member.roleLabel !== 'Регент' && member.roleLabel !== 'Керівник'));
+
+            const v = member.voice || "";
+            if (v && !standardVoices.includes(v)) {
+                // Custom voice
+                setVoice("");
+                setCustomVoice(v);
+                setShowCustomVoice(true);
+            } else {
+                setVoice(v);
+                setCustomVoice("");
+                setShowCustomVoice(false);
+            }
         } else {
             setName("");
             setRole('member');
+            setRoleLabel("");
+            setShowCustomRole(false);
             setVoice("");
+            setCustomVoice("");
+            setShowCustomVoice(false);
         }
         setError(null);
     }, [member, isOpen]);
 
     if (!isOpen) return null;
+
+    const effectiveVoice = showCustomVoice ? customVoice.trim() : voice;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -44,17 +75,14 @@ export default function EditMemberModal({ isOpen, onClose, member, onSave, onDel
             setError("Введіть ім'я учасника");
             return;
         }
-        if (role === 'member' && !voice) {
-            setError("Будь ласка, оберіть партію (голос)");
-            return;
-        }
         setLoading(true);
         try {
             await onSave({
                 id: member?.id || `manual_${Date.now()}`,
                 name: name.trim(),
                 role,
-                voice: voice ? (voice as any) : undefined
+                roleLabel: showCustomRole ? roleLabel.trim() : undefined,
+                voice: effectiveVoice ? (effectiveVoice as any) : undefined
             });
             onClose();
         } catch (err: any) {
@@ -79,7 +107,7 @@ export default function EditMemberModal({ isOpen, onClose, member, onSave, onDel
     return (
         <>
             <div className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-                <div className="bg-surface border border-border w-full max-w-sm p-6 rounded-3xl shadow-2xl">
+                <div className="bg-surface border border-border w-full max-w-sm p-6 rounded-3xl shadow-2xl max-h-[85vh] overflow-y-auto">
                     <div className="flex justify-between items-center mb-6">
                         <h3 className="text-xl font-bold text-text-primary">
                             {isEditing ? "Редагувати учасника" : "Новий учасник"}
@@ -92,11 +120,11 @@ export default function EditMemberModal({ isOpen, onClose, member, onSave, onDel
                     <form onSubmit={handleSubmit} className="space-y-5">
                         {/* Name */}
                         <div>
-                            <label className="text-xs text-text-secondary uppercase font-bold mb-2 block">Ім'я та Прізвище</label>
+                            <label className="text-xs text-text-secondary uppercase font-bold mb-2 block">Прізвище та ім'я</label>
                             <input
                                 value={name}
                                 onChange={e => setName(e.target.value)}
-                                placeholder="Ім'я та Прізвище..."
+                                placeholder="Прізвище та ім'я..."
                                 className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl focus:border-text-secondary/50 focus:bg-surface outline-none transition-all"
                             />
                         </div>
@@ -107,36 +135,98 @@ export default function EditMemberModal({ isOpen, onClose, member, onSave, onDel
                             <div className="grid grid-cols-2 gap-2">
                                 <button
                                     type="button"
-                                    onClick={() => setRole('member')}
-                                    className={`p-3 rounded-xl text-sm font-bold transition-all ${role === 'member' ? 'bg-primary text-background' : 'bg-surface-highlight text-text-secondary hover:bg-surface-highlight/80'}`}
+                                    onClick={() => { setRole('member'); setShowCustomRole(false); setRoleLabel(""); }}
+                                    className={`p-3 rounded-xl text-sm font-bold transition-all ${role === 'member' && !showCustomRole ? 'bg-primary text-background' : 'bg-surface-highlight text-text-secondary hover:bg-surface-highlight/80'}`}
                                 >
                                     Хорист
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => setRole('regent')}
-                                    className={`p-3 rounded-xl text-sm font-bold transition-all ${role === 'regent' ? 'bg-primary text-background' : 'bg-surface-highlight text-text-secondary hover:bg-surface-highlight/80'}`}
+                                    onClick={() => { setRole('regent'); setShowCustomRole(false); setRoleLabel(""); }}
+                                    className={`p-3 rounded-xl text-sm font-bold transition-all ${role === 'regent' && !showCustomRole ? 'bg-primary text-background' : 'bg-surface-highlight text-text-secondary hover:bg-surface-highlight/80'}`}
                                 >
                                     Регент
                                 </button>
                             </div>
+                            {/* Custom Role Toggle */}
+                            {!showCustomRole ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCustomRole(true)}
+                                    className="mt-2 flex items-center gap-1.5 text-xs text-text-secondary hover:text-primary transition-colors"
+                                >
+                                    <Plus className="w-3.5 h-3.5" />
+                                    Інша роль...
+                                </button>
+                            ) : (
+                                <div className="mt-2 flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        value={roleLabel}
+                                        onChange={e => setRoleLabel(e.target.value)}
+                                        placeholder="Напр: Акомпаніатор, Статист..."
+                                        className="flex-1 p-2.5 bg-surface-highlight text-text-primary border border-primary/30 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                                        autoFocus
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => { setShowCustomRole(false); setRoleLabel(""); }}
+                                        className="p-2.5 text-text-secondary hover:text-text-primary bg-surface-highlight rounded-xl border border-border"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         {/* Voice */}
                         <div>
                             <label className="text-xs text-text-secondary uppercase font-bold mb-2 block">Партія (Голос)</label>
                             <div className="grid grid-cols-2 gap-2">
-                                {['Soprano', 'Alto', 'Tenor', 'Bass'].map((v) => (
+                                {standardVoices.map((v) => (
                                     <button
                                         key={v}
                                         type="button"
-                                        onClick={() => setVoice(voice === v ? "" : v)}
-                                        className={`p-3 rounded-xl text-sm font-bold transition-all ${voice === v ? 'bg-primary text-background' : 'bg-surface-highlight text-text-secondary hover:bg-surface-highlight/80'}`}
+                                        onClick={() => {
+                                            setVoice(voice === v ? "" : v);
+                                            setShowCustomVoice(false);
+                                            setCustomVoice("");
+                                        }}
+                                        className={`p-3 rounded-xl text-sm font-bold transition-all ${voice === v && !showCustomVoice ? 'bg-primary text-background' : 'bg-surface-highlight text-text-secondary hover:bg-surface-highlight/80'}`}
                                     >
-                                        {v === 'Soprano' ? 'Сопрано' : v === 'Alto' ? 'Альт' : v === 'Tenor' ? 'Тенор' : 'Бас'}
+                                        {voiceLabels[v]}
                                     </button>
                                 ))}
                             </div>
+                            {/* Custom Voice Toggle */}
+                            {!showCustomVoice ? (
+                                <button
+                                    type="button"
+                                    onClick={() => { setShowCustomVoice(true); setVoice(""); }}
+                                    className="mt-2 flex items-center gap-1.5 text-xs text-text-secondary hover:text-primary transition-colors"
+                                >
+                                    <Plus className="w-3.5 h-3.5" />
+                                    Інша партія...
+                                </button>
+                            ) : (
+                                <div className="mt-2 flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        value={customVoice}
+                                        onChange={e => setCustomVoice(e.target.value)}
+                                        placeholder="Напр: Баритон, Меццо-сопрано..."
+                                        className="flex-1 p-2.5 bg-surface-highlight text-text-primary border border-primary/30 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                                        autoFocus
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => { setShowCustomVoice(false); setCustomVoice(""); }}
+                                        className="p-2.5 text-text-secondary hover:text-text-primary bg-surface-highlight rounded-xl border border-border"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         {error && (

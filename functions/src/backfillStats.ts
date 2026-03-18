@@ -136,8 +136,35 @@ function calculateStatsForBackfill(
 
     const topSongs = allSongs.slice(0, 20);
 
+
     return { totalServices, averageAttendance, attendanceTrend, topSongs, allSongs, memberStats };
 }
+
+import { onRequest } from "firebase-functions/v2/https";
+
+export const debugStats = onRequest(async (req, res) => {
+    try {
+        const choirsSnap = await db.collection("choirs").get();
+        let out = "";
+        
+        for (const c of choirsSnap.docs) {
+            const statsSnap = await db.doc(`choirs/${c.id}/stats/summary`).get();
+            const stats = statsSnap.data();
+            out += `Choir ${c.id}: StatsExist=${statsSnap.exists} TrendLen=${stats?.attendanceTrend?.length || 0} UpdatedAt=${stats?.updatedAt?.toDate?.() || stats?.updatedAt}\n`;
+            
+            // If trend exists, show last 3 entries
+            if (stats?.attendanceTrend) {
+                const last3 = stats.attendanceTrend.slice(-3);
+                last3.forEach((e: any) => {
+                    out += `  -> ${e.date}: ${e.percentage}%\n`;
+                });
+            }
+        }
+        res.status(200).send(out);
+    } catch (e: any) {
+        res.status(500).send(`Error: ${e.message}`);
+    }
+});
 
 // ─── CALLABLE FUNCTION ───────────────────────────────────
 

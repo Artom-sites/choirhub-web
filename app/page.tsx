@@ -20,12 +20,12 @@ import {
     query,
     where
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getFirestoreLazy } from "@/lib/firebase";
 import Preloader from "@/components/Preloader";
 
 function SetupPageContent() {
     const router = useRouter();
-    const { user, userData, loading: authLoading, signInWithGoogle, signInWithApple, signInWithEmail, signUpWithEmail, resetPassword, refreshProfile, isGuest, signOut, pendingCredential, existingMethod, clearPendingCredential } = useAuth();
+    const { user, userData, loading: authLoading, signInWithGoogle, signInWithApple, signInWithEmail, signUpWithEmail, resetPassword, refreshProfile, isGuest, signOut, pendingCredential, existingMethod, clearPendingCredential, primaryUid } = useAuth();
 
     const searchParams = useSearchParams();
     const urlCode = searchParams.get('code');
@@ -54,6 +54,7 @@ function SetupPageContent() {
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [authName, setAuthName] = useState("");
+
 
     // Claim Modal State
     const [showClaimModal, setShowClaimModal] = useState(false);
@@ -380,7 +381,7 @@ function SetupPageContent() {
 
             if (namePromptReason === 'claim' && claimChoirId) {
                 // We are updating the claimed member entry directly
-                const choirDocRef = doc(db, "choirs", claimChoirId);
+                const choirDocRef = doc(getFirestoreLazy(), "choirs", claimChoirId);
                 const choirSnap = await getDoc(choirDocRef);
                 if (choirSnap.exists()) {
                     const cData = choirSnap.data() as Choir;
@@ -438,6 +439,8 @@ function SetupPageContent() {
                     <p className="text-text-secondary text-sm mb-8">Ваш хоровий асистент</p>
 
                     <div className="w-full space-y-3">
+
+
                         {/* Email/Password Fields */}
                         {isRegistering && (
                             <input
@@ -480,7 +483,7 @@ function SetupPageContent() {
                         )}
 
                         {!isRegistering && (
-                            <div className="flex justify-end">
+                            <div className="flex justify-end pt-1">
                                 <button
                                     onClick={() => { setView('reset_password'); setError(''); setResetSent(false); }}
                                     className="text-xs text-text-secondary hover:text-text-primary transition-colors"
@@ -490,10 +493,16 @@ function SetupPageContent() {
                             </div>
                         )}
 
+                        {/* Disclaimer */}
+                        <p className="text-[11px] text-text-secondary leading-snug text-center px-4 py-2">
+                            Продовжуючи, ви погоджуєтесь <br />
+                            з <Link href="/terms" className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>Умовами використання</Link> та <Link href="/privacy" className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>Політикою конфіденційності</Link>
+                        </p>
+
                         <button
                             onClick={handleEmailAuth}
                             disabled={formLoading || !email || !password}
-                            className="w-full py-4 bg-text-primary text-background font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all disabled:opacity-40"
+                            className="w-full py-4 bg-text-primary text-background font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             {formLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isRegistering ? "Зареєструватися" : "Увійти")}
                         </button>
@@ -526,7 +535,7 @@ function SetupPageContent() {
                             <button
                                 onClick={handleGoogleLogin}
                                 disabled={formLoading}
-                                className="relative py-3.5 bg-surface border border-border rounded-xl flex items-center justify-center gap-2 hover:bg-surface-highlight transition-colors disabled:opacity-50"
+                                className="relative py-3.5 bg-surface border border-border rounded-xl flex items-center justify-center gap-2 hover:bg-surface-highlight transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {googleLoading ? (
                                     <Loader2 className="w-5 h-5 animate-spin text-text-primary" />
@@ -546,7 +555,7 @@ function SetupPageContent() {
                             <button
                                 onClick={handleAppleLogin}
                                 disabled={formLoading}
-                                className="relative py-3.5 bg-surface border border-border rounded-xl flex items-center justify-center gap-2 hover:bg-surface-highlight transition-colors disabled:opacity-50"
+                                className="relative py-3.5 bg-surface border border-border rounded-xl flex items-center justify-center gap-2 hover:bg-surface-highlight transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {appleLoading ? (
                                     <Loader2 className="w-5 h-5 animate-spin text-text-primary" />
@@ -654,10 +663,16 @@ function SetupPageContent() {
                         )}
                         {error && <p className="text-red-400 text-sm bg-red-400/10 p-3 rounded-lg">{error}</p>}
 
+                        {/* Disclaimer */}
+                        <p className="text-[11px] text-text-secondary leading-snug text-center px-4 py-2">
+                            Продовжуючи, ви погоджуєтесь <br />
+                            з <Link href="/terms" className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>Умовами використання</Link> та <Link href="/privacy" className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>Політикою конфіденційності</Link>
+                        </p>
+
                         <button
                             onClick={handleEmailAuth}
-                            disabled={formLoading}
-                            className="w-full py-4 bg-primary hover:opacity-90 text-background font-bold rounded-xl mt-4 flex items-center justify-center shadow-lg transition-all disabled:opacity-50"
+                            disabled={formLoading || !email || !password}
+                            className="w-full py-4 bg-primary hover:opacity-90 text-background font-bold rounded-xl mt-4 flex items-center justify-center shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {formLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isRegistering ? "Зареєструватися" : "Увійти")}
                         </button>
@@ -741,6 +756,8 @@ function SetupPageContent() {
                         <p className="text-text-secondary">
                             {urlCode ? "Приєднайтеся до хору за запрошенням" : "У вас ще немає хору. Що зробимо?"}
                         </p>
+
+
 
                         <div className="grid gap-3 pt-4">
                             {!urlCode && !isGuest && (

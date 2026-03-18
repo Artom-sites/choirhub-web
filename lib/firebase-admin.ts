@@ -7,8 +7,9 @@ interface FirebaseAdminConfig {
     privateKey: string;
 }
 
-function formatPrivateKey(key: string) {
-    return key.replace(/\\n/g, "\n");
+function formatPrivateKey(b64Key: string) {
+    if (!b64Key) return '';
+    return Buffer.from(b64Key, 'base64').toString('utf8').replace(/\\n/g, '\n');
 }
 
 export function createFirebaseAdminApp(config: FirebaseAdminConfig) {
@@ -34,12 +35,12 @@ export function getAdmin() {
 
     const projectId = process.env.FIREBASE_PROJECT_ID;
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-    const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY_B64;
 
     if (!projectId || !clientEmail || !privateKey) {
         if (!projectId) console.error("Missing FIREBASE_PROJECT_ID");
         if (!clientEmail) console.error("Missing FIREBASE_CLIENT_EMAIL");
-        if (!privateKey) console.error("Missing FIREBASE_PRIVATE_KEY");
+        if (!privateKey) console.error("Missing FIREBASE_PRIVATE_KEY_B64");
         return null;
     }
 

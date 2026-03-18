@@ -147,9 +147,9 @@ export default function SubmitSongModal({ onClose, onSuccess }: Props) {
             // Step 3: Update doc with file URL
             try {
                 const { doc, updateDoc } = await import("firebase/firestore");
-                const { db } = await import("@/lib/firebase");
+                const { getFirestoreLazy } = await import("@/lib/firebase");
 
-                await updateDoc(doc(db, "pending_songs", songId), {
+                await updateDoc(doc(getFirestoreLazy(), "pending_songs", songId), {
                     parts: [{
                         name: "Партитура",
                         pdfUrl: downloadUrl

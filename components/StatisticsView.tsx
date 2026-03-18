@@ -5,7 +5,7 @@ import { Choir } from "@/types";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { ArrowLeft, Users, Mic2, Calendar, TrendingUp, Music, X, ChevronRight, Loader2, AlertCircle } from "lucide-react";
 import { doc, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getFirestoreLazy } from "@/lib/firebase";
 import DetailedStatisticsModal from "./DetailedStatisticsModal";
 
 // ─── Types matching the summary document from Cloud Function ───
@@ -54,7 +54,7 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
 
     useEffect(() => {
         if (!choir.id) return;
-        const summaryRef = doc(db, `choirs/${choir.id}/stats/summary`);
+        const summaryRef = doc(getFirestoreLazy(), `choirs/${choir.id}/stats/summary`);
         const unsub = onSnapshot(
             summaryRef,
             (snapshot) => {
@@ -77,20 +77,48 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
 
     // Voice distribution
     const voiceData = useMemo(() => {
-        const counts: Record<string, number> = { Soprano: 0, Alto: 0, Tenor: 0, Bass: 0, Unassigned: 0 };
+        const counts: Record<string, number> = {};
+
         (choir.members || []).filter((m: any) => !m.isDuplicate).forEach(m => {
-            if (m.voice && counts[m.voice] !== undefined) {
-                counts[m.voice]++;
-            } else {
-                counts.Unassigned++;
-            }
+            const voice = m.voice || 'Unassigned';
+            if (!counts[voice]) counts[voice] = 0;
+            counts[voice]++;
         });
-        const raw = [
-            { name: 'Сопрано', key: 'Soprano', value: counts.Soprano, color: '#f472b6' },
-            { name: 'Альт', key: 'Alto', value: counts.Alto, color: '#c084fc' },
-            { name: 'Тенор', key: 'Tenor', value: counts.Tenor, color: '#60a5fa' },
-            { name: 'Бас', key: 'Bass', value: counts.Bass, color: '#4ade80' },
-        ].filter(d => d.value > 0);
+
+        // Predefined colors for standard voices
+        const standardColors: Record<string, string> = {
+            Soprano: '#f472b6',
+            Alto: '#c084fc',
+            Tenor: '#60a5fa',
+            Bass: '#4ade80',
+        };
+
+        // Name mappings for standard voices
+        const nameMap: Record<string, string> = {
+            Soprano: 'Сопрано',
+            Alto: 'Альт',
+            Tenor: 'Тенор',
+            Bass: 'Бас',
+            Unassigned: 'Без партії'
+        };
+
+        // Helper to generate a consistent color based on string hash
+        const getHashColor = (str: string) => {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            const hue = Math.abs(hash) % 360;
+            return `hsl(${hue}, 70%, 65%)`; // Pastel brights
+        };
+
+        const raw = Object.entries(counts)
+            .map(([key, value]) => ({
+                name: nameMap[key] || key, // Use mapping if standard, otherwise raw custom name
+                key,
+                value,
+                color: standardColors[key] || (key === 'Unassigned' ? '#9ca3af' : getHashColor(key))
+            }))
+            .filter(d => d.value > 0)
+            .sort((a, b) => b.value - a.value); // Sort largest groups first
 
         // Largest-remainder method so percentages sum to exactly 100
         const total = raw.reduce((s, d) => s + d.value, 0);
@@ -348,7 +376,7 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                     )}
 
                     {/* Most Performed Songs */}
-                    {stats.topSongs.length > 0 && (
+                    {(stats.topSongs || []).length > 0 && (
                         <div className="bg-surface border border-border rounded-3xl p-5">
                             <h3 className="font-bold mb-4 flex items-center gap-2 text-[15px]">
                                 <div className="w-8 h-8 rounded-xl bg-pink-500/10 flex items-center justify-center">
@@ -358,7 +386,8 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                             </h3>
                             <div className="space-y-1">
                                 {stats.topSongs.slice(0, 5).map((song, idx) => {
-                                    const barWidth = (song.count / stats.topSongs[0].count) * 100;
+                                    const maxCount = stats.topSongs?.[0]?.count || 1;
+                                    const barWidth = (song.count / maxCount) * 100;
                                     return (
                                         <div key={song.songId} className="flex items-center gap-2.5 py-2 group">
                                             <span className={`text-xs w-5 text-right font-bold tabular-nums ${idx < 3 ? 'text-pink-400' : 'text-text-secondary/50'}`}>
@@ -384,12 +413,12 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                                 })}
                             </div>
 
-                            {stats.allSongs.length > 5 && (
+                            {(stats.allSongs || []).length > 5 && (
                                 <button
                                     onClick={() => setShowAllSongs(true)}
                                     className="w-full mt-3 py-2.5 bg-surface-highlight/60 hover:bg-surface-highlight rounded-xl text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors flex items-center justify-center gap-1.5"
                                 >
-                                    Усі пісні ({stats.allSongs.length})
+                                    Усі пісні ({(stats.allSongs || []).length})
                                     <ChevronRight className="w-3.5 h-3.5" />
                                 </button>
                             )}
@@ -407,11 +436,11 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                             <button onClick={() => setShowAllSongs(false)} className="p-2 hover:bg-surface-highlight rounded-xl">
                                 <X className="w-5 h-5" />
                             </button>
-                            <h2 className="font-bold text-lg">Статистика по пісням ({stats.allSongs.length})</h2>
+                            <h2 className="font-bold text-lg">Статистика по пісням ({(stats.allSongs || []).length})</h2>
                         </div>
                         <div className="flex-1 overflow-y-auto p-4 pb-safe">
                             <div className="space-y-2 max-w-lg mx-auto">
-                                {stats.allSongs.map((song, idx) => (
+                                { (stats.allSongs || []).map((song, idx) => (
                                     <div key={song.songId} className="flex items-center gap-3 bg-surface border border-border p-3 rounded-xl">
                                         <span className={`text-xs w-6 text-center font-bold tabular-nums ${idx < 3 ? 'text-pink-400' : 'text-text-secondary'}`}>{idx + 1}</span>
                                         <div className="flex-1 min-w-0">
@@ -420,10 +449,10 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                                                 <span className="text-sm text-pink-400 font-bold ml-2 tabular-nums">{song.count}×</span>
                                             </div>
                                             <div className="h-1 bg-white/5 rounded-full overflow-hidden mt-1.5">
-                                                <div
+                                                  <div
                                                     className="h-full rounded-full"
                                                     style={{
-                                                        width: `${(song.count / stats.allSongs[0].count) * 100}%`,
+                                                        width: `${(song.count / (stats.allSongs?.[0]?.count || 1)) * 100}%`,
                                                         background: 'linear-gradient(90deg, #ec4899, #a855f7)'
                                                     }}
                                                 />

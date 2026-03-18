@@ -36,13 +36,14 @@ export default function DetailedStatisticsModal({
     const [activeTab, setActiveTab] = useState<'services' | 'members'>('services');
 
     const sortedServices = useMemo(() => {
+        const trend = attendanceTrend || [];
         // Sort reverse chronological
-        return [...attendanceTrend].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return [...trend].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [attendanceTrend]);
-
     const sortedMembers = useMemo(() => {
+        const statsMap = memberStats || {};
         const membersList = (choir.members || []).map(m => {
-            const stats = memberStats[m.id] || { presentCount: 0, absentCount: 0, servicesWithRecord: 0, attendanceRate: 0 };
+            const stats = statsMap[m.id] || { presentCount: 0, absentCount: 0, servicesWithRecord: 0, attendanceRate: 0 };
             return {
                 ...m,
                 stats

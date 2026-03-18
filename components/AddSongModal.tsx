@@ -6,7 +6,7 @@ import { SimpleSong } from "@/types";
 import { CATEGORIES } from "@/lib/themes";
 import { useAuth } from "@/contexts/AuthContext";
 import { updateDoc, doc, arrayRemove } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getFirestoreLazy } from "@/lib/firebase";
 import ConfirmationModal from "./ConfirmationModal";
 import { Dialog } from '@capacitor/dialog';
 

@@ -21,13 +21,23 @@ import {
     runTransaction
 } from "firebase/firestore";
 import { signOut } from "firebase/auth";
-import { db, functions, auth } from "./firebase";
-export { db, functions, auth };
+import { getFirestoreLazy, getFunctionsLazy, getAuthLazy } from "./firebase";
+
+// Helper getters to replace legacy exported static instances
+const getDb = () => getFirestoreLazy();
+const getAuth = () => getAuthLazy();
+const getFn = () => getFunctionsLazy();
+
+// Re-export for external files that might still need them lazily if they were importing from db.ts
+export const db = new Proxy({} as any, { get: (_, prop) => (getFirestoreLazy() as any)[prop as any] });
+export const auth = new Proxy({} as any, { get: (_, prop) => (getAuthLazy() as any)[prop as any] });
+export const functions = new Proxy({} as any, { get: (_, prop) => (getFunctionsLazy() as any)[prop as any] });
+
 import { httpsCallable } from "firebase/functions";
 import {
     Service, SimpleSong, Choir, UserData, ServiceSong,
     GlobalSong, LocalSong, SongMeta, SongCategory, SongSource,
-    PendingSong, SongSubmissionStatus
+    PendingSong, SongSubmissionStatus, RecurringSchedule, RecurringRule
 } from "@/types";
 import { getCachedSongs, setCachedSongs, getCachedServices, setCachedServices, isOffline } from "./offlineDataCache";
 
@@ -63,38 +73,81 @@ const songConverter = {
     }
 };
 
+// Normalizes service data to ensure critical arrays like 'songs' always exist.
+export function normalizeService(id: string, data: any): Service {
+    if (!data) {
+        console.error(`🚨 [normalizeService] CRITICAL: Null data for service ${id}`);
+        return { id, title: 'Error', songs: [], confirmedMembers: [], absentMembers: [] } as any;
+    }
+
+    const songsValid = Array.isArray(data.songs);
+    if (!songsValid) {
+        console.error(`🚨 [normalizeService] MALFORMED SONGS DETECTED!
+ServiceId: ${id}
+Title: "${data.title}"
+Songs Type: ${typeof data.songs}
+IsArray: ${songsValid}
+Stack Trace follows for forensic isolation:`);
+        console.trace(); // Standard way to get the stack trace in the console
+        if (process.env.NODE_ENV === 'development') {
+            console.log('Full malformed doc:', JSON.stringify(data));
+        }
+    }
+
+    return {
+        ...data,
+        id,
+        songs: songsValid ? data.songs : [],
+        confirmedMembers: Array.isArray(data.confirmedMembers) ? data.confirmedMembers : [],
+        absentMembers: Array.isArray(data.absentMembers) ? data.absentMembers : [],
+        program: Array.isArray(data.program) ? data.program : [],
+    } as Service;
+}
+
 const serviceConverter = {
     toFirestore: (data: any) => data,
-    fromFirestore: (snap: any) => {
-        const data = snap.data();
-        return {
-            id: snap.id,
-            ...data,
-            // date might be stored as string or timestamp, ensure consistency if needed
-        } as Service;
-    }
+    fromFirestore: (snap: any) => normalizeService(snap.id, snap.data())
 };
 
 // ============ SONGS ============
 
 
-// Helper to remove undefined fields (Firestore doesn't like them)
-function removeUndefined(obj: any) {
-    const newObj: any = {};
-    Object.keys(obj).forEach(key => {
-        if (obj[key] !== undefined) {
-            newObj[key] = obj[key];
-        }
-    });
-    return newObj;
+// Helper to check if a value is a plain JS Object (not a class instance like Timestamp/FieldValue)
+function isPlainObject(obj: any): boolean {
+    return typeof obj === 'object' && obj !== null && obj.constructor === Object;
 }
+
+// Helper to deeply remove undefined fields (Firestore doesn't like them)
+function removeUndefined(obj: any): any {
+    if (obj === undefined) return undefined;
+    if (obj === null) return null;
+
+    if (Array.isArray(obj)) {
+        return obj.map(item => removeUndefined(item)).filter(item => item !== undefined);
+    }
+
+    if (isPlainObject(obj)) {
+        const newObj: any = {};
+        for (const key of Object.keys(obj)) {
+            const val = removeUndefined(obj[key]);
+            if (val !== undefined) {
+                newObj[key] = val;
+            }
+        }
+        return newObj;
+    }
+
+    // Return any other types (Date, Timestamp, FieldValue, string, number, bool) as-is
+    return obj;
+}
+
 export async function addSong(choirId: string, song: Omit<SimpleSong, "id">): Promise<string> {
     try {
-        const docRef = await addDoc(collection(db, `choirs/${choirId}/songs`), {
-            ...removeUndefined(song),
+        const docRef = await addDoc(collection(getDb(), `choirs/${choirId}/songs`), removeUndefined({
+            ...song,
             addedAt: serverTimestamp(),
             updatedAt: serverTimestamp()
-        });
+        }));
         return docRef.id;
     } catch (error) {
         console.error("Error adding song:", error);
@@ -105,7 +158,7 @@ export async function addSong(choirId: string, song: Omit<SimpleSong, "id">): Pr
 export async function deleteSong(choirId: string, songId: string): Promise<void> {
     try {
         // Soft delete
-        const docRef = doc(db, `choirs/${choirId}/songs`, songId);
+        const docRef = doc(getDb(), `choirs/${choirId}/songs`, songId);
         await updateDoc(docRef, {
             deletedAt: new Date().toISOString(),
             updatedAt: serverTimestamp()
@@ -134,7 +187,7 @@ export async function getSongsByIds(choirId: string, songIds: string[]): Promise
         const batch = uniqueIds.slice(i, i + chunkSize);
         try {
             const q = query(
-                collection(db, `choirs/${choirId}/songs`),
+                collection(getDb(), `choirs/${choirId}/songs`),
                 where(documentId(), "in", batch)
             );
             const snapshot = await getDocs(q);
@@ -163,7 +216,7 @@ export async function getSongs(choirId: string): Promise<SimpleSong[]> {
 
     try {
         const q = query(
-            collection(db, `choirs/${choirId}/songs`),
+            collection(getDb(), `choirs/${choirId}/songs`),
             orderBy("title")
         );
         const snapshot = await safeGetDocs(q, `getSongs(${choirId})`, 500);
@@ -197,13 +250,13 @@ export async function syncSongs(choirId: string, lastSyncTimestamp: number): Pro
         if (lastSyncTimestamp === 0) {
             // Initial Sync: Fetch ALL songs (including those without updatedAt)
             q = query(
-                collection(db, `choirs/${choirId}/songs`)
+                collection(getDb(), `choirs/${choirId}/songs`)
             );
         } else {
             // Delta Sync: Fetch only changed songs
             const syncTime = Timestamp.fromMillis(lastSyncTimestamp);
             q = query(
-                collection(db, `choirs/${choirId}/songs`),
+                collection(getDb(), `choirs/${choirId}/songs`),
                 where("updatedAt", ">", syncTime)
             );
         }
@@ -247,7 +300,7 @@ export async function getSong(choirId: string, songId: string): Promise<SimpleSo
     }
 
     try {
-        const docRef = doc(db, `choirs/${choirId}/songs`, songId);
+        const docRef = doc(getDb(), `choirs/${choirId}/songs`, songId);
         const snapshot = await getDoc(docRef);
         if (snapshot.exists()) {
             const data = snapshot.data();
@@ -275,11 +328,11 @@ export async function getSong(choirId: string, songId: string): Promise<SimpleSo
 
 export async function updateSong(choirId: string, songId: string, updates: Partial<SimpleSong>): Promise<void> {
     try {
-        const docRef = doc(db, `choirs/${choirId}/songs`, songId);
-        await updateDoc(docRef, {
-            ...removeUndefined(updates),
+        const docRef = doc(getDb(), `choirs/${choirId}/songs`, songId);
+        await updateDoc(docRef, removeUndefined({
+            ...updates,
             updatedAt: serverTimestamp()
-        });
+        }));
     } catch (error) {
         console.error("Error updating song:", error);
         throw error;
@@ -318,7 +371,7 @@ export async function uploadSongParts(
     songId: string,
     partsToUpload: { name: string; file: File }[]
 ): Promise<SongPart[]> {
-    const songRef = doc(db, `choirs/${choirId}/songs`, songId);
+    const songRef = doc(getDb(), `choirs/${choirId}/songs`, songId);
 
     // Upload files first (outside transaction — R2 uploads are idempotent)
     const uploadedParts: SongPart[] = [];
@@ -329,7 +382,7 @@ export async function uploadSongParts(
     }
 
     // Update Firestore atomically via transaction
-    return await runTransaction(db, async (tx) => {
+    return await runTransaction(getDb(), async (tx) => {
         const snap = await tx.get(songRef);
         if (!snap.exists()) throw new Error("Song not found");
 
@@ -356,9 +409,9 @@ export async function deleteSongPart(
     songId: string,
     partId: string
 ): Promise<void> {
-    const songRef = doc(db, `choirs/${choirId}/songs`, songId);
+    const songRef = doc(getDb(), `choirs/${choirId}/songs`, songId);
 
-    await runTransaction(db, async (tx) => {
+    await runTransaction(getDb(), async (tx) => {
         const snap = await tx.get(songRef);
         if (!snap.exists()) throw new Error("Song not found");
 
@@ -390,14 +443,14 @@ export async function getUpcomingServices(choirId: string, limitCount = 5): Prom
         const todayStr = today.toISOString().split('T')[0]; // "YYYY-MM-DD" assuming local timezone matches or is close enough
 
         const q = query(
-            collection(db, `choirs/${choirId}/services`),
+            collection(getDb(), `choirs/${choirId}/services`),
             where("date", ">=", todayStr),
             orderBy("date", "asc"),
             limit(limitCount)
         );
 
         const snapshot = await safeGetDocs(q, `getUpcomingServices(${choirId})`, limitCount);
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Service));
+        return snapshot.docs.map(doc => normalizeService(doc.id, doc.data()));
     } catch (error) {
         console.error("Error fetching upcoming services:", error);
         return [];
@@ -420,13 +473,13 @@ export async function getServices(choirId: string): Promise<Service[]> {
 
     try {
         const q = query(
-            collection(db, `choirs/${choirId}/services`),
+            collection(getDb(), `choirs/${choirId}/services`),
             orderBy("date", "desc"),
             limit(200)
         );
         const snapshot = await safeGetDocs(q, `getServices(${choirId})`, 200);
         const services = snapshot.docs
-            .map(doc => ({ id: doc.id, ...doc.data() } as Service))
+            .map(doc => normalizeService(doc.id, doc.data()))
             .filter(s => !s.deletedAt); // Exclude soft-deleted services
 
         // Smart Sort: Upcoming (Ascending), then Past (Descending)
@@ -473,7 +526,14 @@ export async function getServices(choirId: string): Promise<Service[]> {
 
 export async function addService(choirId: string, service: Omit<Service, "id">): Promise<string> {
     try {
-        const docRef = await addDoc(collection(db, `choirs/${choirId}/services`), service);
+        const docRef = await addDoc(collection(getDb(), `choirs/${choirId}/services`), removeUndefined({
+            ...service,
+            songs: service.songs || [],
+            confirmedMembers: service.confirmedMembers || [],
+            absentMembers: service.absentMembers || [],
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+        }));
 
         return docRef.id;
     } catch (error) {
@@ -484,8 +544,9 @@ export async function addService(choirId: string, service: Omit<Service, "id">):
 
 export async function updateService(choirId: string, serviceId: string, updates: Partial<Service>): Promise<void> {
     try {
-        const docRef = doc(db, `choirs/${choirId}/services`, serviceId);
-        await updateDoc(docRef, updates);
+        const docRef = doc(getDb(), `choirs/${choirId}/services`, serviceId);
+        await updateDoc(docRef, removeUndefined(updates));
+
 
     } catch (error) {
         console.error("Error updating service:", error);
@@ -496,10 +557,20 @@ export async function updateService(choirId: string, serviceId: string, updates:
 // Soft-delete service (moves to trash)
 export async function deleteService(choirId: string, serviceId: string): Promise<void> {
     try {
-        const docRef = doc(db, `choirs/${choirId}/services`, serviceId);
-        await updateDoc(docRef, {
-            deletedAt: new Date().toISOString()
-        });
+        const docRef = doc(getDb(), `choirs/${choirId}/services`, serviceId);
+        const snap = await getDoc(docRef);
+        const data = snap.data();
+
+        // If it's a recurring service, add to single-doc exceptions (arrayUnion)
+        if (data?.createdByRecurring && data?.recurringInstanceKey) {
+            const exceptionRef = doc(getDb(), `choirs/${choirId}/settings`, 'recurringExceptions');
+            await setDoc(exceptionRef, {
+                keys: arrayUnion(data.recurringInstanceKey)
+            }, { merge: true });
+        }
+
+        await updateDoc(docRef, { deletedAt: new Date().toISOString() });
+
 
     } catch (error) {
         console.error("Error soft-deleting service:", error);
@@ -507,10 +578,38 @@ export async function deleteService(choirId: string, serviceId: string): Promise
     }
 }
 
+/**
+ * RECURRING SCHEDULE
+ */
+export async function getRecurringSchedule(choirId: string): Promise<RecurringSchedule | null> {
+    try {
+        const docRef = doc(getDb(), `choirs/${choirId}/settings/recurringSchedule`);
+        const snap = await getDoc(docRef);
+        return snap.exists() ? snap.data() as RecurringSchedule : null;
+    } catch (error) {
+        console.error("Error getting recurring schedule:", error);
+        return null;
+    }
+}
+
+export async function saveRecurringSchedule(choirId: string, schedule: RecurringSchedule): Promise<void> {
+    try {
+        const docRef = doc(getDb(), `choirs/${choirId}/settings/recurringSchedule`);
+        await setDoc(docRef, {
+            ...schedule,
+            updatedAt: serverTimestamp()
+        });
+    } catch (error) {
+        console.error("Error saving recurring schedule:", error);
+        throw error;
+    }
+}
+
 // Permanently delete service (for cleanup)
 export async function permanentlyDeleteService(choirId: string, serviceId: string): Promise<void> {
     try {
-        await deleteDoc(doc(db, `choirs/${choirId}/services`, serviceId));
+        await deleteDoc(doc(getDb(), `choirs/${choirId}/services`, serviceId));
+
 
     } catch (error) {
         console.error("Error permanently deleting service:", error);
@@ -521,10 +620,20 @@ export async function permanentlyDeleteService(choirId: string, serviceId: strin
 // Restore service from trash
 export async function restoreService(choirId: string, serviceId: string): Promise<void> {
     try {
-        const docRef = doc(db, `choirs/${choirId}/services`, serviceId);
-        await updateDoc(docRef, {
-            deletedAt: deleteField()
-        });
+        const docRef = doc(getDb(), `choirs/${choirId}/services`, serviceId);
+        const snap = await getDoc(docRef);
+        const data = snap.data();
+
+        // If it's a recurring service, remove from single-doc exceptions (arrayRemove)
+        if (data?.createdByRecurring && data?.recurringInstanceKey) {
+            const exceptionRef = doc(getDb(), `choirs/${choirId}/settings`, 'recurringExceptions');
+            await updateDoc(exceptionRef, {
+                keys: arrayRemove(data.recurringInstanceKey)
+            });
+        }
+
+        await updateDoc(docRef, { deletedAt: deleteField() });
+
 
     } catch (error) {
         console.error("Error restoring service:", error);
@@ -535,7 +644,7 @@ export async function restoreService(choirId: string, serviceId: string): Promis
 // Finalize service (locks attendance, triggers stats recalculation)
 export async function finalizeService(choirId: string, serviceId: string, userId: string): Promise<void> {
     try {
-        const docRef = doc(db, `choirs/${choirId}/services`, serviceId);
+        const docRef = doc(getDb(), `choirs/${choirId}/services`, serviceId);
         await updateDoc(docRef, {
             isFinalized: true,
             finalizedAt: new Date().toISOString(),
@@ -550,7 +659,7 @@ export async function finalizeService(choirId: string, serviceId: string, userId
 // Un-finalize service (unlocks for editing, triggers stats recalculation)
 export async function unfinalizeService(choirId: string, serviceId: string): Promise<void> {
     try {
-        const docRef = doc(db, `choirs/${choirId}/services`, serviceId);
+        const docRef = doc(getDb(), `choirs/${choirId}/services`, serviceId);
         await updateDoc(docRef, {
             isFinalized: deleteField(),
             finalizedAt: deleteField(),
@@ -566,12 +675,12 @@ export async function unfinalizeService(choirId: string, serviceId: string): Pro
 export async function getDeletedServices(choirId: string): Promise<Service[]> {
     try {
         const q = query(
-            collection(db, `choirs/${choirId}/services`),
+            collection(getDb(), `choirs/${choirId}/services`),
             where("deletedAt", "!=", null),
             limit(100)
         );
         const snapshot = await safeGetDocs(q, `getDeletedServices(${choirId})`, 100);
-        return snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Service[];
+        return snapshot.docs.map(d => normalizeService(d.id, d.data()));
     } catch (error) {
         console.error("Error getting deleted services:", error);
         return [];
@@ -584,10 +693,9 @@ export async function addSongToService(
     serviceSong: ServiceSong
 ): Promise<void> {
     try {
-        const docRef = doc(db, `choirs/${choirId}/services`, serviceId);
-        await updateDoc(docRef, {
-            songs: arrayUnion(serviceSong)
-        });
+        const docRef = doc(getDb(), `choirs/${choirId}/services`, serviceId);
+        await updateDoc(docRef, { songs: arrayUnion(removeUndefined(serviceSong)) });
+
 
     } catch (error) {
         console.error("Error adding song to service:", error);
@@ -601,10 +709,9 @@ export async function removeSongFromService(
     updatedSongs: ServiceSong[]
 ): Promise<void> {
     try {
-        const docRef = doc(db, `choirs/${choirId}/services`, serviceId);
-        await updateDoc(docRef, {
-            songs: updatedSongs
-        });
+        const docRef = doc(getDb(), `choirs/${choirId}/services`, serviceId);
+        await updateDoc(docRef, { songs: removeUndefined(updatedSongs) });
+
 
     } catch (error) {
         console.error("Error updating service songs:", error);
@@ -618,7 +725,7 @@ export async function setServiceAttendance(
     status: 'present' | 'absent' | 'unknown'
 ): Promise<void> {
     try {
-        const docRef = doc(db, `choirs/${choirId}/services`, serviceId);
+        const docRef = doc(getDb(), `choirs/${choirId}/services`, serviceId);
 
         // We need to atomically update both arrays to avoid inconsistent state
         // If present: add to confirmed, remove from absent
@@ -640,6 +747,7 @@ export async function setServiceAttendance(
 
         await updateDoc(docRef, updates);
 
+
     } catch (error) {
         console.error("Error setting attendance:", error);
         throw error;
@@ -650,7 +758,7 @@ export async function setServiceAttendance(
 
 export async function getChoir(choirId: string): Promise<Choir | null> {
     try {
-        const docRef = doc(db, "choirs", choirId);
+        const docRef = doc(getDb(), "choirs", choirId);
         const snapshot = await getDoc(docRef);
         if (snapshot.exists()) {
             return { id: snapshot.id, ...snapshot.data() } as Choir;
@@ -668,7 +776,7 @@ export async function uploadChoirIcon(choirId: string, file: File | Blob): Promi
         const { uploadChoirIconToR2 } = await import("./storage");
         const downloadUrl = await uploadChoirIconToR2(choirId, file as File);
 
-        const docRef = doc(db, "choirs", choirId);
+        const docRef = doc(getDb(), "choirs", choirId);
         await updateDoc(docRef, {
             icon: downloadUrl
         });
@@ -681,9 +789,9 @@ export async function uploadChoirIcon(choirId: string, file: File | Blob): Promi
 
 export async function updateChoirMembers(choirId: string, members: any[]): Promise<void> {
     try {
-        const docRef = doc(db, "choirs", choirId);
-        // Strip out 'undefined' values which cause Firebase invalid-argument errors
-        const safeMembers = JSON.parse(JSON.stringify(members));
+        const docRef = doc(getDb(), "choirs", choirId);
+        // Deep clean undefined values before saving via the new recursive removeUndefined
+        const safeMembers = removeUndefined(members);
         await updateDoc(docRef, {
             members: safeMembers
         });
@@ -697,8 +805,8 @@ export async function updateChoir(choirId: string, updates: Partial<Choir>): Pro
     try {
         // choirType is immutable after creation — remove if accidentally passed
         const { choirType, ...safeUpdates } = updates;
-        const docRef = doc(db, "choirs", choirId);
-        await updateDoc(docRef, safeUpdates);
+        const docRef = doc(getDb(), "choirs", choirId);
+        await updateDoc(docRef, removeUndefined(safeUpdates));
     } catch (error) {
         console.error("Error updating choir:", error);
         throw error;
@@ -707,7 +815,7 @@ export async function updateChoir(choirId: string, updates: Partial<Choir>): Pro
 
 export async function addKnownConductor(choirId: string, name: string): Promise<void> {
     try {
-        const docRef = doc(db, "choirs", choirId);
+        const docRef = doc(getDb(), "choirs", choirId);
         await updateDoc(docRef, {
             knownConductors: arrayUnion(name)
         });
@@ -719,7 +827,7 @@ export async function addKnownConductor(choirId: string, name: string): Promise<
 
 export async function removeKnownConductor(choirId: string, name: string): Promise<void> {
     try {
-        const docRef = doc(db, "choirs", choirId);
+        const docRef = doc(getDb(), "choirs", choirId);
         await updateDoc(docRef, {
             knownConductors: arrayRemove(name)
         });
@@ -731,7 +839,7 @@ export async function removeKnownConductor(choirId: string, name: string): Promi
 
 export async function addKnownCategory(choirId: string, category: string): Promise<void> {
     try {
-        const docRef = doc(db, "choirs", choirId);
+        const docRef = doc(getDb(), "choirs", choirId);
         await updateDoc(docRef, {
             knownCategories: arrayUnion(category)
         });
@@ -743,7 +851,7 @@ export async function addKnownCategory(choirId: string, category: string): Promi
 
 export async function removeKnownCategory(choirId: string, category: string): Promise<void> {
     try {
-        const docRef = doc(db, "choirs", choirId);
+        const docRef = doc(getDb(), "choirs", choirId);
         await updateDoc(docRef, {
             knownCategories: arrayRemove(category)
         });
@@ -755,7 +863,7 @@ export async function removeKnownCategory(choirId: string, category: string): Pr
 
 export async function addKnownPianist(choirId: string, name: string): Promise<void> {
     try {
-        const docRef = doc(db, "choirs", choirId);
+        const docRef = doc(getDb(), "choirs", choirId);
         await updateDoc(docRef, {
             knownPianists: arrayUnion(name)
         });
@@ -767,7 +875,7 @@ export async function addKnownPianist(choirId: string, name: string): Promise<vo
 
 export async function removeKnownPianist(choirId: string, name: string): Promise<void> {
     try {
-        const docRef = doc(db, "choirs", choirId);
+        const docRef = doc(getDb(), "choirs", choirId);
         await updateDoc(docRef, {
             knownPianists: arrayRemove(name)
         });
@@ -779,7 +887,7 @@ export async function removeKnownPianist(choirId: string, name: string): Promise
 
 export async function deleteAdminCode(choirId: string, codeToDelete: string): Promise<void> {
     try {
-        const choirRef = doc(db, "choirs", choirId);
+        const choirRef = doc(getDb(), "choirs", choirId);
         const choirSnap = await getDoc(choirRef);
 
         if (!choirSnap.exists()) throw new Error("Choir not found");
@@ -800,7 +908,7 @@ export async function deleteAdminCode(choirId: string, codeToDelete: string): Pr
 export async function getChoirNotifications(choirId: string): Promise<any[]> {
     try {
         const q = query(
-            collection(db, `choirs/${choirId}/notifications`),
+            collection(getDb(), `choirs/${choirId}/notifications`),
             orderBy("createdAt", "desc"),
             limit(100)
         );
@@ -814,7 +922,7 @@ export async function getChoirNotifications(choirId: string): Promise<any[]> {
 
 export async function markNotificationAsRead(choirId: string, notificationId: string, userId: string): Promise<void> {
     try {
-        const docRef = doc(db, `choirs/${choirId}/notifications`, notificationId);
+        const docRef = doc(getDb(), `choirs/${choirId}/notifications`, notificationId);
         await updateDoc(docRef, {
             readBy: arrayUnion(userId)
         });
@@ -825,7 +933,7 @@ export async function markNotificationAsRead(choirId: string, notificationId: st
 
 export async function deleteNotification(choirId: string, notificationId: string): Promise<void> {
     try {
-        const docRef = doc(db, `choirs/${choirId}/notifications`, notificationId);
+        const docRef = doc(getDb(), `choirs/${choirId}/notifications`, notificationId);
         await deleteDoc(docRef);
     } catch (error) {
         console.error("Error deleting notification:", error);
@@ -845,7 +953,7 @@ export async function createUser(userId: string, data: Partial<UserData>): Promi
             }
         }
 
-        await setDoc(doc(db, "users", userId), {
+        await setDoc(doc(getDb(), "users", userId), {
             ...cleanData,
             createdAt: serverTimestamp()
         }, { merge: true });
@@ -881,8 +989,8 @@ export async function createChoir(name: string, choirType: 'msc' | 'standard'): 
         const data = result.data as any;
 
         // Force token refresh to pick up new claims immediately
-        if (auth.currentUser) {
-            const tokenResult = await auth.currentUser.getIdTokenResult(true);
+        if (getAuth().currentUser) {
+            const tokenResult = await getAuth().currentUser!.getIdTokenResult(true);
             console.log("[DEBUG] Refreshed Token Claims:", tokenResult.claims);
             if (!tokenResult.claims.choirs) {
                 console.warn("[WARNING] 'choirs' claim is MISSING in new token!");
@@ -904,8 +1012,8 @@ export async function forceSyncClaims(): Promise<void> {
         const syncFn = httpsCallable(functions, 'forceSyncClaims');
         await syncFn();
         // Force token refresh to pick up new claims immediately
-        if (auth.currentUser) {
-            await auth.currentUser.getIdToken(true);
+        if (getAuth().currentUser) {
+            await getAuth().currentUser!.getIdToken(true);
         }
     } catch (error) {
         console.error("Error forcing claims sync:", error);
@@ -928,7 +1036,7 @@ export async function adminDeleteUser(targetUid: string): Promise<void> {
 
 export async function getUserProfile(userId: string): Promise<UserData | null> {
     try {
-        const docRef = doc(db, "users", userId);
+        const docRef = doc(getDb(), "users", userId);
         const snapshot = await getDoc(docRef);
         if (snapshot.exists()) {
             return { id: snapshot.id, ...snapshot.data() } as UserData;
@@ -946,7 +1054,7 @@ export async function getUserProfile(userId: string): Promise<UserData | null> {
 export async function getChoirUsers(choirId: string): Promise<UserData[]> {
     try {
         // Query the real users collection — find all users linked to this choir
-        const usersRef = collection(db, "users");
+        const usersRef = collection(getDb(), "users");
         const q = query(usersRef, where("choirId", "==", choirId), limit(1000));
         const snapshot = await getDocs(q);
 
@@ -1001,7 +1109,7 @@ export async function joinChoir(inviteCode: string): Promise<any> {
         const joinFn = httpsCallable(functions, 'atomicJoinChoir');
         const result = await joinFn({ inviteCode });
         // Force token refresh to pick up new Custom Claims
-        await auth.currentUser?.getIdToken(true);
+        await getAuth().currentUser?.getIdToken(true);
         return result.data;
     } catch (error) {
         console.error("Error joining choir:", error);
@@ -1014,7 +1122,7 @@ export async function leaveChoir(choirId: string): Promise<void> {
         const leaveFn = httpsCallable(functions, 'atomicLeaveChoir');
         await leaveFn({ choirId });
         // Force token refresh to pick up updated Custom Claims
-        await auth.currentUser?.getIdToken(true);
+        await getAuth().currentUser?.getIdToken(true);
     } catch (error) {
         console.error("Error leaving choir:", error);
         throw error;
@@ -1046,13 +1154,13 @@ export async function getGlobalSongs(category?: SongCategory): Promise<GlobalSon
         let q;
         if (category) {
             q = query(
-                collection(db, "global_songs"),
+                collection(getDb(), "global_songs"),
                 where("category", "==", category),
                 orderBy("title")
             );
         } else {
             q = query(
-                collection(db, "global_songs"),
+                collection(getDb(), "global_songs"),
                 orderBy("title")
             );
         }
@@ -1073,7 +1181,7 @@ export async function getGlobalSongs(category?: SongCategory): Promise<GlobalSon
  */
 export async function getGlobalSong(songId: string): Promise<GlobalSong | null> {
     try {
-        const docRef = doc(db, "global_songs", songId);
+        const docRef = doc(getDb(), "global_songs", songId);
         const snapshot = await getDoc(docRef);
         if (snapshot.exists()) {
             const data = snapshot.data();
@@ -1095,7 +1203,7 @@ export async function getGlobalSong(songId: string): Promise<GlobalSong | null> 
  */
 export async function addGlobalSong(song: Omit<GlobalSong, "id">): Promise<string> {
     try {
-        const docRef = await addDoc(collection(db, "global_songs"), {
+        const docRef = await addDoc(collection(getDb(), "global_songs"), {
             ...song,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
@@ -1112,7 +1220,7 @@ export async function addGlobalSong(song: Omit<GlobalSong, "id">): Promise<strin
  */
 export async function updateGlobalSong(songId: string, updates: Partial<GlobalSong>): Promise<void> {
     try {
-        const docRef = doc(db, "global_songs", songId);
+        const docRef = doc(getDb(), "global_songs", songId);
         await updateDoc(docRef, {
             ...updates,
             updatedAt: serverTimestamp()
@@ -1130,7 +1238,7 @@ export async function updateGlobalSong(songId: string, updates: Partial<GlobalSo
  */
 export async function submitSong(song: Record<string, any>): Promise<string> {
     try {
-        const docRef = await addDoc(collection(db, "pending_songs"), {
+        const docRef = await addDoc(collection(getDb(), "pending_songs"), {
             ...song,
             status: 'pending' as SongSubmissionStatus,
             submittedAt: serverTimestamp()
@@ -1148,7 +1256,7 @@ export async function submitSong(song: Record<string, any>): Promise<string> {
 export async function getPendingSongs(): Promise<PendingSong[]> {
     try {
         const q = query(
-            collection(db, "pending_songs"),
+            collection(getDb(), "pending_songs"),
             where("status", "==", "pending"),
             orderBy("submittedAt", "desc")
         );
@@ -1182,11 +1290,11 @@ export async function approveSong(pendingSong: PendingSong, adminId: string): Pr
         };
 
         // 2. Add to global catalog (mscCatalog)
-        await addDoc(collection(db, "mscCatalog"), globalSongData);
+        await addDoc(collection(getDb(), "mscCatalog"), globalSongData);
 
         // 3. Mark pending song as approved (or delete it if you prefer cleanup)
         // We'll mark it approved to keep history for the user
-        const pendingRef = doc(db, "pending_songs", pendingSong.id!);
+        const pendingRef = doc(getDb(), "pending_songs", pendingSong.id!);
         await updateDoc(pendingRef, {
             status: 'approved',
             reviewedBy: adminId,
@@ -1204,7 +1312,7 @@ export async function approveSong(pendingSong: PendingSong, adminId: string): Pr
  */
 export async function rejectSong(songId: string, adminId: string, reason: string): Promise<void> {
     try {
-        const docRef = doc(db, "pending_songs", songId);
+        const docRef = doc(getDb(), "pending_songs", songId);
         await updateDoc(docRef, {
             status: 'rejected',
             reviewedBy: adminId,
@@ -1226,7 +1334,7 @@ export async function getLocalSongs(choirId: string): Promise<LocalSong[]> {
     if (!choirId) return [];
     try {
         const q = query(
-            collection(db, `choirs/${choirId}/local_songs`),
+            collection(getDb(), `choirs/${choirId}/local_songs`),
             where("deletedAt", "==", null), // Only active songs
             orderBy("title")
         );
@@ -1251,7 +1359,7 @@ export async function addLocalSong(
     userId: string
 ): Promise<string> {
     try {
-        const docRef = await addDoc(collection(db, `choirs/${choirId}/local_songs`), {
+        const docRef = await addDoc(collection(getDb(), `choirs/${choirId}/local_songs`), {
             ...song,
             choirId,
             addedBy: userId,
@@ -1307,7 +1415,7 @@ export async function getSongsMeta(choirId?: string): Promise<SongMeta[]> {
         // Local songs (if choirId provided) — from Firestore with limit
         if (choirId) {
             const localQ = query(
-                collection(db, `choirs/${choirId}/local_songs`),
+                collection(getDb(), `choirs/${choirId}/local_songs`),
                 orderBy("title"),
                 limit(200)
             );
@@ -1346,7 +1454,7 @@ export async function saveUserSong(
     partIndex: number = 0
 ): Promise<void> {
     try {
-        const docRef = doc(db, "users", userId);
+        const docRef = doc(getDb(), "users", userId);
         const savedSong = {
             songId,
             source,
@@ -1372,7 +1480,7 @@ export async function unsaveUserSong(
 ): Promise<void> {
     try {
         // Get current saved songs
-        const userDoc = await getDoc(doc(db, "users", userId));
+        const userDoc = await getDoc(doc(getDb(), "users", userId));
         if (!userDoc.exists()) return;
 
         const userData = userDoc.data();
@@ -1381,7 +1489,7 @@ export async function unsaveUserSong(
             (s: any) => !(s.songId === songId && s.source === source)
         );
 
-        await updateDoc(doc(db, "users", userId), {
+        await updateDoc(doc(getDb(), "users", userId), {
             savedSongs: updatedSongs
         });
     } catch (error) {
@@ -1394,7 +1502,7 @@ export async function unsaveUserSong(
 
 export async function softDeleteLocalSong(choirId: string, songId: string, userId: string): Promise<void> {
     try {
-        const docRef = doc(db, `choirs/${choirId}/songs`, songId); // Corrected collection
+        const docRef = doc(getDb(), `choirs/${choirId}/songs`, songId); // Corrected collection
         await updateDoc(docRef, {
             deletedAt: new Date().toISOString(),
             updatedAt: serverTimestamp(),
@@ -1408,7 +1516,7 @@ export async function softDeleteLocalSong(choirId: string, songId: string, userI
 
 export async function restoreLocalSong(choirId: string, songId: string): Promise<void> {
     try {
-        const docRef = doc(db, `choirs/${choirId}/songs`, songId); // Corrected collection
+        const docRef = doc(getDb(), `choirs/${choirId}/songs`, songId); // Corrected collection
         await updateDoc(docRef, {
             deletedAt: deleteField(),
             deletedBy: deleteField(),
@@ -1422,7 +1530,7 @@ export async function restoreLocalSong(choirId: string, songId: string): Promise
 
 export async function permanentDeleteLocalSong(choirId: string, songId: string): Promise<void> {
     try {
-        const docRef = doc(db, `choirs/${choirId}/songs`, songId); // Corrected collection
+        const docRef = doc(getDb(), `choirs/${choirId}/songs`, songId); // Corrected collection
         await deleteDoc(docRef);
     } catch (error) {
         console.error("Error permanently deleting local song:", error);
@@ -1433,7 +1541,7 @@ export async function permanentDeleteLocalSong(choirId: string, songId: string):
 export async function getDeletedSongs(choirId: string): Promise<SimpleSong[]> {
     try {
         const q = query(
-            collection(db, `choirs/${choirId}/songs`),
+            collection(getDb(), `choirs/${choirId}/songs`),
             where("deletedAt", "!=", null),
             limit(200)
         );
@@ -1455,7 +1563,7 @@ export async function getDeletedSongs(choirId: string): Promise<SimpleSong[]> {
 export async function getDeletedLocalSongs(choirId: string): Promise<LocalSong[]> {
     try {
         const q = query(
-            collection(db, `choirs/${choirId}/local_songs`),
+            collection(getDb(), `choirs/${choirId}/local_songs`),
             where("deletedAt", "!=", null),
             orderBy("deletedAt", "desc"),
             limit(200)
@@ -1475,7 +1583,7 @@ export async function getDeletedLocalSongs(choirId: string): Promise<LocalSong[]
 export async function getMemberAbsences(choirId: string, memberId: string, maxResults: number = 20): Promise<Service[]> {
     try {
         const q = query(
-            collection(db, `choirs/${choirId}/services`),
+            collection(getDb(), `choirs/${choirId}/services`),
             where("absentMembers", "array-contains", memberId),
             orderBy("date", "desc"),
             limit(maxResults)

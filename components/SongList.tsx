@@ -8,10 +8,10 @@ import { Search, FileText, Music2, ChevronRight, Filter, Plus, Eye, User, Loader
 import { SimpleSong } from "@/types";
 import { CATEGORIES, Category } from "@/lib/themes";
 import { AnimatePresence, motion } from "framer-motion";
-import { Virtuoso, TableVirtuoso } from 'react-virtuoso';
+import { Virtuoso, TableVirtuoso, VirtuosoHandle } from 'react-virtuoso';
 import Fuse from 'fuse.js';
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getFirestoreLazy } from "@/lib/firebase";
 import { addSong, uploadSongPdf, uploadSongParts, deleteSong, addKnownConductor, updateSong, softDeleteLocalSong, restoreLocalSong } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRepertoire } from "@/contexts/RepertoireContext";
@@ -22,7 +22,7 @@ import ConfirmationModal from "./ConfirmationModal";
 import GlobalArchive from "./GlobalArchive";
 import TrashBin from "./TrashBin";
 import Toast from "./Toast";
-import SwipeableCard from "./SwipeableCard";
+import SwipeableCard, { SwipeableCardRef } from "./SwipeableCard";
 import SongSkeleton from "./SongSkeleton";
 import { PencilKitAnnotator } from "@/plugins/PencilKitAnnotator";
 import { hapticLight, hapticSuccess } from "../hooks/useHaptics";
@@ -54,7 +54,8 @@ export default function SongList({
 }: SongListProps) {
     const router = useRouter();
     const { userData } = useAuth();
-    const { songs, loading, refreshRepertoire } = useRepertoire();
+    const { songs: rawSongs, loading, refreshRepertoire } = useRepertoire();
+    const songs = rawSongs || [];
 
     const [isSyncing, setIsSyncing] = useState(false);
     const [search, setSearch] = useState("");
@@ -69,6 +70,15 @@ export default function SongList({
     const [showTrashBin, setShowTrashBin] = useState(false);
     const [editingSong, setEditingSong] = useState<SimpleSong | null>(null);
     const [deletingSongId, setDeletingSongId] = useState<string | null>(null);
+    const cardRefs = useRef<Record<string, SwipeableCardRef | null>>({});
+
+    const cancelDelete = () => {
+        if (deletingSongId && cardRefs.current[deletingSongId]) {
+            cardRefs.current[deletingSongId]?.reset();
+        }
+        setDeletingSongId(null);
+    };
+
     const [toast, setToast] = useState<{ message: string; type: "success" | "error"; actionLabel?: string; onAction?: () => void } | null>(null);
     const [isNative, setIsNative] = useState(false);
     const editClickGuardRef = useRef(false);
@@ -80,6 +90,21 @@ export default function SongList({
     const effectiveCanAdd = canAddSongs;
 
     const [subTab, setSubTab] = useState<'repertoire' | 'catalog'>('repertoire');
+    const virtuosoRef = useRef<VirtuosoHandle>(null);
+
+    // Listen to main nav double tap to scroll to top (for Repertoire list)
+    useEffect(() => {
+        const handleNavDoubleTap = (e: Event) => {
+            const customEvent = e as CustomEvent;
+            if (customEvent.detail?.tab === 'songs' && subTab === 'repertoire' && virtuosoRef.current) {
+                // Scroll Virtuoso specifically to index 0 smoothly
+                virtuosoRef.current.scrollToIndex({ index: 0, behavior: 'smooth' });
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        };
+        window.addEventListener('nav-tab-double-click', handleNavDoubleTap);
+        return () => window.removeEventListener('nav-tab-double-click', handleNavDoubleTap);
+    }, [subTab]);
     const [viewingSong, setViewingSong] = useState<SimpleSong | null>(null);
     const [pendingArchiveQuery, setPendingArchiveQuery] = useState("");
     const [showArchiveModal, setShowArchiveModal] = useState(false);
@@ -103,7 +128,7 @@ export default function SongList({
         return () => window.removeEventListener('focus', onFocus);
     }, [refreshRepertoire]);
 
-    const fuse = useMemo(() => new Fuse(songs, {
+    const fuse = useMemo(() => new Fuse(songs || [], {
         keys: ['title', 'conductor'],
         threshold: 0.3,
         distance: 100,
@@ -143,8 +168,8 @@ export default function SongList({
         return results;
     }, [songs, search, selectedCategory, selectedConductor, fuse]);
 
-    const uniqueConductors = Array.from(new Set(songs.map(s => s.conductor).filter(Boolean))).sort();
-    const songsWithPdf = songs.filter(s => s.hasPdf).length;
+    const uniqueConductors = Array.from(new Set((songs || []).map(s => s.conductor).filter(Boolean))).sort();
+    const songsWithPdf = (songs || []).filter(s => s.hasPdf).length;
 
     const handleSongClick = (song: SimpleSong) => {
         // Guard: skip if three-dots (edit) button was just tapped
@@ -270,10 +295,15 @@ export default function SongList({
 
         // Duplicate detection
         const normalizedTitle = globalSong.title.trim().toLowerCase();
-        const duplicate = songs.find(s => s.title.trim().toLowerCase() === normalizedTitle);
+        const duplicate = songs.find((s: SimpleSong) => s.title.trim().toLowerCase() === normalizedTitle);
         if (duplicate) {
-            setToast({ message: `"${duplicate.title}" вже є в репертуарі`, type: "error" });
-            return;
+            const { value } = await Dialog.confirm({
+                title: "Така пісня вже є",
+                message: `Пісня "${duplicate.title}" вже існує в репертуарі. Ви впевнені, що хочете додати її ще раз?`,
+                okButtonTitle: "Додати",
+                cancelButtonTitle: "Скасувати"
+            });
+            if (!value) return; // User cancelled
         }
 
         try {
@@ -348,13 +378,13 @@ export default function SongList({
     };
 
     if (loading) {
-        return <div className="flex justify-center py-20"><Loader2 className="animate-spin w-8 h-8 text-white/20" /></div>;
+        return <div className="flex justify-center py-20 opacity-0"></div>;
     }
 
     return (
         <div className="max-w-5xl mx-auto px-4 pb-32 pt-4 space-y-5">
             {/* Sub-Tab Switcher */}
-            <div className="flex bg-surface rounded-xl p-0.5 border border-border">
+            <div className="flex bg-surface/50 backdrop-blur-xl border border-border rounded-xl p-0.5 mb-6">
                 <button
                     onClick={() => setSubTab('repertoire')}
                     className={`flex-1 py-2.5 rounded-[10px] text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${subTab === 'repertoire'
@@ -386,6 +416,20 @@ export default function SongList({
                         isOverlayOpen={isOverlayOpen}
                         onAddSong={canAddSongs ? async (globalSong) => {
                             if (!userData?.choirId) return;
+
+                            // Duplicate detection
+                            const normalizedTitle = globalSong.title.trim().toLowerCase();
+                            const duplicate = songs.find((s: SimpleSong) => s.title.trim().toLowerCase() === normalizedTitle);
+                            if (duplicate) {
+                                const { value } = await Dialog.confirm({
+                                    title: "Така пісня вже є",
+                                    message: `Пісня "${duplicate.title}" вже існує в репертуарі. Ви впевнені, що хочете додати її ще раз?`,
+                                    okButtonTitle: "Додати",
+                                    cancelButtonTitle: "Скасувати"
+                                });
+                                if (!value) return; // User cancelled
+                            }
+
                             try {
                                 const pdfUrl = globalSong.parts?.[0]?.pdfUrl || '';
                                 await addSong(userData.choirId, {
@@ -397,9 +441,13 @@ export default function SongList({
                                     hasPdf: !!pdfUrl,
                                     parts: globalSong.parts,
                                 });
+                                setToast({ message: `"${globalSong.title}" додано до репертуару`, type: "success" });
                                 await refreshRepertoire();
                                 if (onRefresh) onRefresh();
-                            } catch (e) { console.error(e); }
+                            } catch (e) {
+                                console.error(e);
+                                setToast({ message: "Помилка додавання з архіву", type: "error" });
+                            }
                         } : undefined}
                     />
                 </div>
@@ -408,10 +456,10 @@ export default function SongList({
             {/* Repertoire Content */}
             <div className={subTab === 'repertoire' ? 'block' : 'hidden'}>
                 {/* Stats Card */}
-                <div className="bg-surface rounded-2xl p-5 card-shadow">
+                <div className="bg-surface/50 backdrop-blur-xl border border-border rounded-2xl p-5 mb-2">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 glass-frost-circle rounded-full flex items-center justify-center text-zinc-700">
+                            <div className="w-12 h-12 bg-black/5 dark:bg-white/10 rounded-full flex items-center justify-center text-text-primary">
                                 <Music2 className="w-6 h-6" />
                             </div>
                             <div>
@@ -437,14 +485,14 @@ export default function SongList({
                 </div>
 
                 {/* Search & Filter - Sticky */}
-                <div className="sticky z-20 -mx-4 px-4 pt-3 pb-3 mt-2 bg-background/95 backdrop-blur-xl border-b border-border" style={{ top: 'calc(env(safe-area-inset-top) + 64px)' }}>
+                <div className="sticky z-20 -mx-4 px-4 pt-3 pb-3 mt-2 bg-background/50 backdrop-blur-2xl border-b border-border" style={{ top: 'calc(env(safe-area-inset-top) + 64px)' }}>
                     <div className="flex gap-2">
                         <div className="relative flex-1 group">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
                             <input
                                 type="text"
                                 placeholder="Пошук..."
-                                className="w-full pl-11 pr-10 py-3 bg-surface rounded-xl text-base focus:outline-none text-text-primary placeholder:text-text-secondary/50 transition-all border border-transparent"
+                                className="w-full pl-11 pr-10 py-3 bg-surface/50 backdrop-blur-xl rounded-xl text-base focus:outline-none text-text-primary placeholder:text-text-secondary/50 transition-all border border-border focus:bg-surface/80"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                             />
@@ -461,7 +509,7 @@ export default function SongList({
                             onClick={() => setShowFilters(!showFilters)}
                             className={`px-4 rounded-xl flex items-center gap-2 transition-all border ${showFilters
                                 ? "bg-primary text-background border-primary shadow-md"
-                                : "bg-surface text-text-secondary border-transparent hover:bg-surface-highlight"
+                                : "bg-surface/50 backdrop-blur-xl text-text-secondary border-border hover:bg-surface-highlight"
                                 }`}
                         >
                             <Filter className="w-5 h-5" />
@@ -507,12 +555,9 @@ export default function SongList({
                     </AnimatePresence>
                 </div>
 
-                {/* Song List */}
                 <div>
                     {loading ? (
-                        <div className="mt-2">
-                            <SongSkeleton count={8} />
-                        </div>
+                        <div className="mt-2 opacity-0 py-20"></div>
                     ) : filteredSongs.length === 0 ? (
                         <div className="text-center py-24 opacity-40">
                             <div className="w-16 h-16 bg-surface rounded-full flex items-center justify-center mx-auto mb-4">
@@ -528,6 +573,7 @@ export default function SongList({
                                         <div>Назва</div><div>Категорія</div><div>Диригент</div><div></div>
                                     </div>
                                     <Virtuoso
+                                        ref={virtuosoRef}
                                         useWindowScroll
                                         initialItemCount={20}
                                         data={filteredSongs}
@@ -535,7 +581,7 @@ export default function SongList({
                                             if (!song) return null;
                                             return (
                                                 <div style={{ minHeight: '40px' }}>
-                                                    <SwipeableCard key={song.id} disabled={!effectiveCanAdd} onDelete={() => initiateDelete(null, song.id)} className="border-b border-border/30" contentClassName="bg-background" disableFullSwipe={true}>
+                                                    <SwipeableCard ref={(el) => { cardRefs.current[song.id] = el }} key={song.id} disabled={!effectiveCanAdd} onDelete={() => initiateDelete(null, song.id)} className="border-b border-border/30" contentClassName="bg-background" disableFullSwipe={true}>
                                                         <div className="grid grid-cols-[1fr_180px_180px_60px] gap-4 py-3 pl-0 pr-4 hover:bg-surface items-center cursor-pointer transition-colors relative z-10" onClick={() => handleSongClick(song)}>
                                                             <div className="flex items-center gap-3 min-w-0">
                                                                 <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-text-primary">
@@ -562,6 +608,7 @@ export default function SongList({
                             {isMobile === true && (
                                 <div>
                                     <Virtuoso
+                                        ref={virtuosoRef}
                                         useWindowScroll
                                         initialItemCount={20}
                                         data={filteredSongs}
@@ -569,7 +616,7 @@ export default function SongList({
                                             if (!song) return <div style={{ height: 60 }} />;
                                             return (
                                                 <div style={{ minHeight: '60px' }}>
-                                                    <SwipeableCard key={song.id} disabled={!effectiveCanAdd} onDelete={() => initiateDelete(null, song.id)} className="border-b border-border/30" contentClassName="bg-background" backgroundClassName="rounded-2xl" disableFullSwipe={!Capacitor.isNativePlatform()}>
+                                                    <SwipeableCard ref={(el) => { cardRefs.current[song.id] = el }} key={song.id} disabled={!effectiveCanAdd} onDelete={() => initiateDelete(null, song.id)} className="border-b border-border/30" contentClassName="bg-background" backgroundClassName="rounded-2xl" disableFullSwipe={!Capacitor.isNativePlatform()}>
                                                         <div onClick={() => handleSongClick(song)} className="flex items-center gap-3 py-3 px-0 bg-background cursor-pointer relative z-10">
                                                             <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-text-primary">
                                                                 {song.hasPdf ? <Eye className="w-5 h-5 text-background" /> : <FileText className="w-5 h-5 text-background" />}
@@ -625,7 +672,7 @@ export default function SongList({
             {showTrashBin && (
                 <TrashBin choirId={userData?.choirId || ""} onClose={() => setShowTrashBin(false)} initialFilter="song" onRestore={() => refreshRepertoire()} />
             )}
-            <ConfirmationModal isOpen={!!deletingSongId} onClose={() => setDeletingSongId(null)} onConfirm={confirmDelete} title="Видалити пісню?" message="Цю пісню буде видалено з репертуару назавжди." confirmLabel="Видалити" isDestructive />
+            <ConfirmationModal isOpen={!!deletingSongId} onClose={cancelDelete} onConfirm={confirmDelete} title="Видалити пісню?" message="Цю пісню буде видалено з репертуару назавжди." confirmLabel="Видалити" isDestructive />
             <ConfirmationModal
                 isOpen={showOpenSongConfirm}
                 onClose={() => { setShowOpenSongConfirm(false); setLastAddedSongId(null); }}

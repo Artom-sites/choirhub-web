@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Bell, X, Check, Loader2 } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { useFcmToken } from "@/hooks/useFcmToken";
-import { AnimatePresence, motion } from "framer-motion";
+import { Dialog } from "@capacitor/dialog";
 
 export default function NotificationPrompt() {
-    const { permissionStatus, requestPermission, loading, isSupported, isPreferenceEnabled } = useFcmToken();
-    const [isVisible, setIsVisible] = useState(false);
+    const { permissionStatus, requestPermission, isSupported, isPreferenceEnabled } = useFcmToken();
+    const hasPrompted = useRef(false);
 
     useEffect(() => {
         // 1. Check if supported
@@ -32,79 +31,37 @@ export default function NotificationPrompt() {
             if (diffDays < 7) return;
         }
 
+        if (hasPrompted.current) return;
+
         // Show prompt after a small delay
-        const timer = setTimeout(() => {
-            setIsVisible(true);
+        const timer = setTimeout(async () => {
+            if (hasPrompted.current) return;
+            hasPrompted.current = true;
+            
+            try {
+                const { value } = await Dialog.confirm({
+                    title: 'Важливі сповіщення',
+                    message: 'Увімкніть сповіщення, щоб не пропускати повідомлення про зміни в розкладі та нові пісні.',
+                    okButtonTitle: 'Увімкнути',
+                    cancelButtonTitle: 'Не зараз'
+                });
+
+                if (value) {
+                    try {
+                        await requestPermission("NotificationPrompt");
+                    } catch (e) {
+                        console.warn("NotificationPrompt enable failed:", e);
+                    }
+                } else {
+                    localStorage.setItem('notification_prompt_dismissed', Date.now().toString());
+                }
+            } catch (err) {
+                console.error("Failed to show dialog:", err);
+            }
         }, 3000);
 
         return () => clearTimeout(timer);
-    }, [permissionStatus, isSupported, isPreferenceEnabled]);
+    }, [permissionStatus, isSupported, isPreferenceEnabled, requestPermission]);
 
-    const handleEnable = async () => {
-        try {
-            await requestPermission("NotificationPrompt");
-        } catch (e) {
-            console.warn("NotificationPrompt enable failed:", e);
-        } finally {
-            setIsVisible(false);
-        }
-    };
-
-    const handleLater = () => {
-        localStorage.setItem('notification_prompt_dismissed', Date.now().toString());
-        setIsVisible(false);
-    };
-
-    if (!isVisible) return null;
-
-    return (
-        <AnimatePresence>
-            <motion.div
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 50 }}
-                className="fixed bottom-20 left-4 right-4 z-[70] md:left-auto md:right-8 md:w-96"
-            >
-                <div className="bg-surface card-shadow border border-border rounded-2xl p-5 shadow-2xl">
-                    <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
-                                <Bell className="w-5 h-5" />
-                            </div>
-                            <div>
-                                <h3 className="font-bold text-text-primary text-sm">Важливі сповіщення</h3>
-                                <p className="text-xs text-text-secondary mt-0.5">Від регента хору</p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={handleLater}
-                            className="text-text-secondary hover:text-text-primary p-1"
-                        >
-                            <X className="w-4 h-4" />
-                        </button>
-                    </div>
-
-                    <p className="text-sm text-text-primary mb-4 leading-relaxed">
-                        Увімкніть сповіщення, щоб не пропускати повідомлення про <b>зміни в розкладі</b> та <b>нові пісні</b>.
-                    </p>
-
-                    <div className="flex gap-3">
-                        <button
-                            onClick={handleLater}
-                            className="flex-1 py-2.5 px-4 rounded-xl text-sm font-medium text-text-secondary hover:bg-surface-highlight transition-colors"
-                        >
-                            Не зараз
-                        </button>
-                        <button
-                            onClick={handleEnable}
-                            disabled={loading}
-                            className="flex-1 py-2.5 px-4 bg-primary text-background rounded-xl text-sm font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
-                        >
-                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Увімкнути"}
-                        </button>
-                    </div>
-                </div>
-            </motion.div>
-        </AnimatePresence>
-    );
+    return null;
 }

@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { collection, getDocs, query, orderBy, limit, startAfter, startAt, endAt, QueryDocumentSnapshot, where } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getFirestoreLazy } from "@/lib/firebase";
 import { GlobalSong, SongPart } from "@/types";
 import { extractInstrument } from "@/lib/utils";
 import { OFFICIAL_THEMES } from "@/lib/themes";
@@ -97,7 +97,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
     const [selectedCategory, setSelectedCategory] = useState("all"); // Default to 'all' or 'new'? keep 'all' 
     const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
     const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
-    const [selectedLanguage, setSelectedLanguage] = useState<'all' | 'cyrillic' | 'latin'>('all');
+    const [selectedLanguage, setSelectedLanguage] = useState<'all' | 'ukr' | 'rus' | 'eng' | 'ger' | 'rom'>('all');
     const [availableThemes, setAvailableThemes] = useState<string[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [isPreviewLoading, setIsPreviewLoading] = useState(false);
@@ -106,20 +106,151 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
     const [fuseInstance, setFuseInstance] = useState<Fuse<GlobalSong> | null>(null);
 
     // Pagination State
-    const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot | null>(null);
     const [hasMore, setHasMore] = useState(true);
     const [isSearchingServer, setIsSearchingServer] = useState(false);
     const observer = useRef<IntersectionObserver | null>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     const [showFilters, setShowFilters] = useState(false);
+    const [isNative, setIsNative] = useState(false);
     const [showAddOptions, setShowAddOptions] = useState(false);
     const [songToAdd, setSongToAdd] = useState<GlobalSong | null>(null);
     const [toastMessage, setToastMessage] = useState<string | null>(null);
-    const [isNative, setIsNative] = useState(false);
 
     useEffect(() => {
         setIsNative(Capacitor.isNativePlatform());
     }, []);
+
+    // Listen to main nav double tap to scroll to top
+    useEffect(() => {
+        const handleNavDoubleTap = (e: Event) => {
+            const customEvent = e as CustomEvent;
+            if (customEvent.detail?.tab === 'songs' && scrollContainerRef.current) {
+                // If Archive is active and we tap Songs, scroll to top
+                scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        };
+        window.addEventListener('nav-tab-double-click', handleNavDoubleTap);
+        return () => window.removeEventListener('nav-tab-double-click', handleNavDoubleTap);
+    }, []);
+
+    // ============================================
+    // ADVANCED LANGUAGE DETECTION PIPELINE
+    // ============================================
+
+    const EXACT_TITLE_MAP: Record<string, 'ukr' | 'rus'> = {
+        "слава богу": "rus",
+        "христос воскрес": "rus",
+        "о, благодать": "rus",
+        "слава в вышних богу": "rus",
+        "слава в вишніх богу": "ukr",
+        "алилуя": "ukr",
+        "аллилуйя": "rus",
+        "осана": "ukr",
+        "осанна": "rus",
+    };
+
+    const UKR_STRONG_STEMS = ["прийш", "житт", "серце", "пісн", "святий", "гріх", "віра", "наді", "спасін"];
+    const RUS_STRONG_STEMS = ["пришл", "жизн", "сердце", "песн", "святой", "грех", "вера", "надеж", "спасен", "спасение"];
+
+    const UKR_WORDS = ["хай", "нехай", "щоб", "боже", "христа", "як", "так", "його", "мого", "твого", "свого"];
+    const RUS_WORDS = ["ибо", "пусть", "чтоб", "боже", "христа", "как", "так", "его", "моего", "твоего", "своего"];
+
+    const UKR_SUFFIXES = ["ість", "ення", "ання", "іння", "ття", "ого"];
+    const RUS_SUFFIXES = ["ость", "ение", "ание", "ого", "ему"];
+
+    function detectTitleLanguage(rawTitle: string, debug = false): 'ukr' | 'rus' | 'eng' | 'ger' | 'rom' | 'other' {
+        const title = rawTitle.toLowerCase().trim();
+        const cleanTitle = title.replace(/[^\wа-яіїєґăâîșțäöüß]/gi, ' ');
+        const words = cleanTitle.split(/\s+/).filter(w => w.length > 0);
+
+        const logDebug = (detected: string, ukrScore: number | string, rusScore: number | string, reason: string) => {
+            if (process.env.NODE_ENV === 'development') {
+                console.log(`[Lang] "${rawTitle}" -> ${detected} -> UKR:${ukrScore} RUS:${rusScore} -> ${reason}`);
+            }
+        };
+
+        // 1. Exact override dictionary
+        if (EXACT_TITLE_MAP[title]) {
+            logDebug(EXACT_TITLE_MAP[title], '-', '-', 'Exact map');
+            return EXACT_TITLE_MAP[title];
+        }
+
+        // 2. Strong unique letters (highest priority)
+        const hasRom = /[ăâîșț]/.test(title);
+        if (hasRom) return 'rom';
+
+        const hasGer = /[äöüß]/.test(title);
+        if (hasGer) return 'ger';
+
+        const hasUkr = /[іїєґ]/.test(title);
+        if (hasUkr) {
+            logDebug('ukr', '-', '-', 'Unique letters');
+            return 'ukr';
+        }
+
+        const hasRus = /[ыэъё]/.test(title);
+        if (hasRus) {
+            logDebug('rus', '-', '-', 'Unique letters');
+            return 'rus';
+        }
+
+        const isEng = /^[a-z]+$/.test(cleanTitle.replace(/\s+/g, ''));
+        if (isEng) return 'eng';
+
+        // Must be neutral Cyrillic now
+        const hasCyrillic = /[а-я]/i.test(cleanTitle);
+        if (!hasCyrillic) return 'other';
+
+        // 3. Strong Stems (Trumps generic scoring)
+        for (const word of words) {
+            for (const stem of UKR_STRONG_STEMS) {
+                if (word.startsWith(stem)) {
+                    logDebug('ukr', '-', '-', `Strong stem: ${stem}`);
+                    return 'ukr';
+                }
+            }
+            for (const stem of RUS_STRONG_STEMS) {
+                if (word.startsWith(stem)) {
+                    logDebug('rus', '-', '-', `Strong stem: ${stem}`);
+                    return 'rus';
+                }
+            }
+        }
+
+        // 4 & 5. Keyword and Suffix scoring
+        let ukrScore = 0;
+        let rusScore = 0;
+        let matchReasons: string[] = [];
+
+        for (const word of words) {
+            // Exact words
+            if (UKR_WORDS.includes(word)) { ukrScore += 2; matchReasons.push(`Word UKR:${word}`); }
+            if (RUS_WORDS.includes(word)) { rusScore += 2; matchReasons.push(`Word RUS:${word}`); }
+
+            // Suffixes
+            for (const suffix of UKR_SUFFIXES) {
+                if (word.endsWith(suffix) && word.length > suffix.length + 1) { ukrScore += 1; matchReasons.push(`Suffix UKR:-${suffix}`); }
+            }
+            for (const suffix of RUS_SUFFIXES) {
+                if (word.endsWith(suffix) && word.length > suffix.length + 1) { rusScore += 1; matchReasons.push(`Suffix RUS:-${suffix}`); }
+            }
+        }
+
+        // 6. Final decision
+        if (ukrScore > rusScore) {
+            logDebug('ukr', ukrScore, rusScore, matchReasons.join(', ') || 'Scoring win');
+            return 'ukr';
+        }
+        if (rusScore > ukrScore) {
+            logDebug('rus', ukrScore, rusScore, matchReasons.join(', ') || 'Scoring win');
+            return 'rus';
+        }
+
+        // Domain-specific fallback for MSC archive
+        logDebug('rus', ukrScore, rusScore, 'Fallback');
+        return 'rus';
+    }
 
     // Check if user is Admin/Moderator (Exclusive to artemdula0@gmail.com)
     const isModerator = userData?.email === "artemdula0@gmail.com";
@@ -282,7 +413,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
             console.log("⚠️ Fallback: Fetching ALL docs from Firestore...");
             // Fetch ALL songs to ensure correct sorting (Cyrillic first) and complete list
             // This is more expensive but required for parity with Web/R2 version
-            const q = query(collection(db, "global_songs"));
+            const q = query(collection(getFirestoreLazy(), "global_songs"));
 
             const snapshot = await getDocs(q);
             console.log(`⚠️ Fallback: Fetched ${snapshot.docs.length} docs from Firestore`);
@@ -371,7 +502,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
             console.log(`🔄 Delta Sync: Checking for updates since ${lastUpdate.toISOString()}...`);
 
             const q = query(
-                collection(db, "global_songs"),
+                collection(getFirestoreLazy(), "global_songs"),
                 where("updatedAt", ">", lastUpdate)
             );
 
@@ -447,10 +578,10 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
             results = results.filter(s => s.subcategory === selectedSubCategory);
         }
 
-        if (selectedLanguage === 'cyrillic') {
-            results = results.filter(s => isCyrillic(s.title));
-        } else if (selectedLanguage === 'latin') {
-            results = results.filter(s => !isCyrillic(s.title));
+        if (selectedLanguage !== 'all') {
+            results = results.filter(s => {
+                return detectTitleLanguage(s.title) === selectedLanguage;
+            });
         }
 
         if (selectedTheme) {
@@ -489,8 +620,11 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
             if (selectedSubCategory) results = results.filter(s => s.subcategory === selectedSubCategory);
             if (selectedTheme) results = results.filter(s => s.theme === selectedTheme);
             // Language
-            if (selectedLanguage === 'cyrillic') results = results.filter(s => isCyrillic(s.title));
-            else if (selectedLanguage === 'latin') results = results.filter(s => !isCyrillic(s.title));
+            if (selectedLanguage !== 'all') {
+                results = results.filter(s => {
+                    return detectTitleLanguage(s.title) === selectedLanguage;
+                });
+            }
 
             // Bypass the normal "results = songs" logic at start of effect
             // because "songs" only has the loaded page.
@@ -717,10 +851,10 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
     return (
         <div className="flex flex-col h-full mt-4">
             {/* Stats Header Card - Matching Repertoire Style */}
-            <div className="bg-surface rounded-2xl p-5 card-shadow">
+            <div className="bg-surface/50 backdrop-blur-xl border border-border rounded-2xl p-5 mb-2">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 glass-frost-circle rounded-full flex items-center justify-center text-zinc-700">
+                        <div className="w-12 h-12 bg-black/5 dark:bg-white/10 rounded-full flex items-center justify-center text-text-primary">
                             <Library className="w-6 h-6" />
                         </div>
                         <div>
@@ -765,7 +899,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
 
             {!isModerationMode ? (
                 <>
-                    <div className="sticky z-10 -mx-4 px-4 pt-3 pb-3 mt-2 bg-background/95 backdrop-blur-lg border-b border-border" style={{ top: isOverlayOpen ? '0px' : 'calc(env(safe-area-inset-top) + 64px)' }}>
+                    <div className="sticky z-10 -mx-4 px-4 pt-3 pb-3 mt-2 bg-background/50 backdrop-blur-2xl border-b border-border" style={{ top: isOverlayOpen ? '0px' : 'calc(env(safe-area-inset-top) + 64px)' }}>
                         <div className="flex gap-2">
                             <div className="relative flex-1 group">
                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
@@ -774,7 +908,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                     placeholder="Пошук..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-11 pr-10 py-3 bg-surface rounded-xl text-base focus:outline-none text-text-primary placeholder:text-text-secondary/50 transition-all border border-transparent"
+                                    className="w-full pl-11 pr-10 py-3 bg-surface/50 backdrop-blur-xl rounded-xl text-base focus:outline-none text-text-primary placeholder:text-text-secondary/50 transition-all border border-border focus:bg-surface/80"
                                 />
                                 {searchQuery && (
                                     <button
@@ -789,7 +923,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                 onClick={() => setShowFilters(!showFilters)}
                                 className={`px-4 rounded-xl flex items-center gap-2 transition-all border ${showFilters || activeFiltersCount > 0
                                     ? "bg-primary text-background border-primary shadow-md"
-                                    : "bg-surface text-text-secondary border-transparent hover:bg-surface-highlight"
+                                    : "bg-surface/50 backdrop-blur-xl text-text-secondary border-border hover:bg-surface-highlight"
                                     }`}
                             >
                                 <Filter className="w-5 h-5" />
@@ -808,12 +942,15 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                 >
                                     <div className="bg-surface rounded-2xl p-4 mb-4 space-y-4 border border-border">
                                         {/* Language */}
-                                        <div>
+                                        <div className="border-b border-border pb-4">
                                             <p className="text-xs text-text-secondary uppercase font-bold tracking-wider mb-2">Мова</p>
-                                            <div className="flex bg-black/20 rounded-xl p-1 w-fit">
-                                                <button onClick={() => setSelectedLanguage('all')} className={`px-3 py-1.5 rounded-lg text-sm transition-all ${selectedLanguage === 'all' ? 'bg-primary/20 text-text-primary' : 'text-text-secondary'}`}>Всі</button>
-                                                <button onClick={() => setSelectedLanguage('cyrillic')} className={`px-3 py-1.5 rounded-lg text-sm transition-all ${selectedLanguage === 'cyrillic' ? 'bg-primary/20 text-text-primary' : 'text-text-secondary'}`}>АБВ</button>
-                                                <button onClick={() => setSelectedLanguage('latin')} className={`px-3 py-1.5 rounded-lg text-sm transition-all ${selectedLanguage === 'latin' ? 'bg-primary/20 text-text-primary' : 'text-text-secondary'}`}>ABC</button>
+                                            <div className="flex gap-2 pb-2 overflow-x-auto scrollbar-hide -mx-4 px-4">
+                                                <button onClick={() => setSelectedLanguage('all')} className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm transition-all border ${selectedLanguage === 'all' ? 'bg-primary text-background border-primary font-semibold shadow-sm' : 'bg-surface text-text-secondary border-border hover:bg-surface-highlight'}`}>Всі</button>
+                                                <button onClick={() => setSelectedLanguage('ukr')} className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm transition-all border flex items-center gap-1.5 ${selectedLanguage === 'ukr' ? 'bg-primary text-background border-primary font-semibold shadow-sm' : 'bg-surface text-text-secondary border-border hover:bg-surface-highlight'}`}>🇺🇦 УКР</button>
+                                                <button onClick={() => setSelectedLanguage('rus')} className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm transition-all border flex items-center gap-1.5 ${selectedLanguage === 'rus' ? 'bg-primary text-background border-primary font-semibold shadow-sm' : 'bg-surface text-text-secondary border-border hover:bg-surface-highlight'}`}>🇷🇺 РУС</button>
+                                                <button onClick={() => setSelectedLanguage('eng')} className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm transition-all border flex items-center gap-1.5 ${selectedLanguage === 'eng' ? 'bg-primary text-background border-primary font-semibold shadow-sm' : 'bg-surface text-text-secondary border-border hover:bg-surface-highlight'}`}>🌍 ENG</button>
+                                                <button onClick={() => setSelectedLanguage('ger')} className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm transition-all border flex items-center gap-1.5 ${selectedLanguage === 'ger' ? 'bg-primary text-background border-primary font-semibold shadow-sm' : 'bg-surface text-text-secondary border-border hover:bg-surface-highlight'}`}>🇩🇪 GER</button>
+                                                <button onClick={() => setSelectedLanguage('rom')} className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm transition-all border flex items-center gap-1.5 ${selectedLanguage === 'rom' ? 'bg-primary text-background border-primary font-semibold shadow-sm' : 'bg-surface text-text-secondary border-border hover:bg-surface-highlight'}`}>🇷🇴 ROM</button>
                                             </div>
                                         </div>
 
@@ -828,9 +965,9 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                                             setSelectedCategory(cat.id);
                                                             setSelectedSubCategory(null);
                                                         }}
-                                                        className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-all border ${selectedCategory === cat.id
-                                                            ? "bg-primary text-background border-primary font-semibold"
-                                                            : "bg-transparent text-text-secondary border-border hover:border-border/50"
+                                                        className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm whitespace-nowrap transition-all border ${selectedCategory === cat.id
+                                                            ? "bg-primary text-background border-primary font-semibold shadow-sm"
+                                                            : "bg-surface text-text-secondary border-border hover:bg-surface-highlight"
                                                             }`}
                                                     >
                                                         <cat.icon className="w-4 h-4" />
@@ -842,14 +979,14 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
 
                                         {/* Subcategories */}
                                         {selectedCategory !== "all" && selectedCategory !== "new" && SUBCATEGORIES[selectedCategory] && (
-                                            <div className="space-y-2">
-                                                <p className="text-xs text-text-secondary uppercase font-bold tracking-wider">Склад</p>
+                                            <div className="border-b border-border pb-4">
+                                                <p className="text-xs text-text-secondary uppercase font-bold tracking-wider mb-2">Склад</p>
                                                 <div className="flex flex-wrap gap-2">
                                                     <button
                                                         onClick={() => setSelectedSubCategory(null)}
-                                                        className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${!selectedSubCategory
-                                                            ? "bg-primary text-background border-primary"
-                                                            : "bg-transparent text-text-secondary border-border hover:border-border/50"
+                                                        className={`px-4 py-2 rounded-xl text-sm transition-all border ${!selectedSubCategory
+                                                            ? "bg-primary text-background border-primary font-semibold shadow-sm"
+                                                            : "bg-surface text-text-secondary border-border hover:bg-surface-highlight"
                                                             }`}
                                                     >
                                                         Всі
@@ -858,9 +995,9 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                                         <button
                                                             key={sub.id}
                                                             onClick={() => setSelectedSubCategory(selectedSubCategory === sub.id ? null : sub.id)}
-                                                            className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${selectedSubCategory === sub.id
-                                                                ? "bg-primary text-background border-primary"
-                                                                : "bg-transparent text-text-secondary border-border hover:border-border/50"
+                                                            className={`px-4 py-2 rounded-xl text-sm transition-all border ${selectedSubCategory === sub.id
+                                                                ? "bg-primary text-background border-primary font-semibold shadow-sm"
+                                                                : "bg-surface text-text-secondary border-border hover:bg-surface-highlight"
                                                                 }`}
                                                         >
                                                             {sub.label}
@@ -872,11 +1009,11 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
 
                                         {/* Themes */}
                                         <div className="space-y-2">
-                                            <p className="text-xs text-text-secondary uppercase font-bold tracking-wider">Тематика</p>
+                                            <p className="text-xs text-text-secondary uppercase font-bold tracking-wider pb-1">Тематика</p>
                                             <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-                                                <button onClick={() => setSelectedTheme(null)} className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs border ${!selectedTheme ? "bg-primary text-background border-primary" : "bg-transparent text-text-secondary border-border"}`}>Всі теми</button>
+                                                <button onClick={() => setSelectedTheme(null)} className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm transition-all border ${!selectedTheme ? "bg-primary text-background border-primary font-semibold shadow-sm" : "bg-surface text-text-secondary border-border hover:bg-surface-highlight"}`}>Всі теми</button>
                                                 {OFFICIAL_THEMES.map(theme => (
-                                                    <button key={theme} onClick={() => setSelectedTheme(selectedTheme === theme ? null : theme)} className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs border ${selectedTheme === theme ? "bg-primary text-background border-primary" : "bg-transparent text-text-secondary border-border"}`}>{theme}</button>
+                                                    <button key={theme} onClick={() => setSelectedTheme(selectedTheme === theme ? null : theme)} className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm transition-all border ${selectedTheme === theme ? "bg-primary text-background border-primary font-semibold shadow-sm" : "bg-surface text-text-secondary border-border hover:bg-surface-highlight"}`}>{theme}</button>
                                                 ))}
                                             </div>
                                         </div>
@@ -899,7 +1036,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
             )}
 
             {/* List */}
-            <div className="flex-1 overflow-y-auto">
+            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
                 {loading || moderationLoading ? (
                     <Preloader inline />
                 ) : isModerationMode ? (
@@ -1269,7 +1406,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                             body: JSON.stringify({ action: 'rebuild' })
                         });
                         if (!res.ok) throw new Error("API Error");
-                        setToastMessage("Індекс оновлено! Перезавантажте сторінку.");
+                        setToastMessage(Capacitor.isNativePlatform() ? "Індекс оновлено! Перезапустіть додаток." : "Індекс оновлено! Перезавантажте сторінку.");
                         setTimeout(() => setToastMessage(null), 5000);
                         loadFromR2();
                     } catch (e) {
@@ -1280,7 +1417,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                     }
                 }}
                 title="Оновити пошуковий індекс?"
-                message="Це може зайняти деякий час. Після оновлення потрібно буде перезавантажити сторінку."
+                message={`Це може зайняти деякий час. Після оновлення потрібно буде ${Capacitor.isNativePlatform() ? 'перезапустити додаток' : 'перезавантажити сторінку'}.`}
                 confirmText="Оновити"
                 variant="warning"
                 loading={rebuildIndexModal.loading}

@@ -3,9 +3,9 @@
  */
 export async function uploadFileToR2(key: string, file: File | Blob): Promise<string> {
     // 1. Get Presigned URL via Direct HTTP Cloud Function (Bypass Client SDK to resolve internal errors)
-    const { auth, app } = await import("@/lib/firebase");
+    const { getAuthLazy, app } = await import("@/lib/firebase");
 
-    const user = auth.currentUser;
+    const user = getAuthLazy().currentUser;
     if (!user) throw new Error("User must be logged in");
 
     const token = await user.getIdToken();
@@ -113,8 +113,8 @@ export async function uploadSongPartPdf(
  */
 export async function deleteFileFromR2(key: string): Promise<void> {
     try {
-        const { auth, app } = await import("@/lib/firebase");
-        const user = auth.currentUser;
+        const { getAuthLazy, app } = await import("@/lib/firebase");
+        const user = getAuthLazy().currentUser;
         if (!user) return;
 
         const token = await user.getIdToken();

@@ -5,13 +5,20 @@ import * as admin from "firebase-admin";
 
 // Initialize Firebase Admin if not already
 if (!admin.apps.length) {
-    admin.initializeApp({
-        credential: admin.credential.cert({
-            projectId: process.env.FIREBASE_PROJECT_ID,
-            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-            privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        }),
-    });
+    const b64Key = process.env.FIREBASE_PRIVATE_KEY_B64 || '';
+    const privateKey = b64Key ? Buffer.from(b64Key, 'base64').toString('utf8').replace(/\\n/g, '\n') : '';
+
+    try {
+        admin.initializeApp({
+            credential: admin.credential.cert({
+                projectId: process.env.FIREBASE_PROJECT_ID,
+                clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+                privateKey: privateKey,
+            }),
+        });
+    } catch (e: any) {
+        console.error("FIREBASE INIT ERROR:", e.message);
+    }
 }
 const db = admin.firestore();
 
@@ -46,20 +53,26 @@ export async function POST(req: NextRequest) {
             // FETCH ALL SONGS from Firestore (One-time heavy read)
             console.log("Rebuilding index from scratch...");
             const snapshot = await db.collection("global_songs").orderBy("title").get();
-            currentDesc = snapshot.docs.map(doc => {
-                const data = doc.data();
-                return {
-                    id: doc.id,
-                    title: data.title,
-                    category: data.category,
-                    subcategory: data.subcategory || null,
-                    theme: data.theme || null,
-                    composer: data.composer || null,
-                    poet: data.poet || null,
-                    pdfUrl: data.pdfUrl || data.parts?.[0]?.pdfUrl || null,
-                    partsCount: data.parts?.length || 0,
-                };
-            });
+            currentDesc = snapshot.docs
+                .filter(doc => {
+                    const data = doc.data();
+                    // Global kill switch: exclude songs where isEnabled is explicitly false
+                    return data.isEnabled !== false;
+                })
+                .map(doc => {
+                    const data = doc.data();
+                    return {
+                        id: doc.id,
+                        title: data.title,
+                        category: data.category,
+                        subcategory: data.subcategory || null,
+                        theme: data.theme || null,
+                        composer: data.composer || null,
+                        poet: data.poet || null,
+                        pdfUrl: data.pdfUrl || data.parts?.[0]?.pdfUrl || null,
+                        partsCount: data.parts?.length || 0,
+                    };
+                });
             console.log(`Fetched ${snapshot.docs.length} songs for index.`);
         } else {
             // Incremental Update (Read existing index first)

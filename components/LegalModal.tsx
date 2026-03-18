@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, ExternalLink, ShieldAlert, FileText, Music2, Scale, Lock, Copyright, ArrowLeft } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ExternalLink, ShieldAlert, FileText, Music2, Scale, Copyright, Lock, ArrowLeft } from "lucide-react";
 import { Browser } from "@capacitor/browser";
 import PrivacyText from "./legal/PrivacyText";
 import TermsText from "./legal/TermsText";
@@ -10,103 +11,98 @@ interface LegalModalProps {
     isOpen: boolean;
     onClose: () => void;
     initialView?: 'main' | 'privacy' | 'terms';
-    onOpenPrivacy?: () => void;
-    onOpenTerms?: () => void;
 }
 
 type SubView = 'main' | 'privacy' | 'terms';
 
 export default function LegalModal({ isOpen, onClose, initialView = 'main' }: LegalModalProps) {
     const [subView, setSubView] = useState<SubView>(initialView);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-    // Reset view when modal opens/closes or initialView changes
     useEffect(() => {
         if (isOpen) {
             setSubView(initialView);
         }
     }, [isOpen, initialView]);
-    const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-    // Scroll to top when subView changes
     useEffect(() => {
         if (scrollContainerRef.current) {
-            scrollContainerRef.current.scrollTo({ top: 0, behavior: 'instant' });
+            scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
         }
     }, [subView]);
 
     const openExternal = async (url: string) => {
-        await Browser.open({ url });
+        try {
+            if (url.startsWith('mailto:') || url.startsWith('tel:')) {
+                window.location.href = url;
+                return;
+            }
+            await Browser.open({ url });
+        } catch (error) {
+            console.error("Browser.open failed:", error);
+            window.open(url, '_blank');
+        }
     };
 
     const handleClose = () => {
-        setSubView('main');
-        onClose();
+        if (subView !== 'main') {
+            setSubView('main');
+        } else {
+            onClose();
+        }
     };
 
-    if (!isOpen) return null;
-
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-            <div
-                onClick={handleClose}
-                className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            />
-
-            <div className="relative bg-surface border border-border w-full max-w-md md:max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                {/* Header */}
-                <div className="p-6 border-b border-border flex items-center justify-between bg-surface sticky top-0 z-10">
-                    <div className="flex items-center gap-3">
-                        {subView !== 'main' && (
-                            <button
-                                onClick={() => setSubView('main')}
-                                className="p-1.5 hover:bg-surface-highlight rounded-full transition-colors text-text-secondary hover:text-text-primary"
-                            >
-                                <ArrowLeft className="w-5 h-5" />
-                            </button>
-                        )}
-                        <h2 className="text-xl font-bold text-text-primary tracking-tight">
-                            {subView === 'main' && 'Джерела та контент'}
-                            {subView === 'privacy' && 'Політика конфіденційності'}
-                            {subView === 'terms' && 'Умови використання'}
-                        </h2>
+        <AnimatePresence>
+            {isOpen && (
+                <motion.div
+                    initial={{ x: "100%" }}
+                    animate={{ x: 0 }}
+                    exit={{ x: "100%" }}
+                    transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                    className="fixed inset-0 z-[100] bg-background text-text-primary flex flex-col"
+                >
+                    {/* Header */}
+                    <div className="shrink-0 pt-[max(env(safe-area-inset-top),16px)] bg-surface/80 backdrop-blur-xl border-b border-border">
+                        <div className="px-4 py-3 pb-3 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={handleClose}
+                                    className="p-2 hover:bg-surface-highlight rounded-xl transition-colors text-text-secondary hover:text-text-primary"
+                                >
+                                    <ArrowLeft className="w-5 h-5" />
+                                </button>
+                                <h1 className="font-bold text-lg tracking-tight">
+                                    {subView === 'main' && 'Джерела та контент'}
+                                    {subView === 'privacy' && 'Політика конфіденційності'}
+                                    {subView === 'terms' && 'Умови використання'}
+                                </h1>
+                            </div>
+                        </div>
                     </div>
-                    <button
-                        onClick={handleClose}
-                        className="p-2 bg-surface-highlight hover:bg-border rounded-full transition-colors text-text-secondary hover:text-text-primary"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
 
-                <div ref={scrollContainerRef} className="p-6 overflow-y-auto space-y-6">
-                    {subView === 'main' && <MainContent openExternal={openExternal} onOpenPrivacy={() => setSubView('privacy')} onOpenTerms={() => setSubView('terms')} />}
-                    {subView === 'privacy' && <PrivacyContent />}
-                    {subView === 'terms' && <TermsContent />}
-                </div>
-
-                <div className="p-6 border-t border-border bg-surface">
-                    <button
-                        onClick={subView === 'main' ? handleClose : () => setSubView('main')}
-                        className="w-full py-3 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-colors"
-                    >
-                        {subView === 'main' ? 'Зрозуміло' : 'Назад'}
-                    </button>
-                </div>
-            </div>
-        </div>
+                    <div ref={scrollContainerRef} className="flex-1 overflow-y-auto w-full">
+                        <div className="max-w-2xl mx-auto w-full p-4 md:p-6 pb-[max(env(safe-area-inset-bottom),24px)] space-y-6">
+                            {subView === 'main' && <MainContent openExternal={openExternal} onOpenPrivacy={() => setSubView('privacy')} onOpenTerms={() => setSubView('terms')} />}
+                            {subView === 'privacy' && <PrivacyContent />}
+                            {subView === 'terms' && <TermsContent />}
+                        </div>
+                    </div>
+                </motion.div>
+            )}
+        </AnimatePresence>
     );
 }
 
 function MainContent({ openExternal, onOpenPrivacy, onOpenTerms }: { openExternal: (url: string) => Promise<void>; onOpenPrivacy: () => void; onOpenTerms: () => void }) {
     return (
         <>
-            {/* Section 1: Song Catalog */}
             <section className="space-y-3">
                 <div className="flex items-center gap-2 text-text-primary font-bold text-base">
                     <Music2 className="w-5 h-5 text-indigo-400" />
-                    <h3>Каталог пісень</h3>
+                    <h2>Каталог пісень</h2>
                 </div>
-                <div className="p-4 bg-surface-highlight rounded-2xl border border-border space-y-3">
+                <div className="p-4 bg-surface rounded-2xl border border-border space-y-3">
                     <p className="text-sm text-text-secondary leading-relaxed">
                         Каталог пісень у застосунку сформовано на основі відкритих матеріалів,
                         опублікованих Музично-хоровим відділом МСЦ ЄХБ (Міжнародний союз церков
@@ -126,13 +122,12 @@ function MainContent({ openExternal, onOpenPrivacy, onOpenTerms }: { openExterna
                 </div>
             </section>
 
-            {/* Section 2: Copyright */}
             <section className="space-y-3">
                 <div className="flex items-center gap-2 text-text-primary font-bold text-base">
                     <Copyright className="w-5 h-5 text-purple-400" />
-                    <h3>Авторські права</h3>
+                    <h2>Авторські права</h2>
                 </div>
-                <div className="p-4 bg-surface-highlight rounded-2xl border border-border space-y-3">
+                <div className="p-4 bg-surface rounded-2xl border border-border space-y-3">
                     <p className="text-sm text-text-secondary leading-relaxed">
                         Застосунок не є власником музичних творів і не претендує на авторські права.
                         Всі права на оригінальні твори належать їх авторам та правовласникам.
@@ -144,13 +139,12 @@ function MainContent({ openExternal, onOpenPrivacy, onOpenTerms }: { openExterna
                 </div>
             </section>
 
-            {/* Section 3: User Content */}
             <section className="space-y-3">
                 <div className="flex items-center gap-2 text-text-primary font-bold text-base">
                     <FileText className="w-5 h-5 text-amber-400" />
-                    <h3>Користувацький контент</h3>
+                    <h2>Користувацький контент</h2>
                 </div>
-                <div className="p-4 bg-surface-highlight rounded-2xl border border-border space-y-3">
+                <div className="p-4 bg-surface rounded-2xl border border-border space-y-3">
                     <p className="text-sm text-text-secondary leading-relaxed">
                         Користувачі можуть додавати власні матеріали (ноти, тексти, PDF-файли)
                         для використання в межах свого хору або церковної спільноти.
@@ -162,13 +156,12 @@ function MainContent({ openExternal, onOpenPrivacy, onOpenTerms }: { openExterna
                 </div>
             </section>
 
-            {/* Section 4: Data Protection */}
             <section className="space-y-3">
                 <div className="flex items-center gap-2 text-text-primary font-bold text-base">
                     <Lock className="w-5 h-5 text-cyan-400" />
-                    <h3>Захист даних</h3>
+                    <h2>Захист даних</h2>
                 </div>
-                <div className="p-4 bg-surface-highlight rounded-2xl border border-border space-y-3">
+                <div className="p-4 bg-surface rounded-2xl border border-border space-y-3">
                     <p className="text-sm text-text-secondary leading-relaxed">
                         Ваші дані зашифровані та зберігаються на серверах Google Firebase
                         та Cloudflare з дотриманням стандартів GDPR.
@@ -180,13 +173,12 @@ function MainContent({ openExternal, onOpenPrivacy, onOpenTerms }: { openExterna
                 </div>
             </section>
 
-            {/* Section 5: Responsibility */}
             <section className="space-y-3">
                 <div className="flex items-center gap-2 text-text-primary font-bold text-base">
                     <ShieldAlert className="w-5 h-5 text-emerald-400" />
-                    <h3>Відповідальність</h3>
+                    <h2>Відповідальність</h2>
                 </div>
-                <div className="p-4 bg-surface-highlight rounded-2xl border border-border space-y-3">
+                <div className="p-4 bg-surface rounded-2xl border border-border space-y-3">
                     <p className="text-sm text-text-secondary leading-relaxed">
                         Користувачі несуть відповідальність за контент, який вони додають
                         або використовують у застосунку.
@@ -198,31 +190,31 @@ function MainContent({ openExternal, onOpenPrivacy, onOpenTerms }: { openExterna
                 </div>
             </section>
 
-            {/* Section 6: Legal */}
             <section className="space-y-3">
                 <div className="flex items-center gap-2 text-text-primary font-bold text-base">
                     <Scale className="w-5 h-5 text-rose-400" />
-                    <h3>Правова інформація</h3>
+                    <h2>Правова інформація</h2>
                 </div>
-                <div className="p-4 bg-surface-highlight rounded-2xl border border-border space-y-3">
-                    <p className="text-sm text-text-secondary leading-relaxed">
+                <div className="p-4 bg-surface rounded-2xl border border-border space-y-3">
+                    <p className="text-sm text-text-secondary leading-relaxed mb-4">
                         Детальну інформацію про обробку персональних даних
                         можна знайти в нашій Політиці конфіденційності.
                     </p>
-                    <div className="flex flex-col gap-2 items-start">
+
+                    <div className="flex flex-col gap-0 border border-border rounded-xl overflow-hidden divide-y divide-border">
                         <button
                             onClick={onOpenPrivacy}
-                            className="inline-flex items-center gap-2 text-xs font-bold text-rose-400 hover:text-rose-300 transition-colors uppercase tracking-wider"
+                            className="w-full text-left py-3 px-4 hover:bg-surface-highlight transition-colors flex items-center justify-between group"
                         >
-                            Політика конфіденційності
-                            <ArrowLeft className="w-3 h-3 rotate-180" />
+                            <span className="text-sm font-semibold text-text-primary group-hover:text-rose-400 transition-colors">Політика конфіденційності</span>
+                            <ArrowLeft className="w-4 h-4 text-text-secondary rotate-180" />
                         </button>
                         <button
                             onClick={onOpenTerms}
-                            className="inline-flex items-center gap-2 text-xs font-bold text-primary hover:opacity-80 transition-colors uppercase tracking-wider"
+                            className="w-full text-left py-3 px-4 hover:bg-surface-highlight transition-colors flex items-center justify-between group"
                         >
-                            Умови використання
-                            <ArrowLeft className="w-3 h-3 rotate-180" />
+                            <span className="text-sm font-semibold text-text-primary group-hover:text-primary transition-colors">Умови використання</span>
+                            <ArrowLeft className="w-4 h-4 text-text-secondary rotate-180" />
                         </button>
                     </div>
                 </div>

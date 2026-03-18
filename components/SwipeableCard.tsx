@@ -1,7 +1,11 @@
 "use client";
 
-import { useState, useRef, ReactNode } from "react";
+import { useState, useRef, forwardRef, useImperativeHandle, ReactNode } from "react";
 import { Trash2 } from "lucide-react";
+
+export interface SwipeableCardRef {
+    reset: () => void;
+}
 
 interface SwipeableCardProps {
     children: ReactNode;
@@ -10,9 +14,10 @@ interface SwipeableCardProps {
     className?: string; // Outer wrapper class
     contentClassName?: string; // Inner content class (for background overrides)
     backgroundClassName?: string; // Delete button background class
+    disableFullSwipe?: boolean;
 }
 
-export default function SwipeableCard({
+const SwipeableCard = forwardRef<SwipeableCardRef, SwipeableCardProps>(({
     children,
     onDelete,
     disabled = false,
@@ -20,13 +25,21 @@ export default function SwipeableCard({
     contentClassName = "bg-surface",
     backgroundClassName = "",
     disableFullSwipe = false
-}: SwipeableCardProps & { disableFullSwipe?: boolean }) {
+}, ref) => {
     const [translateX, setTranslateX] = useState(0);
     const [isRevealed, setIsRevealed] = useState(false);
     const startX = useRef(0);
     const currentX = useRef(0);
     const isDragging = useRef(false);
     const shouldBlockClick = useRef(false);
+
+    useImperativeHandle(ref, () => ({
+        reset: () => {
+            setTranslateX(0);
+            setIsRevealed(false);
+            shouldBlockClick.current = false;
+        }
+    }));
 
     const THRESHOLD = 80; // Pixels to reveal delete button
     const DELETE_AREA_WIDTH = 80; // Standard reveal width
@@ -179,29 +192,14 @@ export default function SwipeableCard({
 
     return (
         <div
-            className={`relative overflow-hidden ${className}`}
+            className={`relative overflow-hidden ${className} ${backgroundClassName}`}
             onClickCapture={handleClickCapture}
-            style={{
-                position: 'relative',
-                overflow: 'hidden',
-                WebkitMaskImage: '-webkit-radial-gradient(white, black)',
-                transform: 'translateZ(0)'
-            }}
         >
             {/* Delete action — strictly bound to card height */}
             <div
                 data-delete-action="true"
-                className={`bg-red-500 cursor-pointer active:bg-red-600 ${backgroundClassName}`}
+                className={`bg-red-500 cursor-pointer active:bg-red-600 absolute inset-y-0 right-0 w-full flex items-center justify-end pr-6 transition-opacity duration-200`}
                 style={{
-                    position: 'absolute',
-                    top: 0,
-                    bottom: 0,
-                    right: 0,
-                    left: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'flex-end',
-                    paddingRight: '1.5rem',
                     visibility: translateX < 0 ? 'visible' : 'hidden',
                     touchAction: 'manipulation',
                 }}
@@ -210,6 +208,7 @@ export default function SwipeableCard({
                     if (isRevealed) {
                         e.stopPropagation();
                         onDelete();
+                        // Reset everything
                         setTranslateX(0);
                         setIsRevealed(false);
                         shouldBlockClick.current = false;
@@ -229,7 +228,7 @@ export default function SwipeableCard({
 
             {/* Swipe content — relative z-1, defines card height */}
             <div
-                className={`w-full select-none ${contentClassName}`}
+                className={`w-full h-full select-none ${contentClassName}`}
                 style={{
                     position: 'relative',
                     zIndex: 1,
@@ -250,4 +249,6 @@ export default function SwipeableCard({
             </div>
         </div>
     );
-}
+});
+
+export default SwipeableCard;

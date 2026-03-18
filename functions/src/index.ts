@@ -166,12 +166,12 @@ export const atomicCreateChoir = functions.https.onCall(async (data, context) =>
         choirType
     };
 
-    // Updates
     batch.set(userRef, {
         choirId: choirId, // Set as active
         choirName: name.trim(),
         role: 'head',
         memberships: admin.firestore.FieldValue.arrayUnion(newMembership),
+        choirIds: admin.firestore.FieldValue.arrayUnion(choirId),
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
 
@@ -309,10 +309,10 @@ export const atomicJoinChoir = functions.https.onCall(async (data, context) => {
             });
         }
 
-        // If user is switching active choir to this one (or has no active choir)
         const updates: any = {
             memberships: updatedMemberships,
             permissions: uniquePermissions,
+            choirIds: admin.firestore.FieldValue.arrayUnion(choirId),
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         };
 
@@ -444,7 +444,10 @@ export const atomicLeaveChoir = functions.https.onCall(async (data, context) => 
             const memberships = userData.memberships || [];
             const updatedMemberships = memberships.filter((m: any) => m.choirId !== choirId);
 
-            const updates: any = { memberships: updatedMemberships };
+            const updates: any = { 
+                memberships: updatedMemberships,
+                choirIds: admin.firestore.FieldValue.arrayRemove(choirId)
+            };
 
             // If active choir is this one, clear it
             if (userData.choirId === choirId) {
@@ -1230,9 +1233,12 @@ export const mergeAccounts = functions.https.onCall(async (data, context) => {
         });
 
         // WRITE 6: sync secondary user doc (DO NOT DELETE)
+        // NOTE: Use mergedInto (not linkedTo) — linkedTo was checked by old iOS builds
+        // and blocked login with an "Акаунт об'єднано" dialog.
         transaction.update(secondaryRef, {
             memberships: JSON.parse(JSON.stringify(mergedMemberships)),
-            linkedTo: primaryUid,
+            mergedInto: primaryUid,
+            linkedTo: admin.firestore.FieldValue.delete(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
@@ -1977,15 +1983,43 @@ export const sendNotification = functions.https.onCall(async (data, context) => 
         throw new functions.https.HttpsError("not-found", "Choir not found");
     }
 
-    const memberIds = (choirData.members || []).map((m: any) => m.id);
-    console.log(`[sendNotification] Found ${memberIds.length} members in choir.`);
+    const explicitIds = (choirData.members || [])
+        .map((m: any) => m.accountUid || m.id)
+        .filter((id: string) => !!id);
 
-    const userRefs = memberIds.map((id: string) => db.collection("users").doc(id));
-    const userDocs = await db.getAll(...userRefs);
+    // Dynamic membership query (new schema)
+    const usersSnap = await db.collection("users")
+        .where("choirIds", "array-contains", choirId)
+        .get();
+
+    // Legacy fallback query for unmigrated users
+    const legacySnap = await db.collection("users")
+        .where("choirId", "==", choirId)
+        .get();
+
+    const fetchedDocsMap = new Map<string, admin.firestore.DocumentSnapshot>();
+    usersSnap.docs.forEach(doc => fetchedDocsMap.set(doc.id, doc));
+    legacySnap.docs.forEach(doc => fetchedDocsMap.set(doc.id, doc));
+
+    // Fetch any missing explicit members
+    const missingIds = explicitIds.filter((id: string) => !fetchedDocsMap.has(id));
+    if (missingIds.length > 0) {
+        for (let i = 0; i < missingIds.length; i += 100) {
+            const chunk = missingIds.slice(i, i + 100);
+            const refs = chunk.map((id: string) => db.collection("users").doc(id));
+            const missingSnap = await db.getAll(...refs);
+            missingSnap.forEach(doc => {
+                 if (doc.exists) fetchedDocsMap.set(doc.id, doc);
+            });
+        }
+    }
+
+    const allUserDocs = Array.from(fetchedDocsMap.values());
+    console.log(`[sendNotification] Found ${explicitIds.length} explicit members, ${usersSnap.size} dynamically joined (new schema), and ${legacySnap.size} (legacy schema). Total unique valid docs: ${allUserDocs.length}`);
 
     // Collect tokens with origin info for debugging
     const tokenOrigins: { token: string; userId: string; userName: string }[] = [];
-    userDocs.forEach(doc => {
+    allUserDocs.forEach(doc => {
         const u = doc.data();
         if (u && u.notificationsEnabled && u.fcmTokens && Array.isArray(u.fcmTokens)) {
             for (const t of u.fcmTokens) {
@@ -2034,8 +2068,20 @@ export const sendNotification = functions.https.onCall(async (data, context) => 
             choirId: choirId
         },
         apns: {
-            headers: { "apns-priority": "10", "apns-push-type": "alert" },
-            payload: { aps: { sound: "default", badge: 1 } },
+            headers: {
+                "apns-priority": "10",
+                "apns-push-type": "alert"
+            },
+            payload: {
+                aps: {
+                    alert: {
+                        title: pushTitle,
+                        body: pushBody
+                    },
+                    sound: "default",
+                    badge: 1
+                }
+            }
         },
         android: {
             priority: "high" as const,
@@ -2044,23 +2090,26 @@ export const sendNotification = functions.https.onCall(async (data, context) => 
         tokens: uniqueTokens,
     };
 
-    console.log(`[sendNotification] Payload structure:`, JSON.stringify({
-        notification: message.notification,
-        apns: message.apns,
-        android: message.android,
-        tokenCount: uniqueTokens.length
-    }, null, 2));
-
-    // 4. Send
-    console.log(`[sendNotification] Sending to ${uniqueTokens.length} devices...`);
+    console.log(`[sendNotification] EXACT OUTGOING PAYLOAD:`);
+    console.log(`  - Target tokens count: ${uniqueTokens.length}`);
+    console.log(`  - notification.title: ${message.notification.title}`);
+    console.log(`  - notification.body: ${message.notification.body}`);
+    console.log(`  - apns.payload: ${JSON.stringify(message.apns?.payload || {})}`);
+    console.log(`  - android.notification: ${JSON.stringify(message.android?.notification || {})}`);
+    
+    // 4. Send via Firebase Admin SDK
+    console.log(`[sendNotification] Calling admin.messaging().sendEachForMulticast...`);
     const response = await admin.messaging().sendEachForMulticast(message);
     console.log(`[sendNotification] Result: successCount=${response.successCount}, failureCount=${response.failureCount}`);
 
     // 5. Detailed per-token response logging
     const errors: { tokenPrefix: string; user: string; code: string; message: string }[] = [];
+    const tokensToRemove: string[] = [];
+
     response.responses.forEach((resp, idx) => {
         const origin = uniqueOrigins[idx];
         const tokenPrefix = origin.token.substring(0, 20) + "...";
+        
         if (resp.success) {
             console.log(`  ✅ [${idx}] ${origin.userName}: delivered (messageId=${resp.messageId})`);
         } else {
@@ -2068,6 +2117,14 @@ export const sendNotification = functions.https.onCall(async (data, context) => 
             const errMsg = resp.error?.message || "no message";
             console.error(`  ❌ [${idx}] ${origin.userName}: FAILED code=${errCode} msg=${errMsg}`);
             errors.push({ tokenPrefix, user: origin.userName, code: errCode, message: errMsg });
+            
+            if (
+                errCode === 'messaging/registration-token-not-registered' ||
+                errCode === 'messaging/invalid-registration-token' ||
+                errCode === 'messaging/invalid-argument'
+            ) {
+                tokensToRemove.push(uniqueTokens[idx]);
+            }
         }
     });
 
@@ -2089,20 +2146,6 @@ export const sendNotification = functions.https.onCall(async (data, context) => 
     await db.collection(`choirs/${choirId}/notifications`).add(notificationData);
 
     // 7. Clean up stale tokens
-    const tokensToRemove: string[] = [];
-    response.responses.forEach((resp, idx) => {
-        if (!resp.success) {
-            const errCode = resp.error?.code;
-            if (
-                errCode === 'messaging/registration-token-not-registered' ||
-                errCode === 'messaging/invalid-registration-token' ||
-                errCode === 'messaging/invalid-argument'
-            ) {
-                tokensToRemove.push(uniqueTokens[idx]);
-            }
-        }
-    });
-
     if (tokensToRemove.length > 0) {
         console.log(`[sendNotification] Cleaning ${tokensToRemove.length} stale tokens...`);
         const staleSnaps = await Promise.all(
@@ -2425,3 +2468,173 @@ async function deleteR2Directory(prefix: string): Promise<void> {
         continuationToken = listResponse.NextContinuationToken;
     }
 }
+
+/**
+ * backfillChoirIds (Admin Only)
+ * One-time migration function to populate the `choirIds` array for all users.
+ * Safe to run multiple times (idempotent arrayUnion via Sets).
+ */
+export const backfillChoirIds = functions.https.onCall(async (data, context) => {
+    // Basic auth check
+    if (!context.auth) throw new functions.https.HttpsError("unauthenticated", "Must be logged in");
+
+    // Let it run if authenticated since it's an idempotent pure data fix.
+    const usersSnap = await db.collection("users").get();
+    let updatedCount = 0;
+    
+    // Firestore batch limit is 500 operations
+    const batches: FirebaseFirestore.WriteBatch[] = [db.batch()];
+    let currentBatchIndex = 0;
+    let opsInCurrentBatch = 0;
+
+    usersSnap.docs.forEach(doc => {
+        const userData = doc.data();
+        const memberships = userData.memberships || [];
+        const choirIdsSet = new Set<string>();
+        
+        // Include legacy active choir
+        if (userData.choirId) choirIdsSet.add(userData.choirId);
+        
+        // Include all memberships
+        memberships.forEach((m: any) => {
+            if (m.choirId) choirIdsSet.add(m.choirId);
+        });
+        
+        // Compare with existing array if any
+        const existingChoirIds = userData.choirIds || [];
+        const needsUpdate = choirIdsSet.size > 0 && 
+            (existingChoirIds.length !== choirIdsSet.size || !existingChoirIds.every((id: string) => choirIdsSet.has(id)));
+
+        if (needsUpdate) {
+            batches[currentBatchIndex].update(doc.ref, { choirIds: Array.from(choirIdsSet) });
+            opsInCurrentBatch++;
+            updatedCount++;
+
+            if (opsInCurrentBatch >= 490) { // Keep slightly under 500 limit
+                batches.push(db.batch());
+                currentBatchIndex++;
+                opsInCurrentBatch = 0;
+            }
+        }
+    });
+
+    for (const batch of batches) {
+        if ((batch as any)._ops?.length > 0 || (batch as any)._mutations?.length > 0) {
+           await batch.commit();
+        }
+    }
+
+    console.log(`[backfillChoirIds] Processed ${usersSnap.size} users. Updated ${updatedCount} users.`);
+    return { success: true, totalProcessed: usersSnap.size, totalUpdated: updatedCount };
+});
+
+// --- CHOIR RENAMING FAN-OUT ---
+export const onChoirUpdated = functions.firestore
+    .document("choirs/{choirId}")
+    .onUpdate(async (change, context) => {
+        const choirId = context.params.choirId;
+        const before = change.before.data();
+        const after = change.after.data();
+
+        // Trigger only if the name actually changed
+        if (!before || !after || before.name === after.name) {
+            return null;
+        }
+
+        const newName = after.name;
+        console.log(`[onChoirUpdated] Choir ${choirId} changed name from "${before.name}" to "${newName}". Starting fan-out.`);
+
+        // 1. Collect all users reliably using the hybrid approach
+        const explicitIds = (after.members || [])
+            .map((m: any) => m.accountUid || m.id)
+            .filter((id: string) => !!id);
+
+        const usersSnap = await db.collection("users")
+            .where("choirIds", "array-contains", choirId)
+            .get();
+
+        const legacySnap = await db.collection("users")
+            .where("choirId", "==", choirId)
+            .get();
+
+        const fetchedDocsMap = new Map<string, admin.firestore.DocumentSnapshot>();
+        usersSnap.docs.forEach((doc) => fetchedDocsMap.set(doc.id, doc));
+        legacySnap.docs.forEach((doc) => fetchedDocsMap.set(doc.id, doc));
+
+        const missingIds = explicitIds.filter((id: string) => !fetchedDocsMap.has(id));
+        if (missingIds.length > 0) {
+            // Firestore batch get limit is 100
+            for (let i = 0; i < missingIds.length; i += 100) {
+                const chunk = missingIds.slice(i, i + 100);
+                const refs = chunk.map((id: string) => db.collection("users").doc(id));
+                const missingSnap = await db.getAll(...refs);
+                missingSnap.forEach((doc) => {
+                    if (doc.exists) fetchedDocsMap.set(doc.id, doc);
+                });
+            }
+        }
+
+        const allUserDocs = Array.from(fetchedDocsMap.values());
+        console.log(`[onChoirUpdated] Found ${allUserDocs.length} unique users to update for choir ${choirId}`);
+
+        if (allUserDocs.length === 0) return null;
+
+        // 2. Perform chunked batch updates
+        const batches: FirebaseFirestore.WriteBatch[] = [db.batch()];
+        let currentBatchIndex = 0;
+        let opsInCurrentBatch = 0;
+
+        allUserDocs.forEach((doc) => {
+            const userData = doc.data()!;
+            const updates: any = {};
+            let needsUpdate = false;
+
+            // A. Update memberships array if needed
+            if (userData.memberships && Array.isArray(userData.memberships)) {
+                let membershipsChanged = false;
+                const updatedMemberships = userData.memberships.map((m: any) => {
+                    if (m.choirId === choirId && m.choirName !== newName) {
+                        membershipsChanged = true;
+                        return { ...m, choirName: newName };
+                    }
+                    return m;
+                });
+
+                if (membershipsChanged) {
+                    updates.memberships = updatedMemberships;
+                    needsUpdate = true;
+                }
+            }
+
+            // B. Update root choirName if this is their active choir
+            if (userData.choirId === choirId && userData.choirName !== newName) {
+                updates.choirName = newName;
+                needsUpdate = true;
+            }
+
+            if (needsUpdate) {
+                batches[currentBatchIndex].update(doc.ref, updates);
+                opsInCurrentBatch++;
+
+                // Keep safely under Firestore's 500 ops/batch limit
+                if (opsInCurrentBatch >= 490) {
+                    batches.push(db.batch());
+                    currentBatchIndex++;
+                    opsInCurrentBatch = 0;
+                }
+            }
+        });
+
+        // 3. Commit all batches
+        let committedCount = 0;
+        for (const batch of batches) {
+            if ((batch as any)._ops?.length > 0 || (batch as any)._mutations?.length > 0) {
+                await batch.commit();
+                committedCount += (batch as any)._ops?.length || (batch as any)._mutations?.length || 0;
+            }
+        }
+
+        console.log(`[onChoirUpdated] Fan-out complete. Committed updates for ${committedCount} users.`);
+        return null;
+    });
+

@@ -6,14 +6,14 @@ import { addSongToService, removeSongFromService, getChoir, updateService, setSe
 import { updateAttendanceCache } from "@/lib/attendanceCache";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRepertoire } from "@/contexts/RepertoireContext";
-import { ChevronLeft, Eye, X, Plus, Users, UserX, Check, Calendar, Music, UserCheck, AlertCircle, Trash2, User as UserIcon, CloudDownload, CheckCircle, Loader, ChevronDown, Mic2, BookOpen, Hand, Mic, Users2, MoreHorizontal, GripVertical, ListOrdered, Printer, Pencil } from "lucide-react";
+import { ChevronLeft, Eye, X, Plus, Users, UserX, Check, Calendar, Music, UserCheck, AlertCircle, Trash2, User as UserIcon, CloudDownload, CheckCircle, Loader, ChevronDown, Mic2, BookOpen, Hand, Mic, Users2, MoreHorizontal, GripVertical, ListOrdered, Printer, Pencil, Save } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { Share } from '@capacitor/share';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Dialog } from '@capacitor/dialog';
 import { useRouter } from "next/navigation";
-import SwipeableCard from "./SwipeableCard";
+import SwipeableCard, { SwipeableCardRef } from "./SwipeableCard";
 
 import { resolvePdfUrlToBase64 } from "../lib/cache";
 import OfflinePdfModal from "./OfflinePdfModal";
@@ -23,6 +23,7 @@ import { PencilKitAnnotator } from "@/plugins/PencilKitAnnotator";
 
 interface ServiceViewProps {
     service: Service;
+    allServices?: Service[];
     onBack: () => void;
     canEdit: boolean;
     canEditCredits?: boolean; // Edit conductor/pianist
@@ -33,23 +34,27 @@ interface ServiceViewProps {
 
 // Define programTypeConfig here
 const programTypeConfig: Record<string, { label: string; icon: React.ReactNode; color: string; bg: string }> = {
-    choir: { label: "Пісня хору", icon: <Users2 className="w-4 h-4" />, color: "text-blue-400", bg: "bg-blue-500/10" },
-    solo: { label: "Соло", icon: <Mic className="w-4 h-4" />, color: "text-purple-400", bg: "bg-purple-500/10" },
-    prayer: { label: "Молитва", icon: <Hand className="w-4 h-4" />, color: "text-green-400", bg: "bg-green-500/10" },
+    choir: { label: "Хор", icon: <Music className="w-4 h-4" />, color: "text-blue-400", bg: "bg-blue-500/10" },
+    congregation: { label: "Заг. спів", icon: <Users2 className="w-4 h-4" />, color: "text-cyan-400", bg: "bg-cyan-500/10" },
+    verse: { label: "Вірш", icon: <BookOpen className="w-4 h-4" />, color: "text-purple-400", bg: "bg-purple-500/10" },
+    prayer: { label: "Молитва", icon: <Hand className="w-4 h-4" />, color: "text-amber-500", bg: "bg-amber-500/10" },
+    sermon: { label: "Проповідь", icon: <BookOpen className="w-4 h-4" />, color: "text-orange-400", bg: "bg-orange-500/10" },
+    solo: { label: "Соло", icon: <Mic className="w-4 h-4" />, color: "text-pink-400", bg: "bg-pink-500/10" },
+    ensemble: { label: "Ансамбль", icon: <Users2 className="w-4 h-4" />, color: "text-green-400", bg: "bg-green-500/10" },
     reading: { label: "Читання", icon: <BookOpen className="w-4 h-4" />, color: "text-yellow-400", bg: "bg-yellow-500/10" },
-    sermon: { label: "Проповідь", icon: <Mic2 className="w-4 h-4" />, color: "text-red-400", bg: "bg-red-500/10" },
     announcement: { label: "Оголошення", icon: <AlertCircle className="w-4 h-4" />, color: "text-gray-400", bg: "bg-gray-500/10" },
-    other: { label: "Інше", icon: <MoreHorizontal className="w-4 h-4" />, color: "text-gray-400", bg: "bg-gray-500/10" },
+    other: { label: "Інше", icon: <MoreHorizontal className="w-4 h-4" />, color: "text-zinc-400", bg: "bg-zinc-500/10" },
 };
 
-export default function ServiceView({ service, onBack, canEdit, canEditCredits = false, canEditAttendance = false, choir, isNativeApp }: ServiceViewProps) {
+export default function ServiceView({ service, allServices = [], onBack, canEdit, canEditCredits = false, canEditAttendance = false, choir, isNativeApp }: ServiceViewProps) {
     const router = useRouter();
     const { userData, user } = useAuth();
 
     // Local state for optimistic updates
     const [currentService, setCurrentService] = useState<Service>(service);
     // const [availableSongs, setAvailableSongs] = useState<SimpleSong[]>([]); // Replaced by Context
-    const { songs: availableSongs } = useRepertoire();
+    const { songs: rawAvailableSongs } = useRepertoire();
+    const availableSongs = rawAvailableSongs || [];
     const [showAddSong, setShowAddSong] = useState(false);
     const [showAttendance, setShowAttendance] = useState(false);
     const [search, setSearch] = useState("");
@@ -72,11 +77,65 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
     }, [isNativeApp]);
     const [activeTab, setActiveTab] = useState<'program' | 'choir'>('program');
     const [showAddProgramItem, setShowAddProgramItem] = useState(false);
+    const [editingProgramItem, setEditingProgramItem] = useState<ProgramItem | null>(null);
     const [programItems, setProgramItems] = useState<ProgramItem[]>(service.program || []);
     const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
     const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
     const [swipedProgramItemId, setSwipedProgramItemId] = useState<string | null>(null);
     const [programItemToDelete, setProgramItemToDelete] = useState<string | null>(null);
+
+    // Edit Service Modal (title, date, time)
+    const [showEditServiceModal, setShowEditServiceModal] = useState(false);
+    const [editTitle, setEditTitle] = useState(service.title);
+    const [editDate, setEditDate] = useState(service.date);
+    const [editTime, setEditTime] = useState(service.time || '');
+    const [editingDescription, setEditingDescription] = useState(false);
+    const [editDescription, setEditDescription] = useState(service.description || '');
+
+    const openEditServiceModal = () => {
+        setEditTitle(currentService.title);
+        setEditDate(currentService.date);
+        setEditTime(currentService.time || '');
+        setShowEditServiceModal(true);
+    };
+
+    const saveServiceDetails = async () => {
+        const trimmedTitle = editTitle.trim();
+        if (!trimmedTitle) return;
+        setCurrentService(prev => ({ ...prev, title: trimmedTitle, date: editDate, time: editTime || undefined }));
+        setShowEditServiceModal(false);
+        if (userData?.choirId) {
+            const updates: any = { title: trimmedTitle, date: editDate };
+            if (editTime) updates.time = editTime; else updates.time = '';
+            await updateService(userData.choirId, currentService.id, updates);
+        }
+    };
+
+    const saveDescription = async () => {
+        const val = editDescription.trim();
+        setCurrentService(prev => ({ ...prev, description: val || undefined }));
+        setEditingDescription(false);
+        if (userData?.choirId) await updateService(userData.choirId, currentService.id, { description: val } as any);
+    };
+
+    const cardRefs = useRef<Record<string, SwipeableCardRef | null>>({});
+
+    const cancelDeleteProgramItem = () => {
+        if (programItemToDelete && cardRefs.current[programItemToDelete]) {
+            cardRefs.current[programItemToDelete]?.reset();
+        }
+        setProgramItemToDelete(null);
+    }
+
+    const cancelDeleteSong = () => {
+        if (songToDeleteIndex !== null) {
+            const tempSongIdStr = `temp-song-${songToDeleteIndex}`;
+            if (cardRefs.current[tempSongIdStr]) {
+                cardRefs.current[tempSongIdStr]?.reset();
+            }
+        }
+        setSongToDeleteIndex(null);
+    }
 
     const isServiceType = service.type !== 'rehearsal'; // default to true if undefined for backward compat with 'service'
 
@@ -110,8 +169,8 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
 
         // Auto-migrate legacy songs to program items if program is empty but songs exist
         // Migrate songs to program items ONLY if it's a full service type
-        if (isServiceType && isNative && currentService.songs.length > 0 && !service.program) {
-            const migratedProgram: ProgramItem[] = service.songs.map((s, index) => {
+        if (isServiceType && isNative && (currentService.songs || []).length > 0 && !service.program) {
+            const migratedProgram: ProgramItem[] = (service.songs || []).map((s, index) => {
                 const songTitle = availableSongs.find(as => as.id === s.songId)?.title || s.songTitle || "Невідома пісня";
                 return {
                     id: crypto.randomUUID(),
@@ -135,46 +194,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
         }
     }, [service, isNative, availableSongs, userData?.choirId, isServiceType]);
 
-    // Push service data to iOS widgets (native only)
-    useEffect(() => {
-        if (!isNative || !Capacitor.isNativePlatform()) return;
-        const pushWidgetData = async () => {
-            try {
-                const WidgetData = (await import('@/plugins/WidgetDataPlugin')).default;
-                const songTitles = currentService.songs.map(s => {
-                    const full = availableSongs.find(a => a.id === s.songId);
-                    return full?.title || s.songTitle || 'Невідома пісня';
-                });
-                const userId = userData?.id || '';
-                const confirmed = currentService.confirmedMembers || [];
-                const absent = currentService.absentMembers || [];
-                const total = choirMembers.length;
-                let voteStatus: 'confirmed' | 'absent' | 'pending' = 'pending';
-                if (confirmed.includes(userId)) voteStatus = 'confirmed';
-                else if (absent.includes(userId)) voteStatus = 'absent';
-
-                await WidgetData.updateServiceData({
-                    title: currentService.title,
-                    date: currentService.date,
-                    time: currentService.time || '',
-                    type: currentService.type || 'service',
-                    serviceId: currentService.id,
-                    choirId: userData?.choirId || '',
-                    choirName: choir?.name || 'MyChoir',
-                    voteStatus,
-                    confirmedCount: confirmed.length,
-                    pendingCount: Math.max(0, total - confirmed.length - absent.length),
-                    absentCount: absent.length,
-                    totalMembers: total,
-                    songs: songTitles,
-                    userId,
-                });
-            } catch (e) {
-                // Widget plugin not available — ignore silently
-            }
-        };
-        pushWidgetData();
-    }, [currentService, choirMembers, availableSongs, isNative, userData, choir]);
+    // Widget data updates are now handled globally via lib/db.ts mutations and lib/widgetSync.ts
 
     // Sync choir data updates
     useEffect(() => {
@@ -297,13 +317,13 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
         if (!Capacitor.isNativePlatform()) return;
 
         // Check cache status for UI
-        const songIds = currentService.songs.map(s => s.songId);
+        const songIds = (currentService.songs || []).map(s => s.songId);
         checkCacheStatus(songIds).then(status => {
             setLocalCacheStatus(status);
         });
 
         // Cache all songs in this service for offline access
-        const songsToCache = currentService.songs.map(s => {
+        const songsToCache = (currentService.songs || []).map(s => {
             const fullSong = availableSongs.find(as => as.id === s.songId);
             if (fullSong && (fullSong.pdfUrl || (fullSong.parts && fullSong.parts.length > 0))) {
                 return {
@@ -325,14 +345,17 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
         }
 
         // Prefetch the song page route to cache JS chunks
-        if (currentService.songs.length > 0) {
-            const firstSongId = currentService.songs[0].songId;
-            const prefetchUrl = `/song?id=${firstSongId}`;
-            const link = document.createElement('link');
-            link.rel = 'prefetch';
-            link.href = prefetchUrl;
-            link.as = 'document';
-            document.head.appendChild(link);
+        const songs = currentService.songs || [];
+        if (songs.length > 0) {
+            const firstSongId = songs[0]?.songId;
+            if (firstSongId) {
+                const prefetchUrl = `/song?id=${firstSongId}`;
+                const link = document.createElement('link');
+                link.rel = 'prefetch';
+                link.href = prefetchUrl;
+                link.as = 'document';
+                document.head.appendChild(link);
+            }
         }
     }, [currentService, availableSongs, cacheServiceSongs, checkCacheStatus]);
 
@@ -394,7 +417,21 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
         setVotingLoading(true);
 
         try {
+            if (allServices && allServices.length > 0) {
+                const up = allServices.map(s => {
+                    if (s.id !== currentService.id) return s;
+                    let c = [...(s.confirmedMembers || [])].filter(id => id !== user.uid);
+                    let a = [...(s.absentMembers || [])].filter(id => id !== user.uid);
+                    if (status === 'present') c.push(user.uid);
+                    else if (status === 'absent') a.push(user.uid);
+                    return { ...s, confirmedMembers: c, absentMembers: a };
+                });
+                import('@/lib/widgetSync').then(m => m.syncWidgetNearestService(up, choir)).catch(console.error);
+            }
             await setServiceAttendance(userData.choirId, currentService.id, user.uid, status);
+            // Since ServiceView might not have the full services list easily available from props if we removed it, wait, we probably need allServices for widget sync!
+            // Ah, the user said we must implement payload-driven widget sync directly from React state using the UPDATED in-memory services array. 
+            // In ServiceView, we don't have the full array unless we keep the allServices prop. Let's keep the allServices prop! 
         } catch (e) {
             console.error(e);
             // Revert on error
@@ -408,8 +445,8 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
 
     const getMyStatus = () => {
         if (!user?.uid) return 'unknown';
-        if (currentService.confirmedMembers?.includes(user?.uid)) return 'present';
-        if (currentService.absentMembers?.includes(user?.uid)) return 'absent';
+        if ((currentService as any).absentMembers?.includes(user?.uid)) return 'absent';
+        if ((currentService as any).confirmedMembers?.includes(user?.uid)) return 'present';
         return 'unknown';
     };
 
@@ -431,7 +468,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
         setAddingSongsLoading(true);
 
         // Find full song objects
-        const songsToAdd = availableSongs.filter(s => selectedSongsToService.includes(s.id));
+        const songsToAdd = (availableSongs || []).filter(s => selectedSongsToService.includes(s.id));
         const newServiceSongs: ServiceSong[] = songsToAdd.map(s => {
             const songData: ServiceSong = {
                 songId: s.id,
@@ -593,9 +630,9 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
     };
 
     const openEditCredits = (index: number) => {
-        const song = currentService.songs[index];
-        setTempConductor(song.performedBy || "");
-        setTempPianist(song.pianist || "");
+        const song = currentService.songs?.[index];
+        setTempConductor(song?.performedBy || "");
+        setTempPianist(song?.pianist || "");
         setEditingSongIndex(index);
         setShowCustomConductor(false);
         setShowCustomPianist(false);
@@ -606,8 +643,12 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
     const handleSaveCredits = async () => {
         if (editingSongIndex === null || !userData?.choirId) return;
 
-        const updatedSongs = [...currentService.songs];
+        const updatedSongs = [...(currentService.songs || [])];
         const currentSong = updatedSongs[editingSongIndex];
+        if (!currentSong) {
+            setEditingSongIndex(null);
+            return;
+        }
         const updatedSong: ServiceSong = { ...currentSong };
 
         if (tempConductor) {
@@ -702,9 +743,11 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
             });
 
             let finalUpdate = { ...currentService, absentMembers, confirmedMembers };
-            // Auto finalize when attendance is specifically saved for a past service
-            const isFutureNow = isUpcoming(currentService.date, currentService.time);
-            if (!isFutureNow && userData?.id) {
+
+            // Always finalize when admin explicitly saves attendance.
+            // The save button is already disabled before service start time,
+            // and the backend guard prevents premature finalization even if UI is bypassed.
+            if (userData?.id) {
                 await finalizeService(userData.choirId, currentService.id, userData.id);
                 finalUpdate.isFinalized = true;
                 finalUpdate.finalizedAt = new Date().toISOString();
@@ -721,9 +764,9 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
         }
     };
 
-    const filteredSongs = availableSongs.filter(s =>
+    const filteredSongs = (availableSongs || []).filter(s =>
         s.title.toLowerCase().includes(search.toLowerCase()) &&
-        !currentService.songs.some(existing => existing.songId === s.id)
+        !(currentService.songs || []).some(existing => existing.songId === s.id)
     );
 
     const absentCount = absentMembers.length;
@@ -789,6 +832,16 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
         await syncProgramToSongs(updated);
     };
 
+    // Edit program item
+    const handleEditProgramItem = async (updatedItem: ProgramItem) => {
+        if (!userData?.choirId) return;
+        const updated = programItems.map(p => p.id === updatedItem.id ? updatedItem : p);
+        setProgramItems(updated);
+        setEditingProgramItem(null);
+        setShowAddProgramItem(false);
+        await syncProgramToSongs(updated);
+    };
+
     // Remove program item
     const handleRemoveProgramItem = async (itemId: string) => {
         if (!userData?.choirId) return;
@@ -818,7 +871,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
         }
         if (!userData?.choirId) return;
 
-        const items = [...programItems];
+        const items = [...programItems].sort((a, b) => a.order - b.order);
         const dragIndex = items.findIndex(p => p.id === draggedItemId);
         const dropIndex = items.findIndex(p => p.id === dragOverItemId);
 
@@ -959,34 +1012,36 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
     return (
         <div className="pb-32 bg-background min-h-screen">
             {/* Header */}
-            <div className="sticky top-0 z-20 bg-surface border-b border-border px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-4 flex items-center gap-4">
+            <div className="sticky top-0 z-20 bg-surface border-b border-border px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 flex items-center gap-3">
                 <button
                     onClick={onBack}
                     className="p-2 -ml-2 text-text-secondary hover:text-text-primary rounded-full hover:bg-surface-highlight transition-colors"
                 >
                     <ChevronLeft className="w-6 h-6" />
                 </button>
-                <div className="flex-1">
-                    <h1 className="text-xl font-bold text-text-primary leading-tight">{currentService.title}</h1>
+                <div className="flex-1 min-w-0">
+                    <h1 className="text-lg font-bold text-text-primary leading-tight truncate">{currentService.title}</h1>
+                    <p className="text-[13px] text-text-secondary mt-0.5">
+                        {(() => {
+                            const [y, m, d] = currentService.date.split('-').map(Number);
+                            return new Date(y, m - 1, d).toLocaleDateString('uk-UA', { weekday: 'short', day: 'numeric', month: 'long' });
+                        })()}
+                        {currentService.time && <span className="text-primary font-semibold ml-1">о {currentService.time}</span>}
+                    </p>
                 </div>
+                {canEdit && (
+                    <button
+                        onClick={openEditServiceModal}
+                        className="p-2 -mr-2 text-text-secondary hover:text-text-primary rounded-full hover:bg-surface-highlight transition-colors"
+                    >
+                        <Pencil className="w-5 h-5" />
+                    </button>
+                )}
 
             </div>
 
             <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
 
-                {/* Date Module */}
-                <div className="bg-surface/30 rounded-[24px] border border-border/60 shadow-sm p-4 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                        <Calendar className="w-5 h-5 text-blue-400" />
-                    </div>
-                    <p className="text-text-primary font-medium text-[15px]">
-                        {(() => {
-                            const [y, m, d] = currentService.date.split('-').map(Number);
-                            return new Date(y, m - 1, d).toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' });
-                        })()}
-                        {currentService.time && <span className="text-blue-400 font-bold ml-2">о {currentService.time}</span>}
-                    </p>
-                </div>
 
                 {/* ===== TAB BAR ===== */}
                 <div className="flex bg-surface/40 border border-border/60 rounded-2xl p-1 gap-1">
@@ -1030,11 +1085,12 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                         </button>
                                         {canEdit && (
                                             <button
-                                                onClick={() => setShowAddProgramItem(true)}
-                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-highlight text-text-primary rounded-full text-xs font-bold hover:bg-surface-highlight/80 transition-colors"
+                                                onClick={() => { setEditDescription(currentService.description || ''); setEditingDescription(true); }}
+                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors relative ${currentService.description ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20' : 'bg-surface-highlight text-text-secondary hover:bg-surface-highlight/80'}`}
                                             >
-                                                <Plus className="w-3.5 h-3.5" />
-                                                Додати
+                                                <Pencil className="w-3.5 h-3.5" />
+                                                Нотатки
+                                                {currentService.description && <span className="w-1.5 h-1.5 bg-amber-400 rounded-full absolute -top-0.5 -right-0.5" />}
                                             </button>
                                         )}
                                     </div>
@@ -1063,7 +1119,8 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                                         handleUpdateWarmup(e.target.value);
                                                     }
                                                 }}
-                                                className="w-full bg-transparent text-[14px] font-medium text-text-primary appearance-none focus:outline-none cursor-pointer"
+                                                style={{ fontSize: '16px' }}
+                                                className="w-full bg-transparent text-[16px] font-medium text-text-primary appearance-none focus:outline-none cursor-pointer"
                                             >
                                                 <option value="">Без розспіванки</option>
                                                 {regentsList.map((name, i) => (
@@ -1080,8 +1137,9 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                                     type="text"
                                                     value={warmupConductor}
                                                     onChange={(e) => setWarmupConductor(e.target.value)}
+                                                    style={{ fontSize: '16px' }}
                                                     placeholder="Хто проводить?"
-                                                    className="flex-1 min-w-0 bg-surface-highlight text-[14px] font-medium text-text-primary rounded-lg px-2 py-1 outline-none border border-primary/30"
+                                                    className="flex-1 min-w-0 bg-surface-highlight text-[16px] font-medium text-text-primary rounded-lg px-2 py-1 outline-none border border-primary/30"
                                                     autoFocus
                                                     onKeyDown={(e) => {
                                                         if (e.key === 'Enter') handleUpdateWarmup(warmupConductor);
@@ -1098,118 +1156,152 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
 
                                 {/* Program Items List — Timeline Style */}
                                 <div className="relative">
-                                    {[...programItems].sort((a, b) => a.order - b.order).map((item, index) => {
-                                        const config = programTypeConfig[item.type] || programTypeConfig['other'];
-                                        const isDragged = draggedItemId === item.id;
-                                        const isDragOver = dragOverItemId === item.id;
-                                        const showSub = item.title && item.title.toLowerCase() !== config.label.toLowerCase();
-                                        return (
-                                            <div key={item.id} className="relative w-full mb-2">
-                                                {/* Insertion Line (above this item when dragging) */}
-                                                {isDragOver && draggedItemId !== item.id && (
-                                                    <div className="absolute -top-[9px] left-8 right-0 z-20 flex items-center pointer-events-none">
-                                                        <div className="w-2.5 h-2.5 rounded-full bg-primary border-2 border-primary -ml-1" />
-                                                        <div className="flex-1 h-[2px] bg-primary" />
-                                                    </div>
-                                                )}
+                                    {(() => {
+                                        const sortedItems = [...programItems].sort((a, b) => a.order - b.order);
+                                        return sortedItems.map((item, index) => {
+                                            const explicitType = item.type || 'other';
+                                            let config = programTypeConfig[explicitType] || programTypeConfig['other'];
 
-                                                <SwipeableCard
-                                                    onDelete={() => setProgramItemToDelete(item.id)}
-                                                    disabled={!canEdit}
-                                                    className="rounded-xl"
-                                                    contentClassName="bg-background rounded-xl"
-                                                    disableFullSwipe={true}
-                                                >
-                                                    <div
-                                                        draggable={canEdit}
-                                                        onDragStart={() => handleDragStart(item.id)}
-                                                        onDragOver={(e) => { e.preventDefault(); setDragOverItemId(item.id); }}
-                                                        onDragEnd={handleDragEnd}
-                                                        className={`w-full flex items-center gap-3 min-h-16 py-2 select-none [-webkit-touch-callout:none] ${isDragged ? 'opacity-40 scale-[0.98]' : ''}`}
+                                            const isDragged = draggedItemId === item.id;
+                                            const isDragOver = dragOverItemId === item.id;
+
+                                            let displayTitle = item.title || '';
+                                            let displaySongTitle = item.songTitle || '';
+
+                                            // Auto-infer older items that were imported or missing types
+                                            if (!item.type || item.type === 'other') {
+                                                const lower = displayTitle.toLowerCase();
+                                                if (lower.includes('заг. спів') || lower.includes('загальний спів')) config = programTypeConfig['congregation'];
+                                                else if (lower.includes('вірш')) config = programTypeConfig['verse'];
+                                                else if (lower.includes('хор') || lower.includes('пісня хору')) config = programTypeConfig['choir'];
+                                                else if (lower.includes('молитва')) config = programTypeConfig['prayer'];
+                                                else if (lower.includes('проповідь')) config = programTypeConfig['sermon'];
+                                                else if (lower.includes('соло')) config = programTypeConfig['solo'];
+                                                else if (lower.includes('ансамбль')) config = programTypeConfig['ensemble'];
+                                            }
+
+                                            // Sometimes legacy items had "Пісня хору Мінь Бог живий" as title
+                                            if (config.label === 'Хор' && displayTitle.toLowerCase().includes('пісня хору')) {
+                                                displayTitle = displayTitle.replace(/пісня хору\s*-?\s*/i, '').trim();
+                                            }
+
+                                            const isLegacyOther = config.label === 'Інше' && displayTitle && displayTitle.toLowerCase() !== 'інше';
+                                            const mainDisplayName = isLegacyOther ? displayTitle : config.label;
+
+                                            // Choose what to show as the subtitle
+                                            // For Choir, we want the song name as the subtitle (displayTitle or songTitle)
+                                            let subtitleText = '';
+                                            if (config.label === 'Хор') {
+                                                subtitleText = displaySongTitle || (displayTitle.toLowerCase() !== 'хор' ? displayTitle : '');
+                                                // For others, show displayTitle if it differs from the main label
+                                            } else if (!isLegacyOther && displayTitle && displayTitle.toLowerCase() !== config.label.toLowerCase()) {
+                                                subtitleText = displayTitle;
+                                            }
+                                            const showSub = subtitleText.length > 0;
+                                            return (
+                                                <div key={item.id} className="relative w-full mb-2">
+                                                    {/* Insertion Line (dynamic placement based on drag direction) */}
+                                                    {isDragOver && draggedItemId !== item.id && (
+                                                        (() => {
+                                                            const dragIdx = sortedItems.findIndex(p => p.id === draggedItemId);
+                                                            const dropIdx = index;
+                                                            const isMovingDown = dragIdx < dropIdx;
+
+                                                            return (
+                                                                <div className={`absolute ${isMovingDown ? '-bottom-[9px]' : '-top-[9px]'} left-8 right-0 z-20 flex items-center pointer-events-none`}>
+                                                                    <div className="w-2.5 h-2.5 rounded-full bg-primary border-2 border-primary -ml-1" />
+                                                                    <div className="flex-1 h-[2px] bg-primary" />
+                                                                </div>
+                                                            );
+                                                        })()
+                                                    )}
+
+                                                    <SwipeableCard
+                                                        ref={(el) => { cardRefs.current[item.id] = el }}
+                                                        onDelete={() => setProgramItemToDelete(item.id)}
+                                                        disabled={!canEdit}
+                                                        className="rounded-xl"
+                                                        contentClassName="bg-background rounded-xl"
+                                                        disableFullSwipe={true}
                                                     >
-                                                        {/* Left Column: Number */}
-                                                        <div className="flex-shrink-0 w-7 text-right">
-                                                            <span className="text-[14px] font-bold text-text-secondary/40 tabular-nums">{index + 1}</span>
-                                                        </div>
-
-                                                        {/* Icon Dot */}
-                                                        <div className={`w-8 h-8 rounded-xl ${config.color} flex items-center justify-center flex-shrink-0`}>
-                                                            {config.icon}
-                                                        </div>
-
-                                                        {/* Text */}
                                                         <div
-                                                            className="flex-1 min-w-0"
-                                                            onClick={(e) => {
-                                                                if (item.songId) handleViewPdf(item.songId, item.title);
-                                                            }}
+                                                            draggable={canEdit}
+                                                            onDragStart={() => handleDragStart(item.id)}
+                                                            onDragOver={(e) => { e.preventDefault(); setDragOverItemId(item.id); }}
+                                                            onDragEnd={handleDragEnd}
+                                                            className={`w-full flex items-center gap-3 min-h-16 py-2 select-none [-webkit-touch-callout:none] ${isDragged ? 'opacity-40 scale-[0.98]' : ''}`}
                                                         >
-                                                            <h3 className="text-[15px] font-bold text-text-primary leading-tight">{config.label}</h3>
-                                                            {showSub && (
-                                                                <p className="text-[13px] text-text-secondary mt-0.5 truncate">{item.title}</p>
+                                                            {/* Left Column: Number */}
+                                                            <div className="flex-shrink-0 w-7 text-right">
+                                                                <span className="text-[14px] font-bold text-text-secondary/40 tabular-nums">{index + 1}</span>
+                                                            </div>
+
+                                                            {/* Icon Dot */}
+                                                            <div className={`w-8 h-8 rounded-xl ${config.color} flex items-center justify-center flex-shrink-0`}>
+                                                                {config.icon}
+                                                            </div>
+
+                                                            {/* Text */}
+                                                            <div
+                                                                className="flex-1 min-w-0"
+                                                                onClick={(e) => {
+                                                                    if (canEdit) {
+                                                                        setEditingProgramItem(item);
+                                                                        setShowAddProgramItem(true);
+                                                                    } else if (item.songId) {
+                                                                        handleViewPdf(item.songId, item.title);
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <h3 className="text-[15px] font-bold text-text-primary leading-tight">{mainDisplayName}</h3>
+                                                                {showSub && (
+                                                                    <p className="text-[13px] text-text-secondary mt-0.5 truncate">{subtitleText}</p>
+                                                                )}
+                                                                {item.performer && (
+                                                                    <p className="text-[12px] text-text-secondary/60 mt-0.5">{item.performer}</p>
+                                                                )}
+                                                            </div>
+
+                                                            {/* View PDF */}
+                                                            {item.songId && (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleViewPdf(item.songId!, item.title);
+                                                                    }}
+                                                                    className="p-1.5 text-text-secondary/40 hover:text-primary transition-colors flex-shrink-0"
+                                                                >
+                                                                    <Eye className="w-4 h-4" />
+                                                                </button>
                                                             )}
-                                                            {item.performer && (
-                                                                <p className="text-[12px] text-text-secondary/60 mt-0.5">{item.performer}</p>
-                                                            )}
-                                                            {(item.conductor || item.pianist) && (
-                                                                <div className="flex items-center gap-3 mt-1 text-[11px] font-medium">
-                                                                    {item.conductor && (
-                                                                        <div className="flex items-center gap-1.5 text-indigo-400">
-                                                                            <UserIcon className="w-3 h-3" />
-                                                                            <span>{item.conductor}</span>
-                                                                        </div>
-                                                                    )}
-                                                                    {item.conductor && item.pianist && (
-                                                                        <div className="w-1 h-1 rounded-full bg-border/50" />
-                                                                    )}
-                                                                    {item.pianist && (
-                                                                        <div className="flex items-center gap-1.5 text-amber-500/90">
-                                                                            <span className="text-[10px]">🎹</span>
-                                                                            <span>{item.pianist}</span>
-                                                                        </div>
-                                                                    )}
+
+                                                            {/* Drag Handle (Right Side) */}
+                                                            {canEdit && (
+                                                                <div
+                                                                    className="cursor-grab active:cursor-grabbing p-1.5 select-none flex-shrink-0 opacity-20 hover:opacity-50 active:opacity-70 transition-opacity touch-none"
+                                                                    style={{ touchAction: 'none' }}
+                                                                    onTouchStart={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleTouchStart(e, item.id, index);
+                                                                    }}
+                                                                    onTouchMove={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleTouchMove(e);
+                                                                    }}
+                                                                    onTouchEnd={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleTouchEnd();
+                                                                    }}
+                                                                >
+                                                                    <GripVertical className="w-4 h-4 text-text-secondary pointer-events-none" />
                                                                 </div>
                                                             )}
                                                         </div>
-
-                                                        {/* View PDF */}
-                                                        {item.songId && (
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleViewPdf(item.songId!, item.title);
-                                                                }}
-                                                                className="p-1.5 text-text-secondary/40 hover:text-primary transition-colors flex-shrink-0"
-                                                            >
-                                                                <Eye className="w-4 h-4" />
-                                                            </button>
-                                                        )}
-
-                                                        {/* Drag Handle (Right Side) */}
-                                                        {canEdit && (
-                                                            <div
-                                                                className="cursor-grab active:cursor-grabbing p-1.5 select-none flex-shrink-0 opacity-20 hover:opacity-50 active:opacity-70 transition-opacity touch-none"
-                                                                onTouchStart={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleTouchStart(e, item.id, index);
-                                                                }}
-                                                                onTouchMove={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleTouchMove(e);
-                                                                }}
-                                                                onTouchEnd={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleTouchEnd();
-                                                                }}
-                                                            >
-                                                                <GripVertical className="w-4 h-4 text-text-secondary pointer-events-none" />
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </SwipeableCard>
-                                            </div>
-                                        );
-                                    })}
+                                                    </SwipeableCard>
+                                                </div>
+                                            );
+                                        })
+                                    })()}
                                 </div>
 
                                 {/* Add Program Item Button (Bottom) */}
@@ -1222,24 +1314,157 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                         Додати пункт
                                     </button>
                                 )}
+
+                                {/* Notes Section — at end of program */}
+                                {editingDescription ? (
+                                    <div className="bg-surface/30 rounded-[20px] border border-primary/30 shadow-sm p-4 space-y-3">
+                                        <label className="text-xs text-text-secondary uppercase font-bold">Нотатки</label>
+                                        <textarea
+                                            autoFocus
+                                            value={editDescription}
+                                            onChange={e => setEditDescription(e.target.value)}
+                                            placeholder="Наприклад: особливості служіння, нагадування..."
+                                            rows={4}
+                                            className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                                        />
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => { setEditingDescription(false); setEditDescription(currentService.description || ''); }}
+                                                className="flex-1 py-2 text-sm font-bold text-text-secondary bg-surface-highlight rounded-xl hover:bg-surface-highlight/80 transition-colors"
+                                            >
+                                                Скасувати
+                                            </button>
+                                            <button
+                                                onClick={saveDescription}
+                                                className="flex-1 py-2 text-sm font-bold text-background bg-primary rounded-xl hover:opacity-90 transition-colors"
+                                            >
+                                                Зберегти
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : currentService.description ? (
+                                    <div className="bg-surface/30 rounded-[20px] border border-border/60 shadow-sm px-4 py-3">
+                                        <div className="flex items-center justify-between mb-1.5">
+                                            <p className="text-[10px] font-bold text-text-secondary uppercase tracking-wider flex items-center gap-1.5">
+                                                <Pencil className="w-3 h-3 text-amber-400" />
+                                                Нотатки
+                                            </p>
+                                            {canEdit && (
+                                                <button
+                                                    onClick={() => { setEditDescription(currentService.description || ''); setEditingDescription(true); }}
+                                                    className="text-[11px] font-semibold text-primary hover:text-primary/80 transition-colors"
+                                                >
+                                                    Редагувати
+                                                </button>
+                                            )}
+                                        </div>
+                                        <div
+                                            className={`text-sm text-text-primary whitespace-pre-wrap transition-all ${!(currentService as any).__notesExpanded ? 'line-clamp-2' : ''}`}
+                                        >
+                                            {currentService.description}
+                                        </div>
+                                        {currentService.description.split('\n').length > 2 || currentService.description.length > 120 ? (
+                                            <button
+                                                onClick={() => setCurrentService(prev => ({ ...prev, __notesExpanded: !(prev as any).__notesExpanded } as any))}
+                                                className="text-[11px] font-semibold text-primary mt-1.5 hover:text-primary/80 transition-colors"
+                                            >
+                                                {(currentService as any).__notesExpanded ? 'Згорнути' : 'Показати більше'}
+                                            </button>
+                                        ) : null}
+                                    </div>
+                                ) : null}
                             </div>
                         )}
 
                         {/* If native and no program items yet, show a button to start creating */}
-                        {isServiceType && programItems.length === 0 && canEdit && (
+                        {isServiceType && programItems.length === 0 && (
                             <div className="space-y-4 pt-2">
-                                <button
-                                    onClick={() => setShowAddProgramItem(true)}
-                                    className="w-full py-8 border-2 border-dashed border-primary/20 rounded-[28px] hover:border-primary/50 hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-3"
-                                >
-                                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                                        <Plus className="w-6 h-6 text-primary" />
+                                {canEdit && (
+                                    <>
+                                        <div className="flex items-center justify-between gap-3 px-1">
+                                            <h2 className="text-xs font-bold text-text-secondary uppercase tracking-[0.15em]">Програма</h2>
+                                            <button
+                                                onClick={() => { setEditDescription(currentService.description || ''); setEditingDescription(true); }}
+                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors relative ${currentService.description ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20' : 'bg-surface-highlight text-text-secondary hover:bg-surface-highlight/80'}`}
+                                            >
+                                                <Pencil className="w-3.5 h-3.5" />
+                                                Нотатки
+                                                {currentService.description && <span className="w-1.5 h-1.5 bg-amber-400 rounded-full absolute -top-0.5 -right-0.5" />}
+                                            </button>
+                                        </div>
+                                        <button
+                                            onClick={() => setShowAddProgramItem(true)}
+                                            className="w-full py-8 border-2 border-dashed border-primary/20 rounded-[28px] hover:border-primary/50 hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-3"
+                                        >
+                                            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                                                <Plus className="w-6 h-6 text-primary" />
+                                            </div>
+                                            <div className="text-center">
+                                                <span className="text-[15px] font-bold text-text-primary block mb-1">Створити програму</span>
+                                                <span className="text-sm text-text-secondary">Натисніть, щоб додати пісні та молитви</span>
+                                            </div>
+                                        </button>
+                                    </>
+                                )}
+
+                                {/* Notes Section — when program is empty */}
+                                {editingDescription ? (
+                                    <div className="bg-surface/30 rounded-[20px] border border-primary/30 shadow-sm p-4 space-y-3">
+                                        <label className="text-xs text-text-secondary uppercase font-bold">Нотатки</label>
+                                        <textarea
+                                            autoFocus
+                                            value={editDescription}
+                                            onChange={e => setEditDescription(e.target.value)}
+                                            placeholder="Наприклад: особливості служіння, нагадування..."
+                                            rows={4}
+                                            className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                                        />
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => { setEditingDescription(false); setEditDescription(currentService.description || ''); }}
+                                                className="flex-1 py-2 text-sm font-bold text-text-secondary bg-surface-highlight rounded-xl hover:bg-surface-highlight/80 transition-colors"
+                                            >
+                                                Скасувати
+                                            </button>
+                                            <button
+                                                onClick={saveDescription}
+                                                className="flex-1 py-2 text-sm font-bold text-background bg-primary rounded-xl hover:opacity-90 transition-colors"
+                                            >
+                                                Зберегти
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div className="text-center">
-                                        <span className="text-[15px] font-bold text-text-primary block mb-1">Створити програму</span>
-                                        <span className="text-sm text-text-secondary">Натисніть, щоб додати пісні та молитви</span>
+                                ) : currentService.description ? (
+                                    <div className="bg-surface/30 rounded-[20px] border border-border/60 shadow-sm px-4 py-3">
+                                        <div className="flex items-center justify-between mb-1.5">
+                                            <p className="text-[10px] font-bold text-text-secondary uppercase tracking-wider flex items-center gap-1.5">
+                                                <Pencil className="w-3 h-3 text-amber-400" />
+                                                Нотатки
+                                            </p>
+                                            {canEdit && (
+                                                <button
+                                                    onClick={() => { setEditDescription(currentService.description || ''); setEditingDescription(true); }}
+                                                    className="text-[11px] font-semibold text-primary hover:text-primary/80 transition-colors"
+                                                >
+                                                    Редагувати
+                                                </button>
+                                            )}
+                                        </div>
+                                        <div
+                                            className={`text-sm text-text-primary whitespace-pre-wrap transition-all ${!(currentService as any).__notesExpanded ? 'line-clamp-2' : ''}`}
+                                        >
+                                            {currentService.description}
+                                        </div>
+                                        {currentService.description.split('\n').length > 2 || currentService.description.length > 120 ? (
+                                            <button
+                                                onClick={() => setCurrentService(prev => ({ ...prev, __notesExpanded: !(prev as any).__notesExpanded } as any))}
+                                                className="text-[11px] font-semibold text-primary mt-1.5 hover:text-primary/80 transition-colors"
+                                            >
+                                                {(currentService as any).__notesExpanded ? 'Згорнути' : 'Показати більше'}
+                                            </button>
+                                        ) : null}
                                     </div>
-                                </button>
+                                ) : null}
                             </div>
                         )}
                     </>
@@ -1249,14 +1474,15 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                 {(!isServiceType && activeTab === 'program') && (
                     <div className="mt-8 space-y-4">
                         <div className="flex items-center justify-between gap-3 px-1">
-                            <h2 className="text-xs font-bold text-text-secondary uppercase tracking-[0.15em]">Пісні ({currentService.songs.length})</h2>
+                            <h2 className="text-xs font-bold text-text-secondary uppercase tracking-[0.15em]">Пісні ({(currentService.songs || []).length})</h2>
                             {canEdit && (
                                 <button
-                                    onClick={() => setShowAddSong(true)}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-highlight text-text-primary rounded-full text-xs font-bold hover:bg-surface-highlight/80 transition-colors"
+                                    onClick={() => { setEditDescription(currentService.description || ''); setEditingDescription(true); }}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors relative ${currentService.description ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20' : 'bg-surface-highlight text-text-secondary hover:bg-surface-highlight/80'}`}
                                 >
-                                    <Plus className="w-3.5 h-3.5" />
-                                    Додати
+                                    <Pencil className="w-3.5 h-3.5" />
+                                    Нотатки
+                                    {currentService.description && <span className="w-1.5 h-1.5 bg-amber-400 rounded-full absolute -top-0.5 -right-0.5" />}
                                 </button>
                             )}
                         </div>
@@ -1285,7 +1511,8 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                                     handleUpdateWarmup(e.target.value);
                                                 }
                                             }}
-                                            className="w-full bg-transparent text-[15px] font-medium text-text-primary appearance-none focus:outline-none cursor-pointer"
+                                            style={{ fontSize: '16px' }}
+                                            className="w-full bg-transparent text-[16px] font-medium text-text-primary appearance-none focus:outline-none cursor-pointer"
                                         >
                                             <option value="">Без розспіванки</option>
                                             {regentsList.map((name, i) => (
@@ -1302,8 +1529,9 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                                 type="text"
                                                 value={warmupConductor}
                                                 onChange={(e) => setWarmupConductor(e.target.value)}
+                                                style={{ fontSize: '16px' }}
                                                 placeholder="Хто проводить?"
-                                                className="flex-1 min-w-0 bg-surface-highlight text-[14px] font-medium text-text-primary rounded-lg px-2 py-1.5 outline-none border border-primary/30"
+                                                className="flex-1 min-w-0 bg-surface-highlight text-[16px] font-medium text-text-primary rounded-lg px-2 py-1.5 outline-none border border-primary/30"
                                                 autoFocus
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Enter') handleUpdateWarmup(warmupConductor);
@@ -1319,25 +1547,41 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                             </div>
                         )}
 
-                        {currentService.songs.length === 0 ? (
-                            <div className="text-center py-10 bg-surface border border-border rounded-3xl flex flex-col items-center justify-center gap-3">
-                                <div className="w-16 h-16 rounded-full flex items-center justify-center transition-colors glass-frost-circle text-zinc-700">
-                                    <Music className="w-8 h-8" />
+                        {(currentService.songs || []).length === 0 ? (
+                            canEdit ? (
+                                <button
+                                    onClick={() => setShowAddSong(true)}
+                                    className="w-full text-center py-10 bg-transparent border-2 border-dashed border-border/40 rounded-[28px] hover:border-primary/50 hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-3"
+                                >
+                                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                                        <Plus className="w-6 h-6 text-primary" />
+                                    </div>
+                                    <div className="text-center">
+                                        <span className="text-[15px] font-bold text-text-primary block mb-1">Список порожній</span>
+                                        <span className="text-sm text-text-secondary">Натисніть, щоб додати пісні на репетицію</span>
+                                    </div>
+                                </button>
+                            ) : (
+                                <div className="text-center py-10 bg-surface border border-border rounded-3xl flex flex-col items-center justify-center gap-3">
+                                    <div className="w-16 h-16 rounded-full flex items-center justify-center transition-colors glass-frost-circle text-zinc-700">
+                                        <Music className="w-8 h-8" />
+                                    </div>
+                                    <div>
+                                        <p className="text-text-primary font-medium">Список порожній</p>
+                                        <p className="text-sm text-text-secondary">Пісень ще не додано</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="text-text-primary font-medium">Список порожній</p>
-                                    <p className="text-sm text-text-secondary">Додайте пісні до цього служіння</p>
-                                </div>
-                            </div>
+                            )
                         ) : (
                             <div className="space-y-2">
-                                {currentService.songs.map((song, index) => {
+                                {(currentService.songs || []).map((song, index) => {
                                     const originalSong = availableSongs.find(s => s.id === song.songId);
                                     const hasPdf = originalSong?.hasPdf;
 
                                     return (
                                         <SwipeableCard
                                             key={`${song.songId}-${index}`}
+                                            ref={(el) => { cardRefs.current[`temp-song-${index}`] = el }}
                                             onDelete={() => setSongToDeleteIndex(index)}
                                             disabled={!canEdit}
                                             className="rounded-3xl"
@@ -1395,7 +1639,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                         )}
 
                         {/* Add Song Button (Bottom) */}
-                        {canEdit && currentService.songs.length > 0 && (
+                        {canEdit && (currentService.songs || []).length > 0 && (
                             <button
                                 onClick={() => setShowAddSong(true)}
                                 className="w-full py-4 border border-dashed border-border/60 rounded-[28px] text-text-secondary hover:text-text-primary hover:bg-surface-highlight/30 hover:border-border transition-all flex items-center justify-center gap-2 text-sm font-medium"
@@ -1404,6 +1648,65 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                 Додати ще пісню
                             </button>
                         )}
+
+                        {/* Notes Section — at end of rehearsal songs */}
+                        {editingDescription ? (
+                            <div className="bg-surface/30 rounded-[20px] border border-primary/30 shadow-sm p-4 space-y-3">
+                                <label className="text-xs text-text-secondary uppercase font-bold">Нотатки</label>
+                                <textarea
+                                    autoFocus
+                                    value={editDescription}
+                                    onChange={e => setEditDescription(e.target.value)}
+                                    placeholder="Наприклад: особливості репетиції, нагадування..."
+                                    rows={4}
+                                    className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                                />
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => { setEditingDescription(false); setEditDescription(currentService.description || ''); }}
+                                        className="flex-1 py-2 text-sm font-bold text-text-secondary bg-surface-highlight rounded-xl hover:bg-surface-highlight/80 transition-colors"
+                                    >
+                                        Скасувати
+                                    </button>
+                                    <button
+                                        onClick={saveDescription}
+                                        className="flex-1 py-2 text-sm font-bold text-background bg-primary rounded-xl hover:opacity-90 transition-colors"
+                                    >
+                                        Зберегти
+                                    </button>
+                                </div>
+                            </div>
+                        ) : currentService.description ? (
+                            <div className="bg-surface/30 rounded-[20px] border border-border/60 shadow-sm px-4 py-3">
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <p className="text-[10px] font-bold text-text-secondary uppercase tracking-wider flex items-center gap-1.5">
+                                        <Pencil className="w-3 h-3 text-amber-400" />
+                                        Нотатки
+                                    </p>
+                                    {canEdit && (
+                                        <button
+                                            onClick={() => { setEditDescription(currentService.description || ''); setEditingDescription(true); }}
+                                            className="text-[11px] font-semibold text-primary hover:text-primary/80 transition-colors"
+                                        >
+                                            Редагувати
+                                        </button>
+                                    )}
+                                </div>
+                                <div
+                                    className={`text-sm text-text-primary whitespace-pre-wrap transition-all ${!(currentService as any).__notesExpanded ? 'line-clamp-2' : ''}`}
+                                >
+                                    {currentService.description}
+                                </div>
+                                {currentService.description.split('\n').length > 2 || currentService.description.length > 120 ? (
+                                    <button
+                                        onClick={() => setCurrentService(prev => ({ ...prev, __notesExpanded: !(prev as any).__notesExpanded } as any))}
+                                        className="text-[11px] font-semibold text-primary mt-1.5 hover:text-primary/80 transition-colors"
+                                    >
+                                        {(currentService as any).__notesExpanded ? 'Згорнути' : 'Показати більше'}
+                                    </button>
+                                ) : null}
+                            </div>
+                        ) : null}
                     </div>
                 )}
 
@@ -1558,7 +1861,7 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                         <div className="flex-1 overflow-y-auto p-4 space-y-2 pb-32">
                             {filteredSongs.map(song => {
                                 const isSelected = selectedSongsToService.includes(song.id);
-                                const alreadyInService = currentService.songs.some(s => s.songId === song.id);
+                                const alreadyInService = (currentService.songs || []).some(s => s.songId === song.id);
 
                                 return (
                                     <button
@@ -1758,18 +2061,34 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
 
                             {(canEdit || canEditAttendance) && (
                                 <div className="p-4 bg-surface border-t border-border pb-safe-offset">
-                                    <button
-                                        onClick={handleSaveAttendance}
-                                        className="w-full py-3 bg-primary text-background rounded-xl font-bold hover:opacity-90 transition-colors shadow-lg"
-                                    >
-                                        Зберегти
-                                    </button>
-                                    <button
-                                        onClick={markRestAsPresent}
-                                        className="w-full mt-2 py-3 text-blue-400 font-medium text-sm hover:bg-blue-500/10 rounded-xl transition-colors"
-                                    >
-                                        Відмітити решту як "Буде"
-                                    </button>
+                                    {isFuture ? (
+                                        <>
+                                            <button
+                                                disabled
+                                                className="w-full py-3 bg-surface-highlight text-text-secondary rounded-xl font-bold cursor-not-allowed"
+                                            >
+                                                Зберегти
+                                            </button>
+                                            <p className="text-center text-xs text-text-secondary mt-2">
+                                                Збереження доступне після початку служіння
+                                            </p>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <button
+                                                onClick={handleSaveAttendance}
+                                                className="w-full py-3 bg-primary text-background rounded-xl font-bold hover:opacity-90 transition-colors shadow-lg"
+                                            >
+                                                Зберегти
+                                            </button>
+                                            <button
+                                                onClick={markRestAsPresent}
+                                                className="w-full mt-2 py-3 text-blue-400 font-medium text-sm hover:bg-blue-500/10 rounded-xl transition-colors"
+                                            >
+                                                Відмітити решту як "Буде"
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -1788,12 +2107,12 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                                 <div>
                                     <h3 className="text-lg font-bold text-text-primary">Видалити пісню?</h3>
                                     <p className="text-text-secondary text-sm mt-1">
-                                        "{songToDeleteIndex !== null ? currentService.songs[songToDeleteIndex]?.songTitle : ""}" буде прибрано з цієї програми.
+                                        "{songToDeleteIndex !== null ? currentService.songs?.[songToDeleteIndex]?.songTitle : ""}" буде прибрано з цієї програми.
                                     </p>
                                 </div>
                                 <div className="flex gap-3 w-full mt-2">
                                     <button
-                                        onClick={() => setSongToDeleteIndex(null)}
+                                        onClick={cancelDeleteSong}
                                         className="flex-1 py-3 border border-border rounded-xl text-text-primary hover:bg-surface-highlight transition-colors font-medium text-sm"
                                     >
                                         Скасувати
@@ -1988,12 +2307,80 @@ export default function ServiceView({ service, onBack, canEdit, canEditCredits =
                 )
             }
 
+            {/* Edit Service Modal (title, date, time) */}
+            {showEditServiceModal && (
+                <div className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+                    <div className="bg-surface border border-border w-full max-w-sm p-6 rounded-3xl shadow-2xl">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold text-text-primary">Редагувати</h3>
+                            <button onClick={() => setShowEditServiceModal(false)} className="p-2 text-text-secondary hover:text-text-primary transition-colors">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-5">
+                            {/* Title */}
+                            <div>
+                                <label className="text-xs text-text-secondary uppercase font-bold mb-2 block">Назва</label>
+                                <input
+                                    autoFocus
+                                    value={editTitle}
+                                    onChange={e => setEditTitle(e.target.value)}
+                                    placeholder="Назва служіння..."
+                                    className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl focus:border-primary/50 focus:bg-surface outline-none transition-all"
+                                />
+                            </div>
+
+                            {/* Date */}
+                            <div>
+                                <label className="text-xs text-text-secondary uppercase font-bold mb-2 block">Дата</label>
+                                <input
+                                    type="date"
+                                    value={editDate}
+                                    onChange={e => setEditDate(e.target.value)}
+                                    className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl focus:border-primary/50 focus:bg-surface outline-none transition-all"
+                                />
+                            </div>
+
+                            {/* Time */}
+                            <div>
+                                <label className="text-xs text-text-secondary uppercase font-bold mb-2 block">Час (необов'язково)</label>
+                                <input
+                                    type="time"
+                                    value={editTime}
+                                    onChange={e => setEditTime(e.target.value)}
+                                    className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl focus:border-primary/50 focus:bg-surface outline-none transition-all"
+                                />
+                            </div>
+
+                            <div className="flex gap-3 mt-6">
+                                <button
+                                    onClick={() => setShowEditServiceModal(false)}
+                                    className="flex-1 p-3 bg-surface-highlight text-text-secondary rounded-xl font-bold hover:bg-surface-highlight/80 transition-colors"
+                                >
+                                    Скасувати
+                                </button>
+                                <button
+                                    onClick={saveServiceDetails}
+                                    disabled={!editTitle.trim()}
+                                    className="flex-1 p-3 bg-primary text-background rounded-xl font-bold hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
+                                >
+                                    <Save className="w-4 h-4" /> Зберегти
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Add Program Item Modal (Native-only) */}
             {
                 showAddProgramItem && (
                     <AddProgramItemModal
                         onAdd={handleAddProgramItem}
-                        onClose={() => setShowAddProgramItem(false)}
+                        onClose={() => { setShowAddProgramItem(false); setEditingProgramItem(null); }}
+                        editItem={editingProgramItem || undefined}
+                        onEdit={handleEditProgramItem}
                     />
                 )
             }

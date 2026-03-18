@@ -1,4 +1,4 @@
-export type UserRole = 'head' | 'regent' | 'member';
+export type UserRole = 'head' | 'regent' | 'admin' | 'member';
 
 export type Permission =
     | 'add_songs'
@@ -38,10 +38,12 @@ export interface ChoirMember {
     id: string; // userId or unique string
     name: string;
     role: UserRole;
+    roleLabel?: string; // Custom badge text like "Секретар" or "Акомпаніатор"
     voice?: 'Soprano' | 'Alto' | 'Tenor' | 'Bass';
     photoURL?: string;
     permissions?: Permission[]; // Custom admin permissions
     hasAccount?: boolean; // True if this member is linked to a real App Account
+    accountUid?: string; // The specific Firebase Auth UID of the linked account
     linkedUserIds?: string[]; // Additional linked app user UIDs
 }
 
@@ -91,6 +93,7 @@ export interface Service {
     date: string;
     time?: string; // HH:MM format, e.g. "10:00"
     title: string;
+    description?: string; // Notes/details about the service
     songs: ServiceSong[];
     program?: ProgramItem[]; // Порядок служіння (native-only)
     absentMembers?: string[]; // Array of member IDs
@@ -100,6 +103,28 @@ export interface Service {
     isFinalized?: boolean; // When true, stats include this service's attendance
     finalizedAt?: string; // ISO timestamp of finalization
     finalizedBy?: string; // UID of who finalized
+    createdByRecurring?: boolean;
+    recurringRuleId?: string;
+    recurringInstanceKey?: string;
+    createdAt?: any;
+    updatedAt?: any;
+}
+
+export interface RecurringRule {
+    id: string;
+    type: 'rehearsal' | 'service';
+    title: string;
+    dayOfWeek: number;    // 0=Sun, 1=Mon...
+    time: string;         // "18:00"
+    warmupConductor?: string;
+    enabled: boolean;
+}
+
+export interface RecurringSchedule {
+    rules: RecurringRule[];
+    enabled: boolean;
+    updatedAt: any;
+    updatedBy: string;
 }
 
 export interface SimpleSong {
@@ -117,6 +142,8 @@ export interface SimpleSong {
     composer?: string;
     poet?: string;
     theme?: string;
+    keywords?: string[]; // Added for faster local search cache mapping
+    updatedAt?: string; // Cache track date
     deletedAt?: string; // For soft delete
 }
 

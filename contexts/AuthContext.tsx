@@ -17,12 +17,13 @@ import {
     OAuthProvider,
     browserPopupRedirectResolver,
     linkWithCredential,
+    linkWithPopup,
     fetchSignInMethodsForEmail,
     AuthCredential
 } from "firebase/auth";
 import { Capacitor } from "@capacitor/core";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
-import { app, auth } from "@/lib/firebase";
+import { app, getAuthLazy } from "@/lib/firebase";
 import { getUserProfile, createUser, getChoir } from "@/lib/db";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { UserData } from "@/types";
@@ -45,6 +46,9 @@ interface AuthContextType {
     pendingCredential: AuthCredential | null;
     existingMethod: string | null;
     clearPendingCredential: () => void;
+    primaryUid: string | null;
+    linkWithGoogle: () => Promise<void>;
+    linkWithApple: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -60,10 +64,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [fcmToken, setFcmToken] = useState<string | null>(null);
     const [pendingCredential, setPendingCredential] = useState<AuthCredential | null>(null);
     const [existingMethod, setExistingMethod] = useState<string | null>(null);
+    const [primaryUid, setPrimaryUid] = useState<string | null>(null);
 
     useEffect(() => {
+        let unsubscribe: (() => void) | undefined;
+        let isMounted = true;
 
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        const initAuth = async () => {
+            const auth = await getAuthLazy();
+            if (!isMounted) return;
+
+            unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             console.log("Auth State Changed:", firebaseUser ? `User ${firebaseUser.uid}` : "No User");
             setUser(firebaseUser);
 
@@ -107,8 +118,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             setLoading(false);
         });
+        };
 
-        return () => unsubscribe();
+        initAuth();
+
+        return () => {
+            isMounted = false;
+            if (unsubscribe) unsubscribe();
+        };
     }, []);
 
     // Helper to handle account-exists-with-different-credential
@@ -133,6 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 skipAutoCreate.current = true;
                 setPendingCredential(pendingCred);
                 try {
+                    const auth = await getAuthLazy();
                     const methods = await fetchSignInMethodsForEmail(auth, email);
                     const method = methods[0]; // e.g., 'google.com' or 'apple.com'
                     setExistingMethod(method);
@@ -209,10 +227,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (Capacitor.getPlatform() === 'web') {
                 const provider = new GoogleAuthProvider();
                 provider.setCustomParameters({ prompt: 'select_account' });
+                const auth = await getAuthLazy();
                 await signInWithPopup(auth, provider, browserPopupRedirectResolver);
             } else {
                 const result = await FirebaseAuthentication.signInWithGoogle();
                 const credential = GoogleAuthProvider.credential(result.credential?.idToken);
+                const auth = await getAuthLazy();
                 await signInWithCredential(auth, credential);
             }
         } catch (error: any) {
@@ -259,6 +279,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             if (Capacitor.getPlatform() === 'web') {
                 const provider = new OAuthProvider('apple.com');
+                const auth = await getAuthLazy();
                 await signInWithPopup(auth, provider, browserPopupRedirectResolver);
             } else {
                 // skipNativeAuth: true means the plugin does NOT sign in with Firebase natively.
@@ -270,6 +291,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     idToken: result.credential?.idToken,
                     rawNonce: result.credential?.nonce,
                 });
+                const auth = await getAuthLazy();
                 await signInWithCredential(auth, credential);
             }
         } catch (error: any) {
@@ -302,6 +324,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const signInWithEmail = async (email: string, password: string) => {
         try {
+            const auth = await getAuthLazy();
             await signInWithEmailAndPassword(auth, email, password);
         } catch (error) {
             console.error("Error signing in with Email:", error);
@@ -311,6 +334,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const signUpWithEmail = async (email: string, password: string, name: string) => {
         try {
+            const auth = await getAuthLazy();
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             // Create initial profile in Firestore
             await createUser(userCredential.user.uid, {
@@ -330,6 +354,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.error("Error signing up with Email:", error);
             if (error.code === 'auth/email-already-in-use') {
                 try {
+                    const auth = await getAuthLazy();
                     const methods = await fetchSignInMethodsForEmail(auth, email);
                     if (methods.length > 0) {
                         const method = methods[0];
@@ -353,6 +378,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const signInAsGuest = async () => {
         try {
+            const auth = await getAuthLazy();
             await signInAnonymously(auth);
             console.log("Signed in as guest");
         } catch (error) {
@@ -380,6 +406,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 }
             }
 
+            const auth = await getAuthLazy();
             await firebaseSignOut(auth);
             setUserData(null);
             setFcmToken(null);
@@ -390,6 +417,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const resetPassword = async (email: string) => {
         try {
+            const auth = await getAuthLazy();
             await sendPasswordResetEmail(auth, email);
         } catch (error) {
             console.error("Error sending password reset email:", error);
@@ -423,6 +451,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    const linkWithGoogle = async () => {
+        if (!user) return;
+        try {
+            if (Capacitor.getPlatform() === 'web') {
+                const provider = new GoogleAuthProvider();
+                const auth = await getAuthLazy();
+                await linkWithPopup(user, provider, browserPopupRedirectResolver);
+            } else {
+                const result = await FirebaseAuthentication.signInWithGoogle();
+                const credential = GoogleAuthProvider.credential(result.credential?.idToken);
+                await linkWithCredential(user, credential);
+            }
+            await refreshProfile();
+        } catch (error: any) {
+            console.error("Error linking Google:", error);
+            const { Dialog } = await import("@capacitor/dialog");
+            if (error.code === 'auth/credential-already-in-use') {
+                await Dialog.alert({ title: "Помилка", message: "Цей Google-акаунт вже прив'язаний до іншого профілю." });
+            } else {
+                await Dialog.alert({ title: "Помилка", message: "Не вдалося прив'язати Google: " + error.message });
+            }
+        }
+    };
+
+    const linkWithApple = async () => {
+        if (!user) return;
+        try {
+            if (Capacitor.getPlatform() === 'web') {
+                const provider = new OAuthProvider('apple.com');
+                const auth = await getAuthLazy();
+                await linkWithPopup(user, provider, browserPopupRedirectResolver);
+            } else {
+                const result = await FirebaseAuthentication.signInWithApple();
+                const credential = new OAuthProvider('apple.com').credential({
+                    idToken: result.credential?.idToken,
+                    rawNonce: result.credential?.nonce,
+                });
+                await linkWithCredential(user, credential);
+            }
+            await refreshProfile();
+        } catch (error: any) {
+            console.error("Error linking Apple:", error);
+            const { Dialog } = await import("@capacitor/dialog");
+            if (error.code === 'auth/credential-already-in-use') {
+                await Dialog.alert({ title: "Помилка", message: "Цей Apple ID вже прив'язаний до іншого профілю." });
+            } else {
+                await Dialog.alert({ title: "Помилка", message: "Не вдалося прив'язати Apple: " + error.message });
+            }
+        }
+    };
+
+    const refreshProfile = async () => {
+        if (user) {
+            console.log("[Auth] Forcing token refresh to pick up custom claims...");
+            await user.getIdToken(true); // Force refresh
+            await loadUserProfile(user.uid);
+        }
+    };
 
     return (
         <AuthContext.Provider value={{
@@ -436,13 +522,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             signInAsGuest,
             resetPassword,
             signOut,
-            refreshProfile: async () => {
-                if (user) {
-                    console.log("[Auth] Forcing token refresh to pick up custom claims...");
-                    await user.getIdToken(true); // Force refresh
-                    await loadUserProfile(user.uid);
-                }
-            },
+            refreshProfile,
             isGuest: user?.isAnonymous ?? false,
             setFcmToken, // Exposed for useFcmToken hook
             updateActiveChoir,
@@ -452,6 +532,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setPendingCredential(null);
                 setExistingMethod(null);
             },
+            primaryUid,
+            linkWithGoogle,
+            linkWithApple
         }}>
             {children}
         </AuthContext.Provider>

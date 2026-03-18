@@ -155,9 +155,11 @@ export default function NotificationsModal({
                                 )}
                             </div>
 
-                            {!isSupported && !Capacitor.isNativePlatform() && (
+                            {!isSupported && (
                                 <p className="text-xs text-red-400 mt-2">
-                                    Ваш браузер не підтримує пуш-сповіщення
+                                    {Capacitor.isNativePlatform()
+                                        ? "Ваш пристрій не підтримує пуш-сповіщення"
+                                        : "Ваш пристрій або браузер не підтримує пуш-сповіщення"}
                                 </p>
                             )}
 
@@ -167,11 +169,13 @@ export default function NotificationsModal({
                                         Сповіщення заблоковані в налаштуваннях пристрою
                                     </p>
                                     <p className="text-[11px] text-text-secondary">
-                                        {/iPad|iPhone|iPod/.test(navigator.userAgent) && (window as any).Capacitor
+                                        {/iPad|iPhone|iPod/.test(navigator.userAgent) && Capacitor.isNativePlatform()
                                             ? 'Налаштування → MyChoir → Сповіщення → Увімкнути'
                                             : /iPad|iPhone|iPod/.test(navigator.userAgent)
                                                 ? 'Налаштування → Safari → Сповіщення → MyChoir → Дозволити'
-                                                : 'Відкрийте налаштування браузера для цього сайту і дозвольте сповіщення.'}
+                                                : Capacitor.isNativePlatform()
+                                                    ? 'Налаштування вашого пристрою → Додатки → MyChoir → Дозволити сповіщення'
+                                                    : 'Відкрийте налаштування браузера для цього сайту і дозвольте сповіщення.'}
                                     </p>
                                 </div>
                             )}
@@ -218,14 +222,12 @@ export default function NotificationsModal({
                                             </div>
                                         )}
 
-                                        <div className="flex items-center mb-2">
-                                            <span className="text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-md">
-                                                {userData?.choirName || "Хор"}
-                                            </span>
-                                        </div>
-
-                                        <div className="flex items-start justify-between mb-1">
-                                            <h4 className="font-bold text-text-primary flex-1">{n.title}</h4>
+                                        <div className="flex items-center justify-between mb-1.5">
+                                            <div className="flex items-center">
+                                                <span className="text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-md">
+                                                    {userData?.choirName || "Хор"}
+                                                </span>
+                                            </div>
                                             <div className="flex items-center gap-1 flex-shrink-0 ml-2">
                                                 <span className="text-[10px] text-text-secondary">
                                                     {new Date(n.createdAt).toLocaleDateString()}
@@ -243,6 +245,10 @@ export default function NotificationsModal({
                                                     </button>
                                                 )}
                                             </div>
+                                        </div>
+
+                                        <div className="flex items-start justify-between mb-1">
+                                            <h4 className="font-bold text-text-primary flex-1">{n.title}</h4>
                                         </div>
                                         <p className="text-sm text-text-secondary leading-relaxed bg-surface/50 p-2 rounded-lg">
                                             {n.body}

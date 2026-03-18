@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { X, Plus, Loader2, Save, Check, ChevronDown, Trash2, Upload, Search } from "lucide-react";
 import { SimpleSong } from "@/types";
 import { CATEGORIES as OFFICIAL_THEMES_IMPORTED } from "@/lib/themes";
@@ -9,9 +10,47 @@ const OFFICIAL_THEMES = OFFICIAL_THEMES_IMPORTED;
 
 import { useAuth } from "@/contexts/AuthContext";
 import { updateDoc, doc, arrayRemove } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getFirestoreLazy } from "@/lib/firebase";
 import ConfirmationModal from "./ConfirmationModal";
 import { Dialog } from '@capacitor/dialog';
+
+// Helper component to render dropdowns in a portal
+const DropdownPortal = ({ children }: { children: React.ReactNode }) => {
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
+    if (!mounted) return null;
+    return createPortal(children, document.body);
+};
+
+// Hook to track the anchor element for absolute positioning in the portal
+function useDropdownPosition(ref: React.RefObject<HTMLDivElement | null>, isOpen: boolean) {
+    const [rect, setRect] = useState({ top: 0, left: 0, width: 0 });
+
+    const updatePosition = useCallback(() => {
+        if (ref.current && isOpen) {
+            const r = ref.current.getBoundingClientRect();
+            setRect({
+                top: r.bottom + window.scrollY,
+                left: r.left + window.scrollX,
+                width: r.width,
+            });
+        }
+    }, [ref, isOpen]);
+
+    useEffect(() => {
+        if (isOpen) {
+            updatePosition();
+            window.addEventListener('scroll', updatePosition, true);
+            window.addEventListener('resize', updatePosition);
+            return () => {
+                window.removeEventListener('scroll', updatePosition, true);
+                window.removeEventListener('resize', updatePosition);
+            };
+        }
+    }, [isOpen, updatePosition]);
+
+    return rect;
+}
 
 interface EditSongModalProps {
     isOpen: boolean;
@@ -98,6 +137,10 @@ export default function EditSongModal({
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+
+    const themeDropdownRect = useDropdownPosition(themeDropdownRef, isThemeDropdownOpen);
+    const conductorDropdownRect = useDropdownPosition(dropdownRef, isConductorDropdownOpen);
+    const pianistDropdownRect = useDropdownPosition(pianistDropdownRef, isPianistDropdownOpen);
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -209,7 +252,7 @@ export default function EditSongModal({
                 await removeKnownConductor(userData.choirId, conductorToDelete);
             }
             else if (regents.includes(conductorToDelete)) {
-                const choirRef = doc(db, "choirs", userData.choirId);
+                const choirRef = doc(getFirestoreLazy(), "choirs", userData.choirId);
                 await updateDoc(choirRef, {
                     regents: arrayRemove(conductorToDelete)
                 });
@@ -262,75 +305,84 @@ export default function EditSongModal({
     return (
         <>
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[200] animate-in fade-in duration-200 px-5">
-                <div className="bg-[#1C1C1E] w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+                <div className="bg-surface w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
 
                     {/* Form Wrap */}
                     <form onSubmit={handleSave} className="flex flex-col w-full">
                         {/* Header */}
-                        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/10">
-                            <h2 className="text-xl font-bold text-white">Редагувати пісню</h2>
+                        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-border">
+                            <h2 className="text-xl font-bold text-text-primary">Редагувати пісню</h2>
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+                                className="w-8 h-8 flex items-center justify-center rounded-full bg-surface-highlight hover:bg-border transition-colors"
                             >
-                                <X className="w-4 h-4 text-gray-400" />
+                                <X className="w-4 h-4 text-text-secondary" />
                             </button>
                         </div>
 
                         {/* Form Fields */}
-                        <div className="px-5 py-5 space-y-5 max-h-[60vh] overflow-y-auto">
+                        <div className="px-5 py-5 space-y-5 overflow-visible">
 
                             {/* Title Field */}
                             <div>
-                                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                                    Назва пісні <span className="text-red-400">*</span>
+                                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                                    Назва пісні <span className="text-danger">*</span>
                                 </label>
                                 <input
                                     type="text"
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
                                     placeholder="Введіть назву"
-                                    className="w-full bg-[#2C2C2E] text-white text-[16px] rounded-xl px-4 py-3 border-none placeholder:text-gray-500 focus:ring-0 focus:outline-none"
+                                    className="w-full bg-surface-highlight text-text-primary text-[16px] rounded-xl px-4 py-3 border border-border placeholder:text-text-secondary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
                                 />
                             </div>
 
                             {/* Theme / Category Field */}
-                            <div ref={themeDropdownRef}>
-                                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                            <div ref={themeDropdownRef} className="relative z-30">
+                                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
                                     Категорія (тематика)
                                 </label>
                                 {!showCustomTheme ? (
                                     <div className="relative">
                                         <div
                                             onClick={() => setIsThemeDropdownOpen(!isThemeDropdownOpen)}
-                                            className="w-full bg-[#2C2C2E] text-white text-[16px] rounded-xl px-4 py-3 flex items-center justify-between cursor-pointer"
+                                            className="w-full bg-surface-highlight text-text-primary text-[16px] rounded-xl px-4 py-3 border border-border flex items-center justify-between cursor-pointer transition-all hover:bg-surface-hover"
                                         >
-                                            <span className={theme ? 'text-white' : 'text-gray-500'}>
+                                            <span className={theme ? 'text-text-primary' : 'text-text-secondary'}>
                                                 {theme || "Оберіть..."}
                                             </span>
-                                            <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isThemeDropdownOpen ? 'rotate-180' : ''}`} />
+                                            <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${isThemeDropdownOpen ? 'rotate-180' : ''}`} />
                                         </div>
 
                                         {isThemeDropdownOpen && (
-                                            <div className="absolute top-full left-0 right-0 mt-1 bg-[#2C2C2E] rounded-xl border border-white/10 max-h-48 overflow-y-auto z-10 shadow-xl">
-                                                {allThemes.map(t => (
-                                                    <div
-                                                        key={t}
-                                                        onClick={() => { setTheme(t); setIsThemeDropdownOpen(false); }}
-                                                        className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-white/5 border-b border-white/5 last:border-none"
-                                                    >
-                                                        <span className={`text-[15px] ${theme === t ? 'text-blue-400 font-medium' : 'text-white'}`}>{t}</span>
-                                                        {theme === t && <Check className="w-4 h-4 text-blue-400" />}
-                                                    </div>
-                                                ))}
-                                                <div
-                                                    onClick={() => { setShowCustomTheme(true); setIsThemeDropdownOpen(false); }}
-                                                    className="flex items-center px-4 py-2.5 cursor-pointer hover:bg-white/5"
+                                            <DropdownPortal>
+                                                <div 
+                                                    className="fixed mt-1 bg-surface-highlight rounded-xl border border-border max-h-48 overflow-y-auto z-[300] shadow-2xl"
+                                                    style={{
+                                                        top: `${themeDropdownRect.top}px`,
+                                                        left: `${themeDropdownRect.left}px`,
+                                                        width: `${themeDropdownRect.width}px`
+                                                    }}
                                                 >
-                                                    <span className="text-[15px] text-blue-400">Інша тематика...</span>
+                                                    {allThemes.map(t => (
+                                                        <div
+                                                            key={t}
+                                                            onClick={() => { setTheme(t); setIsThemeDropdownOpen(false); }}
+                                                            className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-surface border-b border-border last:border-none"
+                                                        >
+                                                            <span className={`text-[15px] ${theme === t ? 'text-primary font-medium' : 'text-text-primary'}`}>{t}</span>
+                                                            {theme === t && <Check className="w-4 h-4 text-primary" />}
+                                                        </div>
+                                                    ))}
+                                                    <div
+                                                        onClick={() => { setShowCustomTheme(true); setIsThemeDropdownOpen(false); }}
+                                                        className="flex items-center px-4 py-2.5 cursor-pointer hover:bg-surface"
+                                                    >
+                                                        <span className="text-[15px] text-primary">Інша тематика...</span>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            </DropdownPortal>
                                         )}
                                     </div>
                                 ) : (
@@ -340,63 +392,72 @@ export default function EditSongModal({
                                             value={customTheme || ""}
                                             onChange={(e) => setCustomTheme(e.target.value)}
                                             placeholder="Введіть тематику..."
-                                            className="flex-1 bg-[#2C2C2E] text-white text-[16px] rounded-xl px-4 py-3 border-none placeholder:text-gray-500 focus:ring-0 focus:outline-none"
+                                            className="flex-1 bg-surface-highlight text-text-primary text-[16px] rounded-xl px-4 py-3 border border-primary/50 placeholder:text-text-secondary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
                                             autoFocus
                                         />
-                                        <button type="button" onClick={() => setShowCustomTheme(false)} className="p-2 text-gray-400 hover:text-white transition-colors">
-                                            <X className="w-4 h-4" />
+                                        <button type="button" onClick={() => setShowCustomTheme(false)} className="p-3 bg-surface-highlight border border-border text-text-secondary hover:text-text-primary rounded-xl transition-colors">
+                                            <X className="w-5 h-5" />
                                         </button>
                                     </div>
                                 )}
                             </div>
 
                             {/* Conductor Field */}
-                            <div ref={dropdownRef}>
-                                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                            <div ref={dropdownRef} className="relative z-20">
+                                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
                                     Хто диригує
                                 </label>
                                 {!showCustomInput ? (
                                     <div className="relative">
                                         <div
                                             onClick={() => setIsConductorDropdownOpen(!isConductorDropdownOpen)}
-                                            className="w-full bg-[#2C2C2E] text-white text-[16px] rounded-xl px-4 py-3 flex items-center justify-between cursor-pointer"
+                                            className="w-full bg-surface-highlight text-text-primary text-[16px] rounded-xl px-4 py-3 border border-border flex items-center justify-between cursor-pointer transition-all hover:bg-surface-hover"
                                         >
-                                            <span className={conductor ? 'text-white' : 'text-gray-500'}>
+                                            <span className={conductor ? 'text-text-primary' : 'text-text-secondary'}>
                                                 {conductor || "Оберіть..."}
                                             </span>
-                                            <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isConductorDropdownOpen ? 'rotate-180' : ''}`} />
+                                            <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${isConductorDropdownOpen ? 'rotate-180' : ''}`} />
                                         </div>
 
                                         {isConductorDropdownOpen && (
-                                            <div className="absolute top-full left-0 right-0 mt-1 bg-[#2C2C2E] rounded-xl border border-white/10 max-h-48 overflow-y-auto z-10 shadow-xl">
-                                                {allConductors.map(r => (
-                                                    <div
-                                                        key={r}
-                                                        onClick={() => { setConductor(r); setIsConductorDropdownOpen(false); }}
-                                                        className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-white/5 border-b border-white/5 last:border-none group"
-                                                    >
-                                                        <span className={`text-[15px] ${conductor === r ? 'text-blue-400 font-medium' : 'text-white'}`}>{r}</span>
-                                                        <div className="flex items-center gap-2">
-                                                            {conductor === r && <Check className="w-4 h-4 text-blue-400" />}
-                                                            {canManageList && (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={(e) => handleDeleteClick(r, e)}
-                                                                    className="text-red-400 opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity p-1"
-                                                                >
-                                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                                <div
-                                                    onClick={() => { setShowCustomInput(true); setIsConductorDropdownOpen(false); }}
-                                                    className="flex items-center px-4 py-2.5 cursor-pointer hover:bg-white/5"
+                                            <DropdownPortal>
+                                                <div 
+                                                    className="fixed mt-1 bg-surface-highlight rounded-xl border border-border max-h-48 overflow-y-auto z-[300] shadow-2xl"
+                                                    style={{
+                                                        top: `${conductorDropdownRect.top}px`,
+                                                        left: `${conductorDropdownRect.left}px`,
+                                                        width: `${conductorDropdownRect.width}px`
+                                                    }}
                                                 >
-                                                    <span className="text-[15px] text-blue-400">Інший диригент...</span>
+                                                    {allConductors.map(r => (
+                                                        <div
+                                                            key={r}
+                                                            onClick={() => { setConductor(r); setIsConductorDropdownOpen(false); }}
+                                                            className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-surface border-b border-border last:border-none group"
+                                                        >
+                                                            <span className={`text-[15px] ${conductor === r ? 'text-primary font-medium' : 'text-text-primary'}`}>{r}</span>
+                                                            <div className="flex items-center gap-2">
+                                                                {conductor === r && <Check className="w-4 h-4 text-primary" />}
+                                                                {canManageList && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={(e) => handleDeleteClick(r, e)}
+                                                                        className="text-danger opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity p-1"
+                                                                    >
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    <div
+                                                        onClick={() => { setShowCustomInput(true); setIsConductorDropdownOpen(false); }}
+                                                        className="flex items-center px-4 py-2.5 cursor-pointer hover:bg-surface"
+                                                    >
+                                                        <span className="text-[15px] text-primary">Інший диригент...</span>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            </DropdownPortal>
                                         )}
                                     </div>
                                 ) : (
@@ -406,70 +467,79 @@ export default function EditSongModal({
                                             value={customConductor}
                                             onChange={(e) => setCustomConductor(e.target.value)}
                                             placeholder="Введіть ім'я..."
-                                            className="flex-1 bg-[#2C2C2E] text-white text-[16px] rounded-xl px-4 py-3 border-none placeholder:text-gray-500 focus:ring-0 focus:outline-none"
+                                            className="flex-1 bg-surface-highlight text-text-primary text-[16px] rounded-xl px-4 py-3 border border-primary/50 placeholder:text-text-secondary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
                                             autoFocus
                                         />
-                                        <button type="button" onClick={() => setShowCustomInput(false)} className="p-2 text-gray-400 hover:text-white transition-colors">
-                                            <X className="w-4 h-4" />
+                                        <button type="button" onClick={() => setShowCustomInput(false)} className="p-3 bg-surface-highlight border border-border text-text-secondary hover:text-text-primary rounded-xl transition-colors">
+                                            <X className="w-5 h-5" />
                                         </button>
                                     </div>
                                 )}
                             </div>
 
                             {/* Pianist Field */}
-                            <div ref={pianistDropdownRef}>
-                                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                            <div ref={pianistDropdownRef} className="relative z-10">
+                                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
                                     Піаніст
                                 </label>
                                 {!showCustomPianist ? (
                                     <div className="relative">
                                         <div
                                             onClick={() => setIsPianistDropdownOpen(!isPianistDropdownOpen)}
-                                            className="w-full bg-[#2C2C2E] text-white text-[16px] rounded-xl px-4 py-3 flex items-center justify-between cursor-pointer"
+                                            className="w-full bg-surface-highlight text-text-primary text-[16px] rounded-xl px-4 py-3 border border-border flex items-center justify-between cursor-pointer transition-all hover:bg-surface-hover"
                                         >
-                                            <span className={pianist ? 'text-white' : 'text-gray-500'}>
+                                            <span className={pianist ? 'text-text-primary' : 'text-text-secondary'}>
                                                 {pianist || "Оберіть піаніста (опціонально)..."}
                                             </span>
-                                            <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isPianistDropdownOpen ? 'rotate-180' : ''}`} />
+                                            <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${isPianistDropdownOpen ? 'rotate-180' : ''}`} />
                                         </div>
 
                                         {isPianistDropdownOpen && (
-                                            <div className="absolute top-full left-0 right-0 mt-1 bg-[#2C2C2E] rounded-xl border border-white/10 max-h-48 overflow-y-auto z-10 shadow-xl">
-                                                <div
-                                                    onClick={() => { setPianist(""); setIsPianistDropdownOpen(false); }}
-                                                    className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-white/5 border-b border-white/5"
+                                            <DropdownPortal>
+                                                <div 
+                                                    className="fixed mt-1 bg-surface-highlight rounded-xl border border-border max-h-48 overflow-y-auto z-[300] shadow-2xl"
+                                                    style={{
+                                                        top: `${pianistDropdownRect.top}px`,
+                                                        left: `${pianistDropdownRect.left}px`,
+                                                        width: `${pianistDropdownRect.width}px`
+                                                    }}
                                                 >
-                                                    <span className={`text-[15px] italic ${!pianist ? 'text-blue-400 font-medium' : 'text-gray-400'}`}>Немає</span>
-                                                    {!pianist && <Check className="w-4 h-4 text-blue-400" />}
-                                                </div>
-                                                {knownPianists.map(p => (
                                                     <div
-                                                        key={p}
-                                                        onClick={() => { setPianist(p); setIsPianistDropdownOpen(false); }}
-                                                        className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-white/5 border-b border-white/5 last:border-none group"
+                                                        onClick={() => { setPianist(""); setIsPianistDropdownOpen(false); }}
+                                                        className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-surface border-b border-border"
                                                     >
-                                                        <span className={`text-[15px] ${pianist === p ? 'text-blue-400 font-medium' : 'text-white'}`}>{p}</span>
-                                                        <div className="flex items-center gap-2">
-                                                            {pianist === p && <Check className="w-4 h-4 text-blue-400" />}
-                                                            {canManageList && (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={(e) => handlePianistDeleteClick(p, e)}
-                                                                    className="text-red-400 opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity p-1"
-                                                                >
-                                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                                </button>
-                                                            )}
-                                                        </div>
+                                                        <span className={`text-[15px] italic ${!pianist ? 'text-primary font-medium' : 'text-text-secondary'}`}>Немає</span>
+                                                        {!pianist && <Check className="w-4 h-4 text-primary" />}
                                                     </div>
-                                                ))}
-                                                <div
-                                                    onClick={() => { setShowCustomPianist(true); setIsPianistDropdownOpen(false); }}
-                                                    className="flex items-center px-4 py-2.5 cursor-pointer hover:bg-white/5"
-                                                >
-                                                    <span className="text-[15px] text-blue-400">Інший піаніст...</span>
+                                                    {knownPianists.map(p => (
+                                                        <div
+                                                            key={p}
+                                                            onClick={() => { setPianist(p); setIsPianistDropdownOpen(false); }}
+                                                            className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-surface border-b border-border last:border-none group"
+                                                        >
+                                                            <span className={`text-[15px] ${pianist === p ? 'text-primary font-medium' : 'text-text-primary'}`}>{p}</span>
+                                                            <div className="flex items-center gap-2">
+                                                                {pianist === p && <Check className="w-4 h-4 text-primary" />}
+                                                                {canManageList && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={(e) => handlePianistDeleteClick(p, e)}
+                                                                        className="text-danger opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity p-1"
+                                                                    >
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    <div
+                                                        onClick={() => { setShowCustomPianist(true); setIsPianistDropdownOpen(false); }}
+                                                        className="flex items-center px-4 py-2.5 cursor-pointer hover:bg-surface"
+                                                    >
+                                                        <span className="text-[15px] text-primary">Інший піаніст...</span>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            </DropdownPortal>
                                         )}
                                     </div>
                                 ) : (
@@ -479,12 +549,12 @@ export default function EditSongModal({
                                             value={customPianist}
                                             onChange={(e) => setCustomPianist(e.target.value)}
                                             placeholder="Введіть ім'я..."
-                                            className="flex-1 bg-[#2C2C2E] text-white text-[16px] rounded-xl px-4 py-3 border-none placeholder:text-gray-500 focus:ring-0 focus:outline-none"
+                                            className="flex-1 bg-surface-highlight text-text-primary text-[16px] rounded-xl px-4 py-3 border border-primary/50 placeholder:text-text-secondary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
                                             autoFocus
                                         />
                                         {knownPianists.length > 0 && (
-                                            <button type="button" onClick={() => setShowCustomPianist(false)} className="p-2 text-gray-400 hover:text-white transition-colors">
-                                                <X className="w-4 h-4" />
+                                            <button type="button" onClick={() => setShowCustomPianist(false)} className="p-3 bg-surface-highlight border border-border text-text-secondary hover:text-text-primary rounded-xl transition-colors">
+                                                <X className="w-5 h-5" />
                                             </button>
                                         )}
                                     </div>
@@ -492,7 +562,7 @@ export default function EditSongModal({
                             </div>
 
                             {error && (
-                                <div className="px-4 py-2 text-[14px] font-medium text-red-400 text-center bg-red-500/10 rounded-xl">
+                                <div className="px-4 py-2 text-[14px] font-medium text-danger text-center bg-danger/10 rounded-xl">
                                     {error}
                                 </div>
                             )}
@@ -504,7 +574,7 @@ export default function EditSongModal({
                             <button
                                 type="submit"
                                 disabled={loading || !title.trim()}
-                                className="w-full py-3.5 bg-white text-black rounded-xl font-semibold text-[16px] flex items-center justify-center gap-2 disabled:opacity-40 hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                                className="w-full py-3.5 bg-primary text-background rounded-xl font-bold text-[16px] flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100"
                             >
                                 {loading ? (
                                     <Loader2 className="w-5 h-5 animate-spin" />

@@ -23,9 +23,11 @@ export default function NotificationSettings() {
                     <div>
                         <p className="text-text-primary font-medium">Сповіщення недоступні</p>
                         <p className="text-sm">
-                            {/iPad|iPhone|iPod/.test(navigator.userAgent)
+                            {/iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).Capacitor?.isNativePlatform?.()
                                 ? "На iOS сповіщення працюють тільки якщо додати додаток на головний екран"
-                                : "Ваш пристрій або браузер не підтримує пуш-сповіщення"}
+                                : ((window as any).Capacitor?.isNativePlatform?.() 
+                                    ? "Ваш пристрій не підтримує пуш-сповіщення"
+                                    : "Ваш пристрій або браузер не підтримує пуш-сповіщення")}
                         </p>
                     </div>
                 </div>
@@ -86,11 +88,13 @@ export default function NotificationSettings() {
                         Сповіщення заблоковані в налаштуваннях пристрою
                     </p>
                     <p className="text-xs text-text-secondary leading-relaxed">
-                        {/iPad|iPhone|iPod/.test(navigator.userAgent) && (window as any).Capacitor
+                        {/iPad|iPhone|iPod/.test(navigator.userAgent) && (window as any).Capacitor?.isNativePlatform?.()
                             ? 'Налаштування → MyChoir → Сповіщення → Увімкнути'
                             : /iPad|iPhone|iPod/.test(navigator.userAgent)
                                 ? 'Налаштування → Safari → Сповіщення → MyChoir → Дозволити'
-                                : 'Відкрийте налаштування браузера для цього сайту і дозвольте сповіщення.'}
+                                : (window as any).Capacitor?.isNativePlatform?.()
+                                    ? 'Налаштування вашого пристрою → Додатки → MyChoir → Дозволити сповіщення'
+                                    : 'Відкрийте налаштування браузера для цього сайту і дозвольте сповіщення.'}
                     </p>
                 </div>
             )}

@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import { Upload, FileText, X, Check, Loader2, AlertCircle } from "lucide-react";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { storage } from "@/lib/firebase";
+import { getStorageLazy } from "@/lib/firebase";
 
 interface FileUploadProps {
     choirId: string;
@@ -56,7 +56,7 @@ export default function FileUpload({
         setProgress(0);
 
         try {
-            const storageRef = ref(storage, `choirs/${choirId}/songs/${songId}/sheet.pdf`);
+            const storageRef = ref(getStorageLazy(), `choirs/${choirId}/songs/${songId}/sheet.pdf`);
             const uploadTask = uploadBytesResumable(storageRef, file, {
                 contentType: "application/pdf",
             });

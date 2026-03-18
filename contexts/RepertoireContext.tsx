@@ -1,10 +1,10 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode, useRef } from "react";
 import { SimpleSong } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { syncSongs } from "@/lib/db";
-import { auth } from "@/lib/firebase";
+import { getAuthLazy } from "@/lib/firebase";
 
 interface RepertoireContextType {
     songs: SimpleSong[];
@@ -24,63 +24,90 @@ export function useRepertoire() {
     return useContext(RepertoireContext);
 }
 
+// Fallback for idle callback so iOS WKWebView doesn't block
+export const runIdle = (fn: () => void) => {
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(fn);
+    } else {
+        setTimeout(fn, 100);
+    }
+};
+
 export function RepertoireProvider({ children }: { children: ReactNode }) {
     const { userData } = useAuth();
-    const [songs, setSongs] = useState<SimpleSong[]>(() => {
-        // Eagerly try to load from cache on first render (before auth is ready)
-        if (typeof window !== 'undefined') {
-            try {
-                const storedChoirId = localStorage.getItem('choir_last_choirId');
-                if (storedChoirId) {
-                    const cached = localStorage.getItem(`choir_songs_v2_${storedChoirId}`);
-                    if (cached) {
-                        return JSON.parse(cached);
-                    }
-                }
-            } catch (e) { /* ignore */ }
-        }
-        return [];
-    });
-    const [loading, setLoading] = useState(() => {
-        // If we got songs from eager cache, don't show loading
-        if (typeof window !== 'undefined') {
-            try {
-                const storedChoirId = localStorage.getItem('choir_last_choirId');
-                if (storedChoirId) {
-                    const cached = localStorage.getItem(`choir_songs_v2_${storedChoirId}`);
-                    if (cached && JSON.parse(cached).length > 0) return false;
-                }
-            } catch (e) { /* ignore */ }
-        }
-        return true;
-    });
+    const [songs, setSongs] = useState<SimpleSong[]>([]);
+    const [loading, setLoading] = useState(true);
     const [hasSynced, setHasSynced] = useState(false);
+    const syncLockRef = useRef(false);
 
     // Sync cache when choirId becomes available, and persist choirId for eager loading
     useEffect(() => {
         if (typeof window !== 'undefined' && userData?.choirId) {
             localStorage.setItem('choir_last_choirId', userData.choirId);
 
-            const CACHE_KEY = `choir_songs_v2_${userData.choirId}`;
+            const META_KEY = `choir_songs_meta_v2_${userData.choirId}`;
+            const FULL_KEY = `choir_songs_v2_${userData.choirId}`;
+
             try {
-                const cached = localStorage.getItem(CACHE_KEY);
-                if (cached) {
-                    setSongs(JSON.parse(cached));
+                // 1. Sync load fast metadata (id, title, category, keywords) to unblock UI
+                const cachedMeta = localStorage.getItem(META_KEY);
+                if (cachedMeta) {
+                    const parsedMeta = JSON.parse(cachedMeta);
+                    if (Array.isArray(parsedMeta)) {
+                        setSongs(parsedMeta);
+                        setLoading(false);
+                    } else {
+                        throw new Error("Cached meta is not an array");
+                    }
+
+                    // 2. Async load the massive 7500+ full object payload later
+                    runIdle(() => {
+                        try {
+                            const cachedFull = localStorage.getItem(FULL_KEY);
+                            if (cachedFull) {
+                                const parsedFull = JSON.parse(cachedFull);
+                                if (Array.isArray(parsedFull)) {
+                                    setSongs(parsedFull);
+                                }
+                            }
+                        } catch (e) { console.error("Full cache parse error", e); }
+                    });
                 } else {
-                    setSongs([]);
+                    // Fallback to legacy full cache load if meta doesn't exist yet
+                    const cachedFull = localStorage.getItem(FULL_KEY);
+                    if (cachedFull) {
+                        try {
+                            const parsed = JSON.parse(cachedFull);
+                            if (Array.isArray(parsed)) {
+                                setSongs(parsed);
+                                setLoading(false);
+                            } else {
+                                setSongs([]);
+                                setLoading(false);
+                            }
+                        } catch (e) {
+                            setSongs([]);
+                            setLoading(false);
+                        }
+                    } else {
+                        setSongs([]);
+                        setLoading(false);
+                    }
                 }
-                setLoading(false);
             } catch (e) {
                 console.warn("[Repertoire] Failed to load cache", e);
                 setSongs([]);
+                setLoading(false);
             }
         } else if (!userData?.choirId && userData !== undefined) {
             setSongs([]);
+            setLoading(false);
         }
     }, [userData?.choirId]);
 
     const performSync = useCallback(async (force = false) => {
         if (!userData?.choirId) return;
+        if (syncLockRef.current) return;
 
         const CACHE_KEY = `choir_songs_v2_${userData.choirId}`;
         const SYNC_KEY = `choir_sync_v2_${userData.choirId}`;
@@ -93,15 +120,15 @@ export function RepertoireProvider({ children }: { children: ReactNode }) {
         } else if (Date.now() - lastSyncTime < 60000) {
             // Debounce: Don't sync if checked less than 60 seconds ago, unless forced
             console.log("[Repertoire] Skipping sync (recent)");
-            setLoading(false);
             return;
         }
 
+        syncLockRef.current = true;
         console.log("[Repertoire] Starting Delta Sync...");
 
         try {
-            if (auth.currentUser) {
-                const token = await auth.currentUser.getIdTokenResult();
+            if (getAuthLazy().currentUser) {
+                const token = await getAuthLazy().currentUser!.getIdTokenResult();
                 console.log(`[Repertoire] Syncing for Choir: ${userData.choirId}`);
 
                 // Auto-Fix: If claim is missing, force sync and refresh
@@ -115,7 +142,7 @@ export function RepertoireProvider({ children }: { children: ReactNode }) {
                     await forceSyncClaims();
 
                     // Refresh token again
-                    await auth.currentUser.getIdToken(true);
+                    await getAuthLazy().currentUser!.getIdToken(true);
                     console.log("[Repertoire] Auto-fix complete. Retrying sync...");
 
                     // Recursive retry with strict force=true to bypass debounce
@@ -138,9 +165,25 @@ export function RepertoireProvider({ children }: { children: ReactNode }) {
                     const merged = Array.from(currentMap.values())
                         .sort((a, b) => a.title.localeCompare(b.title, 'uk'));
 
-                    // Update Cache
+                    // SPLIT CACHE WRITING for optimization
+                    // 1. Meta Cache: Just enough to render lists and search
+                    const metaSubset = merged.map(s => ({
+                        id: s.id,
+                        title: s.title,
+                        category: s.category,
+                        keywords: s.keywords,
+                        hasPdf: s.hasPdf,
+                        updatedAt: s.updatedAt,
+                        conductor: s.conductor,
+                        pianist: s.pianist
+                    }));
+
+                    localStorage.setItem(`choir_songs_meta_v2_${userData.choirId}`, JSON.stringify(metaSubset));
+
+                    // 2. Full Cache: Everything else including base64 PDFs
                     localStorage.setItem(CACHE_KEY, JSON.stringify(merged));
-                    console.log(`[Repertoire] Cache updated! Total songs: ${merged.length}`);
+
+                    console.log(`[Repertoire] Cache updated (Meta + Full)! Total songs: ${merged.length}`);
                     return merged;
                 });
                 console.log(`[Repertoire] Delta Sync: +${updatedSongs.length}, -${deletedIds.length}`);
@@ -154,7 +197,7 @@ export function RepertoireProvider({ children }: { children: ReactNode }) {
         } catch (error) {
             console.error("[Repertoire] Sync failed:", error);
         } finally {
-            setLoading(false);
+            syncLockRef.current = false;
         }
     }, [userData?.choirId]);
 

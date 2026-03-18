@@ -11,7 +11,7 @@ import { getPdfParts, getCachedSong } from "@/lib/offlineDb";
 import { SimpleSong } from "@/types";
 import PDFViewer from "@/components/PDFViewer";
 import EditSongModal from "@/components/EditSongModal";
-import { ArrowLeft, FileText, Upload, Loader2, Check, AlertCircle, Trash2, ExternalLink, Pencil, User, Download, X, Search, WifiOff, Plus, ChevronDown } from "lucide-react";
+import { ArrowLeft, FileText, Upload, Loader2, Check, AlertCircle, Trash2, ExternalLink, Pencil, User, Download, X, Search, WifiOff, Plus, ChevronDown, Mic, Music } from "lucide-react";
 import { Dialog } from '@capacitor/dialog';
 import { extractInstrument, getFileNameFromUrl, isGenericPartName } from "@/lib/utils";
 import { CATEGORIES as OFFICIAL_THEMES } from "@/lib/themes";
@@ -807,8 +807,8 @@ function SongContent() {
                         await removeKnownConductor(userData.choirId, item);
                     } else if (choirData.regents.includes(item)) {
                         const { doc, updateDoc, arrayRemove } = await import("firebase/firestore");
-                        const { db } = await import("@/lib/firebase");
-                        const choirRef = doc(db, "choirs", userData.choirId);
+                        const { getFirestoreLazy } = await import("@/lib/firebase");
+                        const choirRef = doc(getFirestoreLazy(), "choirs", userData.choirId);
                         await updateDoc(choirRef, { regents: arrayRemove(item) });
                     }
                     setChoirData(prev => ({
@@ -870,8 +870,8 @@ function SongContent() {
                         {song.pianist && (
                             <>
                                 <span className="w-1 h-1 rounded-full bg-text-secondary/30 shrink-0" />
-                                <span className="truncate flex items-center gap-1" title="Піаніст">
-                                    <User className="w-3 h-3" />
+                                <span className="truncate flex items-center gap-1 text-amber-500" title="Піаніст">
+                                    <span className="text-[10px]">🎹</span>
                                     {song.pianist}
                                 </span>
                             </>
@@ -880,6 +880,12 @@ function SongContent() {
                 </div>
                 {canEdit && (
                     <div className="flex items-center gap-1">
+                        <button
+                            onClick={() => setShowEditModal(true)}
+                            className="p-2 text-text-secondary hover:text-text-primary hover:bg-surface-highlight rounded-xl transition-colors"
+                        >
+                            <Pencil className="w-5 h-5" />
+                        </button>
                         <button
                             onClick={handleDelete}
                             className="p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition-colors"
@@ -893,185 +899,7 @@ function SongContent() {
             {/* ─── Content ─── */}
             <div className="flex-1 overflow-y-auto px-4 py-6 pb-[calc(2rem+env(safe-area-inset-bottom))]">
 
-                {/* ── Song Info Section (Inline Editable) ── */}
-                <div className="mb-6 bg-surface border border-border rounded-2xl p-4">
-                    {/* TITLE */}
-                    <div className="mb-4">
-                        {editingField === 'title' ? (
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="text"
-                                    value={editValue}
-                                    onChange={(e) => setEditValue(e.target.value)}
-                                    className="flex-1 bg-surface-highlight text-text-primary text-xl font-bold rounded-lg px-3 py-2 border border-primary/30 focus:outline-none focus:border-primary"
-                                    autoFocus
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') handleSaveField('title');
-                                        if (e.key === 'Escape') { setEditingField(null); setEditValue(""); }
-                                    }}
-                                />
-                                <button onClick={() => handleSaveField('title')} className="p-2 text-primary hover:bg-primary/10 rounded-lg"><Check className="w-5 h-5" /></button>
-                                <button onClick={() => { setEditingField(null); setEditValue(""); }} className="p-2 text-text-secondary hover:bg-surface-highlight rounded-lg"><X className="w-5 h-5" /></button>
-                            </div>
-                        ) : (
-                            <div
-                                className={`flex items-start justify-between gap-3 ${canEdit ? 'cursor-pointer group' : ''}`}
-                                onClick={canEdit ? () => { setEditingField('title'); setEditValue(song.title); } : undefined}
-                            >
-                                <h2 className="text-xl font-bold text-text-primary leading-tight flex-1 group-hover:text-primary transition-colors">{song.title}</h2>
-                                {canEdit && <Pencil className="w-4 h-4 text-text-secondary/30 group-hover:text-primary shrink-0 mt-1 transition-colors" />}
-                            </div>
-                        )}
-                    </div>
 
-                    {/* METADATA TAGS */}
-                    <div className="flex flex-wrap items-center gap-2">
-                        {/* CATEGORY */}
-                        {editingField === 'category' ? (
-                            <div className="flex items-center gap-1 w-full sm:w-auto mt-2 sm:mt-0 relative">
-                                {!showCustomInput ? (
-                                    <select
-                                        value={editValue}
-                                        onChange={(e) => {
-                                            if (e.target.value === '__ADD_NEW__') {
-                                                setShowCustomInput(true);
-                                                setEditValue('');
-                                            } else if (e.target.value === '__MANAGE__') {
-                                                setManageListType('category');
-                                                setEditingField(null);
-                                            } else {
-                                                setEditValue(e.target.value);
-                                                handleSaveField('category', e.target.value);
-                                            }
-                                        }}
-                                        autoFocus
-                                        className="bg-surface-highlight text-xs font-bold uppercase tracking-wider text-primary rounded-full px-4 py-2 border border-primary/30 outline-none cursor-pointer"
-                                        onBlur={() => setEditingField(null)}
-                                    >
-                                        <option value="" disabled>Оберіть...</option>
-                                        {allThemes.map((t: string) => <option key={t} value={t}>{t}</option>)}
-                                        <option value="__ADD_NEW__">➕ Додати нову...</option>
-                                        <option value="__MANAGE__">✏️ Редагувати список...</option>
-                                    </select>
-                                ) : (
-                                    <div className="flex items-center gap-1 w-full sm:w-auto">
-                                        <input type="text" value={editValue} onChange={(e) => setEditValue(e.target.value)} autoFocus placeholder="Нова категорія" className="bg-surface-highlight text-xs font-bold uppercase tracking-wider text-primary rounded-full px-3 py-1.5 border border-primary/30 outline-none w-32" onKeyDown={(e) => { if (e.key === 'Enter') handleSaveField('category'); if (e.key === 'Escape') { setEditingField(null); setShowCustomInput(false); } }} />
-                                        <button onClick={() => handleSaveField('category')} className="p-1 text-primary"><Check className="w-4 h-4" /></button>
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            <span
-                                onClick={canEdit ? () => { setEditingField('category'); setEditValue(song.category); setShowCustomInput(false); dismissHint(); } : undefined}
-                                className={`text-xs px-3 py-1.5 rounded-full bg-primary/10 text-primary font-bold uppercase tracking-wider ${canEdit ? 'cursor-pointer hover:bg-primary/20 transition-colors' : ''}`}
-                            >
-                                {song.category}
-                            </span>
-                        )}
-
-                        {/* CONDUCTOR */}
-                        {editingField === 'conductor' ? (
-                            <div className="flex items-center gap-1 w-full sm:w-auto mt-2 sm:mt-0 relative">
-                                {!showCustomInput ? (
-                                    <>
-                                        <select
-                                            value={editValue}
-                                            onChange={(e) => {
-                                                if (e.target.value === '__ADD_NEW__') {
-                                                    setShowCustomInput(true);
-                                                    setEditValue('');
-                                                } else if (e.target.value === '__MANAGE__') {
-                                                    setManageListType('conductor');
-                                                    setEditingField(null);
-                                                } else {
-                                                    setEditValue(e.target.value);
-                                                    handleSaveField('conductor', e.target.value);
-                                                }
-                                            }}
-                                            autoFocus
-                                            className="bg-surface-highlight text-xs text-text-primary rounded-full px-4 py-2 border border-primary/30 outline-none cursor-pointer"
-                                            onBlur={() => setEditingField(null)}
-                                        >
-                                            <option value="">Оберіть...</option>
-                                            {allConductors.map((c: string) => <option key={c} value={c}>{c}</option>)}
-                                            <option value="__ADD_NEW__">➕ Новий регент...</option>
-                                            <option value="__MANAGE__">✏️ Редагувати список...</option>
-                                        </select>
-                                    </>
-                                ) : (
-                                    <div className="flex items-center gap-1 w-full sm:w-auto mt-2 sm:mt-0">
-                                        <input type="text" value={editValue} onChange={(e) => setEditValue(e.target.value)} autoFocus placeholder="Новий регент" className="bg-surface-highlight text-xs text-text-primary rounded-full px-3 py-1.5 border border-primary/30 outline-none w-32" onKeyDown={(e) => { if (e.key === 'Enter') handleSaveField('conductor'); if (e.key === 'Escape') { setEditingField(null); setShowCustomInput(false); } }} />
-                                        <button onClick={() => handleSaveField('conductor')} className="p-1 text-primary"><Check className="w-4 h-4" /></button>
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            (song.conductor || canEdit) && (
-                                <span
-                                    onClick={canEdit ? () => { setEditingField('conductor'); setEditValue(song.conductor || ""); setShowCustomInput(false); dismissHint(); } : undefined}
-                                    className={`text-xs px-3 py-1.5 rounded-full bg-surface-highlight border border-border text-text-secondary flex items-center gap-1 ${canEdit ? 'cursor-pointer hover:border-primary/50 transition-colors' : ''} ${!song.conductor ? 'opacity-50 border-dashed' : ''}`}
-                                    title="Регент"
-                                >
-                                    <User className="w-3 h-3" /> {song.conductor || '+ Регент'}
-                                </span>
-                            )
-                        )}
-
-                        {/* PIANIST */}
-                        {editingField === 'pianist' ? (
-                            <div className="flex items-center gap-1 w-full sm:w-auto mt-2 sm:mt-0 relative">
-                                {!showCustomInput ? (
-                                    <>
-                                        <select
-                                            value={editValue}
-                                            onChange={(e) => {
-                                                if (e.target.value === '__ADD_NEW__') {
-                                                    setShowCustomInput(true);
-                                                    setEditValue('');
-                                                } else if (e.target.value === '__MANAGE__') {
-                                                    setManageListType('pianist');
-                                                    setEditingField(null);
-                                                } else {
-                                                    setEditValue(e.target.value);
-                                                    handleSaveField('pianist', e.target.value);
-                                                }
-                                            }}
-                                            autoFocus
-                                            className="bg-surface-highlight text-xs text-text-primary rounded-full px-4 py-2 border border-primary/30 outline-none cursor-pointer"
-                                            onBlur={() => setEditingField(null)}
-                                        >
-                                            <option value="">Немає (або оберіть...)</option>
-                                            {knownPianists.map((p: string) => <option key={p} value={p}>{p}</option>)}
-                                            <option value="__ADD_NEW__">➕ Новий піаніст...</option>
-                                            <option value="__MANAGE__">✏️ Редагувати список...</option>
-                                        </select>
-                                    </>
-                                ) : (
-                                    <div className="flex items-center gap-1 w-full sm:w-auto mt-2 sm:mt-0">
-                                        <input type="text" value={editValue} onChange={(e) => setEditValue(e.target.value)} autoFocus placeholder="Новий піаніст" className="bg-surface-highlight text-xs text-text-primary rounded-full px-3 py-1.5 border border-primary/30 outline-none w-32" onKeyDown={(e) => { if (e.key === 'Enter') handleSaveField('pianist'); if (e.key === 'Escape') { setEditingField(null); setShowCustomInput(false); } }} />
-                                        <button onClick={() => handleSaveField('pianist')} className="p-1 text-primary"><Check className="w-4 h-4" /></button>
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            (song.pianist || canEdit) && (
-                                <span
-                                    onClick={canEdit ? () => { setEditingField('pianist'); setEditValue(song.pianist || ""); setShowCustomInput(false); dismissHint(); } : undefined}
-                                    className={`text-xs px-3 py-1.5 rounded-full bg-surface-highlight border border-border text-text-secondary flex items-center gap-1 ${canEdit ? 'cursor-pointer hover:border-primary/50 transition-colors' : ''} ${!song.pianist ? 'opacity-50 border-dashed' : ''}`}
-                                    title="Піаніст"
-                                >
-                                    <User className="w-3 h-3" /> {song.pianist || '+ Піаніст'}
-                                </span>
-                            )
-                        )}
-                    </div>
-
-                    {canEdit && !editingField && !hintDismissed && (
-                        <p className="text-[10px] text-text-secondary/40 mt-3 flex items-center gap-1">
-                            <Pencil className="w-3 h-3" /> Натискайте на поля для швидкого редагування
-                        </p>
-                    )}
-                </div>
 
                 {/* ── PDF Actions Section ── */}
                 {song.hasPdf && (song.pdfUrl || song.pdfData) ? (

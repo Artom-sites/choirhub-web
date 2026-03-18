@@ -6,12 +6,14 @@ import { getServices, addService, deleteService, setServiceAttendance, getChoir 
 import { useAuth } from "@/contexts/AuthContext";
 import { Calendar, Plus, ChevronRight, X, Trash2, Loader2, Check, Clock, Mic2, CheckCircle2, Circle, Music } from "lucide-react";
 import { collection, query, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getFirestoreLazy } from "@/lib/firebase";
 import { Service } from "@/types";
 import ConfirmationModal from "./ConfirmationModal";
 import TrashBin from "./TrashBin";
-import SwipeableCard from "./SwipeableCard";
-import { motion, AnimatePresence } from "framer-motion";
+import SwipeableCard, { SwipeableCardRef } from "./SwipeableCard";
+import { useRef } from "react";
+import RecurringScheduleModal from "./RecurringScheduleModal";
+import { Settings } from "lucide-react";
 
 interface ServiceListProps {
     onSelectService: (service: Service) => void;
@@ -43,6 +45,7 @@ export default function ServiceList({
     const setShowCreateModal = propsSetShowCreateModal ?? setLocalShowCreateModal;
     const [votingLoading, setVotingLoading] = useState<string | null>(null);
     const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
+    const cardRefs = useRef<Record<string, SwipeableCardRef | null>>({});
 
     // Persist archive tab state so returning from a service doesn't reset it
     const [showArchive, setShowArchive] = useState(() => {
@@ -59,14 +62,25 @@ export default function ServiceList({
     }, [showArchive]);
 
     const [showTrashBin, setShowTrashBin] = useState(false);
+    const [showScheduleModal, setShowScheduleModal] = useState(false);
 
     // Create form
     const [newTitle, setNewTitle] = useState("Співанка");
     const [newType, setNewType] = useState<'service' | 'rehearsal'>('rehearsal');
     const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
-    const [newTime, setNewTime] = useState("10:00");
+    const [newTime, setNewTime] = useState("");
     const [newWarmupConductor, setNewWarmupConductor] = useState("");
     const [showCustomWarmup, setShowCustomWarmup] = useState(false);
+
+    // Set current time when the modal opens
+    useEffect(() => {
+        if (showCreateModal) {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            setNewTime(`${hours}:${minutes}`);
+        }
+    }, [showCreateModal]);
     const [regents, setRegents] = useState<string[]>([]);
 
     useEffect(() => {
@@ -89,6 +103,17 @@ export default function ServiceList({
 
         setVotingLoading(serviceId);
         try {
+            if (services.length > 0) {
+                const updated = services.map(s => {
+                    if (s.id !== serviceId) return s;
+                    let c = [...(s.confirmedMembers || [])].filter(id => id !== user.uid);
+                    let a = [...(s.absentMembers || [])].filter(id => id !== user.uid);
+                    if (status === 'present') c.push(user.uid);
+                    else if (status === 'absent') a.push(user.uid);
+                    return { ...s, confirmedMembers: c, absentMembers: a };
+                });
+                import('@/lib/widgetSync').then(m => m.syncWidgetNearestService(updated, { id: userData?.choirId } as any)).catch(console.error);
+            }
             await setServiceAttendance(userData.choirId, serviceId, user.uid, status);
         } catch (error) {
             console.error("Voting failed", error);
@@ -124,10 +149,17 @@ export default function ServiceList({
                 title: newTitle,
                 type: newType,
                 date: newDate,
-                songs: []
+                songs: [],
+                attendanceReminderSent: false,
+                attendanceReminderRetryCount: 0
             };
             if (newTime) serviceData.time = newTime;
             if (newWarmupConductor) serviceData.warmupConductor = newWarmupConductor;
+
+            const tempId = 'temp_' + Date.now();
+            if (services) {
+                import('@/lib/widgetSync').then(m => m.syncWidgetNearestService([...services, { ...serviceData, id: tempId } as any], { id: userData?.choirId } as any)).catch(console.error);
+            }
 
             await addService(userData.choirId, serviceData);
 
@@ -135,7 +167,7 @@ export default function ServiceList({
             setNewTitle("Співанка");
             setNewType('rehearsal');
             setNewDate(new Date().toISOString().split('T')[0]);
-            setNewTime("10:00");
+            setNewTime("");
             setNewWarmupConductor("");
             setShowCustomWarmup(false);
         } catch (error) {
@@ -152,10 +184,20 @@ export default function ServiceList({
 
     const confirmDelete = async () => {
         if (!userData?.choirId || !serviceToDelete) return;
+        if (services) {
+            const updated = services.filter(s => s.id !== serviceToDelete);
+            import('@/lib/widgetSync').then(m => m.syncWidgetNearestService(updated, { id: userData?.choirId } as any)).catch(console.error);
+        }
         await deleteService(userData.choirId, serviceToDelete);
         setServiceToDelete(null);
     };
 
+    const cancelDelete = () => {
+        if (serviceToDelete && cardRefs.current[serviceToDelete]) {
+            cardRefs.current[serviceToDelete]?.reset();
+        }
+        setServiceToDelete(null);
+    }
 
     const formatDate = (dateStr: string) => {
         const [y, m, d] = dateStr.split('-').map(Number);
@@ -198,13 +240,22 @@ export default function ServiceList({
                     </button>
 
                     {effectiveCanEdit && !showArchive && (
-                        <button
-                            onClick={() => setShowTrashBin(true)}
-                            className="p-2 rounded-lg text-text-secondary hover:text-red-400 hover:bg-surface-highlight transition-colors"
-                            title="Корзина"
-                        >
-                            <Trash2 className="w-5 h-5" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => setShowScheduleModal(true)}
+                                className="p-2 rounded-lg text-text-secondary hover:text-primary hover:bg-surface-highlight transition-colors"
+                                title="Розклад"
+                            >
+                                <Settings className="w-5 h-5" />
+                            </button>
+                            <button
+                                onClick={() => setShowTrashBin(true)}
+                                className="p-2 rounded-lg text-text-secondary hover:text-red-400 hover:bg-surface-highlight transition-colors"
+                                title="Корзина"
+                            >
+                                <Trash2 className="w-5 h-5" />
+                            </button>
+                        </div>
                     )}
                 </div>
             </div>
@@ -262,11 +313,12 @@ export default function ServiceList({
                                     className="h-full"
                                 >
                                     <SwipeableCard
+                                        ref={el => { cardRefs.current[service.id] = el; }}
                                         onDelete={() => setServiceToDelete(service.id)}
                                         disabled={!effectiveCanEdit}
                                         className="rounded-2xl h-full"
                                         contentClassName=""
-                                        backgroundClassName="rounded-2xl my-px"
+                                        backgroundClassName="rounded-2xl"
                                         disableFullSwipe={!Capacitor.isNativePlatform()}
                                     >
                                         <div
@@ -288,7 +340,7 @@ export default function ServiceList({
                                                 <div className="flex items-center gap-3 mt-3">
                                                     <div className="flex items-center gap-1.5 text-xs text-text-secondary">
                                                         <Music className="w-3.5 h-3.5" />
-                                                        <span>{service.songs.length} пісень</span>
+                                                        <span>{(service.songs || []).length} пісень</span>
                                                     </div>
                                                     {service.time && (
                                                         <div className="flex items-center gap-1.5 text-xs text-text-secondary">
@@ -373,7 +425,7 @@ export default function ServiceList({
 
             <ConfirmationModal
                 isOpen={!!serviceToDelete}
-                onClose={() => setServiceToDelete(null)}
+                onClose={cancelDelete}
                 onConfirm={confirmDelete}
                 title="Видалити служіння?"
                 message="Служіння буде переміщено до корзини. Ви зможете відновити його протягом 7 днів."
@@ -541,6 +593,15 @@ export default function ServiceList({
                     choirId={userData.choirId}
                     onClose={() => setShowTrashBin(false)}
                     onRestore={() => { }} // Listener handles restore updates
+                />
+            )}
+
+            {/* Recurring Schedule */}
+            {showScheduleModal && userData?.choirId && (
+                <RecurringScheduleModal
+                    isOpen={showScheduleModal}
+                    onClose={() => setShowScheduleModal(false)}
+                    choirId={userData.choirId}
                 />
             )}
         </div>

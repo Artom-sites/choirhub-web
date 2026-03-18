@@ -3,7 +3,7 @@ import React from 'react';
 export default function TermsText() {
     return (
         <>
-            <p className="text-xs text-text-secondary">Останнє оновлення: 18 лютого 2026</p>
+            <p className="text-xs text-text-secondary">Останнє оновлення: 10 березня 2026</p>
 
             {/* 1. General */}
             <section className="space-y-3">
@@ -38,7 +38,8 @@ export default function TermsText() {
                 <ul className="list-disc pl-5 space-y-1 text-sm text-text-secondary">
                     <li>Управління репертуаром (пісні, ноти)</li>
                     <li>Планування служінь та розкладу</li>
-                    <li>Облік присутності хористів</li>
+                    <li>Облік присутності хористів (у т.ч. через голосування «Буду» / «Не буду»)</li>
+                    <li>Аналіз розширеної статистики хору (баланс голосів, відвідуваність)</li>
                     <li>Обмін інформацією через push-сповіщення</li>
                     <li>Доступ до каталогу МХО (МСЦ ЄХБ). Архів МХО використовується як відкритий інформаційний ресурс і не є власністю Додатку.</li>
                     <li>Автономний доступ до даних (офлайн режим)</li>

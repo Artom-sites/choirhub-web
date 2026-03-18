@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { getMessagingInstance, getToken, onMessage } from "@/lib/firebase";
 import { Capacitor } from "@capacitor/core";
 import { useAuth } from "@/contexts/AuthContext";
+import { App } from "@capacitor/app";
+import { Badge } from "@capawesome/capacitor-badge";
 
 // ------------------------------------------------------------------
 // MODULE-LEVEL SINGLETON STATE (Global across all hook instances)
@@ -12,7 +14,7 @@ let globalPermissionStatus: NotificationPermission | "unsupported" | "default" =
 let globalToken: string | null = null;
 let globalPreference = typeof window !== "undefined" ? localStorage.getItem('fcm_enabled') === 'true' : false;
 let isListenerSetup = false;
-let hasAutoRegistered = false;
+let lastAutoRegisteredUid: string | null = null;
 
 // Token State Listeners (Pub/Sub)
 const tokenListeners = new Set<(token: string | null) => void>();
@@ -140,15 +142,14 @@ export function useFcmToken() {
                 });
 
                 // Foreground notification listener
-                await FirebaseMessaging.addListener("notificationReceived", (notification) => {
-                    console.log("[FCM] Foreground notification:", notification);
+                await FirebaseMessaging.addListener("notificationReceived", (event) => {
+                    console.log("[FCM] Foreground notification:", event.notification);
                 });
 
                 // Notification action (tap) listener
-                const { PushNotifications } = await import('@capacitor/push-notifications');
-                await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-                    console.log("[FCM] Push Notification tap action:", action);
-                    const data = action.notification.data || {};
+                await FirebaseMessaging.addListener('notificationActionPerformed', (event) => {
+                    console.log("[FCM] Push Notification tap action:", event.actionId, event.notification);
+                    const data: any = event.notification.data || {};
                     const route = data.route || '/notifications';
                     const choirId = data.choirId || null;
 
@@ -156,6 +157,31 @@ export function useFcmToken() {
                     // Store route for App to pick up once mounted
                     localStorage.setItem('pendingNotificationRoute', JSON.stringify(payload));
                     window.dispatchEvent(new CustomEvent('app-push-route', { detail: payload }));
+                });
+
+                // Clear badges when app is opened
+                try {
+                    // Try to clear badge if the platform supports it
+                    if (FirebaseMessaging.removeAllDeliveredNotifications) {
+                        await FirebaseMessaging.removeAllDeliveredNotifications();
+                    }
+                    await Badge.clear();
+                } catch (e) {
+                    console.error("[FCM] Error clearing notifications:", e);
+                }
+
+                // Explicitly clear badges every time the app comes to the foreground
+                App.addListener('appStateChange', async ({ isActive }) => {
+                    if (isActive) {
+                        try {
+                            if (FirebaseMessaging.removeAllDeliveredNotifications) {
+                                await FirebaseMessaging.removeAllDeliveredNotifications();
+                            }
+                            await Badge.clear();
+                        } catch (e) {
+                            console.error("[FCM] Error clearing badge on resume:", e);
+                        }
+                    }
                 });
 
                 console.log("[FCM] Firebase Messaging listeners set up");
@@ -195,12 +221,9 @@ export function useFcmToken() {
 
     const saveTokenToFirestore = async (t: string, uid: string) => {
         try {
-            const cacheKey = 'fcm_reg_cache';
-            const cached = localStorage.getItem(cacheKey);
-            if (cached) {
-                const p = JSON.parse(cached);
-                if (p.t === t && p.u === uid) return;
-            }
+            // Always register token — do NOT cache-skip, because iOS can refresh
+            // tokens at any time and we must ensure the latest token is in Firestore.
+            console.log("[FCM] Registering token with server:", t.substring(0, 20) + "...");
 
             const { getFunctions, httpsCallable } = await import("firebase/functions");
             const { app } = await import("@/lib/firebase");
@@ -208,7 +231,6 @@ export function useFcmToken() {
             const registerFn = httpsCallable(functions, 'registerFcmToken');
             await registerFn({ token: t });
 
-            localStorage.setItem(cacheKey, JSON.stringify({ t, u: uid, ts: Date.now() }));
             console.log("[FCM] Token saved to Firestore:", t.substring(0, 20) + "...");
         } catch (e) {
             console.error("[FCM] Save to DB failed", e);
@@ -293,6 +315,19 @@ export function useFcmToken() {
                         return globalToken;
                     }
 
+                    // Force token grab if listener hasn't historically fired
+                    try {
+                        console.log("[FCM] Triggering explicit getToken() to force APNs mapping...");
+                        const { token } = await FirebaseMessaging.getToken();
+                        if (token) {
+                            console.log("[FCM] Received token from getToken():", token.substring(0, 20) + "...");
+                            await handleTokenReceived(token);
+                            return token;
+                        }
+                    } catch (e) {
+                         console.warn("[FCM] Explicit getToken() failed, falling back to listener race...", e);
+                    }
+
                     // Wait for listener to deliver the token (max 10s)
                     console.log("[FCM] Waiting for tokenReceived listener...");
                     const fcmToken = await new Promise<string | null>((resolve) => {
@@ -344,7 +379,7 @@ export function useFcmToken() {
             } finally {
                 setLoading(false);
                 registerPromise = null;
-                hasAutoRegistered = true;
+                lastAutoRegisteredUid = user?.uid || null;
             }
         })();
 
@@ -400,13 +435,13 @@ export function useFcmToken() {
     // 5. AUTO-REGISTER
     // ----------------------------------------
     useEffect(() => {
-        if (hasAutoRegistered || !user?.uid) return;
+        if (lastAutoRegisteredUid === user?.uid || !user?.uid) return;
 
         const performAutoRegister = async () => {
             const isEnabled = typeof window !== "undefined" && localStorage.getItem('fcm_enabled') === 'true';
 
             if (!isEnabled) {
-                hasAutoRegistered = true;
+                lastAutoRegisteredUid = user.uid;
                 return;
             }
 
@@ -414,7 +449,7 @@ export function useFcmToken() {
                 console.log("[useFcmToken] Syncing existing global token...");
                 // Just ensure it's in DB
                 saveTokenToFirestore(globalToken, user.uid);
-                hasAutoRegistered = true;
+                lastAutoRegisteredUid = user.uid;
                 return;
             }
 
@@ -422,7 +457,7 @@ export function useFcmToken() {
             await initPromise;
 
             console.log("[useFcmToken] Auto-registering...");
-            hasAutoRegistered = true;
+            lastAutoRegisteredUid = user.uid;
             enableNotifications("auto-register");
         };
 

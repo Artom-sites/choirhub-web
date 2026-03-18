@@ -238,10 +238,10 @@ export default function TrashBin({ choirId, onClose, onRestore, initialFilter = 
                                             </div>
                                         </div>
                                         {
-                                            isService && 'songs' in data && data.songs.length > 0 && (
+                                            isService && 'songs' in data && (data.songs || []).length > 0 && (
                                                 <div className="mt-3 pt-3 border-t border-border">
                                                     <p className="text-xs text-text-secondary">
-                                                        {data.songs.length} {data.songs.length === 1 ? 'пісня' : data.songs.length < 5 ? 'пісні' : 'пісень'}
+                                                        {(data.songs || []).length} {(data.songs || []).length === 1 ? 'пісня' : (data.songs || []).length < 5 ? 'пісні' : 'пісень'}
                                                     </p>
                                                 </div>
                                             )
