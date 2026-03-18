@@ -6,7 +6,7 @@ import { addSongToService, removeSongFromService, getChoir, updateService, setSe
 import { updateAttendanceCache } from "@/lib/attendanceCache";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRepertoire } from "@/contexts/RepertoireContext";
-import { ChevronLeft, Eye, X, Plus, Users, UserX, Check, Calendar, Music, UserCheck, AlertCircle, Trash2, User as UserIcon, CloudDownload, CheckCircle, Loader, ChevronDown, Mic2, BookOpen, Hand, Mic, Users2, MoreHorizontal, GripVertical, ListOrdered, Printer, Pencil, Save } from "lucide-react";
+import { ChevronLeft, Eye, X, Plus, Users, UserX, Check, Calendar, Music, UserCheck, AlertCircle, Trash2, User as UserIcon, CloudDownload, CheckCircle, Loader, ChevronDown, Mic2, BookOpen, Hand, Mic, Users2, MoreHorizontal, GripVertical, ListOrdered, Printer, Pencil, Save, Clock } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { Share } from '@capacitor/share';
@@ -2327,30 +2327,45 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                     value={editTitle}
                                     onChange={e => setEditTitle(e.target.value)}
                                     placeholder="Назва служіння..."
-                                    className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl focus:border-primary/50 focus:bg-surface outline-none transition-all"
+                                    className="w-full h-[50px] px-4 bg-surface-highlight text-text-primary border border-border rounded-xl focus:border-primary/50 focus:bg-surface outline-none transition-all"
                                 />
                             </div>
 
                             {/* Date */}
                             <div>
                                 <label className="text-xs text-text-secondary uppercase font-bold mb-2 block">Дата</label>
-                                <input
-                                    type="date"
-                                    value={editDate}
-                                    onChange={e => setEditDate(e.target.value)}
-                                    className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl focus:border-primary/50 focus:bg-surface outline-none transition-all"
-                                />
+                                <div className="relative w-full">
+                                    <div className="w-full h-[50px] flex items-center pl-[44px] pr-4 bg-surface-highlight border border-border rounded-xl text-text-primary text-[15px] focus-within:border-primary/50 focus-within:bg-surface transition-all">
+                                        {editDate ? editDate.split('-').reverse().join('.') : ''}
+                                    </div>
+                                    <input
+                                        type="date"
+                                        value={editDate}
+                                        onChange={e => setEditDate(e.target.value)}
+                                        className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer appearance-none"
+                                    />
+                                    <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary/70 pointer-events-none" />
+                                </div>
                             </div>
 
                             {/* Time */}
                             <div>
-                                <label className="text-xs text-text-secondary uppercase font-bold mb-2 block">Час (необов'язково)</label>
-                                <input
-                                    type="time"
-                                    value={editTime}
-                                    onChange={e => setEditTime(e.target.value)}
-                                    className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl focus:border-primary/50 focus:bg-surface outline-none transition-all"
-                                />
+                                <label className="text-xs text-text-secondary uppercase font-bold mb-2 flex items-center justify-between">
+                                    <span>Час</span>
+                                    <span className="text-[10px] text-text-secondary/50 lowercase font-medium tracking-normal">(необов'язково)</span>
+                                </label>
+                                <div className="relative w-full">
+                                    <div className="w-full h-[50px] flex items-center pl-[44px] pr-4 bg-surface-highlight border border-border rounded-xl text-text-primary text-[15px] focus-within:border-primary/50 focus-within:bg-surface transition-all">
+                                        {editTime || <span className="text-text-secondary/50">--:--</span>}
+                                    </div>
+                                    <input
+                                        type="time"
+                                        value={editTime}
+                                        onChange={e => setEditTime(e.target.value)}
+                                        className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer appearance-none"
+                                    />
+                                    <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary/70 pointer-events-none" />
+                                </div>
                             </div>
 
                             <div className="flex gap-3 mt-6">
