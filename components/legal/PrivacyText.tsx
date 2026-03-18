@@ -36,7 +36,7 @@ export default function PrivacyText() {
 
                 <h4 className="text-sm font-semibold text-text-primary mt-2">3.1. Облікові дані</h4>
                 <p className="text-sm text-text-secondary leading-relaxed">
-                    При авторизації через Google Sign-In ми отримуємо:
+                    При авторизації через підтримувані сервіси (Google Sign-In, Apple Sign-In або Email) ми отримуємо:
                 </p>
                 <ul className="list-disc pl-5 space-y-1 text-sm text-text-secondary">
                     <li>Ім&apos;я та прізвище</li>
@@ -55,7 +55,7 @@ export default function PrivacyText() {
                 <h4 className="text-sm font-semibold text-text-primary mt-2">3.3. Контент</h4>
                 <ul className="list-disc pl-5 space-y-1 text-sm text-text-secondary">
                     <li>Пісні: назва, композитор, категорія, тональність</li>
-                    <li>Файли нот (PDF)</li>
+                    <li>Медіафайли нот (PDF, зображення з камери або галереї, завантажені користувачем)</li>
                     <li>Плани служінь: дата, час, список пісень</li>
                     <li>Анотації до нот (зберігаються локально на пристрої)</li>
                 </ul>

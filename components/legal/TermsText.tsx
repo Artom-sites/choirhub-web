@@ -50,7 +50,7 @@ export default function TermsText() {
             <section className="space-y-3">
                 <h3 className="text-base font-semibold text-text-primary">4. Реєстрація та обліковий запис</h3>
                 <p className="text-sm text-text-secondary leading-relaxed">
-                    Для використання Додатку необхідна авторизація через обліковий запис Google (Google Sign-In).
+                    Для використання Додатку необхідна авторизація через підтримувані сервіси (Google, Apple) або email.
                     Ви несете відповідальність за безпеку свого облікового запису та всі дії,
                     здійснені під вашими обліковими даними.
                 </p>
