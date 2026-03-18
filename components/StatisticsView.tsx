@@ -183,7 +183,7 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                     <p className="text-text-secondary text-sm mt-1">Додайте служіння, щоб побачити дані</p>
                 </div>
             ) : (
-                <div className="p-4 space-y-4 pb-24 max-w-lg mx-auto">
+                <div className="p-4 space-y-4 pb-24 md:max-w-3xl lg:max-w-5xl mx-auto">
 
                     {/* Summary Cards Row */}
                     <div className="grid grid-cols-3 gap-2">
@@ -439,7 +439,7 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                             <h2 className="font-bold text-lg">Статистика по пісням ({(stats.allSongs || []).length})</h2>
                         </div>
                         <div className="flex-1 overflow-y-auto p-4 pb-safe">
-                            <div className="space-y-2 max-w-lg mx-auto">
+                            <div className="space-y-2 md:max-w-3xl lg:max-w-5xl mx-auto">
                                 { (stats.allSongs || []).map((song, idx) => (
                                     <div key={song.songId} className="flex items-center gap-3 bg-surface border border-border p-3 rounded-xl">
                                         <span className={`text-xs w-6 text-center font-bold tabular-nums ${idx < 3 ? 'text-pink-400' : 'text-text-secondary'}`}>{idx + 1}</span>
