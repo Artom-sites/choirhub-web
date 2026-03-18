@@ -936,23 +936,56 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
     const handlePrint = async () => {
         try {
             const items = programItems.map((item, idx) => {
-                const config = programTypeConfig[item.type] || programTypeConfig['other'];
-                const typeLabel = config.label || 'Інше';
-                let songTitle = '';
-                if (item.title) {
-                    songTitle = item.title;
+                const explicitType = item.type || 'other';
+                let config = programTypeConfig[explicitType] || programTypeConfig['other'];
+
+                let displayTitle = item.title || '';
+                
+                // Auto-infer older items that were imported or missing types
+                if (!item.type || item.type === 'other') {
+                    const lower = displayTitle.toLowerCase();
+                    if (lower.includes('заг. спів') || lower.includes('загальний спів')) config = programTypeConfig['congregation'];
+                    else if (lower.includes('вірш')) config = programTypeConfig['verse'];
+                    else if (lower.includes('хор') || lower.includes('пісня хору')) config = programTypeConfig['choir'];
+                    else if (lower.includes('молитва')) config = programTypeConfig['prayer'];
+                    else if (lower.includes('проповідь')) config = programTypeConfig['sermon'];
+                    else if (lower.includes('соло')) config = programTypeConfig['solo'];
+                    else if (lower.includes('ансамбль')) config = programTypeConfig['ensemble'];
                 }
+
+                if (config.label === 'Хор' && displayTitle.toLowerCase().includes('пісня хору')) {
+                    displayTitle = displayTitle.replace(/пісня хору\s*-?\s*/i, '').trim();
+                }
+
+                // If songId is present, try to get the real song title
+                let displaySongTitle = item.songTitle || '';
                 if ((item as any).type === 'song' && (item as any).songId) {
                     const found = availableSongs?.find((rs: any) => rs.id === (item as any).songId);
-                    if (found) songTitle = found.title;
+                    if (found) displaySongTitle = found.title;
                 }
-                // Sub line: song title + credits (skip if same as type label)
+
+                const isLegacyOther = config.label === 'Інше' && displayTitle && displayTitle.toLowerCase() !== 'інше';
+                const mainDisplayName = isLegacyOther ? displayTitle : config.label;
+
+                let subtitleText = '';
+                if (config.label === 'Хор') {
+                    subtitleText = displaySongTitle || (displayTitle.toLowerCase() !== 'хор' ? displayTitle : '');
+                } else if (!isLegacyOther && displayTitle && displayTitle.toLowerCase() !== config.label.toLowerCase()) {
+                    subtitleText = displayTitle;
+                }
+
                 const subParts: string[] = [];
-                if (songTitle && songTitle.toLowerCase() !== typeLabel.toLowerCase()) subParts.push(songTitle);
+                if (subtitleText) subParts.push(subtitleText);
+                if (item.performer) subParts.push(item.performer);
+                if (item.conductor) subParts.push('Дир: ' + item.conductor);
+                if (item.pianist) subParts.push('Акомп: ' + item.pianist);
+                if (item.note) subParts.push('(' + item.note + ')');
+
                 const subHtml = subParts.length > 0
-                    ? '<div class="sub">' + subParts.join(' · ') + '</div>'
+                    ? '<div class="sub">' + subParts.join(' <span style="opacity:0.6;margin:0 4px">•</span> ') + '</div>'
                     : '';
-                return '<div class="item"><div class="number">' + (idx + 1) + '</div><div class="content"><div class="main">' + typeLabel + '</div>' + subHtml + '</div></div>';
+
+                return '<div class="item"><div class="number">' + (idx + 1) + '</div><div class="content"><div class="main">' + mainDisplayName + '</div>' + subHtml + '</div></div>';
             }).join('');
 
             const dateStr = new Date(currentService.date).toLocaleDateString("uk-UA", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
