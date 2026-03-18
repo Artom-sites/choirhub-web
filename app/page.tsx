@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Music2, Check, ExternalLink, User, Mail, Eye, EyeOff, UserX, AlertTriangle, ArrowLeft, LogOut, Loader2, Apple } from "lucide-react";
 import { Capacitor } from '@capacitor/core';
 import { Dialog } from '@capacitor/dialog';
+import { SplashScreen } from '@capacitor/splash-screen';
 import { useAuth } from "@/contexts/AuthContext";
 import { createUser, getChoir, updateChoirMembers, joinChoir, claimMember, createChoir } from "@/lib/db";
 import { Choir, UserData } from "@/types";
@@ -106,6 +107,11 @@ function SetupPageContent() {
             return null;
         }
         return <Preloader />;
+    }
+
+    // Hide splash screen on native once the auth check is complete and we decided to render the login UI
+    if (typeof window !== 'undefined' && Capacitor.isNativePlatform()) {
+        SplashScreen.hide().catch(() => {});
     }
 
 
