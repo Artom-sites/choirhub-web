@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import SwipeableCard, { SwipeableCardRef } from "./SwipeableCard";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
+import { ActionSheet, ActionSheetButtonStyle } from '@capacitor/action-sheet';
 
 import { resolvePdfUrlToBase64 } from "../lib/cache";
 import OfflinePdfModal from "./OfflinePdfModal";
@@ -936,6 +937,26 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
 
 
     const handlePrint = async () => {
+        if (Capacitor.isNativePlatform()) {
+            const result = await ActionSheet.showActions({
+                title: 'Формат друку',
+                message: 'Оберіть скільки копій програми розмістити на одному аркуші А4:',
+                options: [
+                    { title: '1 (Крупно)' },
+                    { title: '2 (А5, Горизонтально)' },
+                    { title: '4 (А6, Компактно)' },
+                    { title: 'Скасувати', style: ActionSheetButtonStyle.Cancel }
+                ]
+            });
+            if (result.index === 3) return; // Cancel
+            const formats = [1, 2, 4];
+            await generatePdf(formats[result.index]);
+        } else {
+            await generatePdf(2); // default for web
+        }
+    };
+
+    const generatePdf = async (copies: number) => {
         try {
             const items = programItems.map((item, idx) => {
                 const explicitType = item.type || 'other';
@@ -992,27 +1013,75 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
             const timeStr = currentService.time ? ' о ' + currentService.time : '';
 
             const singleProgramHtml = `
-                <h1 style="text-align: center; font-size: 26px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; font-weight: 800; color: #000;">${currentService.title}</h1>
-                <div style="text-align: center; font-size: 16px; color: #555; margin-bottom: 30px; font-weight: 500;">${dateStr}${timeStr}</div>
+                <div class="program-title">${currentService.title}</div>
+                <div class="program-date">${dateStr}${timeStr}</div>
                 ${items}
             `;
 
-            const printHtml = `
-                <div style="width: 1400px; padding: 60px; background: white; color: black; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; display: flex;">
-                    <style>
-                        .program-column { flex: 1; padding: 0 40px; }
-                        .program-column:first-child { border-right: 1px dashed #ccc; }
-                        .item { display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px; }
-                        .number { width: 28px; text-align: right; font-size: 18px; color: #444; font-weight: 600; }
-                        .content { flex: 1; font-size: 18px; line-height: 1.35; }
-                        .main { font-weight: 700; color: #000; }
-                        .extra { color: #333; }
-                        .extra i { font-style: italic; font-weight: normal; }
-                    </style>
-                    <div class="program-column">${singleProgramHtml}</div>
-                    <div class="program-column">${singleProgramHtml}</div>
-                </div>
-            `;
+            let printHtml = '';
+            let pdfOrientation: 'portrait' | 'landscape' = 'portrait';
+
+            if (copies === 1) {
+                printHtml = `
+                    <div style="width: 800px; padding: 60px; background: white; color: black; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                        <style>
+                            .program-title { text-align: center; font-size: 34px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; font-weight: 800; color: #000; }
+                            .program-date { text-align: center; font-size: 20px; color: #555; margin-bottom: 60px; font-weight: 500; }
+                            .item { display: flex; align-items: baseline; gap: 24px; margin-bottom: 32px; }
+                            .number { width: 36px; text-align: right; font-size: 22px; color: #666; line-height: 1; font-weight: 500; }
+                            .content { flex: 1; font-size: 22px; line-height: 1.35; }
+                            .main { font-weight: 700; color: #000; font-size: 26px; line-height: 1.2; }
+                            .extra { color: #444; font-size: 20px; }
+                            .extra i { font-style: italic; font-weight: normal; }
+                        </style>
+                        ${singleProgramHtml}
+                    </div>
+                `;
+                pdfOrientation = 'portrait';
+            } else if (copies === 2) {
+                printHtml = `
+                    <div style="width: 1400px; padding: 60px; background: white; color: black; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; display: flex;">
+                        <style>
+                            .program-column { flex: 1; padding: 0 40px; }
+                            .program-column:first-child { border-right: 1px dashed #ccc; }
+                            .program-title { text-align: center; font-size: 26px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; font-weight: 800; color: #000; }
+                            .program-date { text-align: center; font-size: 16px; color: #555; margin-bottom: 30px; font-weight: 500; }
+                            .item { display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px; }
+                            .number { width: 28px; text-align: right; font-size: 18px; color: #444; font-weight: 600; }
+                            .content { flex: 1; font-size: 18px; line-height: 1.35; }
+                            .main { font-weight: 700; color: #000; }
+                            .extra { color: #333; }
+                            .extra i { font-style: italic; font-weight: normal; }
+                        </style>
+                        <div class="program-column">${singleProgramHtml}</div>
+                        <div class="program-column">${singleProgramHtml}</div>
+                    </div>
+                `;
+                pdfOrientation = 'landscape';
+            } else if (copies === 4) {
+                printHtml = `
+                    <div style="width: 1200px; height: 1697px; padding: 40px; background: white; color: black; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;">
+                        <style>
+                            .program-cell { padding: 30px; }
+                            .program-cell:nth-child(odd) { border-right: 1px dashed #ccc; }
+                            .program-cell:nth-child(1), .program-cell:nth-child(2) { border-bottom: 1px dashed #ccc; }
+                            .program-title { text-align: center; font-size: 22px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; font-weight: 800; color: #000; }
+                            .program-date { text-align: center; font-size: 14px; color: #555; margin-bottom: 20px; font-weight: 500; }
+                            .item { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+                            .number { width: 20px; text-align: right; font-size: 15px; color: #444; font-weight: 600; }
+                            .content { flex: 1; font-size: 15px; line-height: 1.3; }
+                            .main { font-weight: 700; color: #000; }
+                            .extra { color: #333; }
+                            .extra i { font-style: italic; font-weight: normal; }
+                        </style>
+                        <div class="program-cell">${singleProgramHtml}</div>
+                        <div class="program-cell">${singleProgramHtml}</div>
+                        <div class="program-cell">${singleProgramHtml}</div>
+                        <div class="program-cell">${singleProgramHtml}</div>
+                    </div>
+                `;
+                pdfOrientation = 'portrait';
+            }
 
             const container = document.createElement('div');
             container.style.position = 'absolute';
@@ -1031,7 +1100,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                 const imgData = canvas.toDataURL('image/jpeg', 0.98);
                 
                 const pdf = new jsPDF({
-                    orientation: 'landscape',
+                    orientation: pdfOrientation,
                     unit: 'px',
                     format: [canvas.width / 2, canvas.height / 2]
                 });
