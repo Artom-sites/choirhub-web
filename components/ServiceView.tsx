@@ -979,30 +979,38 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                 const subParts: string[] = [];
                 if (subtitleText) subParts.push(subtitleText);
                 if (item.performer) subParts.push(item.performer);
-                if (item.note) subParts.push('(' + item.note + ')');
+                if (item.note) subParts.push(`(${item.note})`);
 
-                const subHtml = subParts.length > 0
-                    ? '<div class="sub">' + subParts.join(' <span style="opacity:0.6;margin:0 4px">•</span> ') + '</div>'
+                const extraHtml = subParts.length > 0
+                    ? `<span class="extra">: <i>${subParts.join(', ')}</i></span>`
                     : '';
 
-                return '<div class="item"><div class="number">' + (idx + 1) + '</div><div class="content"><div class="main">' + mainDisplayName + '</div>' + subHtml + '</div></div>';
+                return `<div class="item"><div class="number">${idx + 1}.</div><div class="content"><span class="main">${mainDisplayName}</span>${extraHtml}</div></div>`;
             }).join('');
 
             const dateStr = new Date(currentService.date).toLocaleDateString("uk-UA", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
             const timeStr = currentService.time ? ' о ' + currentService.time : '';
 
+            const singleProgramHtml = `
+                <h1 style="text-align: center; font-size: 26px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; font-weight: 800; color: #000;">${currentService.title}</h1>
+                <div style="text-align: center; font-size: 16px; color: #555; margin-bottom: 30px; font-weight: 500;">${dateStr}${timeStr}</div>
+                ${items}
+            `;
+
             const printHtml = `
-                <div style="width: 800px; padding: 60px; background: white; color: black; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                <div style="width: 1400px; padding: 60px; background: white; color: black; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; display: flex;">
                     <style>
-                        .item { display: flex; align-items: baseline; gap: 24px; margin-bottom: 32px; }
-                        .number { width: 36px; text-align: right; font-size: 22px; color: #666; line-height: 1; font-weight: 500; }
-                        .content { flex: 1; }
-                        .main { font-weight: 700; font-size: 26px; line-height: 1.2; }
-                        .sub { font-size: 20px; color: #444; margin-top: 8px; line-height: 1.3; }
+                        .program-column { flex: 1; padding: 0 40px; }
+                        .program-column:first-child { border-right: 1px dashed #ccc; }
+                        .item { display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px; }
+                        .number { width: 28px; text-align: right; font-size: 18px; color: #444; font-weight: 600; }
+                        .content { flex: 1; font-size: 18px; line-height: 1.35; }
+                        .main { font-weight: 700; color: #000; }
+                        .extra { color: #333; }
+                        .extra i { font-style: italic; font-weight: normal; }
                     </style>
-                    <h1 style="text-align: center; font-size: 34px; margin-bottom: 12px; font-weight: 700;">${currentService.title}</h1>
-                    <div style="text-align: center; font-size: 20px; color: #555; margin-bottom: 60px;">${dateStr}${timeStr}</div>
-                    ${items}
+                    <div class="program-column">${singleProgramHtml}</div>
+                    <div class="program-column">${singleProgramHtml}</div>
                 </div>
             `;
 
@@ -1023,7 +1031,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                 const imgData = canvas.toDataURL('image/jpeg', 0.98);
                 
                 const pdf = new jsPDF({
-                    orientation: 'portrait',
+                    orientation: 'landscape',
                     unit: 'px',
                     format: [canvas.width / 2, canvas.height / 2]
                 });
