@@ -701,17 +701,26 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
             setKnownPianists(prev => [...prev, tempPianist]);
         }
 
-        // Also update the song in repertoire with the new pianist (only if song doesn't already have a pianist)
-        if (tempPianist && currentSong.songId) {
+        // Also update the song in repertoire with the new conductor/pianist (only if song doesn't already have one)
+        if ((tempPianist || tempConductor) && currentSong.songId) {
             try {
-                // Find the song in availableSongs to check if it already has a pianist
+                // Find the song in availableSongs to check if it already has these fields
                 const originalSong = availableSongs.find(s => s.id === currentSong.songId);
-                if (originalSong && !originalSong.pianist) {
+                const songUpdates: any = {};
+                
+                if (tempPianist && originalSong && !originalSong.pianist) {
+                    songUpdates.pianist = tempPianist;
+                }
+                if (tempConductor && originalSong && !originalSong.conductor) {
+                    songUpdates.conductor = tempConductor;
+                }
+                
+                if (Object.keys(songUpdates).length > 0) {
                     const { updateSong } = await import("@/lib/db");
-                    await updateSong(userData.choirId, currentSong.songId, { pianist: tempPianist });
+                    await updateSong(userData.choirId, currentSong.songId, songUpdates);
                 }
             } catch (e) {
-                console.error("Failed to update song pianist in repertoire:", e);
+                console.error("Failed to update song details in repertoire:", e);
             }
         }
     };
