@@ -7,6 +7,15 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
+  async redirects() {
+    return [
+      {
+        source: '/landing',
+        destination: '/landing/',
+        permanent: true,
+      },
+    ];
+  },
   // Rewrites are not supported in static export
   // async rewrites() {
   //   return [
@@ -59,5 +68,19 @@ const nextConfig: NextConfig = {
     ];
   },
 };
+if (!process.env.CAPACITOR) {
+  nextConfig.rewrites = async () => {
+    return [
+      {
+        source: '/landing',
+        destination: 'https://artom-sites.github.io/mychoir-landing/',
+      },
+      {
+        source: '/landing/:path*',
+        destination: 'https://artom-sites.github.io/mychoir-landing/:path*',
+      },
+    ];
+  };
+}
 
 export default nextConfig;
