@@ -144,13 +144,17 @@ export default function EditSongModal({
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+            const target = event.target as Element;
+            if (target.closest && target.closest('.dropdown-portal')) {
+                return; // Click was inside a portal dropdown, don't close it
+            }
+            if (dropdownRef.current && !dropdownRef.current.contains(target as Node)) {
                 setIsConductorDropdownOpen(false);
             }
-            if (pianistDropdownRef.current && !pianistDropdownRef.current.contains(event.target as Node)) {
+            if (pianistDropdownRef.current && !pianistDropdownRef.current.contains(target as Node)) {
                 setIsPianistDropdownOpen(false);
             }
-            if (themeDropdownRef.current && !themeDropdownRef.current.contains(event.target as Node)) {
+            if (themeDropdownRef.current && !themeDropdownRef.current.contains(target as Node)) {
                 setIsThemeDropdownOpen(false);
             }
         }
@@ -358,7 +362,7 @@ export default function EditSongModal({
                                         {isThemeDropdownOpen && (
                                             <DropdownPortal>
                                                 <div 
-                                                    className="fixed mt-1 bg-surface-highlight rounded-xl border border-border max-h-48 overflow-y-auto z-[300] shadow-2xl"
+                                                    className="fixed mt-1 bg-surface-highlight rounded-xl border border-border max-h-48 overflow-y-auto z-[300] shadow-2xl dropdown-portal"
                                                     style={{
                                                         top: `${themeDropdownRect.top}px`,
                                                         left: `${themeDropdownRect.left}px`,
@@ -422,7 +426,7 @@ export default function EditSongModal({
                                         {isConductorDropdownOpen && (
                                             <DropdownPortal>
                                                 <div 
-                                                    className="fixed mt-1 bg-surface-highlight rounded-xl border border-border max-h-48 overflow-y-auto z-[300] shadow-2xl"
+                                                    className="fixed mt-1 bg-surface-highlight rounded-xl border border-border max-h-48 overflow-y-auto z-[300] shadow-2xl dropdown-portal"
                                                     style={{
                                                         top: `${conductorDropdownRect.top}px`,
                                                         left: `${conductorDropdownRect.left}px`,
@@ -497,7 +501,7 @@ export default function EditSongModal({
                                         {isPianistDropdownOpen && (
                                             <DropdownPortal>
                                                 <div 
-                                                    className="fixed mt-1 bg-surface-highlight rounded-xl border border-border max-h-48 overflow-y-auto z-[300] shadow-2xl"
+                                                    className="fixed mt-1 bg-surface-highlight rounded-xl border border-border max-h-48 overflow-y-auto z-[300] shadow-2xl dropdown-portal"
                                                     style={{
                                                         top: `${pianistDropdownRect.top}px`,
                                                         left: `${pianistDropdownRect.left}px`,
