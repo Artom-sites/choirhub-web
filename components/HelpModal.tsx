@@ -67,7 +67,7 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                         </div>
 
                         {/* Menu Dropdown - Mobile Friendly Tabs */}
-                        <div className="w-full overflow-x-auto flex items-center gap-1.5 px-4 py-3 border-t border-border bg-surface shrink-0 hide-scrollbar">
+                        <div className="md:hidden w-full overflow-x-auto flex items-center gap-1.5 px-4 py-3 border-t border-border bg-surface shrink-0 hide-scrollbar">
                             {tabs.map(tab => (
                                 <button
                                     key={tab.id}
@@ -84,9 +84,28 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                         </div>
                     </div>
 
-                    {/* Content Area */}
-                    <div className="flex-1 overflow-y-auto w-full">
-                        <div className="p-4 md:p-6 max-w-2xl mx-auto w-full pb-[max(env(safe-area-inset-bottom),24px)]">
+                    {/* Content Area with Desktop Sidebar */}
+                    <div className="flex-1 overflow-hidden flex flex-row w-full">
+                        {/* Desktop Sidebar */}
+                        <div className="hidden md:flex flex-col w-64 lg:w-72 shrink-0 border-r border-border bg-surface/30 p-4 gap-1 overflow-y-auto pb-[max(env(safe-area-inset-bottom),24px)]">
+                            {tabs.map(tab => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 border ${activeTab === tab.id
+                                        ? 'bg-primary/5 text-primary border-primary/20 shadow-sm'
+                                        : 'bg-transparent text-text-secondary border-transparent hover:bg-surface-highlight hover:text-text-primary'
+                                        }`}
+                                >
+                                    <tab.icon className="w-5 h-5" />
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Scrolling Content Pane */}
+                        <div className="flex-1 overflow-y-auto w-full bg-background relative">
+                            <div className="p-4 md:p-8 lg:p-10 max-w-6xl mx-auto w-full pb-[max(env(safe-area-inset-bottom),32px)]">
                             {/* GENERAL TAB */}
                             {activeTab === 'general' && (
                                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
@@ -137,10 +156,10 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                             {/* ROLES TAB */}
                             {activeTab === 'roles' && (
                                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                                    <h3 className="text-2xl font-bold text-text-primary mb-6">Рівні Доступу</h3>
+                                    <h3 className="text-2xl font-bold text-text-primary mb-6 md:mb-8">Рівні Доступу</h3>
 
-                                    <div className="space-y-4">
-                                        <div className="p-5 rounded-3xl bg-indigo-500/10 border border-indigo-500/20">
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                                        <div className="p-5 md:p-6 rounded-3xl bg-indigo-500/10 border border-indigo-500/20 h-full">
                                             <div className="flex items-center gap-3 mb-3">
                                                 <Shield className="w-5 h-5 text-indigo-400" />
                                                 <h4 className="font-bold text-text-primary">Регент (Admin)</h4>
@@ -157,7 +176,7 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                                             </ul>
                                         </div>
 
-                                        <div className="p-5 rounded-3xl bg-emerald-500/10 border border-emerald-500/20">
+                                        <div className="p-5 md:p-6 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 h-full">
                                             <div className="flex items-center gap-3 mb-3">
                                                 <User className="w-5 h-5 text-emerald-400" />
                                                 <h4 className="font-bold text-text-primary">Помічник регента</h4>
@@ -172,7 +191,7 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                                             </ul>
                                         </div>
 
-                                        <div className="p-5 rounded-3xl bg-surface border border-border">
+                                        <div className="p-5 md:p-6 rounded-3xl bg-surface border border-border h-full">
                                             <div className="flex items-center gap-3 mb-3">
                                                 <User className="w-5 h-5 text-gray-400" />
                                                 <h4 className="font-bold text-text-primary">Хорист (Member)</h4>
@@ -186,7 +205,7 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                                             </ul>
                                         </div>
 
-                                        <div className="p-5 rounded-3xl bg-surface border border-border mt-4">
+                                        <div className="p-5 md:p-6 rounded-3xl bg-surface border border-border h-full lg:col-span-2">
                                             <h4 className="font-bold text-text-primary mb-2">🎭 Кастомні Ролі та Партії</h4>
                                             <p className="text-sm text-text-secondary">
                                                 Регент може створювати власні ролі (наприклад, &quot;Акомпаніатор&quot;) та кастомні вокальні партії (наприклад, &quot;Баритон&quot; або &quot;Учень&quot;). Ці кастомні партії автоматично враховуються у статистиці балансу голосів.
@@ -199,10 +218,10 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                             {/* SONGS TAB */}
                             {activeTab === 'songs' && (
                                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                                    <h3 className="text-2xl font-bold text-text-primary mb-6">Робота з піснями</h3>
+                                    <h3 className="text-2xl font-bold text-text-primary mb-6 md:mb-8">Робота з піснями</h3>
 
-                                    <div className="space-y-4">
-                                        <div className="bg-surface p-5 rounded-3xl border border-border">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                                        <div className="bg-surface p-5 md:p-6 rounded-3xl border border-border h-full">
                                             <h4 className="font-bold text-text-primary mb-2 flex items-center gap-2">
                                                 <FileText className="w-5 h-5 text-blue-400" />
                                                 Партії та партитура
@@ -230,7 +249,7 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                                             </div>
                                         </div>
 
-                                        <div className="bg-surface p-5 rounded-3xl border border-border">
+                                        <div className="bg-surface p-5 md:p-6 rounded-3xl border border-border h-full">
                                             <h4 className="font-bold text-text-primary mb-2 flex items-center gap-2">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
                                                 Анотації та нотатки
@@ -283,10 +302,10 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                             {/* SERVICES TAB */}
                             {activeTab === 'services' && (
                                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                                    <h3 className="text-2xl font-bold text-text-primary mb-6">Служіння та розклад</h3>
+                                    <h3 className="text-2xl font-bold text-text-primary mb-6 md:mb-8">Служіння та розклад</h3>
 
-                                    <div className="space-y-4">
-                                        <div className="bg-surface p-5 rounded-3xl border border-border">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                                        <div className="bg-surface p-5 md:p-6 rounded-3xl border border-border h-full">
                                             <h4 className="font-bold text-text-primary mb-2">📅 Створення служіння</h4>
                                             <p className="text-sm text-text-secondary">
                                                 Регент може створити нове служіння з датою, часом та списком пісень.
@@ -331,10 +350,10 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                             {/* ADMIN TAB */}
                             {activeTab === 'admin' && (
                                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                                    <h3 className="text-2xl font-bold text-text-primary mb-6">Інструменти Регента</h3>
+                                    <h3 className="text-2xl font-bold text-text-primary mb-6 md:mb-8">Інструменти Регента</h3>
 
-                                    <div className="space-y-6">
-                                        <section>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                                        <section className="bg-surface p-5 md:p-6 rounded-3xl border border-border h-full">
                                             <h4 className="text-lg font-bold text-text-primary mb-3 flex items-center gap-2">
                                                 <span className="w-6 h-6 rounded-full bg-surface-highlight border border-border flex items-center justify-center text-xs">1</span>
                                                 Коди запрошення 🔑
@@ -348,7 +367,7 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                                             </ul>
                                         </section>
 
-                                        <section>
+                                        <section className="bg-surface p-5 md:p-6 rounded-3xl border border-border h-full">
                                             <h4 className="text-lg font-bold text-text-primary mb-3 flex items-center gap-2">
                                                 <span className="w-6 h-6 rounded-full bg-surface-highlight border border-border flex items-center justify-center text-xs">2</span>
                                                 Керування учасниками 👥
@@ -361,7 +380,7 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                                             </ul>
                                         </section>
 
-                                        <section>
+                                        <section className="bg-surface p-5 md:p-6 rounded-3xl border border-border h-full">
                                             <h4 className="text-lg font-bold text-text-primary mb-3 flex items-center gap-2">
                                                 <span className="w-6 h-6 rounded-full bg-surface-highlight border border-border flex items-center justify-center text-xs">3</span>
                                                 Сповіщення 📢
@@ -372,7 +391,7 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                                             </p>
                                         </section>
 
-                                        <section>
+                                        <section className="bg-surface p-5 md:p-6 rounded-3xl border border-border h-full">
                                             <h4 className="text-lg font-bold text-text-primary mb-3 flex items-center gap-2">
                                                 <span className="w-6 h-6 rounded-full bg-surface-highlight border border-border flex items-center justify-center text-xs">4</span>
                                                 Статистика 📊
@@ -383,7 +402,7 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                                             </p>
                                         </section>
 
-                                        <section>
+                                        <section className="bg-surface p-5 md:p-6 rounded-3xl border border-border h-full">
                                             <h4 className="text-lg font-bold text-text-primary mb-3 flex items-center gap-2">
                                                 <span className="w-6 h-6 rounded-full bg-surface-highlight border border-border flex items-center justify-center text-xs">5</span>
                                                 Налаштування хору ⚙️
@@ -400,10 +419,10 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                             {/* NOTIFICATIONS TAB */}
                             {activeTab === 'notifications' && (
                                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                                    <h3 className="text-2xl font-bold text-text-primary mb-6">Сповіщення</h3>
+                                    <h3 className="text-2xl font-bold text-text-primary mb-6 md:mb-8">Сповіщення</h3>
 
-                                    <div className="space-y-4">
-                                        <div className="bg-surface p-5 rounded-3xl border border-border">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                                        <div className="bg-surface p-5 md:p-6 rounded-3xl border border-border h-full">
                                             <h4 className="font-bold text-text-primary mb-2">🔔 Push-сповіщення</h4>
                                             <p className="text-sm text-text-secondary">
                                                 Отримуйте сповіщення про нові служіння, зміни в розкладі та
@@ -424,7 +443,7 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                                             </ul>
                                         </div>
 
-                                        <div className="bg-amber-500/10 p-5 rounded-3xl border border-amber-500/20">
+                                        <div className="bg-amber-500/10 p-5 md:p-6 rounded-3xl border border-amber-500/20 h-full md:col-span-2">
                                             <h4 className="font-bold text-text-primary mb-2">⚠️ Важливо</h4>
                                             {Capacitor.isNativePlatform() ? (
                                                 <p className="text-sm text-text-secondary">
@@ -444,10 +463,10 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                             {/* FAQ TAB */}
                             {activeTab === 'faq' && (
                                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                                    <h3 className="text-2xl font-bold text-text-primary mb-6">Часті питання</h3>
+                                    <h3 className="text-2xl font-bold text-text-primary mb-6 md:mb-8">Часті питання</h3>
 
-                                    <div className="space-y-4">
-                                        <div className="bg-surface p-5 rounded-3xl border border-border">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                                        <div className="bg-surface p-5 md:p-6 rounded-3xl border border-border h-full">
                                             <h4 className="font-bold text-text-primary mb-2">Як приєднатися до хору?</h4>
                                             <p className="text-sm text-text-secondary">
                                                 Отримайте код запрошення від регента вашого хору.
@@ -501,6 +520,7 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                                     </div>
                                 </div>
                             )}
+                            </div>
                         </div>
                     </div>
                 </motion.div>

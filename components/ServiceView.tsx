@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useRef } from "react";
 import { Service, ServiceSong, SimpleSong, Choir, ChoirMember, ProgramItem, ProgramItemType } from "@/types";
-import { addSongToService, removeSongFromService, getChoir, updateService, setServiceAttendance, addKnownConductor, addKnownPianist, finalizeService } from "@/lib/db";
+import { addSongToService, removeSongFromService, getChoir, updateService, setServiceAttendance, addKnownConductor, addKnownPianist } from "@/lib/db";
+import { getFirstNameInitial } from "@/lib/utils";
 import { updateAttendanceCache } from "@/lib/attendanceCache";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRepertoire } from "@/contexts/RepertoireContext";
@@ -747,27 +748,29 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
     };
 
     const handleSaveAttendance = async () => {
-        if (!userData?.choirId) return;
+        if (!userData?.choirId || !userData?.id) return;
         try {
+            // Single atomic write: attendance + finalization in one Firestore request.
+            // Eliminates race condition and false errors for attendance-permission users.
+            const now = new Date().toISOString();
             await updateService(userData.choirId, currentService.id, {
                 absentMembers,
-                confirmedMembers
+                confirmedMembers,
+                isFinalized: true,
+                finalizedAt: now,
+                finalizedBy: userData.id,
             });
 
-            let finalUpdate = { ...currentService, absentMembers, confirmedMembers };
-
-            // Always finalize when admin explicitly saves attendance.
-            // The save button is already disabled before service start time,
-            // and the backend guard prevents premature finalization even if UI is bypassed.
-            if (userData?.id) {
-                await finalizeService(userData.choirId, currentService.id, userData.id);
-                finalUpdate.isFinalized = true;
-                finalUpdate.finalizedAt = new Date().toISOString();
-                finalUpdate.finalizedBy = userData.id;
-            }
+            const finalUpdate = {
+                ...currentService,
+                absentMembers,
+                confirmedMembers,
+                isFinalized: true,
+                finalizedAt: now,
+                finalizedBy: userData.id,
+            };
 
             setCurrentService(finalUpdate);
-            // Persist to attendance cache immediately
             updateAttendanceCache(userData.choirId, [finalUpdate]);
             setShowAttendance(false);
         } catch (error) {
@@ -2161,7 +2164,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                                         : isConfirmed ? 'bg-green-500/10 text-green-500'
                                                             : 'bg-surface-highlight text-text-secondary'
                                                         }`}>
-                                                        {member.name?.[0]?.toUpperCase()}
+                                                        {getFirstNameInitial(member.name)}
                                                     </div>
 
                                                     <div className="min-w-0">

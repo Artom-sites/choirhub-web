@@ -91,6 +91,10 @@ async function syncUserClaims(userId) {
     const claims = { choirs };
     if (isSuperAdmin)
         claims.superAdmin = true;
+    // Inject global permissions into token
+    if (data.permissions && Array.isArray(data.permissions) && data.permissions.length > 0) {
+        claims.permissions = data.permissions;
+    }
     console.log(`[DEBUG] Setting claims for ${userId}:`, JSON.stringify(claims, null, 2));
     await admin.auth().setCustomUserClaims(userId, claims);
     console.log(`[DEBUG] Claims set successfully for ${userId}`);

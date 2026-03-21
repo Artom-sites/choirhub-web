@@ -3,6 +3,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { X, Calendar, Users, TrendingUp, TrendingDown, Filter, Mic2, Trophy, AlertTriangle, ArrowUpRight, ArrowDownRight, Minus } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 import { Choir } from "@/types";
+import { getFirstNameInitial } from "@/lib/utils";
 
 interface AttendanceTrendEntry {
     date: string;
@@ -545,7 +546,7 @@ export default function DetailedStatisticsModal({
                             {sortedMembers.map(member => (
                                 <div key={member.id} className="bg-surface border border-border rounded-2xl p-4 flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400 font-bold flex-shrink-0">
-                                        {member.name?.[0]?.toUpperCase() || "?"}
+                                        {getFirstNameInitial(member.name)}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="text-text-primary font-bold truncate">{member.name}</div>

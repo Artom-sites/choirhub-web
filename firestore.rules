@@ -30,6 +30,13 @@ service cloud.firestore {
              request.auth.token.choirs[choirId] in ['admin', 'regent', 'head'];
     }
 
+    // Check specific permission in token
+    function hasPermission(permission) {
+      return isSignedIn() &&
+             request.auth.token.keys().hasAny(['permissions']) &&
+             request.auth.token.permissions.hasAny([permission]);
+    }
+
     // --- Collection Rules ---
 
     // 1. Users Collection
@@ -68,10 +75,12 @@ service cloud.firestore {
       match /services/{serviceId} {
         allow read: if isMemberOfChoir(choirId);
         allow create, delete: if isChoirAdmin(choirId) || isSuperAdmin();
-        // Members can update their own attendance (confirmedMembers/absentMembers only)
+        // Members can update their own attendance or finalize if they have 'attendance' permission
         allow update: if isChoirAdmin(choirId) || isSuperAdmin() || (
-          isMemberOfChoir(choirId) && 
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['confirmedMembers', 'absentMembers'])
+          isMemberOfChoir(choirId) && (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['confirmedMembers', 'absentMembers']) ||
+            (hasPermission('attendance') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['confirmedMembers', 'absentMembers', 'isFinalized', 'finalizedAt', 'finalizedBy']))
+          )
         );
       }
 

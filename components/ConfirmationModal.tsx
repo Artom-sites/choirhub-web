@@ -1,7 +1,10 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState, useRef } from "react";
 import { AlertTriangle, Trash2 } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
+import { Dialog } from "@capacitor/dialog";
+import { hapticLight, hapticSuccess, hapticWarning } from "../hooks/useHaptics";
 
 interface ConfirmationModalProps {
     isOpen: boolean;
@@ -24,7 +27,56 @@ export default function ConfirmationModal({
     cancelLabel = "Скасувати",
     isDestructive = false
 }: ConfirmationModalProps) {
+    const [isNativeRendering, setIsNativeRendering] = useState(false);
+    
+    // Use refs for callbacks to prevent re-triggering Native Dialog on re-renders
+    const onCloseRef = useRef(onClose);
+    const onConfirmRef = useRef(onConfirm);
+    
+    useEffect(() => {
+        onCloseRef.current = onClose;
+        onConfirmRef.current = onConfirm;
+    }, [onClose, onConfirm]);
+
+    useEffect(() => {
+        if (isOpen && Capacitor.isNativePlatform()) {
+            setIsNativeRendering(true);
+            hapticLight();
+            
+            // Extract string message if it's a simple string, else fallback
+            let messageStr = "Ви впевнені, що хочете виконати цю дію?";
+            if (typeof message === 'string') {
+                messageStr = message;
+            } else if (message && typeof (message as any).props?.children === 'string') {
+                messageStr = (message as any).props.children;
+            }
+
+            Dialog.confirm({
+                title,
+                message: messageStr,
+                okButtonTitle: confirmLabel,
+                cancelButtonTitle: cancelLabel
+            }).then(({ value }) => {
+                if (value) {
+                    if (isDestructive) hapticWarning();
+                    else hapticSuccess();
+                    
+                    onConfirmRef.current();
+                } else {
+                    onCloseRef.current();
+                }
+            }).catch((e) => {
+                console.error("Native dialog error:", e);
+                onCloseRef.current();
+            });
+        }
+    }, [isOpen, title, message, confirmLabel, cancelLabel, isDestructive]);
+
+    const isClientNative = typeof window !== "undefined" && Capacitor.isNativePlatform();
+
     if (!isOpen) return null;
+    // Fix flash: Completely prevent web DOM rendering if we are on native iOS/Android
+    if (isClientNative) return null; 
 
     return (
         <div

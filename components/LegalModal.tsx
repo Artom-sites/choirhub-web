@@ -82,7 +82,7 @@ export default function LegalModal({ isOpen, onClose, initialView = 'main' }: Le
                     </div>
 
                     <div ref={scrollContainerRef} className="flex-1 overflow-y-auto w-full">
-                        <div className="max-w-2xl mx-auto w-full p-4 md:p-6 pb-[max(env(safe-area-inset-bottom),24px)] space-y-6">
+                        <div className={`mx-auto w-full p-4 md:p-6 lg:p-8 pb-[max(env(safe-area-inset-bottom),24px)] ${subView === 'main' ? 'max-w-7xl' : 'max-w-3xl'}`}>
                             {subView === 'main' && <MainContent openExternal={openExternal} onOpenPrivacy={() => setSubView('privacy')} onOpenTerms={() => setSubView('terms')} />}
                             {subView === 'privacy' && <PrivacyContent />}
                             {subView === 'terms' && <TermsContent />}
@@ -96,8 +96,8 @@ export default function LegalModal({ isOpen, onClose, initialView = 'main' }: Le
 
 function MainContent({ openExternal, onOpenPrivacy, onOpenTerms }: { openExternal: (url: string) => Promise<void>; onOpenPrivacy: () => void; onOpenTerms: () => void }) {
     return (
-        <>
-            <section className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
+            <section className="space-y-3 flex flex-col">
                 <div className="flex items-center gap-2 text-text-primary font-bold text-base">
                     <Music2 className="w-5 h-5 text-indigo-400" />
                     <h2>Каталог пісень</h2>
@@ -122,7 +122,7 @@ function MainContent({ openExternal, onOpenPrivacy, onOpenTerms }: { openExterna
                 </div>
             </section>
 
-            <section className="space-y-3">
+            <section className="space-y-3 flex flex-col">
                 <div className="flex items-center gap-2 text-text-primary font-bold text-base">
                     <Copyright className="w-5 h-5 text-purple-400" />
                     <h2>Авторські права</h2>
@@ -139,12 +139,12 @@ function MainContent({ openExternal, onOpenPrivacy, onOpenTerms }: { openExterna
                 </div>
             </section>
 
-            <section className="space-y-3">
+            <section className="space-y-3 flex flex-col">
                 <div className="flex items-center gap-2 text-text-primary font-bold text-base">
                     <FileText className="w-5 h-5 text-amber-400" />
                     <h2>Користувацький контент</h2>
                 </div>
-                <div className="p-4 bg-surface rounded-2xl border border-border space-y-3">
+                <div className="p-5 md:p-6 bg-surface rounded-2xl md:rounded-3xl border border-border flex flex-col flex-1 gap-3">
                     <p className="text-sm text-text-secondary leading-relaxed">
                         Користувачі можуть додавати власні матеріали (ноти, тексти, PDF-файли)
                         для використання в межах свого хору або церковної спільноти.
@@ -156,12 +156,12 @@ function MainContent({ openExternal, onOpenPrivacy, onOpenTerms }: { openExterna
                 </div>
             </section>
 
-            <section className="space-y-3">
+            <section className="space-y-3 flex flex-col">
                 <div className="flex items-center gap-2 text-text-primary font-bold text-base">
                     <Lock className="w-5 h-5 text-cyan-400" />
                     <h2>Захист даних</h2>
                 </div>
-                <div className="p-4 bg-surface rounded-2xl border border-border space-y-3">
+                <div className="p-5 md:p-6 bg-surface rounded-2xl md:rounded-3xl border border-border flex flex-col flex-1 gap-3">
                     <p className="text-sm text-text-secondary leading-relaxed">
                         Ваші дані зашифровані та зберігаються на серверах Google Firebase
                         та Cloudflare з дотриманням стандартів GDPR.
@@ -173,12 +173,12 @@ function MainContent({ openExternal, onOpenPrivacy, onOpenTerms }: { openExterna
                 </div>
             </section>
 
-            <section className="space-y-3">
+            <section className="space-y-3 flex flex-col">
                 <div className="flex items-center gap-2 text-text-primary font-bold text-base">
                     <ShieldAlert className="w-5 h-5 text-emerald-400" />
                     <h2>Відповідальність</h2>
                 </div>
-                <div className="p-4 bg-surface rounded-2xl border border-border space-y-3">
+                <div className="p-5 md:p-6 bg-surface rounded-2xl md:rounded-3xl border border-border flex flex-col flex-1 gap-3">
                     <p className="text-sm text-text-secondary leading-relaxed">
                         Користувачі несуть відповідальність за контент, який вони додають
                         або використовують у застосунку.
@@ -190,12 +190,12 @@ function MainContent({ openExternal, onOpenPrivacy, onOpenTerms }: { openExterna
                 </div>
             </section>
 
-            <section className="space-y-3">
+            <section className="space-y-3 flex flex-col">
                 <div className="flex items-center gap-2 text-text-primary font-bold text-base">
                     <Scale className="w-5 h-5 text-rose-400" />
                     <h2>Правова інформація</h2>
                 </div>
-                <div className="p-4 bg-surface rounded-2xl border border-border space-y-3">
+                <div className="p-5 md:p-6 bg-surface rounded-2xl md:rounded-3xl border border-border flex flex-col flex-1 gap-3">
                     <p className="text-sm text-text-secondary leading-relaxed mb-4">
                         Детальну інформацію про обробку персональних даних
                         можна знайти в нашій Політиці конфіденційності.
@@ -219,7 +219,7 @@ function MainContent({ openExternal, onOpenPrivacy, onOpenTerms }: { openExterna
                     </div>
                 </div>
             </section>
-        </>
+        </div>
     );
 }
 

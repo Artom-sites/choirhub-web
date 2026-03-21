@@ -341,3 +341,17 @@ export const isGenericPartName = (name: string): boolean => {
     // Matches: "part 1", "partia 1", "партія 1", "p 1", "p1", "part-1"
     return /^(part|partia|партія|p)[\s.\-_]*\d+$/i.test(lower);
 };
+
+/**
+ * Returns the first letter of the first NAME (not last name) for avatar display.
+ * Names are stored as "Прізвище Ім'я", so we take the second word's first letter.
+ * Falls back to first word's first letter if only one word exists.
+ */
+export const getFirstNameInitial = (name?: string | null): string => {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/);
+    // "Іваненко Олег" → parts[1] = "Олег" → "О"
+    const firstNamePart = parts.length > 1 ? parts[1] : parts[0];
+    return (firstNamePart?.[0] || '?').toUpperCase();
+};
+

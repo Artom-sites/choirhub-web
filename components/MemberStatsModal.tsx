@@ -3,6 +3,7 @@
 import { X, Calendar, Check, AlertCircle, Loader2 } from "lucide-react";
 import { ChoirMember, Service, StatsSummary } from "@/types";
 import { useState, useMemo } from "react";
+import { getFirstNameInitial } from "@/lib/utils";
 
 type Period = '14' | '30' | '90' | 'all';
 
@@ -107,7 +108,7 @@ export default function MemberStatsModal({ member, services, choirId, onClose, g
     const vc = voiceColors[member.voice || ''];
     const isCustomVoice = member.voice && !voiceColors[member.voice];
     const avatarBg = vc ? `${vc.bg} ${vc.text}` : isCustomVoice ? 'bg-teal-500/15 text-teal-400' : 'bg-surface-highlight text-text-primary';
-    const avatarLetter = member.voice ? member.voice[0].toUpperCase() : (member.name?.[0]?.toUpperCase() || '?');
+    const avatarLetter = getFirstNameInitial(member.name);
     const attendanceColor = stats.attendanceRate >= 80 ? '#4ade80' : stats.attendanceRate >= 50 ? '#fbbf24' : '#f87171';
 
     return (
