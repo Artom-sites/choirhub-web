@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon, mergeMembers, updateChoir, deleteMyAccount, adminDeleteUser, deleteAdminCode, getChoirNotifications, getChoirUsers, joinChoir, updateMember, claimMember, leaveChoir } from "@/lib/db";
 import { updateAttendanceCache } from "@/lib/attendanceCache";
+import { getFirstNameInitial } from "@/lib/utils";
 import { App } from '@capacitor/app';
 import { Capacitor } from "@capacitor/core";
 import { Dialog } from '@capacitor/dialog';
@@ -536,6 +537,40 @@ function HomePageContent() {
 
   const [memberFilter, setMemberFilter] = useState('');
 
+  // --- Native Header Integration ---
+  useEffect(() => {
+    if (!isNative) return;
+    try {
+      const payload = {
+        title: choir?.name || "MyChoir",
+        avatarLetter: userData?.name ? userData.name.charAt(0).toUpperCase() : "U",
+        unreadCount: unreadNotifications
+      };
+      (window as any).webkit?.messageHandlers?.headerSync?.postMessage(payload);
+    } catch (e) {
+      console.warn("Failed to sync header to native", e);
+    }
+  }, [choir?.name, userData?.name, unreadNotifications, isNative]);
+
+  useEffect(() => {
+    if (!isNative) return;
+    
+    const handleAvatar = () => setShowAccount(true);
+    const handleBell = () => router.push('/notifications');
+    const handleTitle = () => setShowChoirManager(true);
+    
+    window.addEventListener('nativeHeaderAvatarClick', handleAvatar);
+    window.addEventListener('nativeHeaderBellClick', handleBell);
+    window.addEventListener('nativeHeaderTitleClick', handleTitle);
+    
+    return () => {
+      window.removeEventListener('nativeHeaderAvatarClick', handleAvatar);
+      window.removeEventListener('nativeHeaderBellClick', handleBell);
+      window.removeEventListener('nativeHeaderTitleClick', handleTitle);
+    };
+  }, [isNative, router]);
+  // ---------------------------------
+
   // Native FAB tap → open correct modal based on active tab and sub-tab
   useEffect(() => {
     const handler = () => {
@@ -617,7 +652,7 @@ function HomePageContent() {
           {member.photoURL ? (
             <img src={member.photoURL} alt={member.name} className="w-full h-full object-cover rounded-full" />
           ) : (
-            member.voice ? member.voice[0] : (member.name?.[0]?.toUpperCase() || '?')
+            member.voice ? member.voice[0].toUpperCase() : getFirstNameInitial(member.name)
           )}
         </div>
 
@@ -642,14 +677,14 @@ function HomePageContent() {
               }
 
               return (
-                <span className={`inline-block text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-md border flex-shrink-0 ${colorClass}`}>
+                <span className={`inline-block text-[9px] font-medium px-1.5 py-[2px] rounded border flex-shrink-0 leading-none ${colorClass}`}>
                   {label}
                 </span>
               );
             })()}
             {/* "Я" badge */}
             {(member.id === user?.uid || member.accountUid === user?.uid) && (
-              <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/20 flex-shrink-0">Я</span>
+              <span className="text-[9px] font-bold px-1.5 py-[2px] rounded flex-shrink-0 leading-none bg-accent/15 text-accent border border-accent/20">Я</span>
             )}
             {member.hasAccount && <Smartphone className="w-3 h-3 text-blue-400 flex-shrink-0" />}
           </div>
@@ -1235,13 +1270,10 @@ function HomePageContent() {
       const updates: Record<string, any> = {
         name: member.name,
         role: member.role,
+        roleLabel: member.roleLabel || null,
+        voice: member.voice || null,
         isDuplicate: false // Always clear isDuplicate when admin explicitly saves
       };
-
-      // Only add voice if it's explicitly set to avoid Firestore 'undefined' errors
-      if (member.voice) {
-        updates.voice = member.voice;
-      }
 
       // Generate a deduplicated list of current members (just in case)
       const dedupedCurrent = Array.from(new Map((choir.members || []).map(m => [m.id, m])).values());
@@ -2226,7 +2258,7 @@ function HomePageContent() {
                     {user?.photoURL ? (
                       <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" />
                     ) : (
-                      <span>{userData?.name?.[0]?.toUpperCase() || "U"}</span>
+                      <span>{getFirstNameInitial(userData?.name) || "U"}</span>
                     )}
                   </div>
                   <div className="flex-1">
@@ -2660,7 +2692,7 @@ function HomePageContent() {
               className="w-10 h-10 shrink-0 rounded-full border border-border hover:border-accent/50 transition-colors overflow-hidden"
             >
               <div className="w-full h-full bg-primary text-background flex items-center justify-center font-bold text-sm">
-                <span>{userData?.name?.[0]?.toUpperCase() || "U"}</span>
+                <span>{getFirstNameInitial(userData?.name) || "U"}</span>
               </div>
             </button>
           </div>

@@ -22,7 +22,7 @@ class MyBridgeViewController: CAPBridgeViewController {
         // We must use document.documentElement to inject CSS before first paint.
         let js = """
         (function(){
-            var css = '.app-nav, .app-fab, .storytelling-preloader { display:none!important; opacity:0!important; visibility:hidden!important; pointer-events:none!important; }';
+            var css = '.app-nav, .app-fab, .storytelling-preloader, header.fixed { display:none!important; opacity:0!important; visibility:hidden!important; pointer-events:none!important; }';
             var s = document.createElement('style');
             s.textContent = css;
             (document.head || document.documentElement).appendChild(s);
