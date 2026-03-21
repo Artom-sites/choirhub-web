@@ -2217,37 +2217,19 @@ function HomePageContent() {
             <GlassPageHeader
               title="Акаунт"
               onBack={() => setShowAccount(false)}
+              rightSegmented={{
+                items: ["sun.max", "moon", "desktopcomputer"],
+                active: theme === "light" ? 0 : theme === "dark" ? 1 : 2,
+                onChange: (index) => {
+                  if (index === 0) setTheme("light");
+                  else if (index === 1) setTheme("dark");
+                  else setTheme("system");
+                }
+              }}
             />
 
             <div className="md:max-w-3xl lg:max-w-4xl mx-auto w-full h-full flex flex-col p-6 overflow-y-auto pb-safe">
-              <div className="flex items-center justify-end mb-8">
-                {/* Compact Theme Toggle */}
-                <div className="flex items-center bg-surface border border-border rounded-full p-0.5 shadow-sm mt-[-4px]">
-                  {[
-                    { id: 'light', icon: Sun, label: 'Світла' },
-                    { id: 'dark', icon: Moon, label: 'Темна' },
-                    { id: 'system', icon: Monitor, label: 'Авто' },
-                  ].map((t) => {
-                    const isActive = theme === t.id;
-                    const Icon = t.icon;
-                    return (
-                      <button
-                        key={t.id}
-                        onClick={() => setTheme(t.id as 'light' | 'dark' | 'system')}
-                        className={`p-2 rounded-full transition-all duration-200 ${isActive
-                          ? 'bg-primary text-background shadow-sm'
-                          : 'text-text-secondary hover:text-text-primary hover:bg-surface-highlight'
-                          }`}
-                        title={t.label}
-                      >
-                        <Icon className="w-4 h-4" />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="space-y-6 flex-1">
+              <div className="space-y-6 flex-1 pt-6">
                 {/* Profile Card */}
                 <div className="bg-surface rounded-2xl p-6 flex items-center gap-5 card-shadow">
                   <div className="w-16 h-16 rounded-full bg-accent text-white flex items-center justify-center text-xl font-bold shadow-lg overflow-hidden">

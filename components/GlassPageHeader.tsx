@@ -16,6 +16,11 @@ interface GlassPageHeaderProps {
   activeTab?: number;
   onTabChange?: (index: number) => void;
   rightActions?: GlassAction[];
+  rightSegmented?: {
+    items: string[];
+    active: number;
+    onChange: (index: number) => void;
+  };
   children?: ReactNode; // Optional extra tabs that still render in DOM below the native header
   onBack?: () => void;
 }
@@ -27,6 +32,7 @@ export default function GlassPageHeader({
   activeTab = 0,
   onTabChange,
   rightActions = [],
+  rightSegmented,
   children,
   onBack,
 }: GlassPageHeaderProps) {
@@ -49,6 +55,13 @@ export default function GlassPageHeader({
         onTabChange(index);
       }
     };
+    
+    // Attach native right segmented handler
+    (window as any).__nativeInnerHeaderRightSegmentClick = (index: number) => {
+      if (rightSegmented?.onChange) {
+        rightSegmented.onChange(index);
+      }
+    };
 
     // Sync configuration to iOS native header
     const syncToNative = () => {
@@ -65,7 +78,11 @@ export default function GlassPageHeader({
             id: a.id,
             icon: a.icon,
             color: a.color || "default"
-          }))
+          })),
+          rightSegmented: rightSegmented ? {
+            items: rightSegmented.items,
+            active: rightSegmented.active
+          } : undefined
         };
         try {
           (window as any).webkit.messageHandlers.innerHeaderSync.postMessage(payload);
@@ -80,8 +97,9 @@ export default function GlassPageHeader({
     return () => {
       delete (window as any).__nativeInnerHeaderAction;
       delete (window as any).__nativeInnerHeaderTabClick;
+      delete (window as any).__nativeInnerHeaderRightSegmentClick;
     };
-  }, [title, subtitle, tabs, activeTab, rightActions, onTabChange]);
+  }, [title, subtitle, tabs, activeTab, rightActions, rightSegmented?.items, rightSegmented?.active, onTabChange, rightSegmented?.onChange]);
 
   // If there are children (like tabs), render them below the reserved native header space
   return (
