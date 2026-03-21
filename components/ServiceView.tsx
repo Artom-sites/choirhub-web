@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import GlassPageHeader, { GlassIconButton } from '@/components/GlassPageHeader';
+import GlassPageHeader from '@/components/GlassPageHeader';
 import { Service, ServiceSong, SimpleSong, Choir, ChoirMember, ProgramItem, ProgramItemType } from "@/types";
 import { addSongToService, removeSongFromService, getChoir, updateService, setServiceAttendance, addKnownConductor, addKnownPianist } from "@/lib/db";
 import { getFirstNameInitial } from "@/lib/utils";
@@ -1186,11 +1186,13 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                     return currentService.time ? `${dateStr} • ${currentService.time}` : dateStr;
                 })()}
                 onBack={onBack}
-                rightActions={canEdit ? (
-                    <GlassIconButton onClick={openEditServiceModal} label="Редагувати">
-                        <Pencil className="w-4.5 h-4.5" />
-                    </GlassIconButton>
-                ) : undefined}
+                rightActions={canEdit ? [
+                    {
+                        id: 'edit',
+                        icon: 'pencil',
+                        onClick: openEditServiceModal
+                    }
+                ] : []}
             />
 
             <div className="md:max-w-3xl lg:max-w-4xl mx-auto px-4 py-6 space-y-6">

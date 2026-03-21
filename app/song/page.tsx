@@ -12,7 +12,7 @@ import { SimpleSong } from "@/types";
 import PDFViewer from "@/components/PDFViewer";
 import EditSongModal from "@/components/EditSongModal";
 import { ArrowLeft, FileText, Upload, Loader2, Check, AlertCircle, Trash2, ExternalLink, Pencil, User, Download, X, Search, WifiOff, Plus, ChevronDown, Mic, Music } from "lucide-react";
-import GlassPageHeader, { GlassIconButton } from "@/components/GlassPageHeader";
+import GlassPageHeader from "@/components/GlassPageHeader";
 import { Dialog } from '@capacitor/dialog';
 import { extractInstrument, getFileNameFromUrl, isGenericPartName } from "@/lib/utils";
 import { CATEGORIES as OFFICIAL_THEMES } from "@/lib/themes";
@@ -577,10 +577,7 @@ function SongContent() {
         return (
             <div className="min-h-screen bg-background relative overflow-x-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] text-text-primary">
                 {/* Skeleton Header */}
-                <GlassPageHeader
-                    leftAction={<div className="w-10 h-10 bg-surface-highlight rounded-full animate-pulse" />}
-                    rightActions={<><div className="w-10 h-10 bg-surface-highlight rounded-full animate-pulse" /><div className="w-10 h-10 bg-surface-highlight rounded-full animate-pulse" /></>}
-                />
+                <GlassPageHeader title="Завантаження..." />
 
                 <div className="md:max-w-3xl lg:max-w-4xl mx-auto px-4 py-6 space-y-6">
                     {/* Skeleton Title & Info */}
@@ -881,16 +878,19 @@ function SongContent() {
                     song.conductor,
                     song.pianist ? `🎹 ${song.pianist}` : null
                 ].filter(Boolean).join(' · ')}
-                rightActions={canEdit ? (
-                    <>
-                        <GlassIconButton onClick={() => setShowEditModal(true)} label="Редагувати">
-                            <Pencil className="w-4.5 h-4.5" />
-                        </GlassIconButton>
-                        <GlassIconButton onClick={handleDelete} danger label="Видалити">
-                            <Trash2 className="w-4.5 h-4.5" />
-                        </GlassIconButton>
-                    </>
-                ) : undefined}
+                rightActions={canEdit ? [
+                    {
+                        id: 'edit',
+                        icon: 'pencil',
+                        onClick: () => setShowEditModal(true)
+                    },
+                    {
+                        id: 'delete',
+                        icon: 'trash',
+                        color: 'danger',
+                        onClick: handleDelete
+                    }
+                ] : []}
             />
 
             {/* ─── Content ─── */}

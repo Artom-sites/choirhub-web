@@ -14,7 +14,7 @@ import {
 } from "@/lib/db";
 import { ChoirNotification, Service } from "@/types";
 import Toast from "@/components/Toast";
-import GlassPageHeader, { GlassIconButton } from "@/components/GlassPageHeader";
+import GlassPageHeader from "@/components/GlassPageHeader";
 import { httpsCallable } from "firebase/functions";
 
 type Tab = "inbox" | "compose";
@@ -165,15 +165,13 @@ export default function NotificationsPage() {
             {/* ─── HEADER ─── */}
             <GlassPageHeader
                 title="Сповіщення"
-                rightActions={
-                    <GlassIconButton
-                        onClick={() => setShowSettings(!showSettings)}
-                        active={showSettings}
-                        label="Налаштування"
-                    >
-                        <Settings className="w-5 h-5" />
-                    </GlassIconButton>
-                }
+                rightActions={[
+                    {
+                        id: "settings",
+                        icon: "gearshape",
+                        onClick: () => setShowSettings((prev) => !prev)
+                    }
+                ]}
             >
                 {/* ─── TABS (hidden when settings open) ─── */}
                 {!showSettings && (
