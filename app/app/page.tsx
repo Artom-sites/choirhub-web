@@ -552,23 +552,24 @@ function HomePageContent() {
     }
   }, [choir?.name, userData?.name, unreadNotifications, isNative]);
 
-  useEffect(() => {
-    if (!isNative) return;
-    
-    const handleAvatar = () => setShowAccount(true);
-    const handleBell = () => router.push('/notifications');
-    const handleTitle = () => setShowChoirManager(true);
-    
-    window.addEventListener('nativeHeaderAvatarClick', handleAvatar);
-    window.addEventListener('nativeHeaderBellClick', handleBell);
-    window.addEventListener('nativeHeaderTitleClick', handleTitle);
-    
+    useEffect(() => {
+    // Expose direct functions on window so Swift can call them by name.
+    // This is more reliable than CustomEvent dispatch since there's no
+    // listener registration timing issue.
+    (window as any).__nativeHeaderAvatarClick = () => setShowAccount(true);
+    (window as any).__nativeHeaderBellClick = () => router.push('/notifications');
+    (window as any).__nativeHeaderTitleClick = () => setShowChoirManager(true);
+    (window as any).__nativeHeaderLogoClick = () => setShowChoirManager(true);
+
     return () => {
-      window.removeEventListener('nativeHeaderAvatarClick', handleAvatar);
-      window.removeEventListener('nativeHeaderBellClick', handleBell);
-      window.removeEventListener('nativeHeaderTitleClick', handleTitle);
+      delete (window as any).__nativeHeaderAvatarClick;
+      delete (window as any).__nativeHeaderBellClick;
+      delete (window as any).__nativeHeaderTitleClick;
+      delete (window as any).__nativeHeaderLogoClick;
     };
-  }, [isNative, router]);
+  // Intentionally no isNative guard — these are no-ops on web (Swift never calls them)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
   // ---------------------------------
 
   // Native FAB tap → open correct modal based on active tab and sub-tab
