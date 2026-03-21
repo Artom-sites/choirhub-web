@@ -160,11 +160,19 @@ export default function NotificationsPage() {
         return () => window.removeEventListener("popstate", onPop);
     }, [router]);
 
+    const availableTabs = [
+        { id: "inbox" as Tab, label: "Вхідні" },
+        ...(canCompose ? [{ id: "compose" as Tab, label: "Написати" }] : []),
+    ];
+
     return (
         <div className="min-h-screen bg-background text-text-primary flex flex-col">
             {/* ─── HEADER ─── */}
             <GlassPageHeader
-                title="Сповіщення"
+                title={showSettings ? "Сповіщення" : undefined}
+                tabs={!showSettings ? availableTabs.map(t => t.label) : undefined}
+                activeTab={availableTabs.findIndex(t => t.id === activeTab)}
+                onTabChange={(index) => setActiveTab(availableTabs[index].id)}
                 rightActions={[
                     {
                         id: "settings",
@@ -172,29 +180,7 @@ export default function NotificationsPage() {
                         onClick: () => setShowSettings((prev) => !prev)
                     }
                 ]}
-            >
-                {/* ─── TABS (hidden when settings open) ─── */}
-                {!showSettings && (
-                    <div className="flex px-3 pb-2 gap-1">
-                        {([
-                            { id: "inbox" as Tab, label: "Вхідні", icon: <Bell className="w-4 h-4" /> },
-                            ...(canCompose ? [{ id: "compose" as Tab, label: "Написати", icon: <Send className="w-4 h-4" /> }] : []),
-                        ]).map(tab => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${activeTab === tab.id
-                                    ? "bg-primary text-background"
-                                    : "bg-surface-highlight text-text-secondary hover:text-text-primary"
-                                    }`}
-                            >
-                                {tab.icon}
-                                {tab.label}
-                            </button>
-                        ))}
-                    </div>
-                )}
-            </GlassPageHeader>
+            />
 
             {/* ─── CONTENT ─── */}
             <div className="flex-1 overflow-y-auto px-4 py-4">
