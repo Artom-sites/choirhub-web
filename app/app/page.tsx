@@ -1026,6 +1026,11 @@ function HomePageContent() {
       role: membership.role
     });
 
+    // Optimistically clear sessionStorage archive state so edit buttons show correctly
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('showArchive');
+    }
+
     await refreshProfile();
     setShowAccount(false);
     setShowChoirManager(false);
@@ -2709,6 +2714,7 @@ function HomePageContent() {
 
         {activeTab === 'home' && (
           <ServiceList
+            key={userData?.choirId}
             onSelectService={handleSelectService}
             canEdit={canEdit}
             services={services}
