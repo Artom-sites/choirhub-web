@@ -23,6 +23,7 @@ interface GlassPageHeaderProps {
   };
   children?: ReactNode; // Optional extra tabs that still render in DOM below the native header
   onBack?: () => void;
+  isActive?: boolean; // Instantly unregister from native stack when false (e.g. during exit animation)
 }
 
 // Global registry to maintain header stack
@@ -68,6 +69,7 @@ export default function GlassPageHeader({
   rightSegmented,
   children,
   onBack,
+  isActive = true,
 }: GlassPageHeaderProps) {
   const router = useRouter();
 
@@ -80,6 +82,17 @@ export default function GlassPageHeader({
     if (typeof window === "undefined") return;
 
     const myId = idRef.current;
+    
+    // If explicitly inactive (e.g. parent is animating out), pop from stack immediately
+    if (!isActive) {
+      const removeIdx = mountedHeaders.findIndex(h => h.id === myId);
+      if (removeIdx >= 0) {
+        mountedHeaders.splice(removeIdx, 1);
+        syncTopHeader();
+      }
+      return;
+    }
+
     const payload = {
       title: title || "",
       subtitle: subtitle || "",
@@ -127,7 +140,7 @@ export default function GlassPageHeader({
         syncTopHeader();
       }
     };
-  }, [title, subtitle, tabs, activeTab, rightActions, rightSegmented?.items, rightSegmented?.active, onTabChange, rightSegmented?.onChange]);
+  }, [title, subtitle, tabs, activeTab, rightActions, rightSegmented?.items, rightSegmented?.active, onTabChange, rightSegmented?.onChange, isActive]);
 
   // If there are children (like tabs), render them below the reserved native header space
   return (

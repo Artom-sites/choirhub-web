@@ -55,6 +55,7 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                     <GlassPageHeader
                         title="Довідка та FAQ"
                         onBack={onClose}
+                        isActive={isOpen}
                     >
 
                         {/* Menu Dropdown - Mobile Friendly Tabs */}

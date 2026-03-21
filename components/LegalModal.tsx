@@ -72,6 +72,7 @@ export default function LegalModal({ isOpen, onClose, initialView = 'main' }: Le
                             'Умови використання'
                         }
                         onBack={handleClose}
+                        isActive={isOpen}
                     />
 
                     <div ref={scrollContainerRef} className="flex-1 overflow-y-auto w-full">

@@ -2217,6 +2217,7 @@ function HomePageContent() {
             <GlassPageHeader
               title="Акаунт"
               onBack={() => setShowAccount(false)}
+              isActive={showAccount}
               rightSegmented={{
                 items: ["sun.max", "moon", "desktopcomputer"],
                 active: theme === "light" ? 0 : theme === "dark" ? 1 : 2,
