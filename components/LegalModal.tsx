@@ -6,6 +6,7 @@ import { ExternalLink, ShieldAlert, FileText, Music2, Scale, Copyright, Lock, Ar
 import { Browser } from "@capacitor/browser";
 import PrivacyText from "./legal/PrivacyText";
 import TermsText from "./legal/TermsText";
+import GlassPageHeader from "./GlassPageHeader";
 
 interface LegalModalProps {
     isOpen: boolean;
@@ -61,25 +62,17 @@ export default function LegalModal({ isOpen, onClose, initialView = 'main' }: Le
                     exit={{ x: "100%" }}
                     transition={{ type: "spring", damping: 25, stiffness: 200 }}
                     className="fixed inset-0 z-[100] bg-background text-text-primary flex flex-col"
+                    data-native-inner="true"
                 >
                     {/* Header */}
-                    <div className="shrink-0 pt-[max(env(safe-area-inset-top),16px)] bg-surface/80 backdrop-blur-xl border-b border-border">
-                        <div className="px-4 py-3 pb-3 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={handleClose}
-                                    className="p-2 hover:bg-surface-highlight rounded-xl transition-colors text-text-secondary hover:text-text-primary"
-                                >
-                                    <ArrowLeft className="w-5 h-5" />
-                                </button>
-                                <h1 className="font-bold text-lg tracking-tight">
-                                    {subView === 'main' && 'Джерела та контент'}
-                                    {subView === 'privacy' && 'Політика конфіденційності'}
-                                    {subView === 'terms' && 'Умови використання'}
-                                </h1>
-                            </div>
-                        </div>
-                    </div>
+                    <GlassPageHeader
+                        title={
+                            subView === 'main' ? 'Джерела та контент' :
+                            subView === 'privacy' ? 'Політика конфіденційності' :
+                            'Умови використання'
+                        }
+                        onBack={handleClose}
+                    />
 
                     <div ref={scrollContainerRef} className="flex-1 overflow-y-auto w-full">
                         <div className={`mx-auto w-full p-4 md:p-6 lg:p-8 pb-[max(env(safe-area-inset-bottom),24px)] ${subView === 'main' ? 'max-w-7xl' : 'max-w-3xl'}`}>

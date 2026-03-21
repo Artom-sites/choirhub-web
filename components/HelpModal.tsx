@@ -5,6 +5,7 @@ import { HelpCircle, User, Shield, Music2, Book, FileText, Bell, Palette, Archiv
 import { useState } from "react";
 import { Browser } from "@capacitor/browser";
 import { Capacitor } from "@capacitor/core";
+import GlassPageHeader from "./GlassPageHeader";
 
 interface HelpModalProps {
     isOpen: boolean;
@@ -48,23 +49,13 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                     exit={{ x: "100%" }}
                     transition={{ type: "spring", damping: 25, stiffness: 200 }}
                     className="fixed inset-0 z-[100] bg-background text-text-primary flex flex-col"
+                    data-native-inner="true"
                 >
                     {/* Header */}
-                    <div className="shrink-0 pt-[max(env(safe-area-inset-top),16px)] bg-surface/80 backdrop-blur-xl border-b border-border">
-                        <div className="px-4 py-3 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={onClose}
-                                    className="p-2 hover:bg-surface-highlight rounded-xl transition-colors text-text-secondary hover:text-text-primary"
-                                >
-                                    <ArrowLeft className="w-5 h-5" />
-                                </button>
-                                <div className="w-8 h-8 flex items-center justify-center bg-primary/10 rounded-lg">
-                                    <HelpCircle className="w-4.5 h-4.5 text-primary" />
-                                </div>
-                                <h1 className="font-bold text-lg tracking-tight">Довідка та FAQ</h1>
-                            </div>
-                        </div>
+                    <GlassPageHeader
+                        title="Довідка та FAQ"
+                        onBack={onClose}
+                    >
 
                         {/* Menu Dropdown - Mobile Friendly Tabs */}
                         <div className="md:hidden w-full overflow-x-auto flex items-center gap-1.5 px-4 py-3 border-t border-border bg-surface shrink-0 hide-scrollbar">
@@ -82,7 +73,7 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                                 </button>
                             ))}
                         </div>
-                    </div>
+                    </GlassPageHeader>
 
                     {/* Content Area with Desktop Sidebar */}
                     <div className="flex-1 overflow-hidden flex flex-row w-full">

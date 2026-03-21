@@ -8,6 +8,7 @@ import {
 } from "@/lib/db";
 import { Trash2, RotateCcw, X, Clock, AlertTriangle, Music, Calendar } from "lucide-react";
 import ConfirmationModal from "./ConfirmationModal";
+import GlassPageHeader from "./GlassPageHeader";
 
 interface TrashBinProps {
     choirId: string;
@@ -117,42 +118,41 @@ export default function TrashBin({ choirId, onClose, onRestore, initialFilter = 
     });
 
     return (
-        <div className="fixed inset-0 z-[70] bg-background flex flex-col animate-in slide-in-from-bottom duration-300">
+        <div className="fixed inset-0 z-[70] bg-background flex flex-col animate-in slide-in-from-bottom duration-300" data-native-inner="true">
             {/* Header */}
-            <div className="sticky top-0 z-10 bg-surface/90 backdrop-blur-xl border-b border-border px-4 pb-3 pt-[calc(env(safe-area-inset-top)+14px)] flex items-center gap-3">
-                <button onClick={onClose} className="p-2 hover:bg-surface-highlight rounded-xl">
-                    <X className="w-5 h-5 text-text-primary" />
-                </button>
-                <Trash2 className="w-5 h-5 text-red-400" />
-                <h2 className="font-bold text-lg text-text-primary">Корзина</h2>
-            </div>
+            <GlassPageHeader
+                title="Корзина"
+                onBack={onClose}
+            >
+                {/* Filter Tabs */}
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide py-1">
+                    <button
+                        onClick={() => setActiveFilter('all')}
+                        className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${activeFilter === 'all' ? 'bg-primary text-background' : 'bg-surface-highlight text-text-secondary hover:bg-surface-highlight/80'
+                            }`}
+                    >
+                        Всі
+                    </button>
+                    <button
+                        onClick={() => setActiveFilter('service')}
+                        className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap ${activeFilter === 'service' ? 'bg-blue-500 text-white' : 'bg-surface-highlight text-text-secondary hover:bg-surface-highlight/80'
+                            }`}
+                    >
+                        <Calendar className="w-3.5 h-3.5" />
+                        Служіння
+                    </button>
+                    <button
+                        onClick={() => setActiveFilter('song')}
+                        className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap ${activeFilter === 'song' ? 'bg-emerald-500 text-white' : 'bg-surface-highlight text-text-secondary hover:bg-surface-highlight/80'
+                            }`}
+                    >
+                        <Music className="w-3.5 h-3.5" />
+                        Пісні
+                    </button>
+                </div>
+            </GlassPageHeader>
 
-            {/* Filter Tabs */}
-            <div className="px-4 pt-4 pb-2 flex gap-2 overflow-x-auto scrollbar-hide">
-                <button
-                    onClick={() => setActiveFilter('all')}
-                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${activeFilter === 'all' ? 'bg-primary text-background' : 'bg-surface-highlight text-text-secondary hover:bg-surface-highlight/80'
-                        }`}
-                >
-                    Всі
-                </button>
-                <button
-                    onClick={() => setActiveFilter('service')}
-                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap ${activeFilter === 'service' ? 'bg-blue-500 text-white' : 'bg-surface-highlight text-text-secondary hover:bg-surface-highlight/80'
-                        }`}
-                >
-                    <Calendar className="w-3.5 h-3.5" />
-                    Служіння
-                </button>
-                <button
-                    onClick={() => setActiveFilter('song')}
-                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap ${activeFilter === 'song' ? 'bg-emerald-500 text-white' : 'bg-surface-highlight text-text-secondary hover:bg-surface-highlight/80'
-                        }`}
-                >
-                    <Music className="w-3.5 h-3.5" />
-                    Пісні
-                </button>
-            </div>
+
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-4 pb-safe pt-2">
