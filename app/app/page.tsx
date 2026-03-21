@@ -22,6 +22,7 @@ import EditMemberModal from "@/components/EditMemberModal"; // New
 import MergeMemberModal from "@/components/MergeMemberModal"; // New
 import MemberStatsModal from "@/components/MemberStatsModal";
 import InstallPrompt from "@/components/InstallPrompt";
+import GlassPageHeader from "@/components/GlassPageHeader";
 
 
 import ThemeSettings from "@/components/ThemeSettings";
@@ -2211,21 +2212,15 @@ function HomePageContent() {
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
             className="fixed inset-0 flex flex-col bg-background"
             style={{ background: 'var(--background)', zIndex: 90 }}
+            data-native-inner="true"
           >
-            <div className="p-4 border-b border-border pt-[calc(1rem_+_env(safe-area-inset-top))]" style={{ background: 'var(--surface)' }}>
-              <button
-                onClick={() => setShowAccount(false)}
-                className="flex items-center gap-2 text-text-primary font-medium hover:text-text-secondary transition-colors py-1"
-              >
-                <ChevronLeft className="w-5 h-5" />
-                Назад
-              </button>
-            </div>
+            <GlassPageHeader
+              title="Акаунт"
+              onBack={() => setShowAccount(false)}
+            />
 
             <div className="md:max-w-3xl lg:max-w-4xl mx-auto w-full h-full flex flex-col p-6 overflow-y-auto pb-safe">
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-3xl font-bold text-text-primary tracking-tight">Акаунт</h2>
-
+              <div className="flex items-center justify-end mb-8">
                 {/* Compact Theme Toggle */}
                 <div className="flex items-center bg-surface border border-border rounded-full p-0.5 shadow-sm mt-[-4px]">
                   {[
