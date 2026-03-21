@@ -575,7 +575,7 @@ function SongContent() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-background relative overflow-x-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] text-text-primary">
+            <div className="min-h-screen bg-background relative overflow-x-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] text-text-primary" data-native-inner="true">
                 {/* Skeleton Header */}
                 <GlassPageHeader title="Завантаження..." />
 
@@ -869,7 +869,7 @@ function SongContent() {
 
 
     return (
-        <div className="min-h-screen bg-background text-text-primary flex flex-col">
+        <div className="min-h-screen bg-background text-text-primary flex flex-col" data-native-inner="true">
             {/* ─── Header ─── */}
             <GlassPageHeader
                 title={song.title}

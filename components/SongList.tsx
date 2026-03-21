@@ -23,6 +23,7 @@ import GlobalArchive from "./GlobalArchive";
 import TrashBin from "./TrashBin";
 import Toast from "./Toast";
 import SwipeableCard, { SwipeableCardRef } from "./SwipeableCard";
+import GlassPageHeader from "./GlassPageHeader";
 import SongSkeleton from "./SongSkeleton";
 import { PencilKitAnnotator } from "@/plugins/PencilKitAnnotator";
 import { hapticLight, hapticSuccess } from "../hooks/useHaptics";
@@ -650,16 +651,8 @@ export default function SongList({
 
             {/* Archive Search Modal from Add Song */}
             {choirType !== 'standard' && showArchiveModal && (
-                <div className="fixed inset-0 z-[200] bg-background flex flex-col">
-                    <div className="flex items-center justify-between p-4 pt-[calc(1rem+env(safe-area-inset-top))] border-b border-white/10 bg-background/80 backdrop-blur-md sticky top-0 z-10">
-                        <h2 className="text-lg font-bold text-text-primary">Знайти в архіві</h2>
-                        <button
-                            onClick={() => setShowArchiveModal(false)}
-                            className="p-2 hover:bg-surface-highlight rounded-full text-text-secondary hover:text-text-primary transition-colors"
-                        >
-                            <X className="w-6 h-6" />
-                        </button>
-                    </div>
+                <div className="fixed inset-0 z-[200] bg-background flex flex-col" data-native-inner="true">
+                    <GlassPageHeader title="Знайти в архіві" onBack={() => setShowArchiveModal(false)} />
                     <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-8">
                         <GlobalArchive onAddSong={handleLinkArchive} initialSearchQuery={pendingArchiveQuery} isOverlayOpen={true} />
                     </div>

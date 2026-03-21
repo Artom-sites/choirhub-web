@@ -7,6 +7,7 @@ import { ArrowLeft, Users, Mic2, Calendar, TrendingUp, Music, X, ChevronRight, L
 import { doc, onSnapshot } from "firebase/firestore";
 import { getFirestoreLazy } from "@/lib/firebase";
 import DetailedStatisticsModal from "./DetailedStatisticsModal";
+import GlassPageHeader from "./GlassPageHeader";
 
 // ─── Types matching the summary document from Cloud Function ───
 
@@ -154,17 +155,9 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
     const onPieLeave = () => setActiveIndex(null);
 
     return (
-        <div className="min-h-screen bg-background text-text-primary">
+        <div className="min-h-screen bg-background text-text-primary" data-native-inner="true">
             {/* Header */}
-            <div className="sticky top-0 z-30 bg-surface/80 backdrop-blur-xl border-b border-border px-4 py-3 pt-[calc(0.75rem_+_env(safe-area-inset-top))] flex items-center gap-3">
-                <button
-                    onClick={onBack}
-                    className="p-2 hover:bg-surface-highlight rounded-xl transition-colors"
-                >
-                    <ArrowLeft className="w-5 h-5 text-text-secondary" />
-                </button>
-                <h1 className="font-bold text-lg text-text-primary">Статистика хору</h1>
-            </div>
+            <GlassPageHeader title="Статистика хору" onBack={onBack} />
 
             {loading ? (
                 <div className="flex flex-col items-center justify-center p-12 mt-12">
@@ -431,13 +424,8 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
             {/* Show All Songs Modal */}
             {
                 showAllSongs && stats && (
-                    <div className="fixed inset-0 z-[70] bg-background flex flex-col animate-in slide-in-from-bottom duration-300">
-                        <div className="sticky top-0 z-10 bg-surface/80 backdrop-blur-xl border-b border-border px-4 py-3 pt-[calc(0.75rem_+_env(safe-area-inset-top))] flex items-center gap-3">
-                            <button onClick={() => setShowAllSongs(false)} className="p-2 hover:bg-surface-highlight rounded-xl">
-                                <X className="w-5 h-5" />
-                            </button>
-                            <h2 className="font-bold text-lg">Статистика по пісням ({(stats.allSongs || []).length})</h2>
-                        </div>
+                    <div className="fixed inset-0 z-[70] bg-background flex flex-col animate-in slide-in-from-bottom duration-300" data-native-inner="true">
+                        <GlassPageHeader title={`Статистика по пісням (${(stats.allSongs || []).length})`} onBack={() => setShowAllSongs(false)} />
                         <div className="flex-1 overflow-y-auto p-4 pb-safe">
                             <div className="space-y-2 w-full">
                                 { (stats.allSongs || []).map((song, idx) => (

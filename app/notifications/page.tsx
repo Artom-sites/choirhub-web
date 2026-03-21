@@ -166,7 +166,7 @@ export default function NotificationsPage() {
     ];
 
     return (
-        <div className="min-h-screen bg-background text-text-primary flex flex-col">
+        <div className="min-h-screen bg-background text-text-primary flex flex-col" data-native-inner="true">
             {/* ─── HEADER ─── */}
             <GlassPageHeader
                 title={showSettings ? "Сповіщення" : undefined}

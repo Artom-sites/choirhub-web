@@ -597,11 +597,14 @@ function HomePageContent() {
     return () => window.removeEventListener('nativeFABPressed', handler);
   }, [activeTab]);
 
-  // Handle Android back gesture
+  // Handle Android back gesture explicitly for Account Modal
   useEffect(() => {
     if (showAccount) {
       window.history.pushState({ modal: 'account' }, '');
-      const handlePopState = () => setShowAccount(false);
+      const handlePopState = (e: PopStateEvent) => {
+        if (e.state?.modal === 'account') return; // We popped back to account, don't close it
+        setShowAccount(false);
+      };
       window.addEventListener('popstate', handlePopState);
 
       // Load cache stats
@@ -618,6 +621,45 @@ function HomePageContent() {
       return () => window.removeEventListener('popstate', handlePopState);
     }
   }, [showAccount]);
+
+  // Handle Android back gesture for Legal Modal
+  useEffect(() => {
+    if (showLegalModal) {
+      window.history.pushState({ modal: 'legal' }, '');
+      const handlePopState = (e: PopStateEvent) => {
+        if (e.state?.modal === 'legal') return;
+        setShowLegalModal(false);
+      };
+      window.addEventListener('popstate', handlePopState);
+      return () => window.removeEventListener('popstate', handlePopState);
+    }
+  }, [showLegalModal]);
+
+  // Handle Android back gesture for Help Modal
+  useEffect(() => {
+    if (showHelpModal) {
+      window.history.pushState({ modal: 'help' }, '');
+      const handlePopState = (e: PopStateEvent) => {
+        if (e.state?.modal === 'help') return;
+        setShowHelpModal(false);
+      };
+      window.addEventListener('popstate', handlePopState);
+      return () => window.removeEventListener('popstate', handlePopState);
+    }
+  }, [showHelpModal]);
+
+  // Handle Android back gesture for Support Modal
+  useEffect(() => {
+    if (showSupportModal) {
+      window.history.pushState({ modal: 'support' }, '');
+      const handlePopState = (e: PopStateEvent) => {
+        if (e.state?.modal === 'support') return;
+        setShowSupportModal(false);
+      };
+      window.addEventListener('popstate', handlePopState);
+      return () => window.removeEventListener('popstate', handlePopState);
+    }
+  }, [showSupportModal]);
 
   // Member Card Renderer
   const [memberSearch, setMemberSearch] = useState('');
@@ -3210,16 +3252,16 @@ function HomePageContent() {
       {/* Account sub-modals (portaled to document.body) */}
       <LegalModal
         isOpen={showLegalModal}
-        onClose={() => setShowLegalModal(false)}
+        onClose={() => window.history.back()}
         initialView={legalInitialView}
       />
       <HelpModal
         isOpen={showHelpModal}
-        onClose={() => setShowHelpModal(false)}
+        onClose={() => window.history.back()}
       />
       <SupportModal
         isOpen={showSupportModal}
-        onClose={() => setShowSupportModal(false)}
+        onClose={() => window.history.back()}
       />
       <DeleteAccountModal
         isOpen={showDeleteModal}

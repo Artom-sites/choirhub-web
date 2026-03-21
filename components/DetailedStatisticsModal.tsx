@@ -4,6 +4,7 @@ import { X, Calendar, Users, TrendingUp, TrendingDown, Filter, Mic2, Trophy, Ale
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 import { Choir } from "@/types";
 import { getFirstNameInitial } from "@/lib/utils";
+import GlassPageHeader from "./GlassPageHeader";
 
 interface AttendanceTrendEntry {
     date: string;
@@ -186,34 +187,14 @@ export default function DetailedStatisticsModal({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[70] bg-background flex flex-col animate-in slide-in-from-bottom duration-300">
-            <div className="sticky top-0 z-10 bg-surface/80 backdrop-blur-xl border-b border-border px-4 py-3 pt-[calc(0.75rem_+_env(safe-area-inset-top))] flex items-center justify-between">
-                <h2 className="font-bold text-lg text-text-primary">Детальна аналітика</h2>
-                <button onClick={onClose} className="p-2 hover:bg-surface-highlight rounded-xl">
-                    <X className="w-5 h-5" />
-                </button>
-            </div>
-
-            <div className="p-4 bg-surface border-b border-border flex gap-2">
-                <button
-                    onClick={() => setActiveTab('services')}
-                    className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'services' ? 'bg-primary text-background' : 'bg-surface-highlight text-text-secondary hover:text-text-primary'}`}
-                >
-                    <div className="flex items-center justify-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        Служіння
-                    </div>
-                </button>
-                <button
-                    onClick={() => setActiveTab('members')}
-                    className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'members' ? 'bg-primary text-background' : 'bg-surface-highlight text-text-secondary hover:text-text-primary'}`}
-                >
-                    <div className="flex items-center justify-center gap-2">
-                        <Users className="w-4 h-4" />
-                        Хористи
-                    </div>
-                </button>
-            </div>
+        <div className="fixed inset-0 z-[70] bg-background flex flex-col animate-in slide-in-from-bottom duration-300" data-native-inner="true">
+            <GlassPageHeader
+                title="Детальна аналітика"
+                onBack={onClose}
+                tabs={['Служіння', 'Хористи']}
+                activeTab={activeTab === 'services' ? 0 : 1}
+                onTabChange={(index) => setActiveTab(index === 0 ? 'services' : 'members')}
+            />
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {activeTab === 'services' && (

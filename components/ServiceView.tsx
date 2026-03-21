@@ -1176,7 +1176,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
 
 
     return (
-        <div className="pb-32 bg-background min-h-screen">
+        <div className="pb-32 bg-background min-h-screen" data-native-inner="true">
             {/* Header */}
             <GlassPageHeader
                 title={currentService.title}
