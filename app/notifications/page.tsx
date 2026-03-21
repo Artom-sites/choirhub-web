@@ -14,6 +14,7 @@ import {
 } from "@/lib/db";
 import { ChoirNotification, Service } from "@/types";
 import Toast from "@/components/Toast";
+import GlassPageHeader, { GlassIconButton } from "@/components/GlassPageHeader";
 import { httpsCallable } from "firebase/functions";
 
 type Tab = "inbox" | "compose";
@@ -162,27 +163,21 @@ export default function NotificationsPage() {
     return (
         <div className="min-h-screen bg-background text-text-primary flex flex-col">
             {/* ─── HEADER ─── */}
-            <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border pt-[env(safe-area-inset-top)]">
-                <div className="flex items-center justify-between px-4 h-14">
-                    <button
-                        onClick={() => router.back()}
-                        className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-surface-highlight transition-colors"
-                    >
-                        <ChevronLeft className="w-5 h-5" />
-                    </button>
-                    <h1 className="text-lg font-bold">Сповіщення</h1>
-                    <button
+            <GlassPageHeader
+                title="Сповіщення"
+                rightActions={
+                    <GlassIconButton
                         onClick={() => setShowSettings(!showSettings)}
-                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${showSettings ? "bg-primary text-background" : "hover:bg-surface-highlight text-text-secondary"
-                            }`}
+                        active={showSettings}
+                        label="Налаштування"
                     >
                         <Settings className="w-5 h-5" />
-                    </button>
-                </div>
-
+                    </GlassIconButton>
+                }
+            >
                 {/* ─── TABS (hidden when settings open) ─── */}
                 {!showSettings && (
-                    <div className="flex px-4 pb-2 gap-1">
+                    <div className="flex px-3 pb-2 gap-1">
                         {([
                             { id: "inbox" as Tab, label: "Вхідні", icon: <Bell className="w-4 h-4" /> },
                             ...(canCompose ? [{ id: "compose" as Tab, label: "Написати", icon: <Send className="w-4 h-4" /> }] : []),
@@ -201,7 +196,7 @@ export default function NotificationsPage() {
                         ))}
                     </div>
                 )}
-            </div>
+            </GlassPageHeader>
 
             {/* ─── CONTENT ─── */}
             <div className="flex-1 overflow-y-auto px-4 py-4">

@@ -559,7 +559,7 @@ function HomePageContent() {
     (window as any).__nativeHeaderAvatarClick = () => setShowAccount(true);
     (window as any).__nativeHeaderBellClick = () => router.push('/notifications');
     (window as any).__nativeHeaderTitleClick = () => setShowChoirManager(true);
-    (window as any).__nativeHeaderLogoClick = () => setShowChoirManager(true);
+    (window as any).__nativeHeaderLogoClick = () => { setEditChoirName(choir?.name || ''); setShowChoirSettings(true); };
 
     return () => {
       delete (window as any).__nativeHeaderAvatarClick;

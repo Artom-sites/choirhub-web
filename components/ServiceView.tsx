@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import GlassPageHeader, { GlassIconButton } from '@/components/GlassPageHeader';
 import { Service, ServiceSong, SimpleSong, Choir, ChoirMember, ProgramItem, ProgramItemType } from "@/types";
 import { addSongToService, removeSongFromService, getChoir, updateService, setServiceAttendance, addKnownConductor, addKnownPianist } from "@/lib/db";
 import { getFirstNameInitial } from "@/lib/utils";
@@ -1177,33 +1178,20 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
     return (
         <div className="pb-32 bg-background min-h-screen">
             {/* Header */}
-            <div className="sticky top-0 z-20 bg-surface border-b border-border px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 flex items-center gap-3">
-                <button
-                    onClick={onBack}
-                    className="p-2 -ml-2 text-text-secondary hover:text-text-primary rounded-full hover:bg-surface-highlight transition-colors"
-                >
-                    <ChevronLeft className="w-6 h-6" />
-                </button>
-                <div className="flex-1 min-w-0">
-                    <h1 className="text-lg font-bold text-text-primary leading-tight truncate">{currentService.title}</h1>
-                    <p className="text-[13px] text-text-secondary mt-0.5">
-                        {(() => {
-                            const [y, m, d] = currentService.date.split('-').map(Number);
-                            return new Date(y, m - 1, d).toLocaleDateString('uk-UA', { weekday: 'short', day: 'numeric', month: 'long' });
-                        })()}
-                        {currentService.time && <span className="text-primary font-semibold ml-1">о {currentService.time}</span>}
-                    </p>
-                </div>
-                {canEdit && (
-                    <button
-                        onClick={openEditServiceModal}
-                        className="p-2 -mr-2 text-text-secondary hover:text-text-primary rounded-full hover:bg-surface-highlight transition-colors"
-                    >
-                        <Pencil className="w-5 h-5" />
-                    </button>
-                )}
-
-            </div>
+            <GlassPageHeader
+                title={currentService.title}
+                subtitle={(() => {
+                    const [y, m, d] = currentService.date.split('-').map(Number);
+                    const dateStr = new Date(y, m - 1, d).toLocaleDateString('uk-UA', { weekday: 'short', day: 'numeric', month: 'long' });
+                    return currentService.time ? `${dateStr} • ${currentService.time}` : dateStr;
+                })()}
+                onBack={onBack}
+                rightActions={canEdit ? (
+                    <GlassIconButton onClick={openEditServiceModal} label="Редагувати">
+                        <Pencil className="w-4.5 h-4.5" />
+                    </GlassIconButton>
+                ) : undefined}
+            />
 
             <div className="md:max-w-3xl lg:max-w-4xl mx-auto px-4 py-6 space-y-6">
 

@@ -12,6 +12,7 @@ import { SimpleSong } from "@/types";
 import PDFViewer from "@/components/PDFViewer";
 import EditSongModal from "@/components/EditSongModal";
 import { ArrowLeft, FileText, Upload, Loader2, Check, AlertCircle, Trash2, ExternalLink, Pencil, User, Download, X, Search, WifiOff, Plus, ChevronDown, Mic, Music } from "lucide-react";
+import GlassPageHeader, { GlassIconButton } from "@/components/GlassPageHeader";
 import { Dialog } from '@capacitor/dialog';
 import { extractInstrument, getFileNameFromUrl, isGenericPartName } from "@/lib/utils";
 import { CATEGORIES as OFFICIAL_THEMES } from "@/lib/themes";
@@ -576,13 +577,10 @@ function SongContent() {
         return (
             <div className="min-h-screen bg-background relative overflow-x-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] text-text-primary">
                 {/* Skeleton Header */}
-                <div className="sticky top-0 z-20 bg-surface/80 backdrop-blur-md border-b border-border px-4 py-3 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] flex items-center justify-between">
-                    <div className="w-10 h-10 bg-surface-highlight rounded-full animate-pulse" />
-                    <div className="flex gap-2">
-                        <div className="w-10 h-10 bg-surface-highlight rounded-full animate-pulse" />
-                        <div className="w-10 h-10 bg-surface-highlight rounded-full animate-pulse" />
-                    </div>
-                </div>
+                <GlassPageHeader
+                    leftAction={<div className="w-10 h-10 bg-surface-highlight rounded-full animate-pulse" />}
+                    rightActions={<><div className="w-10 h-10 bg-surface-highlight rounded-full animate-pulse" /><div className="w-10 h-10 bg-surface-highlight rounded-full animate-pulse" /></>}
+                />
 
                 <div className="md:max-w-3xl lg:max-w-4xl mx-auto px-4 py-6 space-y-6">
                     {/* Skeleton Title & Info */}
@@ -876,54 +874,24 @@ function SongContent() {
     return (
         <div className="min-h-screen bg-background text-text-primary flex flex-col">
             {/* ─── Header ─── */}
-            <header className="bg-surface/50 backdrop-blur-xl border-b border-border px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] flex items-center gap-3 sticky top-0 z-10">
-                <button
-                    onClick={() => router.back()}
-                    className="p-2 hover:bg-surface-highlight rounded-xl transition-colors"
-                >
-                    <ArrowLeft className="w-5 h-5 text-text-secondary" />
-                </button>
-                <div className="flex-1 min-w-0">
-                    <h1 className="font-bold text-lg leading-tight truncate">{song.title}</h1>
-                    <div className="flex items-center gap-2 overflow-hidden text-xs text-text-secondary font-medium tracking-wide">
-                        <span className="uppercase">{song.category}</span>
-                        {song.conductor && (
-                            <>
-                                <span className="w-1 h-1 rounded-full bg-text-secondary/30 shrink-0" />
-                                <span className="truncate flex items-center gap-1" title="Регент">
-                                    <User className="w-3 h-3" />
-                                    {song.conductor}
-                                </span>
-                            </>
-                        )}
-                        {song.pianist && (
-                            <>
-                                <span className="w-1 h-1 rounded-full bg-text-secondary/30 shrink-0" />
-                                <span className="truncate flex items-center gap-1 text-amber-500" title="Піаніст">
-                                    <span className="text-[10px]">🎹</span>
-                                    {song.pianist}
-                                </span>
-                            </>
-                        )}
-                    </div>
-                </div>
-                {canEdit && (
-                    <div className="flex items-center gap-1">
-                        <button
-                            onClick={() => setShowEditModal(true)}
-                            className="p-2 text-text-secondary hover:text-text-primary hover:bg-surface-highlight rounded-xl transition-colors"
-                        >
-                            <Pencil className="w-5 h-5" />
-                        </button>
-                        <button
-                            onClick={handleDelete}
-                            className="p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition-colors"
-                        >
-                            <Trash2 className="w-5 h-5" />
-                        </button>
-                    </div>
-                )}
-            </header>
+            <GlassPageHeader
+                title={song.title}
+                subtitle={[
+                    song.category,
+                    song.conductor,
+                    song.pianist ? `🎹 ${song.pianist}` : null
+                ].filter(Boolean).join(' · ')}
+                rightActions={canEdit ? (
+                    <>
+                        <GlassIconButton onClick={() => setShowEditModal(true)} label="Редагувати">
+                            <Pencil className="w-4.5 h-4.5" />
+                        </GlassIconButton>
+                        <GlassIconButton onClick={handleDelete} danger label="Видалити">
+                            <Trash2 className="w-4.5 h-4.5" />
+                        </GlassIconButton>
+                    </>
+                ) : undefined}
+            />
 
             {/* ─── Content ─── */}
             <div className="flex-1 overflow-y-auto px-4 py-6 pb-[calc(2rem+env(safe-area-inset-bottom))]">
