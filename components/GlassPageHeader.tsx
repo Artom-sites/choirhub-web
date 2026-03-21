@@ -25,6 +25,39 @@ interface GlassPageHeaderProps {
   onBack?: () => void;
 }
 
+// Global registry to maintain header stack
+interface MountedHeader {
+  id: number;
+  payload: any;
+  callbacks: {
+    action: (id: string) => void;
+    tabClick: (index: number) => void;
+    rightSegmentClick: (index: number) => void;
+  };
+}
+let nextHeaderId = 0;
+const mountedHeaders: MountedHeader[] = [];
+
+function syncTopHeader() {
+  if (mountedHeaders.length === 0) return;
+  const top = mountedHeaders[mountedHeaders.length - 1];
+  
+  (window as any).__nativeInnerHeaderAction = top.callbacks.action;
+  (window as any).__nativeInnerHeaderTabClick = top.callbacks.tabClick;
+  (window as any).__nativeInnerHeaderRightSegmentClick = top.callbacks.rightSegmentClick;
+  
+  if (
+    Capacitor.isNativePlatform() &&
+    (window as any).webkit?.messageHandlers?.innerHeaderSync
+  ) {
+    try {
+      (window as any).webkit.messageHandlers.innerHeaderSync.postMessage(top.payload);
+    } catch (e) {
+      console.error("Failed to sync inner header:", e);
+    }
+  }
+}
+
 export default function GlassPageHeader({
   title,
   subtitle,
@@ -38,66 +71,61 @@ export default function GlassPageHeader({
 }: GlassPageHeaderProps) {
   const router = useRouter();
 
+  const idRef = typeof window !== 'undefined' ? (window as any).React?.useRef?.(null) || { current: null } : { current: null };
+  if (idRef.current === null) {
+      idRef.current = nextHeaderId++;
+  }
+
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // Attach native action handler
-    (window as any).__nativeInnerHeaderAction = (actionId: string) => {
-      const action = rightActions.find((a) => a.id === actionId);
-      if (action) {
-        action.onClick();
-      }
+    const myId = idRef.current;
+    const payload = {
+      title: title || "",
+      subtitle: subtitle || "",
+      tabs: tabs,
+      activeTab: activeTab,
+      rightActions: rightActions.map(a => ({
+        id: a.id,
+        icon: a.icon,
+        color: a.color || "default"
+      })),
+      rightSegmented: rightSegmented ? {
+        items: rightSegmented.items,
+        active: rightSegmented.active
+      } : undefined
     };
-    
-    // Attach native tab handler
-    (window as any).__nativeInnerHeaderTabClick = (index: number) => {
-      if (onTabChange) {
-        onTabChange(index);
-      }
-    };
-    
-    // Attach native right segmented handler
-    (window as any).__nativeInnerHeaderRightSegmentClick = (index: number) => {
-      if (rightSegmented?.onChange) {
-        rightSegmented.onChange(index);
+
+    const callbacks = {
+      action: (actionId: string) => {
+        const action = rightActions.find((a) => a.id === actionId);
+        if (action) action.onClick();
+      },
+      tabClick: (index: number) => {
+        if (onTabChange) onTabChange(index);
+      },
+      rightSegmentClick: (index: number) => {
+        if (rightSegmented?.onChange) rightSegmented.onChange(index);
       }
     };
 
-    // Sync configuration to iOS native header
-    const syncToNative = () => {
-      if (
-        Capacitor.isNativePlatform() &&
-        (window as any).webkit?.messageHandlers?.innerHeaderSync
-      ) {
-        const payload = {
-          title: title || "",
-          subtitle: subtitle || "",
-          tabs: tabs,
-          activeTab: activeTab,
-          rightActions: rightActions.map(a => ({
-            id: a.id,
-            icon: a.icon,
-            color: a.color || "default"
-          })),
-          rightSegmented: rightSegmented ? {
-            items: rightSegmented.items,
-            active: rightSegmented.active
-          } : undefined
-        };
-        try {
-          (window as any).webkit.messageHandlers.innerHeaderSync.postMessage(payload);
-        } catch (e) {
-          console.error("Failed to sync inner header:", e);
-        }
-      }
-    };
+    const headerData: MountedHeader = { id: myId, payload, callbacks };
+    const idx = mountedHeaders.findIndex(h => h.id === myId);
+    
+    if (idx >= 0) {
+      mountedHeaders[idx] = headerData;
+    } else {
+      mountedHeaders.push(headerData);
+    }
 
-    syncToNative();
+    syncTopHeader();
 
     return () => {
-      delete (window as any).__nativeInnerHeaderAction;
-      delete (window as any).__nativeInnerHeaderTabClick;
-      delete (window as any).__nativeInnerHeaderRightSegmentClick;
+      const removeIdx = mountedHeaders.findIndex(h => h.id === myId);
+      if (removeIdx >= 0) {
+        mountedHeaders.splice(removeIdx, 1);
+        syncTopHeader();
+      }
     };
   }, [title, subtitle, tabs, activeTab, rightActions, rightSegmented?.items, rightSegmented?.active, onTabChange, rightSegmented?.onChange]);
 
