@@ -239,11 +239,13 @@ export default function GlassPageHeader({
   return (
     <div className="w-full relative z-30">
       {/* Spacer to push content below the native iOS hover header OR web fixed header */}
-      <div className="h-[calc(56px+env(safe-area-inset-top))] w-full pointer-events-none" />
+      {Capacitor.isNativePlatform() && (
+        <div className="h-[calc(56px+env(safe-area-inset-top))] w-full pointer-events-none" />
+      )}
       
       {/* ── Web Header Fallback ── */}
       {!Capacitor.isNativePlatform() && (
-        <div className="fixed top-0 left-0 right-0 z-40 bg-background/90 backdrop-blur-md border-b border-border flex flex-col pt-[env(safe-area-inset-top)]">
+        <div className="sticky top-0 z-40 w-full bg-background/90 backdrop-blur-md border-b border-border flex flex-col pt-[env(safe-area-inset-top)]">
           <div className="h-14 flex items-center px-4 justify-between">
             <div className="flex items-center gap-3 overflow-hidden">
               {onBack && (
@@ -299,8 +301,8 @@ export default function GlassPageHeader({
 
           {/* Web optional segmented control */}
           {rightSegmented && rightSegmented.items && (
-            <div className="px-4 pt-1 pb-3">
-              <div className="flex bg-surface-highlight/50 p-1 rounded-xl w-full">
+            <div className="px-4 pb-2">
+              <div className="flex bg-surface-highlight/50 p-1 rounded-xl w-full max-w-sm mx-auto">
                 {rightSegmented.items.map((item, idx) => (
                   <button
                     key={idx}
