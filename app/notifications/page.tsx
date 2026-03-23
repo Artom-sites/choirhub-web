@@ -176,7 +176,7 @@ export default function NotificationsPage() {
                 rightActions={[
                     {
                         id: "settings",
-                        icon: "gearshape",
+                        icon: showSettings ? "gearshape.fill" : "gearshape",
                         onClick: () => setShowSettings((prev) => !prev)
                     }
                 ]}

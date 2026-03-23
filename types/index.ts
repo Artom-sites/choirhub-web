@@ -175,6 +175,7 @@ export interface GlobalSong {
 
     subcategory?: ChoirSubcategory | string;  // For choir: mixed/female/etc, for orchestra: custom
     theme?: string;         // E.g. "Різдво", "Пасха", "Весілля"
+    language?: string;      // E.g. "ukr", "eng", "rus"
     keywords: string[];     // Lowercase for search: ["отче", "наш", "кедров"]
     partsCount?: number;    // From index
     pdfUrl?: string;        // From index

@@ -245,15 +245,24 @@ function SetupPageContent() {
 
         // Prevent generic "User" or missing name on creation
         const currentName = user.displayName || userData?.name || "";
-        if (!currentName || currentName.trim() === "User" || !currentName.includes(" ")) {
+        const isAppleUser = user.providerData.some(p => p.providerId === 'apple.com');
+        
+        if (!isAppleUser && (!currentName || currentName.trim() === "User" || !currentName.includes(" "))) {
             setFormLoading(false);
             setNamePromptReason('create');
             setShowNameInput(true);
             return;
         }
 
+        await proceedWithCreateChoir();
+    };
+
+    const proceedWithCreateChoir = async () => {
+        setFormLoading(true);
+        setError("");
+
         try {
-            await createChoir(choirName, choirType);
+            await createChoir(choirName, choirType as "msc" | "standard");
 
             // Refresh profile so userData.choirId is set before redirect
             await refreshProfile();
@@ -277,31 +286,39 @@ function SetupPageContent() {
             setError("Код має бути 6 символів");
             return;
         }
-        if (!joinLastName.trim() || !joinFirstName.trim()) {
-            setError("Введіть прізвище та ім'я");
+        if (!joinLastName.trim() && !joinFirstName.trim()) {
+            // Both empty, try to use profile name
+            const currentName = user.displayName || userData?.name || "";
+            const isAppleUser = user.providerData.some(p => p.providerId === 'apple.com');
+            
+            if (!isAppleUser && (!currentName || currentName.trim() === "User" || !currentName.includes(" "))) {
+                setFormLoading(false);
+                setNamePromptReason('join');
+                setShowNameInput(true);
+                return;
+            }
+            await proceedWithJoinChoir(currentName);
             return;
         }
+        
+        // At least one name field filled, use it
+        const fullName = `${joinLastName.trim()} ${joinFirstName.trim()}`.trim();
+        await proceedWithJoinChoir(fullName);
+    };
 
+    const proceedWithJoinChoir = async (fullNameToUse: string) => {
         setFormLoading(true);
         setError("");
-        // Pre-validate name or prompt if missing/generic
-        const currentName = user.displayName || userData?.name || "";
-        if (!currentName || currentName.trim() === "User" || !currentName.includes(" ")) {
-            setFormLoading(false);
-            setNamePromptReason('join');
-            setShowNameInput(true);
-            return;
-        }
-
-        // Save typed name (from the explicit join input fields) to user profile BEFORE joining
-        const fullName = `${joinLastName.trim()} ${joinFirstName.trim()}`;
-        try {
-            await createUser(user.uid, { name: fullName });
-        } catch (e) {
-            console.warn("Failed to save name before join:", e);
-        }
 
         try {
+            if (fullNameToUse && fullNameToUse !== user?.displayName) {
+                try {
+                    await createUser(user!.uid, { name: fullNameToUse });
+                } catch (e) {
+                    console.warn("Failed to save name before join:", e);
+                }
+            }
+
             const result = await joinChoir(inviteCode);
             console.log("Joined:", result);
 
@@ -431,6 +448,21 @@ function SetupPageContent() {
             await Dialog.alert({ title: "Помилка", message: "Помилка збереження імені" });
         } finally {
             setSavingName(false);
+        }
+    };
+
+    const handleSkipCustomName = async () => {
+        if (!namePromptReason) return;
+        setShowNameInput(false);
+        
+        if (namePromptReason === 'create') {
+            await proceedWithCreateChoir();
+        } else if (namePromptReason === 'join') {
+            await proceedWithJoinChoir("");
+        } else if (namePromptReason === 'claim') {
+            // Can't skip claim name since we strictly need to know which member to claim
+            // But we can just close the modal
+            console.log("Skipped name input on claim flow");
         }
     };
 
@@ -881,7 +913,7 @@ function SetupPageContent() {
                                         value={joinLastName}
                                         onChange={(e) => setJoinLastName(e.target.value)}
                                         className="w-full px-4 py-3 bg-surface-highlight rounded-xl border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-text-secondary/30"
-                                        placeholder="Шевченко"
+                                        placeholder="Шевченко (необов'язково)"
                                         autoCapitalize="words"
                                     />
                                 </div>
@@ -891,7 +923,7 @@ function SetupPageContent() {
                                         value={joinFirstName}
                                         onChange={(e) => setJoinFirstName(e.target.value)}
                                         className="w-full px-4 py-3 bg-surface-highlight rounded-xl border border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-text-secondary/30"
-                                        placeholder="Тарас"
+                                        placeholder="Тарас (необов'язково)"
                                         autoCapitalize="words"
                                     />
                                 </div>
@@ -909,7 +941,7 @@ function SetupPageContent() {
                             {error && <p className="text-red-500 text-sm bg-red-500/10 p-3 rounded-lg border border-red-500/20">{error}</p>}
                             <button
                                 onClick={handleJoinChoir}
-                                disabled={formLoading || !joinLastName.trim() || !joinFirstName.trim()}
+                                disabled={formLoading || inviteCode.length !== 6}
                                 className="w-full py-4 bg-primary text-background rounded-xl font-bold mt-4 hover:opacity-90 transition-all flex justify-center shadow-lg disabled:opacity-50"
                             >
                                 {formLoading ? <div className="w-5 h-5 border-2 border-background/20 border-t-background rounded-full animate-spin" /> : "Приєднатися"}
@@ -986,7 +1018,7 @@ function SetupPageContent() {
                         <div className="bg-[#18181b] border border-white/10 rounded-3xl p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200">
                             <h3 className="text-xl font-bold text-white mb-2">Вкажіть ваше ім'я</h3>
                             <p className="text-sm text-text-secondary mb-6">
-                                Для зручності, будь ласка, вкажіть спочатку прізвище.
+                                Задля точної статистики і щоб регент знав, що це саме ви, будь ласка, введіть своє ПІБ. Ви також можете пропустити цей крок.
                             </p>
 
                             <div className="space-y-4">
@@ -1006,17 +1038,29 @@ function SetupPageContent() {
                                     autoCapitalize="words"
                                 />
 
-                                <button
-                                    onClick={handleSaveCustomName}
-                                    disabled={savingName || !customFirstName.trim() || !customLastName.trim()}
-                                    className="w-full py-4 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-all flex justify-center shadow-lg disabled:opacity-50"
-                                >
-                                    {savingName ? (
-                                        <div className="w-5 h-5 border-2 border-background/20 border-t-background rounded-full animate-spin" />
-                                    ) : (
-                                        "Зберегти і увійти"
+                                <div className="pt-2 flex flex-col gap-3">
+                                    <button
+                                        onClick={handleSaveCustomName}
+                                        disabled={savingName || (!customFirstName.trim() && !customLastName.trim())}
+                                        className="w-full py-4 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-all flex justify-center shadow-lg disabled:opacity-50"
+                                    >
+                                        {savingName ? (
+                                            <div className="w-5 h-5 border-2 border-background/20 border-t-background rounded-full animate-spin" />
+                                        ) : (
+                                            "Зберегти і увійти"
+                                        )}
+                                    </button>
+                                    
+                                    {namePromptReason !== 'claim' && (
+                                        <button
+                                            onClick={handleSkipCustomName}
+                                            disabled={savingName}
+                                            className="w-full py-3 text-sm text-text-secondary hover:text-white transition-colors"
+                                        >
+                                            Пропустити
+                                        </button>
                                     )}
-                                </button>
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Capacitor } from "@capacitor/core";
 
@@ -7,6 +7,18 @@ interface GlassAction {
   icon: string;
   color?: "default" | "danger";
   onClick: () => void;
+}
+
+// Hierarchical filter menu item (children → UIMenu submenu in Swift)
+export interface FilterMenuItem {
+  id: string;
+  label: string;
+  isActive: boolean;
+  children?: FilterMenuItem[];
+}
+
+export interface FilterMenuGroup {
+  items: FilterMenuItem[];
 }
 
 interface GlassPageHeaderProps {
@@ -21,9 +33,17 @@ interface GlassPageHeaderProps {
     active: number;
     onChange: (index: number) => void;
   };
-  children?: ReactNode; // Optional extra tabs that still render in DOM below the native header
+  searchInput?: {
+    placeholder?: string;
+    value: string;
+    autoFocus?: boolean;
+    onChange: (val: string) => void;
+  };
+  filterMenu?: FilterMenuGroup[];
+  onFilterMenuSelect?: (itemId: string) => void;
+  children?: ReactNode;
   onBack?: () => void;
-  isActive?: boolean; // Instantly unregister from native stack when false (e.g. during exit animation)
+  isActive?: boolean;
 }
 
 // Global registry to maintain header stack
@@ -31,21 +51,35 @@ interface MountedHeader {
   id: number;
   payload: any;
   callbacks: {
+    back: () => void;
     action: (id: string) => void;
     tabClick: (index: number) => void;
     rightSegmentClick: (index: number) => void;
+    searchChange: (val: string) => void;
+    filterMenuSelect: (itemId: string) => void;
   };
 }
 let nextHeaderId = 0;
 const mountedHeaders: MountedHeader[] = [];
 
 function syncTopHeader() {
-  if (mountedHeaders.length === 0) return;
+  if (mountedHeaders.length === 0) {
+    (window as any).__nativeInnerHeaderBackClick = undefined;
+    (window as any).__nativeInnerHeaderAction = undefined;
+    (window as any).__nativeInnerHeaderTabClick = undefined;
+    (window as any).__nativeInnerHeaderRightSegmentClick = undefined;
+    (window as any).__nativeInnerHeaderSearchChange = undefined;
+    (window as any).__nativeInnerHeaderFilterMenuSelect = undefined;
+    return;
+  }
   const top = mountedHeaders[mountedHeaders.length - 1];
   
+  (window as any).__nativeInnerHeaderBackClick = top.callbacks.back;
   (window as any).__nativeInnerHeaderAction = top.callbacks.action;
   (window as any).__nativeInnerHeaderTabClick = top.callbacks.tabClick;
   (window as any).__nativeInnerHeaderRightSegmentClick = top.callbacks.rightSegmentClick;
+  (window as any).__nativeInnerHeaderSearchChange = top.callbacks.searchChange;
+  (window as any).__nativeInnerHeaderFilterMenuSelect = top.callbacks.filterMenuSelect;
   
   if (
     Capacitor.isNativePlatform() &&
@@ -67,13 +101,16 @@ export default function GlassPageHeader({
   onTabChange,
   rightActions = [],
   rightSegmented,
+  searchInput,
+  filterMenu,
+  onFilterMenuSelect,
   children,
   onBack,
   isActive = true,
 }: GlassPageHeaderProps) {
   const router = useRouter();
 
-  const idRef = typeof window !== 'undefined' ? (window as any).React?.useRef?.(null) || { current: null } : { current: null };
+  const idRef = useRef<number | null>(null);
   if (idRef.current === null) {
       idRef.current = nextHeaderId++;
   }
@@ -83,7 +120,6 @@ export default function GlassPageHeader({
 
     const myId = idRef.current;
     
-    // If explicitly inactive (e.g. parent is animating out), pop from stack immediately
     if (!isActive) {
       const removeIdx = mountedHeaders.findIndex(h => h.id === myId);
       if (removeIdx >= 0) {
@@ -106,10 +142,31 @@ export default function GlassPageHeader({
       rightSegmented: rightSegmented ? {
         items: rightSegmented.items,
         active: rightSegmented.active
-      } : undefined
+      } : undefined,
+      searchInput: searchInput ? {
+        placeholder: searchInput.placeholder,
+        value: searchInput.value,
+        autoFocus: searchInput.autoFocus
+      } : undefined,
+      // Serialize filterMenu groups → [[[id, label, isActive, children?]]]
+      filterMenu: filterMenu
+        ? filterMenu.map(group => group.items.map(item => ({
+            id: item.id,
+            label: item.label,
+            isActive: item.isActive,
+            children: item.children?.map(c => ({ id: c.id, label: c.label, isActive: c.isActive }))
+          })))
+        : undefined
     };
 
     const callbacks = {
+      back: () => {
+        if (onBack) {
+          onBack();
+        } else {
+          router.back();
+        }
+      },
       action: (actionId: string) => {
         const action = rightActions.find((a) => a.id === actionId);
         if (action) action.onClick();
@@ -119,10 +176,16 @@ export default function GlassPageHeader({
       },
       rightSegmentClick: (index: number) => {
         if (rightSegmented?.onChange) rightSegmented.onChange(index);
+      },
+      searchChange: (val: string) => {
+        if (searchInput?.onChange) searchInput.onChange(val);
+      },
+      filterMenuSelect: (itemId: string) => {
+        if (onFilterMenuSelect) onFilterMenuSelect(itemId);
       }
     };
 
-    const headerData: MountedHeader = { id: myId, payload, callbacks };
+    const headerData: MountedHeader = { id: myId as number, payload, callbacks };
     const idx = mountedHeaders.findIndex(h => h.id === myId);
     
     if (idx >= 0) {
@@ -140,9 +203,8 @@ export default function GlassPageHeader({
         syncTopHeader();
       }
     };
-  }, [title, subtitle, tabs, activeTab, rightActions, rightSegmented?.items, rightSegmented?.active, onTabChange, rightSegmented?.onChange, isActive]);
+  }, [title, subtitle, tabs, activeTab, rightActions, rightSegmented?.items, rightSegmented?.active, onTabChange, rightSegmented?.onChange, searchInput?.value, searchInput?.placeholder, searchInput?.autoFocus, searchInput?.onChange, filterMenu, onFilterMenuSelect, isActive]);
 
-  // If there are children (like tabs), render them below the reserved native header space
   return (
     <div className="w-full relative z-30">
       {/* Spacer to push content below the native iOS floating pill header */}

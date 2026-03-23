@@ -61,11 +61,6 @@ function HomePageContent() {
   const { user, userData, loading: authLoading, signOut, refreshProfile, isGuest, updateActiveChoir, linkWithGoogle, linkWithApple } = useAuth();
   const { theme, setTheme } = useTheme();
 
-  // Startup timing diagnostic
-  const startupT0 = useRef(Date.now());
-  const st = (label: string) => console.log(`[Startup] ${label} +${Date.now() - startupT0.current}ms`);
-  useEffect(() => { st('React mount'); }, []);
-
   // Handle push notification tap routing globally
   useEffect(() => {
     const processRoute = async (payloadRaw: any) => {
@@ -156,10 +151,9 @@ function HomePageContent() {
   // Log when app data is fully ready and hide native splash screen
   useEffect(() => {
     if (!isAppReady) return;
-    st('isAppReady=true — content loaded');
     if (Capacitor.isNativePlatform()) {
       requestAnimationFrame(() => {
-        SplashScreen.hide().then(() => st('SplashScreen hidden, app visible')).catch(() => {});
+        SplashScreen.hide().catch(() => {});
       });
     }
   }, [isAppReady]);
@@ -354,10 +348,13 @@ function HomePageContent() {
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showAddServiceModal, setShowAddServiceModal] = useState(false);
   const [showAddSongModal, setShowAddSongModal] = useState(false);
+  const [showSearchOverlay, setShowSearchOverlay] = useState(false);
 
   // Manager/Admin States
   const [managerMode, setManagerMode] = useState<'list' | 'create' | 'join'>('list');
   const [newChoirName, setNewChoirName] = useState("");
+  const [namePromptReason, setNamePromptReason] = useState<'create' | 'join' | 'claim' | null>(null);
+  const [dismissedProfileBanner, setDismissedProfileBanner] = useState(false);
   const [newChoirType, setNewChoirType] = useState<'msc' | 'standard' | null>(null);
   const [joinCode, setJoinCode] = useState("");
   const [joinLastName, setJoinLastName] = useState("");
@@ -427,17 +424,17 @@ function HomePageContent() {
 
   const handleFinishAppRegistration = async () => {
     if (!user || !userData?.choirId) return;
-    if (!joinLastName.trim() || !joinFirstName.trim()) {
-      setManagerError("Введіть прізвище та ім'я");
-      return;
-    }
     setClaimLoading(true);
     setManagerError("");
 
-    const fullName = `${joinLastName.trim()} ${joinFirstName.trim()}`;
+    const hasNameInput = joinLastName.trim() || joinFirstName.trim();
+    const providedName = hasNameInput ? [joinLastName.trim(), joinFirstName.trim()].filter(Boolean).join(" ") : (userData?.name || "");
+
     try {
-      // 1. Save name to user profile
-      await createUser(user.uid, { name: fullName });
+      // 1. Save name to user profile if provided
+      if (hasNameInput) {
+        await createUser(user.uid, { name: providedName });
+      }
 
       // 2. Fetch choir to find unlinked members
       const choirDocRef = doc(db, "choirs", userData.choirId);
@@ -448,10 +445,10 @@ function HomePageContent() {
       const unlinked = currentMembers.filter((m: any) => !m.hasAccount && m.name);
 
       // Auto-matching logic
-      if (unlinked.length > 0) {
+      if (unlinked.length > 0 && providedName && providedName !== "User") {
         const normalize = (name: string) => name.toLowerCase().replace(/\s+/g, ' ').trim();
-        const enteredNameNorm = normalize(fullName);
-        const enteredNameReversed = normalize(`${joinFirstName.trim()} ${joinLastName.trim()}`);
+        const enteredNameNorm = normalize(providedName);
+        const enteredNameReversed = normalize(providedName.split(' ').reverse().join(' '));
 
         const matchedMember = unlinked.find((m: any) => {
           if (!m.name) return false;
@@ -473,8 +470,10 @@ function HomePageContent() {
         }
       }
 
-      // No match -> Update their own auto-created stub with the new name
-      await updateMember(userData.choirId, user.uid, { name: fullName });
+      // No match -> Update their own auto-created stub with the new name if provided
+      if (hasNameInput) {
+        await updateMember(userData.choirId, user.uid, { name: providedName });
+      }
 
       await refreshProfile();
       setShowFinishAppRegistration(false);
@@ -544,14 +543,17 @@ function HomePageContent() {
     try {
       const payload = {
         title: choir?.name || "MyChoir",
-        avatarLetter: userData?.name ? userData.name.charAt(0).toUpperCase() : "U",
-        unreadCount: unreadNotifications
+        avatarLetter: userData?.name ? getFirstNameInitial(userData.name) : "U",
+        unreadCount: unreadNotifications,
+        showSearch: false, // Search is now in the sub-header
+        theme: theme,
+        logoUrl: choir?.icon || ""
       };
       (window as any).webkit?.messageHandlers?.headerSync?.postMessage(payload);
     } catch (e) {
       console.warn("Failed to sync header to native", e);
     }
-  }, [choir?.name, userData?.name, unreadNotifications, isNative]);
+  }, [choir?.name, userData?.name, unreadNotifications, isNative, activeTab, theme]);
 
     useEffect(() => {
     // Expose direct functions on window so Swift can call them by name.
@@ -561,16 +563,16 @@ function HomePageContent() {
     (window as any).__nativeHeaderBellClick = () => router.push('/notifications');
     (window as any).__nativeHeaderTitleClick = () => setShowChoirManager(true);
     (window as any).__nativeHeaderLogoClick = () => { setEditChoirName(choir?.name || ''); setShowChoirSettings(true); };
+    (window as any).__nativeHeaderSearchClick = () => setShowSearchOverlay(true);
 
     return () => {
       delete (window as any).__nativeHeaderAvatarClick;
       delete (window as any).__nativeHeaderBellClick;
       delete (window as any).__nativeHeaderTitleClick;
       delete (window as any).__nativeHeaderLogoClick;
+      delete (window as any).__nativeHeaderSearchClick;
     };
-  // Intentionally no isNative guard — these are no-ops on web (Swift never calls them)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router]);
+  }, [router, choir?.name]);
   // ---------------------------------
 
   // Native FAB tap → open correct modal based on active tab and sub-tab
@@ -779,10 +781,8 @@ function HomePageContent() {
   useEffect(() => {
     // 1. Wait for Auth Context or Profile Loading
     if (authLoading || userData === undefined) {
-      st(`Core init waiting: authLoading=${authLoading} userData=${userData === undefined ? 'undefined' : 'present'}`);
       return;
     }
-    st(`Auth resolved: user=${!!user} choirId=${userData?.choirId}`);
 
     // 2. Unauthenticated -> Redirect to Setup
     if (!user || !userData?.choirId) {
@@ -812,9 +812,7 @@ function HomePageContent() {
     let choirLoaded = false;
 
     const checkReady = () => {
-      st(`checkReady: services=${servicesLoaded} choir=${choirLoaded}`);
       if (servicesLoaded && choirLoaded) {
-        st('App Ready — both loaded');
         setIsAppReady(true);
         setIsSwitchingChoir(false);
       }
@@ -1110,18 +1108,18 @@ function HomePageContent() {
 
   const handleJoinChoir = async () => {
     if (!user || !joinCode || joinCode.length !== 6) return;
-    if (!joinLastName.trim() || !joinFirstName.trim()) {
-      setManagerError("Введіть прізвище та ім'я");
-      return;
-    }
     setManagerLoading(true);
 
-    // Save name to user profile BEFORE joining
-    const fullName = `${joinLastName.trim()} ${joinFirstName.trim()}`;
-    try {
-      await createUser(user.uid, { name: fullName });
-    } catch (e) {
-      console.warn("Failed to save name before join:", e);
+    const hasNameInput = joinLastName.trim() || joinFirstName.trim();
+
+    if (hasNameInput) {
+      // Save name to user profile BEFORE joining
+      const fullName = [joinLastName.trim(), joinFirstName.trim()].filter(Boolean).join(" ");
+      try {
+        await createUser(user.uid, { name: fullName });
+      } catch (e) {
+        console.warn("Failed to save name before join:", e);
+      }
     }
 
     try {
@@ -1148,16 +1146,21 @@ function HomePageContent() {
 
       if (allMembers.length > 0 && result?.choirId) {
         const normalize = (name: string) => name.toLowerCase().replace(/\s+/g, ' ').trim();
-        const enteredNameNorm = normalize(`${joinLastName} ${joinFirstName}`);
-        const enteredNameReversed = normalize(`${joinFirstName} ${joinLastName}`);
+        const providedName = hasNameInput ? [joinLastName.trim(), joinFirstName.trim()].filter(Boolean).join(" ") : (userData?.name || "");
 
-        const matchedMember = allMembers.find((m: any) => {
-          if (!m.name) return false;
-          const mName = normalize(m.name);
-          const distNormal = distance(mName, enteredNameNorm);
-          const distReversed = distance(mName, enteredNameReversed);
-          return distNormal <= 2 || distReversed <= 2;
-        });
+        let matchedMember = null;
+        if (providedName && providedName !== "User") {
+          const enteredNameNorm = normalize(providedName);
+          const enteredNameReversed = normalize(providedName.split(' ').reverse().join(' '));
+
+          matchedMember = allMembers.find((m: any) => {
+            if (!m.name) return false;
+            const mName = normalize(m.name);
+            const distNormal = distance(mName, enteredNameNorm);
+            const distReversed = distance(mName, enteredNameReversed);
+            return distNormal <= 2 || distReversed <= 2;
+          });
+        }
 
         if (matchedMember) {
           console.log("Showing claim modal for:", matchedMember.name);
@@ -1168,13 +1171,17 @@ function HomePageContent() {
           setShowChoirManager(false);
           setShowClaimModal(true);
         } else {
-          await updateMember(result.choirId, user.uid, { name: fullName });
+          if (hasNameInput) {
+            await updateMember(result.choirId, user.uid, { name: [joinLastName.trim(), joinFirstName.trim()].filter(Boolean).join(" ") });
+          }
           setShowAccount(false);
           setShowChoirManager(false);
           router.replace('/app');
         }
       } else if (result?.choirId) {
-        await updateMember(result.choirId, user.uid, { name: fullName });
+        if (hasNameInput) {
+          await updateMember(result.choirId, user.uid, { name: [joinLastName.trim(), joinFirstName.trim()].filter(Boolean).join(" ") });
+        }
         setShowAccount(false);
         setShowChoirManager(false);
         router.replace('/app');
@@ -1481,7 +1488,13 @@ function HomePageContent() {
     try {
       // Cloud Function handles both Firestore cleanup and Auth deletion
       await deleteMyAccount();
-      // Navigation handles itself (auth state change)
+      // Explicitly redirect and clean up state
+      setShowDeleteModal(false);
+      try {
+        router.push("/");
+      } catch (e) {
+        window.location.href = "/";
+      }
     } catch (error: any) {
       console.error("Delete Account Error:", error);
       setManagerError(error.message || "Сталася помилка при видаленні акаунту");
@@ -2008,7 +2021,7 @@ function HomePageContent() {
                       <input
                         value={joinLastName}
                         onChange={e => setJoinLastName(e.target.value)}
-                        placeholder="Шевченко"
+                        placeholder="Шевченко (необов'язково)"
                         className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl placeholder:text-text-secondary"
                         autoCapitalize="words"
                       />
@@ -2018,7 +2031,7 @@ function HomePageContent() {
                       <input
                         value={joinFirstName}
                         onChange={e => setJoinFirstName(e.target.value)}
-                        placeholder="Тарас"
+                        placeholder="Тарас (необов'язково)"
                         className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl placeholder:text-text-secondary"
                         autoCapitalize="words"
                       />
@@ -2034,7 +2047,7 @@ function HomePageContent() {
                   {managerError && <p className="text-red-400 text-xs">{managerError}</p>}
                   <button
                     onClick={handleJoinChoir}
-                    disabled={managerLoading || !joinLastName.trim() || !joinFirstName.trim()}
+                    disabled={managerLoading || joinCode.length !== 6}
                     className="w-full p-3 bg-primary text-background rounded-xl font-bold hover:opacity-90 disabled:opacity-50"
                   >
                     {managerLoading ? <Loader2 className="animate-spin mx-auto" /> : "Додатись"}
@@ -2105,7 +2118,7 @@ function HomePageContent() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[70] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
@@ -2189,7 +2202,7 @@ function HomePageContent() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-4"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex flex-col items-center justify-center p-4"
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
@@ -2205,9 +2218,9 @@ function HomePageContent() {
                 <X className="w-5 h-5" />
               </button>
 
-              <h3 className="text-xl font-bold text-text-primary mb-2">Завершення реєстрації</h3>
+              <h3 className="text-xl font-bold text-text-primary mb-2">Ваш профіль</h3>
               <p className="text-sm text-text-secondary mb-6">
-                Будь ласка, введіть ваше Прізвище та Ім'я для повноцінної роботи додатка.
+                Якщо хочете, додайте ваше ім'я — це допоможе регенту впізнати вас у хорі. Поля необов'язкові та можна пропустити.
               </p>
 
               <div className="space-y-4">
@@ -2217,7 +2230,7 @@ function HomePageContent() {
                     <input
                       value={joinLastName}
                       onChange={e => setJoinLastName(e.target.value)}
-                      placeholder="Наприклад: Шевченко"
+                      placeholder="Прізвище (необов'язково)"
                       className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl placeholder:text-text-secondary"
                       autoCapitalize="words"
                     />
@@ -2227,7 +2240,7 @@ function HomePageContent() {
                     <input
                       value={joinFirstName}
                       onChange={e => setJoinFirstName(e.target.value)}
-                      placeholder="Наприклад: Тарас"
+                      placeholder="Ім'я (необов'язково)"
                       className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl placeholder:text-text-secondary"
                       autoCapitalize="words"
                     />
@@ -2238,7 +2251,7 @@ function HomePageContent() {
 
                 <button
                   onClick={handleFinishAppRegistration}
-                  disabled={claimLoading || !joinLastName.trim() || !joinFirstName.trim()}
+                  disabled={claimLoading}
                   className="w-full py-4 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-all flex justify-center shadow-lg disabled:opacity-50"
                 >
                   {claimLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Продовжити"}
@@ -2307,6 +2320,33 @@ function HomePageContent() {
                     <div className="mt-2">{getRoleBadge(userData?.role || 'member')}</div>
                   </div>
                 </div>
+
+                {/* Profile Banner */}
+                {!dismissedProfileBanner && isUserUnlinked && (
+                  <div className="bg-primary/10 border border-primary/20 rounded-2xl p-4 flex items-start gap-4 animate-in fade-in slide-in-from-top-4 relative">
+                    <button
+                      onClick={() => setDismissedProfileBanner(true)}
+                      className="absolute top-2 right-2 p-1.5 text-text-secondary hover:text-text-primary rounded-full hover:bg-white/5 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center shrink-0 mt-0.5">
+                      <User className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 pr-6">
+                      <h4 className="font-bold text-text-primary mb-1 text-sm">Як вас звати?</h4>
+                      <p className="text-xs text-text-secondary leading-relaxed mb-3">
+                        Додайте ім'я, щоб регенти бачили вас у статистиці відвідувань.
+                      </p>
+                      <button
+                        onClick={openClaimFromBanner}
+                        className="py-2 px-4 bg-primary text-background text-xs font-bold rounded-lg hover:opacity-90 transition-all shadow-sm"
+                      >
+                        Вказати ім'я
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Management Block (Choir & Codes) */}
                 <div className="bg-surface rounded-2xl p-4 card-shadow">
@@ -2627,20 +2667,6 @@ function HomePageContent() {
                 </button>
               </div>
 
-              {/* Підтримати - окремий виділений блок */}
-              <button
-                onClick={() => setShowSupportModal(true)}
-                className="w-full mt-8 py-4 px-5 bg-gradient-to-r from-pink-500/10 to-purple-500/10 border border-pink-400/30 rounded-2xl text-left transition-all hover:from-pink-500/20 hover:to-purple-500/20 flex items-center gap-4 group"
-              >
-                <div className="w-10 h-10 rounded-full bg-pink-500/20 flex items-center justify-center">
-                  <Heart className="w-5 h-5 text-pink-400" />
-                </div>
-                <div>
-                  <span className="text-lg font-medium text-pink-400">Підтримати проєкт</span>
-                  <p className="text-xs text-text-secondary mt-0.5">Допоможіть розвивати застосунок</p>
-                </div>
-              </button>
-
               {/* Delete Account Button */}
               <div className="mt-8 pt-4 border-t border-border">
                 <button
@@ -2657,7 +2683,7 @@ function HomePageContent() {
 
 
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-surface/90 backdrop-blur-3xl border-b border-border shadow-sm pt-safe transition-all flex flex-col">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-surface/90 backdrop-blur-md border-b border-border shadow-sm pt-safe transition-all flex flex-col">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3 w-full">
           {/* Left: Logo + Title */}
           <div className="flex items-center gap-3 shrink-0">
@@ -2735,24 +2761,8 @@ function HomePageContent() {
             </p>
           </div>
         )}
-        {/* Self-service claim banner for unlinked users */}
-        {isUserUnlinked && (
-          <div className="mx-4 mt-3 mb-2">
-            <button
-              onClick={openClaimFromBanner}
-              className="w-full p-4 bg-primary/10 border border-primary/30 rounded-2xl flex items-center gap-3 text-left hover:bg-primary/15 transition-colors active:scale-[0.99]"
-            >
-              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                <User className="w-5 h-5 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-text-primary">Завершіть реєстрацію</p>
-                <p className="text-xs text-text-secondary mt-0.5">Будь ласка, введіть ваше прізвище та ім'я для повноцінної роботи додатка</p>
-              </div>
-              <ChevronRight className="w-5 h-5 text-text-secondary flex-shrink-0" />
-            </button>
-          </div>
-        )}
+
+
 
         {activeTab === 'home' && (
           <ServiceList
@@ -2779,13 +2789,16 @@ function HomePageContent() {
             showAddModal={showAddSongModal}
             setShowAddModal={setShowAddSongModal}
             isOverlayOpen={showAccount || showChoirManager || showAddServiceModal}
+            showSearchOverlay={showSearchOverlay}
+            setShowSearchOverlay={setShowSearchOverlay}
+            isActiveTab={activeTab === 'songs'}
           />
         </div>
 
         {activeTab === 'members' && (
           <div className="max-w-5xl mx-auto px-4 pb-32">
-            {/* Header + Filters — sticky */}
-            <div className="sticky top-[calc(4rem_+_env(safe-area-inset-top))] z-40 bg-background/95 backdrop-blur-md -mx-4 px-4 pt-3 pb-1 border-b border-border">
+            {/* Header + Filters */}
+            <div className="-mx-4 px-4 pt-3 pb-1 mb-2">
               <div className="flex justify-between items-center mb-3">
                 <div className="flex items-center gap-2">
                   <h2 className="text-xl font-bold text-text-primary">Учасники</h2>
@@ -2833,6 +2846,8 @@ function HomePageContent() {
                     {filter.label}
                   </button>
                 ))}
+                {/* Spacer to fix WebKit ignoring right padding on overflow-x-auto flex containers */}
+                <div className="w-4 shrink-0" />
               </div>
             </div>
 

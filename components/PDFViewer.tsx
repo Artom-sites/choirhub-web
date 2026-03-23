@@ -11,8 +11,7 @@ import {
     Download,
     Plus,
     WifiOff,
-
-
+    AlertCircle,
     FileSignature
 } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
@@ -330,7 +329,7 @@ export default function PDFViewer({ url, songId, title, onClose, onAddAction, is
                 {...(isAnnotating ? pinchZoom.handlers : {})}
             >
                 <div
-                    className="min-h-full flex flex-col items-center py-2 px-0 pb-32"
+                    className="min-h-full flex flex-col items-center pt-0 pb-32"
                     style={isAnnotating ? pinchZoom.style : undefined}
                 >
                     {isLoading && (
@@ -340,18 +339,35 @@ export default function PDFViewer({ url, songId, title, onClose, onAddAction, is
                     )}
 
                     {error && (
-                        <div className="text-center py-20 px-4">
-                            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <WifiOff className="w-8 h-8 text-red-400" />
-                            </div>
-                            <p className="text-red-400 mb-4">{error}</p>
-                            <button onClick={() => setRetryCount(p => p + 1)} className="px-6 py-2 bg-black text-white rounded-xl">
-                                Спробувати знову
+                        <div className="flex-1 flex flex-col items-center justify-center py-20 px-4 mt-10">
+                            {error.includes('інтернет') ? (
+                                <>
+                                    <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6 border border-slate-200">
+                                        <WifiOff className="w-10 h-10 text-slate-400" />
+                                    </div>
+                                    <h3 className="text-2xl font-bold text-slate-800 mb-3 text-center">Ви офлайн</h3>
+                                    <p className="text-slate-500 mb-8 text-center max-w-sm leading-relaxed">
+                                        Ці ноти не збережені на пристрої. Підключіться до інтернету, щоб завантажити їх.
+                                    </p>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-100">
+                                        <AlertCircle className="w-10 h-10 text-red-500" />
+                                    </div>
+                                    <h3 className="text-2xl font-bold text-slate-800 mb-3 text-center">Сталася помилка</h3>
+                                    <p className="text-slate-500 mb-8 text-center max-w-sm leading-relaxed">
+                                        {error}. Можливо, файл було видалено, або у вас немає до нього доступу.
+                                    </p>
+                                </>
+                            )}
+                            <button onClick={() => setRetryCount(p => p + 1)} className="px-8 py-3.5 bg-black text-white font-semibold rounded-2xl active:scale-95 transition-all text-[15px] shadow-sm hover:bg-slate-800">
+                                Повторити спробу
                             </button>
                         </div>
                     )}
 
-                    {pdfSource && containerWidth > 0 && (
+                    {pdfSource && containerWidth > 0 && !error && (
                         <Document
                             file={pdfSource}
                             onLoadSuccess={onDocumentLoadSuccess}

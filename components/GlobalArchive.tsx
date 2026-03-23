@@ -9,7 +9,7 @@ import { getFirestoreLazy } from "@/lib/firebase";
 import { GlobalSong, SongPart } from "@/types";
 import { extractInstrument } from "@/lib/utils";
 import { OFFICIAL_THEMES } from "@/lib/themes";
-import { Search, Music, Users, User, Loader2, FolderOpen, Plus, Eye, FileText, ChevronDown, Filter, X, LayoutGrid, Music2, Mic2, Sparkles, ShieldAlert, Check, Library, RefreshCw } from "lucide-react";
+import { Search, Music, Users, User, Loader2, FolderOpen, Plus, Eye, FileText, ChevronDown, ChevronRight, Filter, X, LayoutGrid, Music2, Mic2, Sparkles, ShieldAlert, Check, Library, RefreshCw, SlidersHorizontal } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import PDFViewer from "./PDFViewer";
 import { PencilKitAnnotator } from "@/plugins/PencilKitAnnotator";
@@ -22,14 +22,21 @@ import { getPendingSongs, approveSong, rejectSong, getGlobalSong } from "@/lib/d
 import { PendingSong } from "@/types";
 import { ConfirmModal, AlertModal, InputModal } from "./ui/Modal";
 import { hapticLight, hapticSuccess } from "../hooks/useHaptics";
+import GlassPageHeader from "./GlassPageHeader";
 
 interface GlobalArchiveProps {
     onAddSong?: (song: GlobalSong) => void;
     isOverlayOpen?: boolean;
     initialSearchQuery?: string;
+    showSearchOverlay?: boolean;
+    setShowSearchOverlay?: (show: boolean) => void;
+    externalSearchQuery?: string;
+    externalCategory?: string;
+    externalSubCategory?: string | null;
+    externalLanguage?: 'all' | 'ukr' | 'rus' | 'eng' | 'ger' | 'rom';
 }
 
-const CATEGORIES = [
+export const CATEGORIES = [
     { id: "new", label: "Новинки 🔥", icon: Sparkles },
     { id: "all", label: "Всі", icon: LayoutGrid },
     { id: "choir", label: "Хор", icon: Users },
@@ -37,7 +44,7 @@ const CATEGORIES = [
     { id: "ensemble", label: "Ансамбль", icon: Mic2 },
 ];
 
-const SUBCATEGORIES: Record<string, { id: string; label: string }[]> = {
+export const SUBCATEGORIES: Record<string, { id: string; label: string }[]> = {
     choir: [
         { id: "mixed", label: "Змішаний" },
         { id: "youth", label: "Молодіжний" },
@@ -88,22 +95,28 @@ const fuseOptions = {
     minMatchCharLength: 2,
 };
 
-export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQuery = "" }: GlobalArchiveProps) {
+export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQuery = "", showSearchOverlay, setShowSearchOverlay, externalSearchQuery, externalCategory, externalSubCategory, externalLanguage }: GlobalArchiveProps) {
     const { user, userData } = useAuth();
     const [songs, setSongs] = useState<GlobalSong[]>([]);
     const [filteredSongs, setFilteredSongs] = useState<GlobalSong[]>([]);
     const [loading, setLoading] = useState(true);
-    const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
-    const [selectedCategory, setSelectedCategory] = useState("all"); // Default to 'all' or 'new'? keep 'all' 
-    const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState(externalSearchQuery !== undefined ? externalSearchQuery : initialSearchQuery);
+    const [selectedCategory, setSelectedCategory] = useState(externalCategory || "all");
+    const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(externalSubCategory || null);
     const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
-    const [selectedLanguage, setSelectedLanguage] = useState<'all' | 'ukr' | 'rus' | 'eng' | 'ger' | 'rom'>('all');
+    const [selectedLanguage, setSelectedLanguage] = useState<'all' | 'ukr' | 'rus' | 'eng' | 'ger' | 'rom'>(externalLanguage || 'all');
     const [availableThemes, setAvailableThemes] = useState<string[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [isPreviewLoading, setIsPreviewLoading] = useState(false);
     const [previewSong, setPreviewSong] = useState<GlobalSong | null>(null);
     const [previewPartIndex, setPreviewPartIndex] = useState(0);
     const [fuseInstance, setFuseInstance] = useState<Fuse<GlobalSong> | null>(null);
+
+    // Sync external props to internal state
+    useEffect(() => { if (externalSearchQuery !== undefined) setSearchQuery(externalSearchQuery); }, [externalSearchQuery]);
+    useEffect(() => { if (externalCategory !== undefined) setSelectedCategory(externalCategory); }, [externalCategory]);
+    useEffect(() => { if (externalSubCategory !== undefined) setSelectedSubCategory(externalSubCategory); }, [externalSubCategory]);
+    useEffect(() => { if (externalLanguage !== undefined) setSelectedLanguage(externalLanguage); }, [externalLanguage]);
 
     // Pagination State
     const [hasMore, setHasMore] = useState(true);
@@ -112,6 +125,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     const [showFilters, setShowFilters] = useState(false);
+    const [showExtendedFilters, setShowExtendedFilters] = useState(false);
     const [isNative, setIsNative] = useState(false);
     const [showAddOptions, setShowAddOptions] = useState(false);
     const [songToAdd, setSongToAdd] = useState<GlobalSong | null>(null);
@@ -899,129 +913,116 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
 
             {!isModerationMode ? (
                 <>
-                    <div className="sticky z-10 -mx-4 px-4 pt-3 pb-3 mt-2 bg-background/50 backdrop-blur-2xl border-b border-border" style={{ top: isOverlayOpen ? '0px' : 'calc(env(safe-area-inset-top) + 64px)' }}>
-                        <div className="flex gap-2">
-                            <div className="relative flex-1 group">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
-                                <input
-                                    type="text"
-                                    placeholder="Пошук..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-11 pr-10 py-3 bg-surface/50 backdrop-blur-xl rounded-xl text-base focus:outline-none text-text-primary placeholder:text-text-secondary/50 transition-all border border-border focus:bg-surface/80"
-                                />
-                                {searchQuery && (
-                                    <button
-                                        onClick={() => setSearchQuery("")}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-secondary hover:text-text-primary hover:bg-surface-highlight rounded-full transition-all"
-                                    >
-                                        <X className="w-4 h-4" />
-                                    </button>
-                                )}
-                            </div>
-                            <button
-                                onClick={() => setShowFilters(!showFilters)}
-                                className={`px-4 rounded-xl flex items-center gap-2 transition-all border ${showFilters || activeFiltersCount > 0
-                                    ? "bg-primary text-background border-primary shadow-md"
-                                    : "bg-surface/50 backdrop-blur-xl text-text-secondary border-border hover:bg-surface-highlight"
-                                    }`}
+                    {/* Native Search Overlay */}
+                    <AnimatePresence>
+                        {showSearchOverlay && (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.15 }}
+                                className="fixed inset-0 z-[65] bg-background flex flex-col"
+                                data-native-inner="true"
                             >
-                                <Filter className="w-5 h-5" />
-                                {activeFiltersCount > 0 && <span className="bg-black/20 px-1.5 rounded-full text-xs">{activeFiltersCount}</span>}
-                            </button>
-                        </div>
+                                <GlassPageHeader
+                                    isActive={true}
+                                    onBack={() => {
+                                        setShowSearchOverlay?.(false);
+                                        setSearchQuery("");
+                                        setSelectedCategory("all");
+                                        setSelectedLanguage("all");
+                                        setSelectedSubCategory(null);
+                                        setSelectedTheme(null);
+                                    }}
+                                    searchInput={{
+                                        placeholder: "Пошук в архіві...",
+                                        value: searchQuery,
+                                        onChange: setSearchQuery,
+                                        autoFocus: true
+                                    }}
+                                    filterMenu={[
+                                        {
+                                            items: CATEGORIES.map(cat => ({
+                                                id: `cat:${cat.id}`,
+                                                label: cat.label,
+                                                isActive: selectedCategory === cat.id,
+                                                children: SUBCATEGORIES[cat.id]?.map(sub => ({
+                                                    id: `sub:${sub.id}`,
+                                                    label: sub.label,
+                                                    isActive: selectedSubCategory === sub.id,
+                                                }))
+                                            }))
+                                        },
+                                        {
+                                            items: [
+                                                { id: 'lang:all', label: 'Всі', isActive: selectedLanguage === 'all' },
+                                                { id: 'lang:ukr', label: '🇺🇦 Українська', isActive: selectedLanguage === 'ukr' },
+                                                { id: 'lang:rus', label: '🇷🇺 Російська', isActive: selectedLanguage === 'rus' },
+                                                { id: 'lang:eng', label: '🌍 Англійська', isActive: selectedLanguage === 'eng' },
+                                            ]
+                                        }
+                                    ]}
+                                    onFilterMenuSelect={(itemId) => {
+                                        if (itemId.startsWith('cat:')) {
+                                            const catId = itemId.slice(4);
+                                            setSelectedCategory(catId);
+                                            setSelectedSubCategory(null);
+                                        } else if (itemId.startsWith('sub:')) {
+                                            const subId = itemId.slice(4);
+                                            setSelectedSubCategory(selectedSubCategory === subId ? null : subId);
+                                        } else if (itemId.startsWith('lang:')) {
+                                            const lang = itemId.slice(5) as 'ukr' | 'rus' | 'eng';
+                                            setSelectedLanguage(selectedLanguage === lang ? 'all' : lang);
+                                        }
+                                    }}
+                                />
 
-                        {/* Filters Panel */}
-                        <AnimatePresence>
-                            {showFilters && (
-                                <motion.div
-                                    initial={{ height: 0, opacity: 0 }}
-                                    animate={{ height: "auto", opacity: 1 }}
-                                    exit={{ height: 0, opacity: 0 }}
-                                    className="overflow-hidden mt-2"
-                                >
-                                    <div className="bg-surface rounded-2xl p-4 mb-4 space-y-4 border border-border">
-                                        {/* Language */}
-                                        <div className="border-b border-border pb-4">
-                                            <p className="text-xs text-text-secondary uppercase font-bold tracking-wider mb-2">Мова</p>
-                                            <div className="flex gap-2 pb-2 overflow-x-auto scrollbar-hide -mx-4 px-4">
-                                                <button onClick={() => setSelectedLanguage('all')} className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm transition-all border ${selectedLanguage === 'all' ? 'bg-primary text-background border-primary font-semibold shadow-sm' : 'bg-surface text-text-secondary border-border hover:bg-surface-highlight'}`}>Всі</button>
-                                                <button onClick={() => setSelectedLanguage('ukr')} className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm transition-all border flex items-center gap-1.5 ${selectedLanguage === 'ukr' ? 'bg-primary text-background border-primary font-semibold shadow-sm' : 'bg-surface text-text-secondary border-border hover:bg-surface-highlight'}`}>🇺🇦 УКР</button>
-                                                <button onClick={() => setSelectedLanguage('rus')} className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm transition-all border flex items-center gap-1.5 ${selectedLanguage === 'rus' ? 'bg-primary text-background border-primary font-semibold shadow-sm' : 'bg-surface text-text-secondary border-border hover:bg-surface-highlight'}`}>🇷🇺 РУС</button>
-                                                <button onClick={() => setSelectedLanguage('eng')} className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm transition-all border flex items-center gap-1.5 ${selectedLanguage === 'eng' ? 'bg-primary text-background border-primary font-semibold shadow-sm' : 'bg-surface text-text-secondary border-border hover:bg-surface-highlight'}`}>🌍 ENG</button>
-                                                <button onClick={() => setSelectedLanguage('ger')} className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm transition-all border flex items-center gap-1.5 ${selectedLanguage === 'ger' ? 'bg-primary text-background border-primary font-semibold shadow-sm' : 'bg-surface text-text-secondary border-border hover:bg-surface-highlight'}`}>🇩🇪 GER</button>
-                                                <button onClick={() => setSelectedLanguage('rom')} className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm transition-all border flex items-center gap-1.5 ${selectedLanguage === 'rom' ? 'bg-primary text-background border-primary font-semibold shadow-sm' : 'bg-surface text-text-secondary border-border hover:bg-surface-highlight'}`}>🇷🇴 ROM</button>
-                                            </div>
-                                        </div>
-
-                                        {/* Categories */}
-                                        <div className="border-b border-border pb-4">
-                                            <p className="text-xs text-text-secondary uppercase font-bold tracking-wider mb-2">Категорія</p>
-                                            <div className="flex flex-wrap gap-2">
-                                                {CATEGORIES.map(cat => (
-                                                    <button
-                                                        key={cat.id}
-                                                        onClick={() => {
-                                                            setSelectedCategory(cat.id);
-                                                            setSelectedSubCategory(null);
-                                                        }}
-                                                        className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm whitespace-nowrap transition-all border ${selectedCategory === cat.id
-                                                            ? "bg-primary text-background border-primary font-semibold shadow-sm"
-                                                            : "bg-surface text-text-secondary border-border hover:bg-surface-highlight"
-                                                            }`}
-                                                    >
-                                                        <cat.icon className="w-4 h-4" />
-                                                        {cat.label}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* Subcategories */}
-                                        {selectedCategory !== "all" && selectedCategory !== "new" && SUBCATEGORIES[selectedCategory] && (
-                                            <div className="border-b border-border pb-4">
-                                                <p className="text-xs text-text-secondary uppercase font-bold tracking-wider mb-2">Склад</p>
-                                                <div className="flex flex-wrap gap-2">
-                                                    <button
-                                                        onClick={() => setSelectedSubCategory(null)}
-                                                        className={`px-4 py-2 rounded-xl text-sm transition-all border ${!selectedSubCategory
-                                                            ? "bg-primary text-background border-primary font-semibold shadow-sm"
-                                                            : "bg-surface text-text-secondary border-border hover:bg-surface-highlight"
-                                                            }`}
-                                                    >
-                                                        Всі
-                                                    </button>
-                                                    {SUBCATEGORIES[selectedCategory].map(sub => (
-                                                        <button
-                                                            key={sub.id}
-                                                            onClick={() => setSelectedSubCategory(selectedSubCategory === sub.id ? null : sub.id)}
-                                                            className={`px-4 py-2 rounded-xl text-sm transition-all border ${selectedSubCategory === sub.id
-                                                                ? "bg-primary text-background border-primary font-semibold shadow-sm"
-                                                                : "bg-surface text-text-secondary border-border hover:bg-surface-highlight"
-                                                                }`}
-                                                        >
-                                                            {sub.label}
-                                                        </button>
-                                                    ))}
+                                {/* Results Area (Flexible height) */}
+                                <div className="flex-1 overflow-y-auto">
+                                    <div className="px-4 pb-8">
+                                        {filteredSongs.length === 0 ? (
+                                            <div className="text-center py-24 opacity-40">
+                                                <div className="w-16 h-16 bg-surface rounded-full flex items-center justify-center mx-auto mb-4">
+                                                    <Library className="w-8 h-8 text-text-secondary" />
                                                 </div>
+                                                <p className="text-text-secondary">Нічого не знайдено</p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-0 mt-2">
+                                                <p className="text-xs text-text-secondary my-2">{filteredSongs.length} {filteredSongs.length === 1 ? 'пісня' : 'пісень'}</p>
+                                                {filteredSongs.slice(0, 50).map(song => (
+                                                    <div
+                                                        key={`search-${song.id}`}
+                                                        onClick={() => {
+                                                            setShowSearchOverlay?.(false);
+                                                            setPreviewSong(song);
+                                                            setPreviewPartIndex(0);
+                                                        }}
+                                                        className="flex items-center gap-3 py-3 border-b border-border/30 cursor-pointer active:bg-surface-highlight/50 transition-colors"
+                                                    >
+                                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-text-primary/10">
+                                                            <Music className="w-5 h-5 text-text-primary" />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <h3 className="font-semibold text-text-primary truncate">{song.title}</h3>
+                                                            <p className="text-xs text-text-secondary truncate mt-0.5">
+                                                                {song.composer && <span className="text-xs font-medium text-primary mr-1"><User className="inline-block w-3 h-3 mr-0.5" />{song.composer}</span>}
+                                                                {song.language?.toUpperCase() || ''} • {song.category} {getSubcategoryLabel(song.category, song.subcategory) ? `(${getSubcategoryLabel(song.category, song.subcategory)})` : ''}
+                                                            </p>
+                                                        </div>
+                                                        <ChevronRight className="w-4 h-4 text-text-secondary/40 flex-shrink-0" />
+                                                    </div>
+                                                ))}
+                                                {filteredSongs.length > 50 && (
+                                                    <p className="text-center text-xs text-text-secondary py-4 tracking-wider uppercase">Показано 50 перших результатів</p>
+                                                )}
                                             </div>
                                         )}
-
-                                        {/* Themes */}
-                                        <div className="space-y-2">
-                                            <p className="text-xs text-text-secondary uppercase font-bold tracking-wider pb-1">Тематика</p>
-                                            <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-                                                <button onClick={() => setSelectedTheme(null)} className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm transition-all border ${!selectedTheme ? "bg-primary text-background border-primary font-semibold shadow-sm" : "bg-surface text-text-secondary border-border hover:bg-surface-highlight"}`}>Всі теми</button>
-                                                {OFFICIAL_THEMES.map(theme => (
-                                                    <button key={theme} onClick={() => setSelectedTheme(selectedTheme === theme ? null : theme)} className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm transition-all border ${selectedTheme === theme ? "bg-primary text-background border-primary font-semibold shadow-sm" : "bg-surface text-text-secondary border-border hover:bg-surface-highlight"}`}>{theme}</button>
-                                                ))}
-                                            </div>
-                                        </div>
                                     </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </>
             ) : (
                 <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-xl mb-4">

@@ -19,7 +19,7 @@ import AddSongModal from "./AddSongModal";
 import EditSongModal from "./EditSongModal";
 import PDFViewer from "./PDFViewer";
 import ConfirmationModal from "./ConfirmationModal";
-import GlobalArchive from "./GlobalArchive";
+import GlobalArchive, { CATEGORIES as ARCHIVE_CATEGORIES, SUBCATEGORIES as ARCHIVE_SUBCATEGORIES } from "./GlobalArchive";
 import TrashBin from "./TrashBin";
 import Toast from "./Toast";
 import SwipeableCard, { SwipeableCardRef } from "./SwipeableCard";
@@ -39,6 +39,9 @@ interface SongListProps {
     showAddModal?: boolean;
     setShowAddModal?: (show: boolean) => void;
     isOverlayOpen?: boolean;
+    showSearchOverlay?: boolean;
+    setShowSearchOverlay?: (show: boolean) => void;
+    isActiveTab?: boolean;
 }
 
 export default function SongList({
@@ -47,11 +50,14 @@ export default function SongList({
     regents,
     knownConductors,
     knownCategories,
-    isOverlayOpen,
     knownPianists,
+    isOverlayOpen,
     onRefresh,
     showAddModal: propsShowAddModal,
-    setShowAddModal: propsSetShowAddModal
+    setShowAddModal: propsSetShowAddModal,
+    showSearchOverlay,
+    setShowSearchOverlay,
+    isActiveTab = true
 }: SongListProps) {
     const router = useRouter();
     const { userData } = useAuth();
@@ -92,6 +98,9 @@ export default function SongList({
 
     const [subTab, setSubTab] = useState<'repertoire' | 'catalog'>('repertoire');
     const virtuosoRef = useRef<VirtuosoHandle>(null);
+    const [archiveCategory, setArchiveCategory] = useState("all");
+    const [archiveSubCategory, setArchiveSubCategory] = useState<string | null>(null);
+    const [archiveLanguage, setArchiveLanguage] = useState<'all' | 'ukr' | 'rus' | 'eng'>('all');
 
     // Listen to main nav double tap to scroll to top (for Repertoire list)
     useEffect(() => {
@@ -137,6 +146,107 @@ export default function SongList({
         minMatchCharLength: 2,
     }), [songs]);
 
+    const uniqueConductors = Array.from(new Set((songs || []).map(s => s.conductor).filter(Boolean))).sort();
+
+    // Native SubHeader Sync
+    useEffect(() => {
+        if (!isNative) return;
+        
+        try {
+            const payload = {
+                isVisible: isActiveTab,
+                tabs: choirType !== 'standard' ? ['Репертуар', 'Архів МХО'] : [],
+                activeTab: subTab === 'repertoire' ? 0 : 1,
+                searchInput: {
+                    value: search,
+                    placeholder: "Пошук пісень, регентів...",
+                    autoFocus: false
+                },
+                filterMenu: subTab === 'repertoire' ? [
+                    [
+                        { id: 'theme:All', label: 'Всі', isActive: selectedCategory === 'All' },
+                        ...Array.from(new Set([...CATEGORIES, ...(knownCategories || [])])).map(cat => ({
+                            id: `theme:${cat}`,
+                            label: cat,
+                            isActive: selectedCategory === cat
+                        }))
+                    ],
+                    ...(uniqueConductors.length > 0 ? [
+                        uniqueConductors.map(c => ({
+                            id: `conductor:${c || ''}`,
+                            label: c || '',
+                            isActive: selectedConductor === c
+                        }))
+                    ] : [])
+                ] : [
+                    [
+                        ...ARCHIVE_CATEGORIES.map(cat => ({
+                            id: `arch_cat:${cat.id}`,
+                            label: cat.label,
+                            isActive: archiveCategory === cat.id,
+                            children: ARCHIVE_SUBCATEGORIES[cat.id]?.map(sub => ({
+                                id: `arch_sub:${sub.id}`,
+                                label: sub.label,
+                                isActive: archiveSubCategory === sub.id,
+                            }))
+                        }))
+                    ],
+                    [
+                        { id: 'arch_lang:all', label: 'Всі', isActive: archiveLanguage === 'all' },
+                        { id: 'arch_lang:ukr', label: '🇺🇦 Українська', isActive: archiveLanguage === 'ukr' },
+                        { id: 'arch_lang:rus', label: '🇷🇺 Російська', isActive: archiveLanguage === 'rus' },
+                        { id: 'arch_lang:eng', label: '🌍 Англійська', isActive: archiveLanguage === 'eng' },
+                    ]
+                ]
+            };
+            (window as any).webkit?.messageHandlers?.subHeaderSync?.postMessage(payload);
+        } catch (e) {
+            console.warn("subHeaderSync error", e);
+        }
+        
+    }, [isNative, isActiveTab, subTab, search, selectedCategory, selectedConductor, uniqueConductors, choirType, knownCategories, archiveCategory, archiveSubCategory, archiveLanguage]);
+
+    useEffect(() => {
+        if (!isNative) return;
+        
+        (window as any).__nativeSubHeaderTabClick = (index: number) => {
+            setSubTab(index === 0 ? 'repertoire' : 'catalog');
+        };
+        (window as any).__nativeSubHeaderSearchChange = (val: string) => {
+            setSearch(val);
+        };
+        (window as any).__nativeSubHeaderFilterMenuSelect = (itemId: string) => {
+            if (itemId.startsWith('theme:')) {
+                const cat = itemId.slice(6);
+                setSelectedCategory(cat === selectedCategory ? 'All' : cat as any);
+                setSelectedConductor('All');
+            } else if (itemId.startsWith('conductor:')) {
+                const c = itemId.slice(10);
+                setSelectedConductor(selectedConductor === c ? 'All' : c);
+            } else if (itemId.startsWith('arch_cat:')) {
+                const catId = itemId.slice(9);
+                setArchiveCategory(catId);
+                setArchiveSubCategory(null);
+            } else if (itemId.startsWith('arch_sub:')) {
+                const subId = itemId.slice(9);
+                setArchiveSubCategory(archiveSubCategory === subId ? null : subId);
+            } else if (itemId.startsWith('arch_lang:')) {
+                const lang = itemId.slice(10) as 'ukr' | 'rus' | 'eng';
+                setArchiveLanguage(archiveLanguage === lang ? 'all' : lang);
+            }
+        };
+
+        return () => {
+            delete (window as any).__nativeSubHeaderTabClick;
+            delete (window as any).__nativeSubHeaderSearchChange;
+            delete (window as any).__nativeSubHeaderFilterMenuSelect;
+            
+            try {
+                (window as any).webkit?.messageHandlers?.subHeaderSync?.postMessage({ isVisible: false });
+            } catch (e) {}
+        };
+    }, [isNative, selectedCategory, selectedConductor]);
+
     const filteredSongs = useMemo(() => {
         let results = songs;
         if (search.trim()) {
@@ -169,7 +279,6 @@ export default function SongList({
         return results;
     }, [songs, search, selectedCategory, selectedConductor, fuse]);
 
-    const uniqueConductors = Array.from(new Set((songs || []).map(s => s.conductor).filter(Boolean))).sort();
     const songsWithPdf = (songs || []).filter(s => s.hasPdf).length;
 
     const handleSongClick = (song: SimpleSong) => {
@@ -383,20 +492,20 @@ export default function SongList({
     }
 
     return (
-        <div className="max-w-5xl mx-auto px-4 pb-32 pt-4 space-y-5">
-            {/* Sub-Tab Switcher */}
-            <div className="flex bg-surface/50 backdrop-blur-xl border border-border rounded-xl p-0.5 mb-6">
-                <button
-                    onClick={() => setSubTab('repertoire')}
-                    className={`flex-1 py-2.5 rounded-[10px] text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${subTab === 'repertoire'
-                        ? 'bg-primary text-background'
-                        : 'text-text-secondary'
-                        }`}
-                >
-                    <Music2 className="w-4 h-4" />
-                    Репертуар
-                </button>
-                {choirType !== 'standard' && (
+        <div className={`max-w-5xl mx-auto px-4 pb-32 ${isNative ? 'pt-0' : 'pt-4'} space-y-3`}>
+            {/* Sub-Tab Switcher (Web Only) */}
+            {!isNative && choirType !== 'standard' && (
+                <div className="flex bg-surface/50 backdrop-blur-xl border border-border rounded-xl p-0.5 mb-6">
+                    <button
+                        onClick={() => setSubTab('repertoire')}
+                        className={`flex-1 py-2.5 rounded-[10px] text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${subTab === 'repertoire'
+                            ? 'bg-primary text-background'
+                            : 'text-text-secondary'
+                            }`}
+                    >
+                        <Music2 className="w-4 h-4" />
+                        Репертуар
+                    </button>
                     <button
                         onClick={() => setSubTab('catalog')}
                         className={`flex-1 py-2.5 rounded-[10px] text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${subTab === 'catalog'
@@ -407,14 +516,22 @@ export default function SongList({
                         <Library className="w-4 h-4" />
                         Архів МХО
                     </button>
-                )}
-            </div>
+                </div>
+            )}
 
             {/* Catalog View */}
             {choirType !== 'standard' && (
                 <div data-subtab="catalog" className={subTab === 'catalog' ? 'block h-full' : 'hidden'}>
+                    {/* Extra padding on native so archive clears the SubHeader */}
+                    {isNative && <div className="h-12" />}
                     <GlobalArchive
                         isOverlayOpen={isOverlayOpen}
+                        showSearchOverlay={showSearchOverlay && subTab === 'catalog'}
+                        setShowSearchOverlay={setShowSearchOverlay}
+                        externalSearchQuery={search}
+                        externalCategory={archiveCategory}
+                        externalSubCategory={archiveSubCategory}
+                        externalLanguage={archiveLanguage}
                         onAddSong={canAddSongs ? async (globalSong) => {
                             if (!userData?.choirId) return;
 
@@ -456,8 +573,11 @@ export default function SongList({
 
             {/* Repertoire Content */}
             <div className={subTab === 'repertoire' ? 'block' : 'hidden'}>
+                {/* Extra padding on native so content clears the SubHeader */}
+                {isNative && <div className="h-12" />}
+                
                 {/* Stats Card */}
-                <div className="bg-surface/50 backdrop-blur-xl border border-border rounded-2xl p-5 mb-2">
+                <div className="bg-surface/50 backdrop-blur-xl border border-border rounded-2xl p-5 mb-2 mt-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 bg-black/5 dark:bg-white/10 rounded-full flex items-center justify-center text-text-primary">
@@ -485,78 +605,113 @@ export default function SongList({
                     </div>
                 </div>
 
-                {/* Search & Filter - Sticky */}
-                <div className="sticky z-20 -mx-4 px-4 pt-3 pb-3 mt-2 bg-background/50 backdrop-blur-2xl border-b border-border" style={{ top: 'calc(env(safe-area-inset-top) + 64px)' }}>
-                    <div className="flex gap-2">
-                        <div className="relative flex-1 group">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
-                            <input
-                                type="text"
-                                placeholder="Пошук..."
-                                className="w-full pl-11 pr-10 py-3 bg-surface/50 backdrop-blur-xl rounded-xl text-base focus:outline-none text-text-primary placeholder:text-text-secondary/50 transition-all border border-border focus:bg-surface/80"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                            />
-                            {search && (
-                                <button
-                                    onClick={() => setSearch("")}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-secondary hover:text-text-primary hover:bg-surface-highlight rounded-full transition-all"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
-                            )}
-                        </div>
-                        <button
-                            onClick={() => setShowFilters(!showFilters)}
-                            className={`px-4 rounded-xl flex items-center gap-2 transition-all border ${showFilters
-                                ? "bg-primary text-background border-primary shadow-md"
-                                : "bg-surface/50 backdrop-blur-xl text-text-secondary border-border hover:bg-surface-highlight"
-                                }`}
+                {/* Search Overlay using NativeGlassInner */}
+                <AnimatePresence>
+                    {!isNative && showSearchOverlay && subTab === 'repertoire' && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.15 }}
+                            className="fixed inset-0 z-[65] bg-background flex flex-col"
+                            data-native-inner="true"
                         >
-                            <Filter className="w-5 h-5" />
-                        </button>
-                    </div>
-
-                    <AnimatePresence>
-                        {showFilters && (
-                            <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: "auto", opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={{
-                                    height: { duration: 0.3, ease: [0.25, 0.1, 0.25, 1] },
-                                    opacity: { duration: 0.2, delay: 0.05 }
+                            <GlassPageHeader
+                                title="Пошук"
+                                searchInput={{
+                                    value: search,
+                                    onChange: setSearch,
+                                    placeholder: "Назва пісні, диригент...",
+                                    autoFocus: true
                                 }}
-                                className="overflow-hidden mt-2"
-                            >
-                                <div className="bg-surface rounded-2xl p-4 space-y-4 border border-border/50 shadow-sm">
-                                    <div>
-                                        <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Тематика</p>
-                                        <div className="flex flex-wrap gap-2">
-                                            <button onClick={() => setSelectedCategory("All")} className={`px-3 py-1.5 rounded-lg text-sm transition-all border ${selectedCategory === "All" ? "bg-primary text-background border-primary" : "bg-surface-highlight text-text-secondary border-transparent hover:border-border"}`}>Всі</button>
-                                            {Array.from(new Set([...CATEGORIES, ...(knownCategories || [])])).map(cat => (
-                                                <button key={cat} onClick={() => setSelectedCategory(cat)} className={`px-3 py-1.5 rounded-lg text-sm transition-all border ${selectedCategory === cat ? "bg-primary text-background border-primary" : "bg-surface-highlight text-text-secondary border-transparent hover:border-border"}`}>{cat}</button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    {uniqueConductors.length > 0 && (
-                                        <div>
-                                            <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Регент</p>
-                                            <div className="flex flex-wrap gap-2">
-                                                <button onClick={() => setSelectedConductor("All")} className={`px-3 py-1.5 rounded-lg text-sm transition-all border ${selectedConductor === "All" ? "bg-primary text-background border-primary" : "bg-surface-highlight text-text-secondary border-transparent hover:border-border"}`}>Всі</button>
-                                                {uniqueConductors.map(c => (
-                                                    <button key={c} onClick={() => setSelectedConductor(c || "")} className={`px-3 py-1.5 rounded-lg text-sm transition-all border ${selectedConductor === c ? "bg-primary text-background border-primary" : "bg-surface-highlight text-text-secondary border-transparent hover:border-border"}`}>{c}</button>
-                                                ))}
+                                onBack={() => {
+                                    setShowSearchOverlay?.(false);
+                                    setSearch("");
+                                    setSelectedCategory("All");
+                                    setSelectedConductor("All");
+                                }}
+                                filterMenu={[
+                                    {
+                                        items: [
+                                            { id: 'theme:All', label: 'Всі', isActive: selectedCategory === 'All' },
+                                            ...Array.from(new Set([...CATEGORIES, ...(knownCategories || [])])).map(cat => ({
+                                                id: `theme:${cat}`,
+                                                label: cat,
+                                                isActive: selectedCategory === cat
+                                            }))
+                                        ]
+                                    },
+                                    ...(uniqueConductors.length > 0 ? [{
+                                        items: uniqueConductors.map(c => ({
+                                            id: `conductor:${c || ''}`,
+                                            label: c || '',
+                                            isActive: selectedConductor === c
+                                        }))
+                                    }] : [])
+                                ]}
+                                onFilterMenuSelect={(itemId) => {
+                                    if (itemId.startsWith('theme:')) {
+                                        const cat = itemId.slice(6);
+                                        setSelectedCategory(cat === selectedCategory ? 'All' : cat as any);
+                                        setSelectedConductor('All');
+                                    } else if (itemId.startsWith('conductor:')) {
+                                        const c = itemId.slice(10);
+                                        setSelectedConductor(selectedConductor === c ? 'All' : c);
+                                    }
+                                }}
+                            />
+
+                            {/* Scrollable Results */}
+                            <div className="flex-1 overflow-y-auto">
+                                <div className="px-4 pb-8">
+                                    {filteredSongs.length === 0 ? (
+                                        <div className="text-center py-24 opacity-40">
+                                            <div className="w-16 h-16 bg-surface rounded-full flex items-center justify-center mx-auto mb-4">
+                                                <Music2 className="w-8 h-8 text-text-secondary" />
                                             </div>
+                                            <p className="text-text-secondary">{search ? 'Нічого не знайдено' : 'Почніть вводити назву пісні'}</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-0">
+                                            <p className="text-xs text-text-secondary my-2">{filteredSongs.length} {filteredSongs.length === 1 ? 'пісня' : 'пісень'}</p>
+                                            {filteredSongs.map(song => (
+                                                <div
+                                                    key={song.id}
+                                                    onClick={() => {
+                                                        setShowSearchOverlay?.(false);
+                                                        setSearch("");
+                                                        setSelectedCategory("All");
+                                                        setSelectedConductor("All");
+                                                        handleSongClick(song);
+                                                    }}
+                                                    className="flex items-center gap-3 py-3 border-b border-border/30 cursor-pointer active:bg-surface-highlight/50 transition-colors"
+                                                >
+                                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-text-primary">
+                                                        {song.hasPdf ? <Eye className="w-5 h-5 text-background" /> : <FileText className="w-5 h-5 text-background" />}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-semibold text-text-primary truncate">{song.title}</p>
+                                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                                            {song.conductor && <span className="text-xs text-primary font-medium flex items-center gap-1"><User className="w-3 h-3" />{song.conductor}</span>}
+                                                            {song.conductor && <span className="text-xs text-text-secondary">•</span>}
+                                                            <span className="text-xs text-text-secondary">{song.category}</span>
+                                                        </div>
+                                                    </div>
+                                                    <ChevronRight className="w-4 h-4 text-text-secondary/40 flex-shrink-0" />
+                                                </div>
+                                            ))}
                                         </div>
                                     )}
                                 </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 <div>
+                    {/* Extra padding on native for songs list below stats card */}
+                    {isNative && <div className="h-2" />}
+                    
                     {loading ? (
                         <div className="mt-2 opacity-0 py-20"></div>
                     ) : filteredSongs.length === 0 ? (

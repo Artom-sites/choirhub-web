@@ -6,6 +6,16 @@ import { Capacitor } from "@capacitor/core";
 import { Dialog } from "@capacitor/dialog";
 import { hapticLight, hapticSuccess, hapticWarning } from "../hooks/useHaptics";
 
+if (typeof window !== "undefined") {
+    (window as any).__destructiveConfirmCallback = (id: string, value: boolean) => {
+        const callback = (window as any)[`__destructiveCb_${id}`];
+        if (callback) {
+            callback(value);
+            delete (window as any)[`__destructiveCb_${id}`];
+        }
+    };
+}
+
 interface ConfirmationModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -43,12 +53,32 @@ export default function ConfirmationModal({
             setIsNativeRendering(true);
             hapticLight();
             
-            // Extract string message if it's a simple string, else fallback
             let messageStr = "Ви впевнені, що хочете виконати цю дію?";
             if (typeof message === 'string') {
                 messageStr = message;
             } else if (message && typeof (message as any).props?.children === 'string') {
                 messageStr = (message as any).props.children;
+            }
+
+            if (isDestructive && (window as any).webkit?.messageHandlers?.destructiveConfirm) {
+                const callbackId = Math.random().toString(36).substring(7);
+                (window as any)[`__destructiveCb_${callbackId}`] = (value: boolean) => {
+                    if (value) {
+                         hapticWarning();
+                         onConfirmRef.current();
+                    } else {
+                         onCloseRef.current();
+                    }
+                };
+                
+                (window as any).webkit.messageHandlers.destructiveConfirm.postMessage({
+                    title,
+                    message: messageStr,
+                    okButtonTitle: confirmLabel,
+                    cancelButtonTitle: cancelLabel,
+                    callbackId
+                });
+                return;
             }
 
             Dialog.confirm({

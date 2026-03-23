@@ -45,6 +45,7 @@ function SongContent() {
     const addPartInputRef = useRef<HTMLInputElement>(null);
     const [currentPartIndex, setCurrentPartIndex] = useState(0);
     const [isOfflineMode, setIsOfflineMode] = useState(false);
+    const [fetchError, setFetchError] = useState<string | null>(null);
 
     // Interaction State
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -119,6 +120,22 @@ function SongContent() {
     useEffect(() => {
         setIsIOS(Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios');
     }, []);
+
+    // Force white html/body background when PDF viewer is open so the native
+    // iOS UIVisualEffectView (glass blur) samples white rather than the app's dark background
+    useEffect(() => {
+        if (showViewer) {
+            document.documentElement.style.backgroundColor = '#ffffff';
+            document.body.style.backgroundColor = '#ffffff';
+        } else {
+            document.documentElement.style.backgroundColor = '';
+            document.body.style.backgroundColor = '';
+        }
+        return () => {
+            document.documentElement.style.backgroundColor = '';
+            document.body.style.backgroundColor = '';
+        };
+    }, [showViewer]);
 
     useEffect(() => {
         if (searchParams.get('archive') === '1') {
@@ -275,8 +292,9 @@ function SongContent() {
                 if (userData?.choirId) {
                     fetched = await getSong(userData.choirId, songId);
                 }
-            } catch (e) {
+            } catch (e: any) {
                 console.warn("Failed to fetch song from Firestore (likely offline):", e);
+                setFetchError(e.message || "Помилка завантаження");
             }
 
             // Try to load from offline cache
@@ -576,8 +594,8 @@ function SongContent() {
     if (loading) {
         return (
             <div className="min-h-screen bg-background relative overflow-x-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] text-text-primary" data-native-inner="true">
-                {/* Skeleton Header */}
-                <GlassPageHeader title="Завантаження..." />
+                {/* Skeleton Header - isActive=false keeps native header showing previous screen until content is fully loaded */}
+                <GlassPageHeader title="Завантаження..." isActive={false} />
 
                 <div className="md:max-w-3xl lg:max-w-4xl mx-auto px-4 py-6 space-y-6">
                     {/* Skeleton Title & Info */}
@@ -603,15 +621,37 @@ function SongContent() {
     }
 
     if (!song) {
+        const isOfflineError = !navigator.onLine || fetchError?.includes('Failed to fetch') || fetchError?.includes('offline');
+
         return (
-            <div className="min-h-screen bg-[#09090b] flex items-center justify-center flex-col gap-4">
-                <p className="text-text-secondary">Пісню не знайдено</p>
-                <button
-                    onClick={() => router.back()}
-                    className="text-white hover:underline"
-                >
-                    Назад
-                </button>
+            <div className="min-h-[100dvh] bg-background flex flex-col pt-[calc(3rem+env(safe-area-inset-top))] px-4 relative">
+                <GlassPageHeader title="Помилка" onBack={() => router.back()} />
+                <div className="flex-1 flex flex-col items-center justify-center -mt-20">
+                    <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 shadow-sm border ${isOfflineError ? 'bg-surface border-border text-text-secondary' : 'bg-red-500/10 border-red-500/20 text-red-500'}`}>
+                        {isOfflineError ? <WifiOff className="w-10 h-10" /> : <AlertCircle className="w-10 h-10" />}
+                    </div>
+                    {isOfflineError ? (
+                        <>
+                            <h2 className="text-2xl font-bold text-text-primary mb-3 text-center">Ви офлайн</h2>
+                            <p className="text-text-secondary text-center px-4 max-w-sm mb-8 leading-relaxed">
+                                Ця пісня ще не збережена на вашому пристрої. Підключіться до інтернету, щоб отримати доступ.
+                            </p>
+                        </>
+                    ) : (
+                        <>
+                            <h2 className="text-2xl font-bold text-text-primary mb-3 text-center">Пісню не знайдено</h2>
+                            <p className="text-text-secondary text-center px-4 max-w-sm mb-8 leading-relaxed">
+                                Можливо, її було видалено, або у вас немає до неї доступу.
+                            </p>
+                        </>
+                    )}
+                    <button
+                        onClick={() => router.back()}
+                        className="px-8 py-3.5 bg-surface-highlight text-text-primary font-semibold rounded-2xl active:scale-95 transition-all text-[15px] border border-border"
+                    >
+                        Повернутися назад
+                    </button>
+                </div>
             </div>
         );
     }
@@ -629,100 +669,75 @@ function SongContent() {
         const currentPdfUrl = originalPdfUrl;
 
         return (
-            <div className="h-screen bg-white flex flex-col">
+            <div className="fixed inset-0 z-[100] bg-white flex flex-col" data-native-inner="true">
                 {/* PDF Header */}
-                <div ref={pdfHeaderRef} className="bg-white border-b border-gray-200 shadow-sm z-10 pt-[env(safe-area-inset-top)]">
-                    <div className="px-4 py-3 flex items-center justify-between">
-                        <button
-                            onClick={() => router.back()}
-                            className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition-colors"
-                        >
-                            <ArrowLeft className="w-6 h-6 text-gray-700" />
-                        </button>
+                <div className="z-40">
+                    <GlassPageHeader
+                        title={song.title}
+                        subtitle={hasParts && song.parts ? extractInstrument((song.parts[currentPartIndex].name && !isGenericPartName(song.parts[currentPartIndex].name)) ? song.parts[currentPartIndex].name : getFileNameFromUrl(song.parts[currentPartIndex].pdfUrl || ""), song.title) : undefined}
+                        onBack={() => showViewer && typeof window !== 'undefined' ? window.history.back() : router.back()}
+                        rightActions={[
+                            ...(isTg ? [] : [
+                                {
+                                    id: 'annotate',
+                                    icon: isAnnotating && !isIOS ? 'pencil.circle.fill' : 'pencil',
+                                    onClick: () => {
+                                        if (isIOS) {
+                                            const partsData = (song.parts && song.parts.length > 0)
+                                                ? song.parts.map(p => ({ name: p.name || 'Part', pdfUrl: p.pdfUrl }))
+                                                : [{ name: 'Головна', pdfUrl: song.pdfUrl || song.pdfData! }];
 
-                        <div className="flex-1 mx-4 min-w-0 flex flex-col items-center">
-                            <h1 className="font-bold text-gray-900 truncate w-full text-center">
-                                {song.title}
-                            </h1>
-                            {hasParts && song.parts && (
-                                <p className="text-xs text-gray-500 font-medium whitespace-none truncate px-1" style={{ maxWidth: "200px" }}>
-                                    {(() => {
-                                        const nameToCheck = song.parts[currentPartIndex].name || "";
-                                        const shouldUseFilename = !nameToCheck || isGenericPartName(nameToCheck);
-                                        const sourceString = shouldUseFilename ? getFileNameFromUrl(song.parts[currentPartIndex].pdfUrl || "") : nameToCheck;
-                                        return extractInstrument(sourceString || `Part ${currentPartIndex + 1}`, song.title);
-                                    })()}
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="flex items-center gap-1">
-                            <button
-                                onClick={() => {
-                                    if (isIOS) {
-                                        const partsData = (song.parts && song.parts.length > 0)
-                                            ? song.parts.map(p => ({ name: p.name || 'Part', pdfUrl: p.pdfUrl }))
-                                            : [{ name: 'Головна', pdfUrl: song.pdfUrl || song.pdfData! }];
-
-                                        PencilKitAnnotator.openNativePdfViewer({
-                                            parts: partsData,
-                                            initialPartIndex: currentPartIndex,
-                                            songId: songId as string,
-                                            userUid: userData?.id || 'anonymous',
-                                            title: song.title,
-                                        }).catch(e => {
-                                            console.error('[NativePdf] Error:', e);
-                                        });
-                                    } else {
-                                        setIsAnnotating(!isAnnotating);
+                                            PencilKitAnnotator.openNativePdfViewer({
+                                                parts: partsData,
+                                                initialPartIndex: currentPartIndex,
+                                                songId: songId as string,
+                                                userUid: userData?.id || 'anonymous',
+                                                title: song.title,
+                                            }).catch(e => {
+                                                console.error('[NativePdf] Error:', e);
+                                            });
+                                        } else {
+                                            setIsAnnotating(!isAnnotating);
+                                        }
                                     }
-                                }}
-                                className={`p-2 rounded-full transition-colors ${isAnnotating && !isIOS ? 'bg-gray-900 text-white' : 'hover:bg-gray-100 text-gray-700'}`}
-                                title="Малювати на PDF"
-                            >
-                                <Pencil className="w-6 h-6" />
-                            </button>
-                            <button
-                                onClick={handleDownload}
-                                className="p-2 -mr-2 rounded-full hover:bg-gray-100 transition-colors"
-                                title="Завантажити PDF"
-                            >
-                                <Download className="w-6 h-6 text-gray-700" />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Parts Tabs (if multiple) */}
-                    {hasParts && song.parts && (
-                        <div className="px-4 pb-3 flex gap-2 overflow-x-auto scrollbar-hide">
-                            {song.parts.map((part, index) => (
-                                <button
-                                    key={index}
-                                    onClick={() => setCurrentPartIndex(index)}
-                                    className={`px-4 py-2 rounded-full whitespace-nowrap transition-all text-sm font-medium ${currentPartIndex === index
-                                        ? "bg-gray-900 text-white shadow-sm"
-                                        : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                                        }`}
-                                >
-                                    {(() => {
-                                        const nameToCheck = part.name || "";
-                                        const shouldUseFilename = !nameToCheck || isGenericPartName(nameToCheck);
-                                        const sourceString = shouldUseFilename ? getFileNameFromUrl(part.pdfUrl || "") : nameToCheck;
-                                        return extractInstrument(sourceString || `Part ${index + 1}`, song.title);
-                                    })()}
-                                </button>
-                            ))}
-                        </div>
-                    )}
+                                },
+                                {
+                                    id: 'download',
+                                    icon: 'arrow.down.circle',
+                                    onClick: handleDownload
+                                }
+                            ])
+                        ]}
+                    />
                 </div>
 
+                {/* Parts Tabs (if multiple) */}
+                {hasParts && song.parts && (
+                    <div className="px-4 pb-3 flex gap-2 overflow-x-auto scrollbar-hide bg-white z-40">
+                        {song.parts.map((part, index) => (
+                            <button
+                                key={index}
+                                onClick={() => setCurrentPartIndex(index)}
+                                className={`px-4 py-2 rounded-full whitespace-nowrap transition-all text-sm font-medium ${currentPartIndex === index
+                                    ? "bg-gray-900 text-white shadow-sm"
+                                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                                    }`}
+                            >
+                                {(() => {
+                                    const nameToCheck = part.name || "";
+                                    const shouldUseFilename = !nameToCheck || isGenericPartName(nameToCheck);
+                                    const sourceString = shouldUseFilename ? getFileNameFromUrl(part.pdfUrl || "") : nameToCheck;
+                                    return extractInstrument(sourceString || `Part ${index + 1}`, song.title);
+                                })()}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
                 {/* PDF Content */}
-                <div className="flex-1 overflow-hidden relative">
+                <div className="flex-1 overflow-hidden">
                     <PDFViewer
-                        url={(() => {
-                            // Always use direct URL for static export compatibility
-                            return currentPdfUrl;
-                        })()}
+                        url={currentPdfUrl}
                         songId={currentPartIndex === 0 ? songId as string : undefined}
                         title={song.title}
                         onClose={() => router.back()}

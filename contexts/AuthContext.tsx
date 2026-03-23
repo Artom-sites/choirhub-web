@@ -292,7 +292,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     rawNonce: result.credential?.nonce,
                 });
                 const auth = await getAuthLazy();
-                await signInWithCredential(auth, credential);
+                const userCredential = await signInWithCredential(auth, credential);
+                
+                // Apple provides givenName/familyName only on the FIRST sign-in
+                // Capture it immediately and save to Firebase profile
+                const givenName = (result.user as any)?.givenName || '';
+                const familyName = (result.user as any)?.familyName || '';
+                if ((givenName || familyName) && !userCredential.user.displayName) {
+                    const fullName = [familyName, givenName].filter(Boolean).join(' ').trim();
+                    if (fullName) {
+                        try {
+                            await updateProfile(userCredential.user, { displayName: fullName });
+                            await createUser(userCredential.user.uid, { name: fullName });
+                        } catch (e) {
+                            console.warn('[Auth] Failed to save Apple name:', e);
+                        }
+                    }
+                }
             }
         } catch (error: any) {
             // 1. Detect Apple Sign-In cancellation natively and in web

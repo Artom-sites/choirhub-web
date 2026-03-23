@@ -126,8 +126,13 @@ service cloud.firestore {
     // 5. Pending Songs (Community Submissions)
     match /pending_songs/{songId} {
       allow create: if isSignedIn();
-      // Submitter can read their own; super admin can read all
+      // Submitter can read and update their own; super admin can read/update all
       allow read: if isSuperAdmin() || (isSignedIn() && resource.data.submittedBy == request.auth.uid);
+      allow update: if isSuperAdmin() || (
+        isSignedIn() && 
+        resource.data.submittedBy == request.auth.uid &&
+        request.resource.data.status == resource.data.status
+      );
     }
   }
 }

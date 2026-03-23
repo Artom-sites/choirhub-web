@@ -1289,8 +1289,8 @@ export async function approveSong(pendingSong: PendingSong, adminId: string): Pr
             updatedAt: serverTimestamp()
         };
 
-        // 2. Add to global catalog (mscCatalog)
-        await addDoc(collection(getDb(), "mscCatalog"), globalSongData);
+        // 2. Add to global catalog (global_songs)
+        await addDoc(collection(getDb(), "global_songs"), globalSongData);
 
         // 3. Mark pending song as approved (or delete it if you prefer cleanup)
         // We'll mark it approved to keep history for the user

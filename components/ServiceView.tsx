@@ -1036,7 +1036,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
 
             if (copies === 1) {
                 printHtml = `
-                    <div style="width: 800px; padding: 60px; background: white; color: black; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                    <div style="position:absolute;top:0;left:0;width:800px;padding:60px;box-sizing:border-box;background:white;color:black;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
                         <style>
                             .program-title { text-align: center; font-size: 34px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; font-weight: 800; color: #000; }
                             .program-date { text-align: center; font-size: 20px; color: #555; margin-bottom: 60px; font-weight: 500; }
@@ -1053,7 +1053,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                 pdfOrientation = 'portrait';
             } else if (copies === 2) {
                 printHtml = `
-                    <div style="width: 1400px; padding: 60px; background: white; color: black; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; display: flex;">
+                    <div style="position:absolute;top:0;left:0;width:1400px;padding:60px;box-sizing:border-box;background:white;color:black;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;display:flex;">
                         <style>
                             .program-column { flex: 1; padding: 0 40px; }
                             .program-column:first-child { border-right: 1px dashed #ccc; }
@@ -1073,7 +1073,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                 pdfOrientation = 'landscape';
             } else if (copies === 4) {
                 printHtml = `
-                    <div style="width: 1200px; height: 1697px; padding: 40px; background: white; color: black; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;">
+                    <div style="position:absolute;top:0;left:0;width:1200px;height:1697px;padding:40px;box-sizing:border-box;background:white;color:black;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;">
                         <style>
                             .program-cell { padding: 30px; }
                             .program-cell:nth-child(odd) { border-right: 1px dashed #ccc; }
@@ -1097,10 +1097,13 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
             }
 
             const container = document.createElement('div');
-            // Use fixed positioning inside viewport to prevent aggressive iOS off-screen culling 
+            // Position at top-left with overflow visible so html2canvas captures full content
             container.style.position = 'fixed';
             container.style.left = '0px';
             container.style.top = '0px';
+            container.style.margin = '0';
+            container.style.padding = '0';
+            container.style.overflow = 'visible';
             container.style.zIndex = '-9999'; // Hide behind app content
             container.style.pointerEvents = 'none';
             container.innerHTML = printHtml;
@@ -1110,10 +1113,23 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                 // Short wait to ensure DOM has computed layout
                 await new Promise(resolve => setTimeout(resolve, 50));
 
-                const canvas = await html2canvas(container, {
+                const inner = container.firstElementChild as HTMLElement | null;
+                const targetEl = inner || container;
+                const targetWidth = targetEl.offsetWidth || parseInt(targetEl.style.width) || 800;
+                const targetHeight = targetEl.offsetHeight || parseInt(targetEl.style.height) || 1200;
+
+                const canvas = await html2canvas(targetEl, {
                     scale: 2,
                     useCORS: true,
-                    backgroundColor: '#ffffff'
+                    backgroundColor: '#ffffff',
+                    x: 0,
+                    y: 0,
+                    scrollX: 0,
+                    scrollY: 0,
+                    windowWidth: targetWidth,
+                    windowHeight: targetHeight,
+                    width: targetWidth,
+                    height: targetHeight,
                 });
 
                 if (!canvas.width || !canvas.height) {

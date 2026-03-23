@@ -123,34 +123,14 @@ export default function TrashBin({ choirId, onClose, onRestore, initialFilter = 
             <GlassPageHeader
                 title="Корзина"
                 onBack={onClose}
-            >
-                {/* Filter Tabs */}
-                <div className="flex gap-2 overflow-x-auto scrollbar-hide py-1">
-                    <button
-                        onClick={() => setActiveFilter('all')}
-                        className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${activeFilter === 'all' ? 'bg-primary text-background' : 'bg-surface-highlight text-text-secondary hover:bg-surface-highlight/80'
-                            }`}
-                    >
-                        Всі
-                    </button>
-                    <button
-                        onClick={() => setActiveFilter('service')}
-                        className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap ${activeFilter === 'service' ? 'bg-blue-500 text-white' : 'bg-surface-highlight text-text-secondary hover:bg-surface-highlight/80'
-                            }`}
-                    >
-                        <Calendar className="w-3.5 h-3.5" />
-                        Служіння
-                    </button>
-                    <button
-                        onClick={() => setActiveFilter('song')}
-                        className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap ${activeFilter === 'song' ? 'bg-emerald-500 text-white' : 'bg-surface-highlight text-text-secondary hover:bg-surface-highlight/80'
-                            }`}
-                    >
-                        <Music className="w-3.5 h-3.5" />
-                        Пісні
-                    </button>
-                </div>
-            </GlassPageHeader>
+                tabs={['Всі', 'Служіння', 'Пісні']}
+                activeTab={activeFilter === 'all' ? 0 : activeFilter === 'service' ? 1 : 2}
+                onTabChange={(index) => {
+                    if (index === 0) setActiveFilter('all');
+                    else if (index === 1) setActiveFilter('service');
+                    else if (index === 2) setActiveFilter('song');
+                }}
+            />
 
 
 

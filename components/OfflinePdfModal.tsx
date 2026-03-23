@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import GlassPageHeader from "./GlassPageHeader";
 import PDFViewer from "./PDFViewer";
 
 interface OfflinePdfModalProps {
@@ -65,36 +66,23 @@ export default function OfflinePdfModal({ isOpen, onClose, song }: OfflinePdfMod
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="fixed inset-0 z-50 flex flex-col bg-black/90 backdrop-blur-sm"
+                    className="fixed inset-0 z-50 flex flex-col bg-white"
+                    data-native-inner="true"
                     onClick={(e) => {
                         if (e.target === e.currentTarget) onClose();
                     }}
                 >
                     {/* Header */}
-                    <motion.div
-                        initial={{ y: -20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: 0.1 }}
-                        className="flex items-center justify-between px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 bg-surface border-b border-border shrink-0"
-                    >
-                        <button
-                            onClick={onClose}
-                            className="flex items-center gap-1 text-text-secondary hover:text-text-primary transition-colors min-w-[60px]"
-                        >
-                            <ChevronLeft className="w-5 h-5" />
-                            <span className="text-sm">Назад</span>
-                        </button>
-
-                        <h2 className="text-text-primary font-semibold text-base truncate max-w-[60%] text-center">
-                            {song.title}
-                        </h2>
-
-                        <div className="min-w-[60px]" />
-                    </motion.div>
+                    <div className="z-40">
+                        <GlassPageHeader
+                            title={song.title}
+                            onBack={onClose}
+                        />
+                    </div>
 
                     {/* Part Tabs */}
                     {hasTabs && (
-                        <div className="bg-surface border-b border-border shrink-0">
+                        <div className="bg-white shrink-0 z-40">
                             <div className="flex gap-2 px-4 py-2 overflow-x-auto no-scrollbar">
                                 {parts.map((part, index) => {
                                     const name = part.name?.replace(/\.pdf$/i, "") || `Part ${index + 1}`;
@@ -104,8 +92,8 @@ export default function OfflinePdfModal({ isOpen, onClose, song }: OfflinePdfMod
                                             key={index}
                                             onClick={() => setActivePartIndex(index)}
                                             className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${isActive
-                                                ? "bg-text-primary text-surface"
-                                                : "bg-surface-highlight text-text-secondary hover:text-text-primary"
+                                                ? "bg-primary text-white"
+                                                : "bg-gray-100 text-gray-600 hover:text-gray-900"
                                                 }`}
                                         >
                                             {name}
