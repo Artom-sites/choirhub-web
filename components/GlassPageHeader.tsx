@@ -4,7 +4,7 @@ import { Capacitor } from "@capacitor/core";
 import { 
   ArrowLeft, Pencil, Trash2, Download, Plus, MoreVertical, 
   Music, Users, Settings, SlidersHorizontal, Search, X, UserX,
-  Share, Eye, EyeOff
+  Share, Eye, EyeOff, Sun, Moon, Monitor
 } from "lucide-react";
 
 function renderWebIcon(iconName: string | any) {
@@ -26,6 +26,9 @@ function renderWebIcon(iconName: string | any) {
     case 'square.and.arrow.up': return <Share className="w-5 h-5" />;
     case 'eye': return <Eye className="w-5 h-5" />;
     case 'eye.slash': return <EyeOff className="w-5 h-5" />;
+    case 'sun.max': return <Sun className="w-5 h-5" />;
+    case 'moon': return <Moon className="w-5 h-5" />;
+    case 'desktopcomputer': return <Monitor className="w-5 h-5" />;
     default: return null;
   }
 }
@@ -279,7 +282,7 @@ export default function GlassPageHeader({
           
           {/* Web optional search input */}
           {searchInput && (
-            <div className="px-4 pb-3">
+            <div className="px-4 pt-1 pb-3">
               <div className="relative">
                 <Search className="w-4 h-4 text-text-secondary absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
@@ -296,19 +299,19 @@ export default function GlassPageHeader({
 
           {/* Web optional segmented control */}
           {rightSegmented && rightSegmented.items && (
-            <div className="px-4 pb-3">
+            <div className="px-4 pt-1 pb-3">
               <div className="flex bg-surface-highlight/50 p-1 rounded-xl w-full">
                 {rightSegmented.items.map((item, idx) => (
                   <button
                     key={idx}
                     onClick={() => rightSegmented.onChange(idx)}
-                    className={`flex-1 py-1.5 text-sm font-semibold rounded-lg transition-all ${
+                    className={`flex-1 flex justify-center items-center py-1.5 text-sm font-semibold rounded-lg transition-all ${
                       rightSegmented.active === idx 
                         ? "bg-background text-text-primary shadow-sm" 
                         : "text-text-secondary hover:text-text-primary"
                     }`}
                   >
-                    {item}
+                    {renderWebIcon(item) || item}
                   </button>
                 ))}
               </div>
@@ -319,11 +322,11 @@ export default function GlassPageHeader({
 
       {/* Optional sub-header content (e.g. dom tabs) rendered in DOM just below the header */}
       {children ? (
-        <div className={`px-4 pb-2 bg-background/90 backdrop-blur-md border-b border-border sticky ${!Capacitor.isNativePlatform() ? "top-[calc(56px+env(safe-area-inset-top))]" : "top-[calc(56px+env(safe-area-inset-top))]"}`}>
+        <div className={`px-4 pt-2 pb-2 bg-background/90 backdrop-blur-md border-b border-border sticky ${!Capacitor.isNativePlatform() ? "top-[calc(56px+env(safe-area-inset-top))]" : "top-[calc(56px+env(safe-area-inset-top))]"}`}>
           {children}
         </div>
       ) : (tabs.length > 0 && !Capacitor.isNativePlatform()) ? (
-        <div className="px-4 pb-2 bg-background/90 backdrop-blur-md border-b border-border sticky top-[calc(56px+env(safe-area-inset-top))]">
+        <div className="px-4 pt-2 pb-2 bg-background/90 backdrop-blur-md border-b border-border sticky top-[calc(56px+env(safe-area-inset-top))]">
             <div className="flex bg-surface-highlight/50 p-1 rounded-xl">
                 {tabs.map((tab, idx) => (
                     <button

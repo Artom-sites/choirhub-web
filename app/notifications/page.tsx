@@ -169,10 +169,14 @@ export default function NotificationsPage() {
         <div className="min-h-screen bg-background text-text-primary flex flex-col" data-native-inner="true">
             {/* ─── HEADER ─── */}
             <GlassPageHeader
-                title={showSettings ? "Сповіщення" : undefined}
+                title={showSettings ? "Налаштування" : "Сповіщення"}
                 tabs={!showSettings ? availableTabs.map(t => t.label) : undefined}
                 activeTab={availableTabs.findIndex(t => t.id === activeTab)}
                 onTabChange={(index) => setActiveTab(availableTabs[index].id)}
+                onBack={!Capacitor.isNativePlatform() ? () => {
+                    if (showSettings) setShowSettings(false);
+                    else router.back();
+                } : undefined}
                 rightActions={[
                     {
                         id: "settings",
