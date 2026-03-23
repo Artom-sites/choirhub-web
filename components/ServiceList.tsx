@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { getServices, addService, deleteService, setServiceAttendance, getChoir } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "@/contexts/TranslationContext";
 import { Calendar, Plus, ChevronRight, X, Trash2, Loader2, Check, Clock, Mic2, CheckCircle2, Circle, Music } from "lucide-react";
 import { collection, query, onSnapshot } from "firebase/firestore";
 import { getFirestoreLazy } from "@/lib/firebase";
@@ -37,6 +38,7 @@ export default function ServiceList({
     allHistoryLoaded = false
 }: ServiceListProps) {
     const { userData, user } = useAuth();
+    const { t } = useTranslation();
     const effectiveCanEdit = canEdit;
 
     // Local-to-prop state mapping
@@ -357,12 +359,12 @@ export default function ServiceList({
                                                     return hasAttendanceData ? (
                                                         <div className="flex items-center gap-1.5 mt-2 text-xs text-green-400">
                                                             <CheckCircle2 className="w-3.5 h-3.5" />
-                                                            <span>Присутніх збережено</span>
+                                                            <span>{t('services.attendance_saved')}</span>
                                                         </div>
                                                     ) : (
                                                         <div className="flex items-center gap-1.5 mt-2 text-xs text-amber-400">
                                                             <Clock className="w-3.5 h-3.5" />
-                                                            <span>Відкрийте, щоб зберегти присутніх</span>
+                                                            <span>{t('services.open_to_save')}</span>
                                                         </div>
                                                     );
                                                 })()}
@@ -438,7 +440,7 @@ export default function ServiceList({
                 <div className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
                     <div className="bg-surface w-full max-w-sm rounded-3xl border border-border p-6 shadow-2xl animate-in zoom-in-95">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold text-text-primary">Нове служіння</h3>
+                            <h3 className="text-xl font-bold text-text-primary">{t('services.new')}</h3>
                             <button onClick={() => setShowCreateModal(false)}>
                                 <X className="w-6 h-6 text-text-secondary hover:text-text-primary" />
                             </button>
@@ -474,7 +476,7 @@ export default function ServiceList({
                             </div>
 
                             <div>
-                                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Назва</label>
+                                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">{t('services.title_label')}</label>
                                 <input
                                     type="text"
                                     value={newTitle}
@@ -484,7 +486,7 @@ export default function ServiceList({
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Дата</label>
+                                    <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">{t('services.date_label')}</label>
                                     <div className="relative w-full">
                                         {/* Visual Fake Input */}
                                         <div className="w-full h-12 flex items-center pl-4 pr-10 bg-surface-highlight border border-border rounded-xl text-text-primary text-base">
@@ -501,7 +503,7 @@ export default function ServiceList({
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Час</label>
+                                    <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">{t('services.time_label')}</label>
                                     <div className="relative w-full">
                                         {/* Visual Fake Input */}
                                         <div className="w-full h-12 flex items-center pl-4 pr-10 bg-surface-highlight border border-border rounded-xl text-text-primary text-base">
@@ -520,7 +522,7 @@ export default function ServiceList({
                             </div>
 
                             <div>
-                                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Хто проводить розспіванку</label>
+                                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">{t('services.warmup_leader')}</label>
                                 <div className="relative w-full">
                                     {!showCustomWarmup ? (
                                         <>
@@ -536,7 +538,7 @@ export default function ServiceList({
                                                 }}
                                                 className="w-full h-12 pl-4 pr-10 bg-surface-highlight border border-border rounded-xl text-text-primary text-base appearance-none focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
                                             >
-                                                <option value="">Не вказано</option>
+                                                <option value="">{t('services.not_specified')}</option>
                                                 {regents.map((name, i) => (
                                                     <option key={i} value={name}>{name}</option>
                                                 ))}

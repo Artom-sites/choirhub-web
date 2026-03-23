@@ -732,7 +732,7 @@ function HomePageContent() {
             })()}
             {/* "Я" badge */}
             {(member.id === user?.uid || member.accountUid === user?.uid) && (
-              <span className="text-[9px] font-bold px-1.5 py-[2px] rounded flex-shrink-0 leading-none bg-accent/15 text-accent border border-accent/20">Я</span>
+              <span className="text-[9px] font-bold px-1.5 py-[2px] rounded flex-shrink-0 leading-none bg-accent/15 text-accent border border-accent/20">{t('account.me_badge')}</span>
             )}
             {member.hasAccount && <Smartphone className="w-3 h-3 text-blue-400 flex-shrink-0" />}
           </div>
@@ -1690,8 +1690,8 @@ function HomePageContent() {
             className="fixed inset-0 z-[9999] bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center p-4"
           >
             <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
-            <h2 className="text-xl font-bold text-text-primary mb-2">Перемикання хору</h2>
-            <p className="text-sm text-text-secondary text-center">Будь ласка, зачекайте...</p>
+            <h2 className="text-xl font-bold text-text-primary mb-2">{t('account.switching_choir')}</h2>
+            <p className="text-sm text-text-secondary text-center">{t('account.please_wait')}</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1718,7 +1718,7 @@ function HomePageContent() {
                   <LogOut className="w-6 h-6 text-[#a1a1aa]" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white">Вийти з акаунту?</h3>
+                  <h3 className="text-lg font-bold text-white">{t('account.logout_confirm')}</h3>
                   <p className="text-[#a1a1aa] text-sm mt-1">
                     Для повторного входу знадобиться увійти через Google.
                   </p>
@@ -1759,7 +1759,7 @@ function HomePageContent() {
               className="bg-surface card-shadow w-full max-w-sm p-6 rounded-3xl shadow-2xl"
             >
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold text-text-primary">Налаштування хору</h3>
+                <h3 className="text-lg font-bold text-text-primary">{t('account.choir_settings')}</h3>
                 <button
                   onClick={() => setShowChoirSettings(false)}
                   className="p-2 text-text-secondary hover:text-text-primary hover:bg-surface-highlight rounded-full transition-colors"
@@ -1821,7 +1821,7 @@ function HomePageContent() {
 
               {/* Choir Name */}
               <div className="mb-6">
-                <label className="text-text-secondary text-sm mb-2 block">Назва хору</label>
+                <label className="text-text-secondary text-sm mb-2 block">{t('account.choir_name')}</label>
                 <input
                   type="text"
                   value={editChoirName}
@@ -1907,13 +1907,13 @@ function HomePageContent() {
 
               {managerMode === 'list' && (
                 <div className="space-y-4">
-                  <h3 className="text-xl font-bold text-text-primary text-center mb-6">Мої хори</h3>
+                  <h3 className="text-xl font-bold text-text-primary text-center mb-6">{t('account.my_choirs')}</h3>
 
                   <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                     <div className="p-4 rounded-2xl bg-success/10 border border-success/30 flex items-center justify-between">
                       <div>
                         <p className="text-text-primary font-bold">{userData?.choirName}</p>
-                        <p className="text-xs text-success font-medium tracking-wide">ПОТОЧНИЙ</p>
+                        <p className="text-xs text-success font-medium tracking-wide">{t('account.current')}</p>
                       </div>
                       <Check className="w-5 h-5 text-success" />
                     </div>
@@ -1963,7 +1963,7 @@ function HomePageContent() {
               {managerMode === 'create' && (
                 <div className="space-y-4">
                   <button onClick={() => setManagerMode('list')} className="text-xs text-text-secondary hover:text-text-primary mb-2">← Назад</button>
-                  <h3 className="text-xl font-bold text-text-primary">Новий хор</h3>
+                  <h3 className="text-xl font-bold text-text-primary">{t('account.new_choir')}</h3>
                   <input
                     value={newChoirName}
                     onChange={e => setNewChoirName(e.target.value)}
@@ -1971,7 +1971,7 @@ function HomePageContent() {
                     className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl placeholder:text-text-secondary"
                   />
                   <div className="space-y-2">
-                    <p className="text-xs text-text-secondary uppercase font-bold tracking-wider">Тип хору</p>
+                    <p className="text-xs text-text-secondary uppercase font-bold tracking-wider">{t('account.choir_type')}</p>
                     <button
                       type="button"
                       onClick={() => setNewChoirType('msc')}
@@ -1982,8 +1982,8 @@ function HomePageContent() {
                           {newChoirType === 'msc' && <div className="w-2 h-2 rounded-full bg-primary" />}
                         </div>
                         <div>
-                          <p className="font-bold text-text-primary">Хор МСЦ ЄХБ</p>
-                          <p className="text-xs text-text-secondary">Має доступ до Архіву МХО</p>
+                          <p className="font-bold text-text-primary">{t('account.choir_msc')}</p>
+                          <p className="text-xs text-text-secondary">{t('account.choir_msc_desc')}</p>
                         </div>
                       </div>
                     </button>
@@ -1997,8 +1997,8 @@ function HomePageContent() {
                           {newChoirType === 'standard' && <div className="w-2 h-2 rounded-full bg-primary" />}
                         </div>
                         <div>
-                          <p className="font-bold text-text-primary">Звичайний хор</p>
-                          <p className="text-xs text-text-secondary">Тільки власний репертуар</p>
+                          <p className="font-bold text-text-primary">{t('account.choir_regular')}</p>
+                          <p className="text-xs text-text-secondary">{t('account.choir_regular_desc')}</p>
                         </div>
                       </div>
                     </button>
@@ -2016,10 +2016,10 @@ function HomePageContent() {
               {managerMode === 'join' && (
                 <div className="space-y-4">
                   <button onClick={() => { setManagerMode('list'); setManagerError(""); }} className="text-xs text-text-secondary hover:text-text-primary mb-2">← Назад</button>
-                  <h3 className="text-xl font-bold text-text-primary">Приєднатись</h3>
+                  <h3 className="text-xl font-bold text-text-primary">{t('account.join')}</h3>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider mb-1 block">Прізвище</label>
+                      <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider mb-1 block">{t('account.last_name')}</label>
                       <input
                         value={joinLastName}
                         onChange={e => setJoinLastName(e.target.value)}
@@ -2029,7 +2029,7 @@ function HomePageContent() {
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider mb-1 block">Ім'я</label>
+                      <label className="text-[10px] text-text-secondary uppercase font-bold tracking-wider mb-1 block">{t('account.first_name')}</label>
                       <input
                         value={joinFirstName}
                         onChange={e => setJoinFirstName(e.target.value)}
@@ -2128,7 +2128,7 @@ function HomePageContent() {
               exit={{ scale: 0.95, opacity: 0 }}
               className="bg-surface card-shadow w-full max-w-sm p-6 rounded-3xl shadow-2xl overflow-hidden relative"
             >
-              <h3 className="text-xl font-bold text-text-primary mb-2">Це ви?</h3>
+              <h3 className="text-xl font-bold text-text-primary mb-2">{t('account.is_this_you')}</h3>
               <p className="text-sm text-text-secondary mb-2">
                 Ми знайшли дуже схоже ім'я в списку хору.
               </p>
@@ -2153,7 +2153,7 @@ function HomePageContent() {
                         <span className="ml-2 text-xs text-text-secondary">({m.voice})</span>
                       )}
                       {m.hasAccount && (
-                        <span className="ml-2 text-[10px] text-yellow-500 bg-yellow-500/10 px-1.5 py-0.5 rounded-md">вже має акаунт</span>
+                        <span className="ml-2 text-[10px] text-yellow-500 bg-yellow-500/10 px-1.5 py-0.5 rounded-md">{t('account.already_linked')}</span>
                       )}
                     </div>
                     <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${selectedClaimId === m.id ? 'bg-primary text-background' : 'bg-white/10'
@@ -2220,7 +2220,7 @@ function HomePageContent() {
                 <X className="w-5 h-5" />
               </button>
 
-              <h3 className="text-xl font-bold text-text-primary mb-2">Ваш профіль</h3>
+              <h3 className="text-xl font-bold text-text-primary mb-2">{t('account.your_profile')}</h3>
               <p className="text-sm text-text-secondary mb-6">
                 Якщо хочете, додайте ваше ім'я — це допоможе регенту впізнати вас у хорі. Поля необов'язкові та можна пропустити.
               </p>
@@ -2228,7 +2228,7 @@ function HomePageContent() {
               <div className="space-y-4">
                 <div className="space-y-3">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-text-secondary ml-1">Прізвище</label>
+                    <label className="text-xs font-medium text-text-secondary ml-1">{t('account.last_name')}</label>
                     <input
                       value={joinLastName}
                       onChange={e => setJoinLastName(e.target.value)}
@@ -2238,7 +2238,7 @@ function HomePageContent() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-text-secondary ml-1">Ім'я</label>
+                    <label className="text-xs font-medium text-text-secondary ml-1">{t('account.first_name')}</label>
                     <input
                       value={joinFirstName}
                       onChange={e => setJoinFirstName(e.target.value)}
@@ -2336,7 +2336,7 @@ function HomePageContent() {
                       <User className="w-5 h-5" />
                     </div>
                     <div className="flex-1 pr-6">
-                      <h4 className="font-bold text-text-primary mb-1 text-sm">Як вас звати?</h4>
+                      <h4 className="font-bold text-text-primary mb-1 text-sm">{t('account.whats_your_name')}</h4>
                       <p className="text-xs text-text-secondary leading-relaxed mb-3">
                         Додайте ім'я, щоб регенти бачили вас у статистиці відвідувань.
                       </p>
@@ -2344,7 +2344,7 @@ function HomePageContent() {
                         onClick={openClaimFromBanner}
                         className="py-2 px-4 bg-primary text-background text-xs font-bold rounded-lg hover:opacity-90 transition-all shadow-sm"
                       >
-                        Вказати ім'я
+                        {t('account.set_name')}
                       </button>
                     </div>
                   </div>
@@ -2359,7 +2359,7 @@ function HomePageContent() {
                       </div>
                       <div className="text-left">
                         <p className="text-text-primary font-bold text-sm">{t('account.language') || "Мова (Language)"}</p>
-                        <p className="text-xs text-text-secondary">Оберіть мову інтерфейсу</p>
+                        <p className="text-xs text-text-secondary">{t('account.language_subtitle')}</p>
                       </div>
                     </div>
                     
@@ -2398,8 +2398,8 @@ function HomePageContent() {
                         <Repeat className="w-5 h-5" />
                       </div>
                       <div className="text-left">
-                        <p className="text-text-primary font-bold text-sm">Змінити хор</p>
-                        <p className="text-xs text-text-secondary group-hover:text-text-primary/80">Додати або перемкнути</p>
+                        <p className="text-text-primary font-bold text-sm">{t('account.change_choir')}</p>
+                        <p className="text-xs text-text-secondary group-hover:text-text-primary/80">{t('account.change_choir_subtitle')}</p>
                       </div>
                     </div>
                     <PlusCircle className="w-5 h-5 text-text-secondary group-hover:text-text-primary" />
@@ -2409,7 +2409,7 @@ function HomePageContent() {
                   {(userData?.role === 'head' || userData?.role === 'regent') && choir && (
                     <div className="pt-4 border-t border-border mt-4">
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-sm text-text-secondary">Коди доступу</h3>
+                        <h3 className="text-sm text-text-secondary">{t('account.access_codes')}</h3>
                         <button
                           onClick={() => setShowAdminCodeModal(true)}
                           className="text-xs text-accent hover:underline flex items-center gap-1"
@@ -2422,7 +2422,7 @@ function HomePageContent() {
                       <div className="bg-surface-highlight rounded-xl overflow-hidden">
                         {/* Member Code */}
                         <div className="flex items-center justify-between p-4 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
-                          <span className="text-text-primary text-base">Хористи</span>
+                          <span className="text-text-primary text-base">{t('account.members_code')}</span>
                           <div className="flex items-center gap-3">
                             <code className="text-base font-mono font-medium text-text-primary">{choir.memberCode}</code>
                             <button
@@ -2438,7 +2438,7 @@ function HomePageContent() {
 
                         {/* Regent Code */}
                         <div className="flex items-center justify-between p-4 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
-                          <span className="text-text-primary text-base">Регенти</span>
+                          <span className="text-text-primary text-base">{t('account.regents_code')}</span>
                           <div className="flex items-center gap-3">
                             <code className="text-base font-mono font-medium text-text-primary">{choir.regentCode}</code>
                             <button
@@ -2494,7 +2494,7 @@ function HomePageContent() {
                       <HardDrive className="w-4.5 h-4.5 text-blue-400" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-bold text-text-primary">Офлайн кеш</h3>
+                      <h3 className="text-sm font-bold text-text-primary">{t('account.offline_cache')}</h3>
                       <p className="text-xs text-text-secondary">
                         {cacheSize.count} пісень • {cacheSize.sizeBytes < 1024 * 1024
                           ? `${(cacheSize.sizeBytes / 1024).toFixed(0)} КБ`
@@ -2528,7 +2528,7 @@ function HomePageContent() {
                     {/* Limit slider */}
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Максимум</span>
+                        <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">{t('account.max_limit')}</span>
                         <span className="text-xs font-bold text-text-primary bg-surface-highlight px-2 py-0.5 rounded-md">
                           {(() => {
                             if (cacheLimit === 'unlimited') return 'Безліміт';
@@ -2585,14 +2585,14 @@ function HomePageContent() {
                       />
                       <div className="flex justify-between text-[10px] text-text-secondary/50 mt-1 px-0.5">
                         <span>50 МБ</span>
-                        <span>Безліміт</span>
+                        <span>{t('account.unlimited')}</span>
                       </div>
                     </div>
 
                     {/* Retention slider */}
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Автовидалення</span>
+                        <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">{t('account.auto_delete')}</span>
                         <span className="text-xs font-bold text-text-primary bg-surface-highlight px-2 py-0.5 rounded-md">
                           {(() => {
                             if (cacheRetention === 'never') return 'Ніколи';
@@ -2649,7 +2649,7 @@ function HomePageContent() {
                       />
                       <div className="flex justify-between text-[10px] text-text-secondary/50 mt-1 px-0.5">
                         <span>1 день</span>
-                        <span>Ніколи</span>
+                        <span>{t('account.never')}</span>
                       </div>
                     </div>
                   </div>
@@ -2659,7 +2659,7 @@ function HomePageContent() {
 
               {/* Про застосунок Section */}
               <div className="mt-8">
-                <p className="text-sm text-text-secondary mb-4">Про застосунок</p>
+                <p className="text-sm text-text-secondary mb-4">{t('account.about')}</p>
 
                 <button
                   onClick={async () => {
@@ -2677,7 +2677,7 @@ function HomePageContent() {
                   className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
                 >
                   <Mail className="w-5 h-5 text-text-secondary" />
-                  <span>Підтримка та зворотний зв'язок</span>
+                  <span>{t('account.support')}</span>
                 </button>
 
                 <button
@@ -2685,7 +2685,7 @@ function HomePageContent() {
                   className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
                 >
                   <Scale className="w-5 h-5 text-text-secondary" />
-                  <span>Джерела та контент</span>
+                  <span>{t('account.legal')}</span>
                 </button>
 
                 <button
@@ -2693,7 +2693,7 @@ function HomePageContent() {
                   className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
                 >
                   <HelpCircle className="w-5 h-5 text-text-secondary" />
-                  <span>Довідка та FAQ</span>
+                  <span>{t('account.faq')}</span>
                 </button>
 
                 <button
@@ -2701,7 +2701,7 @@ function HomePageContent() {
                   className="w-full py-4 text-left text-lg font-medium text-text-secondary hover:text-text-primary border-t border-border transition-all flex items-center gap-4 group"
                 >
                   <LogOut className="w-5 h-5" />
-                  <span>Вийти з акаунту</span>
+                  <span>{t('account.logout')}</span>
                 </button>
               </div>
 
@@ -2843,7 +2843,7 @@ function HomePageContent() {
             <div className="-mx-4 px-4 pt-3 pb-1 mb-2">
               <div className="flex justify-between items-center mb-3">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-bold text-text-primary">Учасники</h2>
+                  <h2 className="text-xl font-bold text-text-primary">{t('members.title')}</h2>
                   <span className="text-xs text-text-secondary bg-surface-highlight px-2 py-0.5 rounded-lg font-semibold tabular-nums">
                     {(choir?.members || []).filter((m: any) => !m.isDuplicate).length}
                   </span>
@@ -2897,7 +2897,7 @@ function HomePageContent() {
               {(choir?.members || []).length === 0 ? (
                 <div className="text-center py-12 text-text-secondary">
                   <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Немає учасників</p>
+                  <p>{t('members.no_members')}</p>
                   {canEdit && <p className="text-sm mt-2">Додайте учасників, щоб відстежувати відвідуваність</p>}
                 </div>
               ) : (
@@ -2943,7 +2943,7 @@ function HomePageContent() {
                   });
 
                   if (sortedMembers.length === 0 && !canEdit) {
-                    return <div className="text-center py-8 text-text-secondary">Нікого не знайдено</div>;
+                    return <div className="text-center py-8 text-text-secondary">{t('search.no_one_found')}</div>;
                   }
 
                   // Build alphabet from actual member names
@@ -2982,7 +2982,7 @@ function HomePageContent() {
                           </AnimatePresence>
                         </div>
                       ) : (
-                        <div className="text-center py-8 text-text-secondary">Нікого не знайдено</div>
+                        <div className="text-center py-8 text-text-secondary">{t('search.no_one_found')}</div>
                       )}
 
                       {/* Нові користувачі — unlinked app users (visible to all members) */}
@@ -2990,7 +2990,7 @@ function HomePageContent() {
                         <div className="mt-6">
                           <div className="flex items-center gap-2 mb-3">
                             <Smartphone className="w-4 h-4 text-blue-400" />
-                            <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">Нові користувачі</span>
+                            <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">{t('members.new_users')}</span>
                             <span className="text-[10px] px-1.5 py-0.5 bg-blue-500/15 text-blue-400 rounded-full font-bold">{unlinkedUsers.length}</span>
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
@@ -3120,7 +3120,7 @@ function HomePageContent() {
               >
                 <div className="space-y-5">
                   <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-bold text-text-primary">Створити адмін-код</h3>
+                    <h3 className="text-lg font-bold text-text-primary">{t('account.create_admin_code')}</h3>
                     <button onClick={() => setShowAdminCodeModal(false)} className="p-1 hover:bg-surface-highlight rounded-full">
                       <X className="w-5 h-5 text-text-secondary" />
                     </button>
@@ -3197,7 +3197,7 @@ function HomePageContent() {
                 onClick={e => e.stopPropagation()}
               >
                 <div className="flex justify-between items-start mb-6">
-                <h3 className="text-xl font-bold text-text-primary">Змінити ім'я</h3>
+                <h3 className="text-xl font-bold text-text-primary">{t('account.change_name')}</h3>
                   <button
                     onClick={() => setShowEditName(false)}
                     className="p-1 text-text-secondary hover:text-text-primary transition-colors"

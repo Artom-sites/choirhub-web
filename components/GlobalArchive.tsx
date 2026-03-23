@@ -13,6 +13,7 @@ import { Search, Music, Users, User, Loader2, FolderOpen, Plus, Eye, FileText, C
 import { motion, AnimatePresence } from "framer-motion";
 import PDFViewer from "./PDFViewer";
 import { PencilKitAnnotator } from "@/plugins/PencilKitAnnotator";
+import { useTranslation } from "@/contexts/TranslationContext";
 import ConfirmationModal from "./ConfirmationModal";
 import Preloader from "./Preloader";
 import Fuse from "fuse.js";
@@ -97,6 +98,7 @@ const fuseOptions = {
 
 export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQuery = "", showSearchOverlay, setShowSearchOverlay, externalSearchQuery, externalCategory, externalSubCategory, externalLanguage }: GlobalArchiveProps) {
     const { user, userData } = useAuth();
+    const { t } = useTranslation();
     const [songs, setSongs] = useState<GlobalSong[]>([]);
     const [filteredSongs, setFilteredSongs] = useState<GlobalSong[]>([]);
     const [loading, setLoading] = useState(true);
@@ -985,7 +987,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                                 <div className="w-16 h-16 bg-surface rounded-full flex items-center justify-center mx-auto mb-4">
                                                     <Library className="w-8 h-8 text-text-secondary" />
                                                 </div>
-                                                <p className="text-text-secondary">Нічого не знайдено</p>
+                                                <p className="text-text-secondary">{t('search.not_found')}</p>
                                             </div>
                                         ) : (
                                             <div className="space-y-0 mt-2">
@@ -1014,7 +1016,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                                     </div>
                                                 ))}
                                                 {filteredSongs.length > 50 && (
-                                                    <p className="text-center text-xs text-text-secondary py-4 tracking-wider uppercase">Показано 50 перших результатів</p>
+                                                    <p className="text-center text-xs text-text-secondary py-4 tracking-wider uppercase">{t('songs.shown_first_50')}</p>
                                                 )}
                                             </div>
                                         )}
@@ -1043,7 +1045,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                 ) : isModerationMode ? (
                     pendingSongs.length === 0 ? (
                         <div className="text-center py-12 text-text-secondary">
-                            <p>Заявок не знайдено</p>
+                            <p>{t('archive.no_requests')}</p>
                         </div>
                     ) : (
                         <div className="space-y-3">
@@ -1073,8 +1075,8 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                         >
                                             Переглянути
                                         </button>
-                                        <button onClick={() => handleRejectClick(song)} className="flex-1 py-1.5 bg-red-500/10 text-red-400 rounded-lg text-xs font-medium">Відхилити</button>
-                                        <button onClick={() => handleApproveClick(song)} className="flex-1 py-1.5 bg-green-500/10 text-green-400 rounded-lg text-xs font-medium">Схвалити</button>
+                                        <button onClick={() => handleRejectClick(song)} className="flex-1 py-1.5 bg-red-500/10 text-red-400 rounded-lg text-xs font-medium">{t('archive.reject')}</button>
+                                        <button onClick={() => handleApproveClick(song)} className="flex-1 py-1.5 bg-green-500/10 text-green-400 rounded-lg text-xs font-medium">{t('archive.approve')}</button>
                                     </div>
                                 </div>
                             ))}
@@ -1083,7 +1085,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                 ) : filteredSongs.length === 0 ? (
                     <div className="text-center py-12 text-text-secondary">
                         <FolderOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                        <p>Пісень не знайдено</p>
+                        <p>{t('songs.not_found')}</p>
                     </div>
                 ) : (
                     <>
@@ -1091,10 +1093,10 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                         <table className="w-full hidden md:table table-fixed">
                             <thead>
                                 <tr className="border-b border-border">
-                                    <th className="text-left py-3 pl-0 pr-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Назва</th>
-                                    <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-[120px]">Категорія</th>
-                                    <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-[120px]">Тематика</th>
-                                    <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-[60px]">Партії</th>
+                                    <th className="text-left py-3 pl-0 pr-4 text-xs font-bold text-text-secondary uppercase tracking-wider">{t('songs.title_col')}</th>
+                                    <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-[120px]">{t('songs.category_col')}</th>
+                                    <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-[120px]">{t('songs.topic_col')}</th>
+                                    <th className="text-left py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-[60px]">{t('songs.parts_col')}</th>
                                     {onAddSong && (
                                         <th className="text-right py-3 px-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-16"></th>
                                     )}
@@ -1305,7 +1307,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         <div className="flex items-center justify-between mb-2">
-                                            <h3 className="text-lg font-bold text-white">Додати до репертуару</h3>
+                                            <h3 className="text-lg font-bold text-white">{t('songs.add_to_repertoire')}</h3>
                                             <button
                                                 onClick={() => setShowAddOptions(false)}
                                                 className="p-1 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-highlight transition-colors"
@@ -1313,14 +1315,14 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                                 <X className="w-5 h-5" />
                                             </button>
                                         </div>
-                                        <p className="text-text-secondary text-sm mb-5">Оберіть що додати:</p>
+                                        <p className="text-text-secondary text-sm mb-5">{t('songs.choose_what_to_add')}</p>
                                         <div className="flex flex-col gap-3">
                                             <button onClick={() => handleAddPart(previewSong, previewPartIndex)} className="w-full py-4 px-4 bg-accent/20 border border-accent text-white font-semibold rounded-xl hover:bg-accent/30 transition-colors text-left">
-                                                <div className="text-xs opacity-70 mb-1">Тільки поточна партія:</div>
+                                                <div className="text-xs opacity-70 mb-1">{t('songs.only_current_part')}</div>
                                                 <div className="truncate text-accent">{extractInstrument(previewSong.parts[previewPartIndex]?.name || 'Поточна партія', previewSong.title)}</div>
                                             </button>
                                             <button onClick={() => { handleAddSongWrapper(previewSong); setShowAddOptions(false); setPreviewSong(null); }} className="w-full py-4 px-4 bg-surface-highlight border border-border text-white font-semibold rounded-xl hover:bg-surface-highlight/80 transition-colors text-left">
-                                                <div className="text-xs opacity-70 mb-1">Всю пісню:</div>
+                                                <div className="text-xs opacity-70 mb-1">{t('songs.full_song')}</div>
                                                 <div className="truncate">{previewSong.parts.length} партій</div>
                                             </button>
                                         </div>

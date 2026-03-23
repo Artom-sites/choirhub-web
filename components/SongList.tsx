@@ -15,6 +15,7 @@ import { getFirestoreLazy } from "@/lib/firebase";
 import { addSong, uploadSongPdf, uploadSongParts, deleteSong, addKnownConductor, updateSong, softDeleteLocalSong, restoreLocalSong } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRepertoire } from "@/contexts/RepertoireContext";
+import { useTranslation } from "@/contexts/TranslationContext";
 import AddSongModal from "./AddSongModal";
 import EditSongModal from "./EditSongModal";
 import PDFViewer from "./PDFViewer";
@@ -61,6 +62,7 @@ export default function SongList({
 }: SongListProps) {
     const router = useRouter();
     const { userData } = useAuth();
+    const { t } = useTranslation();
     const { songs: rawSongs, loading, refreshRepertoire } = useRepertoire();
     const songs = rawSongs || [];
 
@@ -584,7 +586,7 @@ export default function SongList({
                                 <Music2 className="w-6 h-6" />
                             </div>
                             <div>
-                                <p className="text-text-secondary text-xs uppercase tracking-wider font-semibold">Репертуар</p>
+                                <p className="text-text-secondary text-xs uppercase tracking-wider font-semibold">{t('songs.repertoire')}</p>
                                 <div className="flex items-center gap-2">
                                     <p className="text-2xl font-bold text-text-primary tracking-tight">{songs.length} пісень</p>
                                     {isSyncing && (
@@ -719,7 +721,7 @@ export default function SongList({
                             <div className="w-16 h-16 bg-surface rounded-full flex items-center justify-center mx-auto mb-4">
                                 <Music2 className="w-8 h-8 text-text-secondary" />
                             </div>
-                            <p className="text-text-secondary">Пісень не знайдено</p>
+                            <p className="text-text-secondary">{t('songs.not_found')}</p>
                         </div>
                     ) : (
                         <>
