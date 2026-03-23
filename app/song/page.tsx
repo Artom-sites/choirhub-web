@@ -893,6 +893,7 @@ function SongContent() {
                     song.conductor,
                     song.pianist ? `🎹 ${song.pianist}` : null
                 ].filter(Boolean).join(' · ')}
+                onBack={!Capacitor.isNativePlatform() ? () => router.back() : undefined}
                 rightActions={canEdit ? [
                     {
                         id: 'edit',

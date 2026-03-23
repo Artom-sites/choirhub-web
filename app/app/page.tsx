@@ -2722,6 +2722,17 @@ function HomePageContent() {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-2 shrink-0">
+            {/* Search Button (Web Only - Repertoire Tab) */}
+            {!isNative && activeTab === 'songs' && (
+              <button
+                onClick={() => setShowSearchOverlay(true)}
+                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-surface-highlight transition-colors text-text-secondary hover:text-text-primary"
+                title="Пошук"
+              >
+                <Search className="w-5 h-5" />
+              </button>
+            )}
+
             {/* Notification Bell */}
             <button
               onClick={() => router.push('/notifications')}
