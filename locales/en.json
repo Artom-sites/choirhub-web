@@ -1,0 +1,20 @@
+{
+  "account.title": "Account",
+  "account.theme": "Appearance",
+  "account.language": "Language",
+  "account.logout": "Log Out",
+  
+  "search.placeholder": "Search",
+  "search.archive_placeholder": "Search archive...",
+  "search.not_found": "Nothing found",
+  "search.results_one": "{{count}} result",
+  "search.results_few": "{{count}} results",
+  "search.results_many": "{{count}} results",
+  "search.results_other": "{{count}} results",
+
+  "tabs.songs": "Songs",
+  "tabs.collections": "Collections",
+  "tabs.archive": "Archive",
+  "tabs.services": "Services",
+  "tabs.choir": "Choir"
+}

@@ -1,0 +1,20 @@
+{
+  "account.title": "Акаунт",
+  "account.theme": "Тема оформлення",
+  "account.language": "Мова (Language)",
+  "account.logout": "Вийти з акаунта",
+  
+  "search.placeholder": "Пошук",
+  "search.archive_placeholder": "Пошук в архіві...",
+  "search.not_found": "Нічого не знайдено",
+  "search.results_one": "{{count}} результат",
+  "search.results_few": "{{count}} результати",
+  "search.results_many": "{{count}} результатів",
+  "search.results_other": "{{count}} результатів",
+
+  "tabs.songs": "Пісні",
+  "tabs.collections": "Збірки",
+  "tabs.archive": "Архів МХО",
+  "tabs.services": "Служіння",
+  "tabs.choir": "Хор"
+}

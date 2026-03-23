@@ -1,0 +1,20 @@
+{
+  "account.title": "Аккаунт",
+  "account.theme": "Тема оформления",
+  "account.language": "Внешний вид (Language)",
+  "account.logout": "Выйти из аккаунта",
+  
+  "search.placeholder": "Поиск",
+  "search.archive_placeholder": "Поиск в архиве...",
+  "search.not_found": "Ничего не найдено",
+  "search.results_one": "{{count}} результат",
+  "search.results_few": "{{count}} результата",
+  "search.results_many": "{{count}} результатов",
+  "search.results_other": "{{count}} результатов",
+
+  "tabs.songs": "Репертуар",
+  "tabs.collections": "Сборники",
+  "tabs.archive": "Архив МХО",
+  "tabs.services": "Служения",
+  "tabs.choir": "Хор"
+}

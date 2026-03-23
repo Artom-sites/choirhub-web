@@ -1,0 +1,20 @@
+{
+  "account.title": "Konto",
+  "account.theme": "Erscheinungsbild",
+  "account.language": "Sprache",
+  "account.logout": "Abmelden",
+  
+  "search.placeholder": "Suchen",
+  "search.archive_placeholder": "Im Archiv suchen...",
+  "search.not_found": "Nichts gefunden",
+  "search.results_one": "{{count}} Ergebnis",
+  "search.results_few": "{{count}} Ergebnisse",
+  "search.results_many": "{{count}} Ergebnisse",
+  "search.results_other": "{{count}} Ergebnisse",
+
+  "tabs.songs": "Repertoire",
+  "tabs.collections": "Sammlungen",
+  "tabs.archive": "Archiv",
+  "tabs.services": "Gottesdienste",
+  "tabs.choir": "Chor"
+}

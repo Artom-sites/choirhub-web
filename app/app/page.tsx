@@ -4,6 +4,7 @@ import { distance } from "fastest-levenshtein";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useTranslation } from "@/contexts/TranslationContext";
 import { getChoir, createUser, updateChoirMembers, getServices, uploadChoirIcon, mergeMembers, updateChoir, deleteMyAccount, adminDeleteUser, deleteAdminCode, getChoirNotifications, getChoirUsers, joinChoir, updateMember, claimMember, leaveChoir } from "@/lib/db";
 import { updateAttendanceCache } from "@/lib/attendanceCache";
 import { getFirstNameInitial } from "@/lib/utils";
@@ -34,7 +35,7 @@ import ConfirmationModal from "@/components/ConfirmationModal";
 import {
   Music2, Loader2, Copy, Check, HelpCircle, Mail, Shield,
   LogOut, ChevronLeft, ChevronRight, House, User, Users, Repeat,
-  PlusCircle, Plus, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor, Scale, Smartphone, RefreshCw, Search, ArrowUpDown, Palette, HardDrive, AlertTriangle, Calendar, Music
+  PlusCircle, Plus, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor, Scale, Smartphone, RefreshCw, Search, ArrowUpDown, Palette, HardDrive, AlertTriangle, Calendar, Music, Globe
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import NotificationPrompt from "@/components/NotificationPrompt";
@@ -60,6 +61,7 @@ function HomePageContent() {
   const searchParams = useSearchParams();
   const { user, userData, loading: authLoading, signOut, refreshProfile, isGuest, updateActiveChoir, linkWithGoogle, linkWithApple } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { t, language, changeLanguage } = useTranslation();
 
   // Handle push notification tap routing globally
   useEffect(() => {
@@ -2348,6 +2350,42 @@ function HomePageContent() {
                   </div>
                 )}
 
+                {/* Language Settings */}
+                <div className="bg-surface rounded-2xl p-4 card-shadow">
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center">
+                        <Globe className="w-5 h-5" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-text-primary font-bold text-sm">{t('account.language') || "Мова (Language)"}</p>
+                        <p className="text-xs text-text-secondary">Оберіть мову інтерфейсу</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex bg-surface-highlight/50 p-1 rounded-xl w-full">
+                      {[
+                        { id: 'uk', label: '🇺🇦' },
+                        { id: 'en', label: '🇬🇧' },
+                        { id: 'ru', label: '🇷🇺' },
+                        { id: 'de', label: '🇩🇪' }
+                      ].map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => changeLanguage(item.id as any)}
+                          className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                            language === item.id 
+                              ? "bg-background text-text-primary shadow-sm" 
+                              : "text-text-secondary hover:text-text-primary"
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
                 {/* Management Block (Choir & Codes) */}
                 <div className="bg-surface rounded-2xl p-4 card-shadow">
                   {/* Change Choir Button */}
@@ -3320,7 +3358,7 @@ function HomePageContent() {
               }`}
             >
               <Calendar className="w-5 h-5 mb-0.5" />
-              <span className="text-[10px] font-medium leading-none">Служіння</span>
+              <span className="text-[10px] font-medium leading-none">{t('tabs.services')}</span>
             </button>
 
             <button
@@ -3330,7 +3368,7 @@ function HomePageContent() {
               }`}
             >
               <Music className="w-5 h-5 mb-0.5" />
-              <span className="text-[10px] font-medium leading-none">Пісні</span>
+              <span className="text-[10px] font-medium leading-none">{t('tabs.songs')}</span>
             </button>
 
             <button
@@ -3340,7 +3378,7 @@ function HomePageContent() {
               }`}
             >
               <Users className="w-5 h-5 mb-0.5" />
-              <span className="text-[10px] font-medium leading-none">Хор</span>
+              <span className="text-[10px] font-medium leading-none">{t('tabs.choir')}</span>
             </button>
           </div>
         </div>

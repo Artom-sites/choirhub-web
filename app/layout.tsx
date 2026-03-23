@@ -4,6 +4,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { RepertoireProvider } from "@/contexts/RepertoireContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ChoirProvider } from "@/contexts/ChoirContext";
+import { TranslationProvider } from "@/contexts/TranslationContext";
 import ClientErrorBoundary from "@/components/ClientErrorBoundary";
 import "./globals.css";
 
@@ -103,15 +104,17 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-text-primary`}
       >
         <ClientErrorBoundary>
-          <AuthProvider>
-            <ChoirProvider>
-              <RepertoireProvider>
-                <ThemeProvider>
-                  {children}
-                </ThemeProvider>
-              </RepertoireProvider>
-            </ChoirProvider>
-          </AuthProvider>
+          <TranslationProvider>
+            <AuthProvider>
+              <ChoirProvider>
+                <RepertoireProvider>
+                  <ThemeProvider>
+                    {children}
+                  </ThemeProvider>
+                </RepertoireProvider>
+              </ChoirProvider>
+            </AuthProvider>
+          </TranslationProvider>
         </ClientErrorBoundary>
       </body>
     </html>
