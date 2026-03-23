@@ -1,3 +1,4 @@
+"use client";
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { Preferences } from '@capacitor/preferences';
 import ukDict from '../locales/uk.json';
