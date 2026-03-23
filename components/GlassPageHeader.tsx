@@ -317,6 +317,54 @@ export default function GlassPageHeader({
               </div>
             </div>
           )}
+
+          {/* Web optional filter menus */}
+          {filterMenu && filterMenu.length > 0 && (
+            <div className="px-4 pb-3 flex flex-col gap-3 max-h-[150px] overflow-y-auto w-full scrollbar-hide">
+              {filterMenu.map((group, gIdx) => {
+                const activeItemWithChildren = group.items.find((i) => i.isActive && i.children && i.children.length > 0);
+                
+                return (
+                  <div key={gIdx} className="flex flex-col gap-2 w-full">
+                    <div className="flex gap-2 overflow-x-auto scrollbar-hide snap-x pb-1 w-full">
+                      {group.items.map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => onFilterMenuSelect?.(item.id)}
+                          className={`snap-start px-4 py-1.5 rounded-full whitespace-nowrap text-[13px] font-medium transition-colors flex-shrink-0 border ${
+                            item.isActive 
+                              ? "bg-text-primary text-background border-transparent shadow-sm" 
+                              : "bg-surface text-text-secondary border-border hover:border-accent/40 hover:text-text-primary"
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Render active item's children immediately below its row */}
+                    {activeItemWithChildren && (
+                      <div className="flex gap-2 overflow-x-auto scrollbar-hide snap-x pl-4 border-l-2 border-primary/20 w-full pb-1">
+                        {activeItemWithChildren.children!.map((child) => (
+                           <button
+                             key={child.id}
+                             onClick={() => onFilterMenuSelect?.(child.id)}
+                             className={`snap-start px-3 py-1 rounded-full whitespace-nowrap text-xs font-semibold transition-colors flex-shrink-0 ${
+                               child.isActive 
+                                 ? "bg-primary text-white shadow-sm" 
+                                 : "bg-surface-highlight text-text-secondary hover:text-text-primary border border-transparent hover:border-border"
+                             }`}
+                           >
+                             {child.label}
+                           </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
