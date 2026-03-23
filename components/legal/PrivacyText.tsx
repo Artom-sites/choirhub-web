@@ -3,7 +3,7 @@ import React from 'react';
 export default function PrivacyText() {
     return (
         <>
-            <p className="text-xs text-text-secondary">Останнє оновлення: 10 березня 2026</p>
+            <p className="text-xs text-text-secondary">Останнє оновлення: 22 березня 2026</p>
 
             {/* 1. Introduction */}
             <section className="space-y-3">
@@ -41,7 +41,6 @@ export default function PrivacyText() {
                 <ul className="list-disc pl-5 space-y-1 text-sm text-text-secondary">
                     <li>Ім&apos;я та прізвище</li>
                     <li>Адреса електронної пошти</li>
-                    <li>URL фото профілю</li>
                     <li>Унікальний ідентифікатор користувача (Firebase UID)</li>
                 </ul>
 
