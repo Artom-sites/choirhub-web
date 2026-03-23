@@ -34,7 +34,7 @@ import ConfirmationModal from "@/components/ConfirmationModal";
 import {
   Music2, Loader2, Copy, Check, HelpCircle, Mail, Shield,
   LogOut, ChevronLeft, ChevronRight, House, User, Users, Repeat,
-  PlusCircle, Plus, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor, Scale, Smartphone, RefreshCw, Search, ArrowUpDown, Palette, HardDrive, AlertTriangle
+  PlusCircle, Plus, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor, Scale, Smartphone, RefreshCw, Search, ArrowUpDown, Palette, HardDrive, AlertTriangle, Calendar, Music
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import NotificationPrompt from "@/components/NotificationPrompt";
@@ -2861,7 +2861,7 @@ function HomePageContent() {
               ) : (
                 ((() => {
                   // Deduplicate by ID to prevent React key errors from corrupted DB state
-                  const dedupedMembers = Array.from(new Map((choir?.members || []).map(m => [m.id, m])).values());
+                  const dedupedMembers = Array.from(new Map((choir?.members || []).map(m => [m.id || (m as any).uid || JSON.stringify(m), m])).values());
 
                   // Determine which UIDs are linked to a REAL roster entry
                   const linkedUids = new Set<string>();
@@ -3304,6 +3304,43 @@ function HomePageContent() {
         confirmLabel="Покинути"
         isDestructive
       />
+
+      {/* ── Web App Bottom Navigation ── */}
+      {!isNative && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-background/90 backdrop-blur-md border-t border-border pb-[env(safe-area-inset-bottom)]">
+          <div className="flex items-center justify-around h-14 max-w-lg mx-auto px-2">
+            <button
+              onClick={() => setActiveTab('home')}
+              className={`flex flex-col items-center justify-center w-20 h-full gap-1 transition-colors ${
+                activeTab === 'home' ? 'text-primary' : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              <Calendar className="w-5 h-5 mb-0.5" />
+              <span className="text-[10px] font-medium leading-none">Служіння</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('songs')}
+              className={`flex flex-col items-center justify-center w-20 h-full gap-1 transition-colors ${
+                activeTab === 'songs' ? 'text-primary' : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              <Music className="w-5 h-5 mb-0.5" />
+              <span className="text-[10px] font-medium leading-none">Пісні</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('members')}
+              className={`flex flex-col items-center justify-center w-20 h-full gap-1 transition-colors ${
+                activeTab === 'members' ? 'text-primary' : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              <Users className="w-5 h-5 mb-0.5" />
+              <span className="text-[10px] font-medium leading-none">Хор</span>
+            </button>
+          </div>
+        </div>
+      )}
 
     </main >
   );

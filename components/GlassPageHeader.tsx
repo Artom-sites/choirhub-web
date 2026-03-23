@@ -1,6 +1,34 @@
 import { ReactNode, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Capacitor } from "@capacitor/core";
+import { 
+  ArrowLeft, Pencil, Trash2, Download, Plus, MoreVertical, 
+  Music, Users, Settings, SlidersHorizontal, Search, X, UserX,
+  Share, Eye, EyeOff
+} from "lucide-react";
+
+function renderWebIcon(iconName: string | any) {
+  if (typeof iconName !== "string") return iconName;
+  switch (iconName.toLowerCase()) {
+    case 'pencil':
+    case 'pencil.circle.fill': return <Pencil className="w-5 h-5" />;
+    case 'trash': return <Trash2 className="w-5 h-5" />;
+    case 'arrow.down.circle': return <Download className="w-5 h-5" />;
+    case 'plus': return <Plus className="w-5 h-5" />;
+    case 'ellipsis': return <MoreVertical className="w-5 h-5" />;
+    case 'music.note': return <Music className="w-5 h-5" />;
+    case 'person.2': return <Users className="w-5 h-5" />;
+    case 'person.fill.xmark': return <UserX className="w-5 h-5" />;
+    case 'gearshape': return <Settings className="w-5 h-5" />;
+    case 'slider.horizontal.3': return <SlidersHorizontal className="w-5 h-5" />;
+    case 'magnifyingglass': return <Search className="w-5 h-5" />;
+    case 'xmark': return <X className="w-5 h-5" />;
+    case 'square.and.arrow.up': return <Share className="w-5 h-5" />;
+    case 'eye': return <Eye className="w-5 h-5" />;
+    case 'eye.slash': return <EyeOff className="w-5 h-5" />;
+    default: return null;
+  }
+}
 
 interface GlassAction {
   id: string;
@@ -207,12 +235,91 @@ export default function GlassPageHeader({
 
   return (
     <div className="w-full relative z-30">
-      {/* Spacer to push content below the native iOS floating pill header */}
-      <div className="h-[calc(48px+8px+env(safe-area-inset-top))] w-full pointer-events-none" />
+      {/* Spacer to push content below the native iOS hover header OR web fixed header */}
+      <div className="h-[calc(56px+env(safe-area-inset-top))] w-full pointer-events-none" />
       
-      {/* Optional sub-header content (e.g. dom tabs) rendered in DOM */}
+      {/* ── Web Header Fallback ── */}
+      {!Capacitor.isNativePlatform() && (
+        <div className="fixed top-0 left-0 right-0 z-40 bg-background/90 backdrop-blur-md border-b border-border flex flex-col pt-[env(safe-area-inset-top)]">
+          <div className="h-14 flex items-center px-4 justify-between">
+            <div className="flex items-center gap-3 overflow-hidden">
+              {onBack && (
+                <button onClick={onBack} className="p-2 -ml-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-highlight transition-colors shrink-0">
+                  <ArrowLeft className="w-5 h-5"/>
+                </button>
+              )}
+              <div className="min-w-0">
+                <h1 className="text-lg font-bold text-text-primary truncate leading-tight">
+                  {title}
+                </h1>
+                {subtitle && (
+                  <p className="text-xs text-text-secondary truncate mt-0.5">
+                    {subtitle}
+                  </p>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-1 shrink-0 ml-2">
+              {rightActions?.map((action) => (
+                <button
+                  key={action.id}
+                  onClick={action.onClick}
+                  className={`p-2 rounded-xl transition-colors ${
+                    action.color === 'danger' 
+                      ? 'text-red-500 hover:bg-red-500/10' 
+                      : 'text-primary hover:bg-primary/10'
+                  }`}
+                >
+                  {renderWebIcon(action.icon)}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          {/* Web optional search input */}
+          {searchInput && (
+            <div className="px-4 pb-3">
+              <div className="relative">
+                <Search className="w-4 h-4 text-text-secondary absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder={searchInput.placeholder || "Пошук"}
+                  value={searchInput.value}
+                  onChange={(e) => searchInput.onChange(e.target.value)}
+                  autoFocus={searchInput.autoFocus}
+                  className="w-full bg-surface-highlight text-text-primary text-sm rounded-xl pl-9 pr-4 py-2 border border-border focus:border-primary/50 focus:outline-none placeholder:text-text-secondary/50"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Web optional segmented control */}
+          {rightSegmented && rightSegmented.items && (
+            <div className="px-4 pb-3">
+              <div className="flex bg-surface-highlight/50 p-1 rounded-xl w-full">
+                {rightSegmented.items.map((item, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => rightSegmented.onChange(idx)}
+                    className={`flex-1 py-1.5 text-sm font-semibold rounded-lg transition-all ${
+                      rightSegmented.active === idx 
+                        ? "bg-background text-text-primary shadow-sm" 
+                        : "text-text-secondary hover:text-text-primary"
+                    }`}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Optional sub-header content (e.g. dom tabs) rendered in DOM just below the header */}
       {children ? (
-        <div className="px-4 pb-2 bg-background/90 backdrop-blur-md border-b border-border sticky top-[calc(56px+env(safe-area-inset-top))]">
+        <div className={`px-4 pb-2 bg-background/90 backdrop-blur-md border-b border-border sticky ${!Capacitor.isNativePlatform() ? "top-[calc(56px+env(safe-area-inset-top))]" : "top-[calc(56px+env(safe-area-inset-top))]"}`}>
           {children}
         </div>
       ) : (tabs.length > 0 && !Capacitor.isNativePlatform()) ? (
@@ -232,4 +339,5 @@ export default function GlassPageHeader({
       ) : null}
     </div>
   );
+
 }
