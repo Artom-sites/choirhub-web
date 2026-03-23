@@ -2753,14 +2753,7 @@ function HomePageContent() {
 
       {/* Tab Content */}
       <div className="relative pt-[calc(4rem_+_env(safe-area-inset-top))] pb-32 md:pb-24">
-        {/* Under Construction Banner - Just a normal block in the flow */}
-        {!isNative && (
-          <div className="bg-orange-500/10 border-b border-amber-500/20 py-2 px-4 text-center">
-            <p className="text-[11px] font-medium text-orange-400">
-              🚧 Додаток в розробці — вибачте за можливі незручності
-            </p>
-          </div>
-        )}
+        {/* Under Construction Banner removed */}
 
 
 
