@@ -70,19 +70,6 @@ if (!process.env.CAPACITOR) {
         source: '/landing/:path*',
         destination: 'https://artom-sites.github.io/mychoir-landing/:path*',
       },
-      // Proxy assets that might resolve relative to root
-      {
-        source: '/images/:path*',
-        destination: 'https://artom-sites.github.io/mychoir-landing/images/:path*',
-      },
-      {
-        source: '/privacy.html',
-        destination: 'https://artom-sites.github.io/mychoir-landing/privacy.html',
-      },
-      {
-        source: '/terms.html',
-        destination: 'https://artom-sites.github.io/mychoir-landing/terms.html',
-      },
     ];
   };
 }

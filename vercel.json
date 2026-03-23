@@ -1,4 +1,11 @@
 {
+    "redirects": [
+        {
+            "source": "/landing",
+            "destination": "/landing/",
+            "permanent": true
+        }
+    ],
     "headers": [
         {
             "source": "/(.*)",
