@@ -979,6 +979,17 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                                 { id: 'lang:rus', label: `🇷🇺 ${t('global.lang_rus')}`, isActive: selectedLanguage === 'rus' },
                                                 { id: 'lang:eng', label: `🌍 ${t('global.lang_eng')}`, isActive: selectedLanguage === 'eng' },
                                             ]
+                                        },
+                                        {
+                                            items: [
+                                                { id: 'theme:all', label: t('global.categories.all'), isActive: !selectedTheme },
+                                                ...OFFICIAL_THEMES.filter(thm => thm !== "Інші").sort((a,b) => a.localeCompare(b)).map(theme => ({
+                                                    id: `theme:${theme}`,
+                                                    label: t(`global.themes.${theme.replace(/ /g, '_')}` as any, { defaultValue: theme }),
+                                                    isActive: selectedTheme === theme,
+                                                })),
+                                                { id: `theme:Інші`, label: t(`global.themes.Інші` as any, { defaultValue: 'Інші' }), isActive: selectedTheme === 'Інші' }
+                                            ]
                                         }
                                     ]}
                                     onFilterMenuSelect={(itemId) => {
@@ -992,6 +1003,9 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                         } else if (itemId.startsWith('lang:')) {
                                             const lang = itemId.slice(5) as 'ukr' | 'rus' | 'eng';
                                             setSelectedLanguage(selectedLanguage === lang ? 'all' : lang);
+                                        } else if (itemId.startsWith('theme:')) {
+                                            const themeId = itemId.slice(6);
+                                            setSelectedTheme(themeId === 'all' ? null : themeId === selectedTheme ? null : themeId);
                                         }
                                     }}
                                 />
@@ -1148,7 +1162,9 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                         </td>
                                         <td className="py-3 px-4">
                                             {song.theme ? (
-                                                <span className="text-sm text-text-secondary">{song.theme}</span>
+                                                <span className="text-sm text-text-secondary">
+                                                    {t(`global.themes.${song.theme.replace(/ /g, '_')}` as any, { defaultValue: song.theme })}
+                                                </span>
                                             ) : (
                                                 <span className="text-sm text-text-secondary/50">—</span>
                                             )}
@@ -1206,14 +1222,14 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                             {song.subcategory && song.theme && <span className="text-xs text-text-secondary">•</span>}
                                             {song.theme && (
                                                 <span className="text-xs text-text-secondary">
-                                                    {song.theme}
+                                                    {t(`global.themes.${song.theme.replace(/ /g, '_')}` as any, { defaultValue: song.theme })}
                                                 </span>
                                             )}
                                             {((song.partsCount && song.partsCount > 1) || (song.parts && song.parts.length > 1)) && (
                                                 <>
                                                     <span className="text-xs text-text-secondary">•</span>
                                                     <span className="text-xs text-text-secondary">
-                                                        {song.partsCount || song.parts.length} партій
+                                                        {song.partsCount || song.parts?.length} {t('songs.parts_col', { defaultValue: 'партій', count: song.partsCount || song.parts?.length })}
                                                     </span>
                                                 </>
 
