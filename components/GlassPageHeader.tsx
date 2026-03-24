@@ -293,8 +293,16 @@ export default function GlassPageHeader({
                   value={searchInput.value}
                   onChange={(e) => searchInput.onChange(e.target.value)}
                   autoFocus={searchInput.autoFocus}
-                  className="w-full bg-surface-highlight text-text-primary text-sm rounded-xl pl-9 pr-4 py-2 border border-border focus:border-primary/50 focus:outline-none placeholder:text-text-secondary/50"
+                  className="w-full bg-surface-highlight text-text-primary text-sm rounded-xl pl-9 pr-9 py-2 border border-border focus:border-primary/50 focus:outline-none placeholder:text-text-secondary/50"
                 />
+                {searchInput.value.length > 0 && (
+                  <button
+                    onClick={() => searchInput.onChange("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           )}
