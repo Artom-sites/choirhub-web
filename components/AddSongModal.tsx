@@ -276,7 +276,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                                             >
                                                 <div className="flex items-center gap-2">
                                                     <span className={`text-sm font-medium ${category ? 'text-text-primary' : 'text-text-secondary'}`}>
-                                                        {category || t('songs.add.category_placeholder')}
+                                                        {category ? t(`global.themes.${category.replace(/ /g, '_')}` as any, { defaultValue: category }) : t('songs.add.category_placeholder')}
                                                     </span>
                                                 </div>
                                                 <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${isCategoryDropdownOpen ? 'rotate-180' : ''}`} />
@@ -293,7 +293,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                                                             }}
                                                             className={`w-full px-4 py-3 flex items-center justify-between hover:bg-surface-highlight cursor-pointer transition-colors ${category === cat ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:text-text-primary'}`}
                                                         >
-                                                            <span className="text-sm font-medium">{cat}</span>
+                                                            <span className="text-sm font-medium">{t(`global.themes.${cat.replace(/ /g, '_')}` as any, { defaultValue: cat })}</span>
                                                         </div>
                                                     ))}
                                                     <div

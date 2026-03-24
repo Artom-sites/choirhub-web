@@ -36,6 +36,7 @@ interface DropdownProps {
 }
 
 function CustomDropdown({ value, options, onChange, placeholder = "Обрати...", allowEmpty = false }: DropdownProps) {
+    const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
 
@@ -57,7 +58,7 @@ function CustomDropdown({ value, options, onChange, placeholder = "Обрати.
                 className="w-full px-4 py-3 bg-surface-highlight rounded-xl text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary/50"
             >
                 <span className={value ? "text-text-primary" : "text-text-secondary"}>
-                    {value || placeholder}
+                    {value ? t(`submit_song.options.${value.replace(/ /g, '_')}` as any, { defaultValue: value }) : placeholder}
                 </span>
                 <ChevronDown className={`w-5 h-5 text-text-secondary transition-transform ${isOpen ? "rotate-180" : ""}`} />
             </button>
@@ -80,7 +81,7 @@ function CustomDropdown({ value, options, onChange, placeholder = "Обрати.
                             onClick={() => { onChange(opt); setIsOpen(false); }}
                             className={`w-full px-4 py-2.5 text-left hover:bg-surface-highlight transition-colors ${value === opt ? "bg-primary/10 text-primary font-medium" : "text-text-primary"}`}
                         >
-                            {opt}
+                            {t(`submit_song.options.${opt.replace(/ /g, '_')}` as any, { defaultValue: opt })}
                         </button>
                     ))}
                 </div>

@@ -136,6 +136,9 @@ export const TranslationProvider: React.FC<{children: React.ReactNode}> = ({ chi
 
     // 4. Ultimate fallback to raw key if totally missing
     if (!translation) {
+      if (variables && variables.defaultValue !== undefined) {
+        return String(variables.defaultValue);
+      }
       return `[${key}]`;
     }
 

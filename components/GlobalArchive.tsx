@@ -66,12 +66,12 @@ export const SUBCATEGORIES: Record<string, { id: string; label: string }[]> = {
     ],
 };
 
-const getSubcategoryLabel = (category: string | undefined, subcategoryId: string | undefined): string | null => {
+const getSubcategoryLabel = (category: string | undefined, subcategoryId: string | undefined, t: any): string | null => {
     if (!subcategoryId || !category) return null;
     const subs = SUBCATEGORIES[category];
     if (!subs) return subcategoryId;
     const found = subs.find(s => s.id === subcategoryId);
-    return found ? found.label : subcategoryId;
+    return found ? t(`global.subcategories.${subcategoryId}`, { defaultValue: found.label }) : subcategoryId;
 };
 
 const PAGE_SIZE = 2000;
@@ -874,7 +874,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                             <Library className="w-6 h-6" />
                         </div>
                         <div>
-                            <p className="text-text-secondary text-xs uppercase tracking-wider font-semibold">Архів МХО</p>
+                            <p className="text-text-secondary text-xs uppercase tracking-wider font-semibold">{t('archive.header')}</p>
                             <div className="flex items-center gap-2">
                                 <p className="text-2xl font-bold text-text-primary tracking-tight">
                                     {searchQuery || activeFiltersCount > 0
@@ -950,7 +950,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                                 isActive: selectedCategory === cat.id,
                                                 children: SUBCATEGORIES[cat.id]?.map(sub => ({
                                                     id: `sub:${sub.id}`,
-                                                    label: sub.label,
+                                                    label: t(`global.subcategories.${sub.id}` as any, { defaultValue: sub.label }),
                                                     isActive: selectedSubCategory === sub.id,
                                                 }))
                                             }))
@@ -1009,7 +1009,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                                             <h3 className="font-semibold text-text-primary truncate">{song.title}</h3>
                                                             <p className="text-xs text-text-secondary truncate mt-0.5">
                                                                 {song.composer && <span className="text-xs font-medium text-primary mr-1"><User className="inline-block w-3 h-3 mr-0.5" />{song.composer}</span>}
-                                                                {song.language?.toUpperCase() || ''} • {song.category} {getSubcategoryLabel(song.category, song.subcategory) ? `(${getSubcategoryLabel(song.category, song.subcategory)})` : ''}
+                                                                {song.language?.toUpperCase() || ''} • {song.category} {getSubcategoryLabel(song.category, song.subcategory, t) ? `(${getSubcategoryLabel(song.category, song.subcategory, t)})` : ''}
                                                             </p>
                                                         </div>
                                                         <ChevronRight className="w-4 h-4 text-text-secondary/40 flex-shrink-0" />
@@ -1126,7 +1126,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                         </td>
                                         <td className="py-3 px-4">
                                             <span className="text-sm text-text-secondary">
-                                                {song.subcategory ? getSubcategoryLabel(song.category, song.subcategory) : song.category}
+                                                {song.subcategory ? getSubcategoryLabel(song.category, song.subcategory, t) : song.category}
                                             </span>
                                         </td>
                                         <td className="py-3 px-4">
@@ -1183,7 +1183,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                         <div className="flex items-center gap-1.5 mt-0.5">
                                             {song.subcategory && (
                                                 <span className="text-xs text-text-secondary">
-                                                    {getSubcategoryLabel(song.category, song.subcategory)}
+                                                    {getSubcategoryLabel(song.category, song.subcategory, t)}
                                                 </span>
                                             )}
                                             {song.subcategory && song.theme && <span className="text-xs text-text-secondary">•</span>}
@@ -1338,10 +1338,9 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                 isOpen={!!songToAdd}
                 onClose={() => setSongToAdd(null)}
                 onConfirm={confirmAddSong}
-                title="Додати пісню?"
-                message={`Ви дійсно хочете додати "${songToAdd?.title}" до репертуару вашого хору?`}
-                confirmLabel="Додати"
-                cancelLabel="Скасувати"
+                title={t('archive.add_song_title')}
+                message={t('archive.add_song_message', { title: songToAdd?.title || '' })}
+                confirmLabel={t('global.actions.add')}
             />
 
             {
