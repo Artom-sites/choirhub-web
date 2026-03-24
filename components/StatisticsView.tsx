@@ -6,6 +6,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { ArrowLeft, Users, Mic2, Calendar, TrendingUp, Music, X, ChevronRight, Loader2, AlertCircle } from "lucide-react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { getFirestoreLazy } from "@/lib/firebase";
+import { useTranslation } from "@/contexts/TranslationContext";
 import DetailedStatisticsModal from "./DetailedStatisticsModal";
 import GlassPageHeader from "./GlassPageHeader";
 
@@ -49,6 +50,7 @@ interface StatisticsViewProps {
 }
 
 export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
+    const { t } = useTranslation();
     const [stats, setStats] = useState<StatsSummary | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -69,7 +71,7 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
             },
             (err) => {
                 console.error("[StatisticsView] onSnapshot error:", err);
-                setError("Помилка завантаження статистики");
+                setError(t('stats.error'));
                 setLoading(false);
             }
         );
@@ -96,11 +98,11 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
 
         // Name mappings for standard voices
         const nameMap: Record<string, string> = {
-            Soprano: 'Сопрано',
-            Alto: 'Альт',
-            Tenor: 'Тенор',
-            Bass: 'Бас',
-            Unassigned: 'Без партії'
+            Soprano: t('stats.voice.soprano'),
+            Alto: t('stats.voice.alto'),
+            Tenor: t('stats.voice.tenor'),
+            Bass: t('stats.voice.bass'),
+            Unassigned: t('stats.voice.unassigned')
         };
 
         // Helper to generate a consistent color based on string hash
@@ -157,12 +159,12 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
     return (
         <div className="min-h-screen bg-background text-text-primary" data-native-inner="true">
             {/* Header */}
-            <GlassPageHeader title="Статистика хору" onBack={onBack} />
+            <GlassPageHeader title={t('stats.title')} onBack={onBack} />
 
             {loading ? (
                 <div className="flex flex-col items-center justify-center p-12 mt-12">
                     <Loader2 className="w-8 h-8 text-primary animate-spin mb-4" />
-                    <p className="text-text-secondary font-medium">Завантаження статистики...</p>
+                    <p className="text-text-secondary font-medium">{t('stats.loading')}</p>
                 </div>
             ) : error ? (
                 <div className="flex flex-col items-center justify-center p-12 mt-12">
@@ -172,8 +174,8 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
             ) : !stats ? (
                 <div className="flex flex-col items-center justify-center p-12 mt-12">
                     <Calendar className="w-8 h-8 text-text-secondary mb-4" />
-                    <p className="text-text-secondary font-medium">Статистика ще не створена</p>
-                    <p className="text-text-secondary text-sm mt-1">Додайте служіння, щоб побачити дані</p>
+                    <p className="text-text-secondary font-medium">{t('stats.empty')}</p>
+                    <p className="text-text-secondary text-sm mt-1">{t('stats.empty_hint')}</p>
                 </div>
             ) : (
                 <div className="p-4 space-y-4 pb-24 w-full">
@@ -185,21 +187,21 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                                 <Users className="w-4.5 h-4.5 text-blue-400" />
                             </div>
                             <p className="text-2xl font-bold">{totalMembers}</p>
-                            <p className="text-[10px] text-text-secondary uppercase tracking-wider mt-0.5">Учасників</p>
+                            <p className="text-[10px] text-text-secondary uppercase tracking-wider mt-0.5">{t('stats.members')}</p>
                         </div>
                         <div className="bg-surface border border-border rounded-2xl p-4 text-center">
                             <div className="w-9 h-9 rounded-xl bg-green-500/10 flex items-center justify-center mx-auto mb-2">
                                 <TrendingUp className="w-4.5 h-4.5 text-green-400" />
                             </div>
                             <p className="text-2xl font-bold">{stats.averageAttendance}%</p>
-                            <p className="text-[10px] text-text-secondary uppercase tracking-wider mt-0.5">Явка</p>
+                            <p className="text-[10px] text-text-secondary uppercase tracking-wider mt-0.5">{t('stats.attendance')}</p>
                         </div>
                         <div className="bg-surface border border-border rounded-2xl p-4 text-center">
                             <div className="w-9 h-9 rounded-xl bg-orange-500/10 flex items-center justify-center mx-auto mb-2">
                                 <Calendar className="w-4.5 h-4.5 text-orange-400" />
                             </div>
                             <p className="text-2xl font-bold">{stats.totalServices}</p>
-                            <p className="text-[10px] text-text-secondary uppercase tracking-wider mt-0.5">Служінь</p>
+                            <p className="text-[10px] text-text-secondary uppercase tracking-wider mt-0.5">{t('stats.services')}</p>
                         </div>
                     </div>
 
@@ -209,7 +211,7 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                             <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center">
                                 <Mic2 className="w-4 h-4 text-purple-400" />
                             </div>
-                            Баланс голосів
+                            {t('stats.voice_balance')}
                         </h3>
 
                         <div className="flex items-center gap-4">
@@ -283,7 +285,7 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                                 <div className="w-8 h-8 rounded-xl bg-orange-500/10 flex items-center justify-center">
                                     <TrendingUp className="w-4 h-4 text-orange-400" />
                                 </div>
-                                Графік
+                                {t('stats.chart')}
                             </h3>
                             {/* Dedicated Layout Row for Chart and YAxis matching Detailed Stats */}
                             <div className="flex h-56 w-full mt-2">
@@ -343,7 +345,7 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                                                     fontSize: '13px',
                                                     boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
                                                 }}
-                                                formatter={(value: any) => [`${value}%`, 'Явка']}
+                                                formatter={(value: any) => [`${value}%`, t('stats.attendance_label')]}
                                             />
                                             <Area
                                                 type="monotone"
@@ -363,7 +365,7 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                                 onClick={() => setShowDetailedStats(true)}
                                 className="w-full mt-3 py-2.5 bg-surface-highlight/60 hover:bg-surface-highlight rounded-xl text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors flex items-center justify-center gap-1.5"
                             >
-                                Детальніше
+                                {t('stats.more')}
                             </button>
                         </div>
                     )}
@@ -375,7 +377,7 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                                 <div className="w-8 h-8 rounded-xl bg-pink-500/10 flex items-center justify-center">
                                     <Music className="w-4 h-4 text-pink-400" />
                                 </div>
-                                Найпопулярніші пісні
+                                {t('stats.top_songs')}
                             </h3>
                             <div className="space-y-1">
                                 {stats.topSongs.slice(0, 5).map((song, idx) => {
@@ -411,7 +413,7 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
                                     onClick={() => setShowAllSongs(true)}
                                     className="w-full mt-3 py-2.5 bg-surface-highlight/60 hover:bg-surface-highlight rounded-xl text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors flex items-center justify-center gap-1.5"
                                 >
-                                    Усі пісні ({(stats.allSongs || []).length})
+                                    {t('stats.all_songs')} ({(stats.allSongs || []).length})
                                     <ChevronRight className="w-3.5 h-3.5" />
                                 </button>
                             )}
@@ -425,7 +427,7 @@ export default function StatisticsView({ choir, onBack }: StatisticsViewProps) {
             {
                 showAllSongs && stats && (
                     <div className="fixed inset-0 z-[70] bg-background flex flex-col animate-in slide-in-from-bottom duration-300" data-native-inner="true">
-                        <GlassPageHeader title={`Статистика по пісням (${(stats.allSongs || []).length})`} onBack={() => setShowAllSongs(false)} />
+                        <GlassPageHeader title={`${t('stats.all_songs_title')} (${(stats.allSongs || []).length})`} onBack={() => setShowAllSongs(false)} />
                         <div className="flex-1 overflow-y-auto p-4 pb-safe">
                             <div className="space-y-2 w-full">
                                 { (stats.allSongs || []).map((song, idx) => (

@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function TermsText() {
+export default function TermsTextUk() {
     return (
         <>
             <p className="text-xs text-text-secondary">Останнє оновлення: 10 березня 2026</p>

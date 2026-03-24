@@ -7,6 +7,7 @@ import { Dialog } from '@capacitor/dialog';
 import { useAuth } from "@/contexts/AuthContext";
 import { getChoirNotifications, markNotificationAsRead, deleteNotification, setServiceAttendance } from "@/lib/db";
 import { ChoirNotification, Service } from "@/types";
+import { useTranslation } from "@/contexts/TranslationContext";
 
 interface NotificationsModalProps {
     isOpen: boolean;
@@ -37,6 +38,7 @@ export default function NotificationsModal({
     fcmLoading
 }: NotificationsModalProps) {
     const { userData } = useAuth();
+    const { t } = useTranslation();
     const [notifications, setNotifications] = useState<ChoirNotification[]>([]);
     const [loading, setLoading] = useState(true);
     const [showSettings, setShowSettings] = useState(false);
@@ -83,7 +85,7 @@ export default function NotificationsModal({
             setConfirmDeleteId(null);
         } catch (error) {
             console.error("Failed to delete notification:", error);
-            await Dialog.alert({ title: "Помилка", message: "Не вдалося видалити повідомлення" });
+            await Dialog.alert({ title: t('song.error'), message: t('notif.error.delete') });
         } finally {
             setDeletingId(null);
         }
@@ -96,7 +98,7 @@ export default function NotificationsModal({
             await setServiceAttendance(userData.choirId, serviceId, userData.id, status);
         } catch (error) {
             console.error("Voting failed:", error);
-            await Dialog.alert({ title: "Помилка", message: "Помилка при збереженні відповіді" });
+            await Dialog.alert({ title: t('song.error'), message: t('notif.error.save') });
         } finally {
             setVotingServiceId(null);
         }
@@ -111,7 +113,7 @@ export default function NotificationsModal({
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xl font-bold text-text-primary flex items-center gap-2">
                         <Bell className="w-5 h-5" />
-                        Сповіщення
+                        {t('notif.title')}
                     </h3>
                     <div className="flex items-center gap-2">
                         <button
@@ -131,8 +133,8 @@ export default function NotificationsModal({
                         <div className="p-4 bg-surface-highlight rounded-2xl">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="font-bold text-text-primary">Пуш-сповіщення</p>
-                                    <p className="text-xs text-text-secondary mt-1">Отримувати сповіщення на цей пристрій</p>
+                                    <p className="font-bold text-text-primary">{t('notif.push.label')}</p>
+                                    <p className="text-xs text-text-secondary mt-1">{t('notif.push.description')}</p>
                                 </div>
                                 {isPreferenceEnabled ? (
                                     <button
@@ -158,24 +160,22 @@ export default function NotificationsModal({
                             {!isSupported && (
                                 <p className="text-xs text-red-400 mt-2">
                                     {Capacitor.isNativePlatform()
-                                        ? "Ваш пристрій не підтримує пуш-сповіщення"
-                                        : "Ваш пристрій або браузер не підтримує пуш-сповіщення"}
+                                        ? t('notif.push.not_supported_ios')
+                                        : t('notif.push.not_supported_other')}
                                 </p>
                             )}
 
                             {permissionStatus === "denied" && (
                                 <div className="mt-2 space-y-1">
-                                    <p className="text-xs text-amber-400 font-medium">
-                                        Сповіщення заблоковані в налаштуваннях пристрою
-                                    </p>
+                                    <p className="text-xs text-amber-400 font-medium">{t('notif.push.blocked_label')}</p>
                                     <p className="text-[11px] text-text-secondary">
                                         {/iPad|iPhone|iPod/.test(navigator.userAgent) && Capacitor.isNativePlatform()
-                                            ? 'Налаштування → MyChoir → Сповіщення → Увімкнути'
+                                            ? t('notif.push.enable_ios')
                                             : /iPad|iPhone|iPod/.test(navigator.userAgent)
-                                                ? 'Налаштування → Safari → Сповіщення → MyChoir → Дозволити'
+                                                ? t('notif.push.enable_safari')
                                                 : Capacitor.isNativePlatform()
-                                                    ? 'Налаштування вашого пристрою → Додатки → MyChoir → Дозволити сповіщення'
-                                                    : 'Відкрийте налаштування браузера для цього сайту і дозвольте сповіщення.'}
+                                                    ? t('notif.push.enable_android')
+                                                    : t('notif.push.enable_browser')}
                                     </p>
                                 </div>
                             )}
@@ -190,7 +190,7 @@ export default function NotificationsModal({
                         ) : notifications.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-10 text-text-secondary">
                                 <BellOff className="w-10 h-10 mb-3 opacity-20" />
-                                <p>Немає сповіщень</p>
+                                <p>{t('notif.empty')}</p>
                             </div>
                         ) : (
                             <div className="space-y-3">
@@ -199,7 +199,7 @@ export default function NotificationsModal({
                                         {/* Delete confirmation overlay */}
                                         {confirmDeleteId === n.id && (
                                             <div className="absolute inset-0 bg-surface-highlight/95 backdrop-blur-sm rounded-2xl flex items-center justify-center gap-3 z-10 p-4">
-                                                <span className="text-sm text-text-primary font-medium">Видалити?</span>
+                                                <span className="text-sm text-text-primary font-medium">{t('notif.delete_confirm')}</span>
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -208,7 +208,7 @@ export default function NotificationsModal({
                                                     disabled={deletingId === n.id}
                                                     className="px-4 py-2 bg-red-500 text-white text-sm font-bold rounded-xl hover:bg-red-600 transition-colors active:scale-95 min-w-[60px] flex items-center justify-center"
                                                 >
-                                                    {deletingId === n.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Так"}
+                                                    {deletingId === n.id ? <Loader2 className="w-4 h-4 animate-spin" /> : t('notif.yes')}
                                                 </button>
                                                 <button
                                                     onClick={(e) => {
@@ -260,10 +260,10 @@ export default function NotificationsModal({
                                                 {(() => {
                                                     const service = services.find(s => s.id === n.serviceId);
                                                     if (!service) {
-                                                        return <p className="text-xs text-text-secondary/60 italic">Служіння видалено або не знайдено</p>;
+                                                        return <p className="text-xs text-text-secondary/60 italic">{t('notif.service_deleted')}</p>;
                                                     }
                                                     if (service.isFinalized) {
-                                                        return <p className="text-xs text-text-secondary/60 italic">Служіння закрито (статистика збережена)</p>;
+                                                        return <p className="text-xs text-text-secondary/60 italic">{t('notif.service_closed')}</p>;
                                                     }
 
                                                     const isPresent = userData?.id ? service.confirmedMembers?.includes(userData.id) : false;
@@ -289,7 +289,7 @@ export default function NotificationsModal({
                                                                         : 'bg-surface border border-accent/20 text-accent hover:bg-accent/10 active:scale-95'
                                                                         }`}
                                                                 >
-                                                                    {votingServiceId === n.serviceId && !isPresent && !isAbsent ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Буду"}
+                                                                    {votingServiceId === n.serviceId && !isPresent && !isAbsent ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : t('notif.vote.will')}
                                                                 </button>
                                                                 <button
                                                                     onClick={(e) => {
@@ -302,7 +302,7 @@ export default function NotificationsModal({
                                                                         : 'bg-surface border border-red-500/20 text-red-500 hover:bg-red-500/10 active:scale-95'
                                                                         }`}
                                                                 >
-                                                                    {votingServiceId === n.serviceId && !isPresent && !isAbsent ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Не буду"}
+                                                                    {votingServiceId === n.serviceId && !isPresent && !isAbsent ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : t('notif.vote.wont')}
                                                                 </button>
                                                             </div>
                                                         </div>
@@ -313,7 +313,7 @@ export default function NotificationsModal({
 
                                         <div className="mt-3 flex items-center justify-between">
                                             <span className="text-[10px] text-text-secondary/50">
-                                                Від: {n.senderName}
+                                                {t('notif.from')} {n.senderName}
                                             </span>
                                         </div>
                                     </div>

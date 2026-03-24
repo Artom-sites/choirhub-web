@@ -8,6 +8,7 @@ import { getFirstNameInitial } from "@/lib/utils";
 import { updateAttendanceCache } from "@/lib/attendanceCache";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRepertoire } from "@/contexts/RepertoireContext";
+import { useTranslation } from "@/contexts/TranslationContext";
 import { ChevronLeft, Eye, X, Plus, Users, UserX, Check, Calendar, Music, UserCheck, AlertCircle, Trash2, User as UserIcon, CloudDownload, CheckCircle, Loader, ChevronDown, Mic2, BookOpen, Hand, Mic, Users2, MoreHorizontal, GripVertical, ListOrdered, Printer, Pencil, Save, Clock } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { StatusBar, Style } from '@capacitor/status-bar';
@@ -37,23 +38,25 @@ interface ServiceViewProps {
     isNativeApp?: boolean; // Passed from parent if already computed
 }
 
-// Define programTypeConfig here
-const programTypeConfig: Record<string, { label: string; icon: React.ReactNode; color: string; bg: string }> = {
-    choir: { label: "Хор", icon: <Music className="w-4 h-4" />, color: "text-blue-400", bg: "bg-blue-500/10" },
-    congregation: { label: "Заг. спів", icon: <Users2 className="w-4 h-4" />, color: "text-cyan-400", bg: "bg-cyan-500/10" },
-    verse: { label: "Вірш", icon: <BookOpen className="w-4 h-4" />, color: "text-purple-400", bg: "bg-purple-500/10" },
-    prayer: { label: "Молитва", icon: <Hand className="w-4 h-4" />, color: "text-amber-500", bg: "bg-amber-500/10" },
-    sermon: { label: "Проповідь", icon: <BookOpen className="w-4 h-4" />, color: "text-orange-400", bg: "bg-orange-500/10" },
-    solo: { label: "Соло", icon: <Mic className="w-4 h-4" />, color: "text-pink-400", bg: "bg-pink-500/10" },
-    ensemble: { label: "Ансамбль", icon: <Users2 className="w-4 h-4" />, color: "text-green-400", bg: "bg-green-500/10" },
-    reading: { label: "Читання", icon: <BookOpen className="w-4 h-4" />, color: "text-yellow-400", bg: "bg-yellow-500/10" },
-    announcement: { label: "Оголошення", icon: <AlertCircle className="w-4 h-4" />, color: "text-gray-400", bg: "bg-gray-500/10" },
-    other: { label: "Інше", icon: <MoreHorizontal className="w-4 h-4" />, color: "text-zinc-400", bg: "bg-zinc-500/10" },
-};
+// programTypeConfig is built inside the component so it can use t()
+const buildProgramTypeConfig = (t: (key: any) => string): Record<string, { label: string; icon: React.ReactNode; color: string; bg: string }> => ({
+    choir: { label: t('program.type.choir'), icon: <Music className="w-4 h-4" />, color: "text-blue-400", bg: "bg-blue-500/10" },
+    congregation: { label: t('program.type.congregation'), icon: <Users2 className="w-4 h-4" />, color: "text-cyan-400", bg: "bg-cyan-500/10" },
+    verse: { label: t('program.type.verse'), icon: <BookOpen className="w-4 h-4" />, color: "text-purple-400", bg: "bg-purple-500/10" },
+    prayer: { label: t('program.type.prayer'), icon: <Hand className="w-4 h-4" />, color: "text-amber-500", bg: "bg-amber-500/10" },
+    sermon: { label: t('program.type.sermon'), icon: <BookOpen className="w-4 h-4" />, color: "text-orange-400", bg: "bg-orange-500/10" },
+    solo: { label: t('program.type.solo'), icon: <Mic className="w-4 h-4" />, color: "text-pink-400", bg: "bg-pink-500/10" },
+    ensemble: { label: t('program.type.ensemble'), icon: <Users2 className="w-4 h-4" />, color: "text-green-400", bg: "bg-green-500/10" },
+    reading: { label: t('service.type.reading'), icon: <BookOpen className="w-4 h-4" />, color: "text-yellow-400", bg: "bg-yellow-500/10" },
+    announcement: { label: t('service.type.announcement'), icon: <AlertCircle className="w-4 h-4" />, color: "text-gray-400", bg: "bg-gray-500/10" },
+    other: { label: t('program.type.other'), icon: <MoreHorizontal className="w-4 h-4" />, color: "text-zinc-400", bg: "bg-zinc-500/10" },
+});
 
 export default function ServiceView({ service, allServices = [], onBack, canEdit, canEditCredits = false, canEditAttendance = false, choir, isNativeApp }: ServiceViewProps) {
     const router = useRouter();
     const { userData, user } = useAuth();
+    const { t } = useTranslation();
+    const programTypeConfig = buildProgramTypeConfig(t);
 
     // Local state for optimistic updates
     const [currentService, setCurrentService] = useState<Service>(service);
@@ -176,12 +179,12 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
         // Migrate songs to program items ONLY if it's a full service type
         if (isServiceType && isNative && (currentService.songs || []).length > 0 && !service.program) {
             const migratedProgram: ProgramItem[] = (service.songs || []).map((s, index) => {
-                const songTitle = availableSongs.find(as => as.id === s.songId)?.title || s.songTitle || "Невідома пісня";
+                const songTitle = availableSongs.find(as => as.id === s.songId)?.title || s.songTitle || t("service.unknown_song");
                 return {
                     id: crypto.randomUUID(),
                     type: 'choir',
                     title: songTitle,
-                    performer: "Хор", // Default
+                    performer: t("program.type.choir"), // Default
                     songId: s.songId,
                     songTitle: songTitle,
                     conductor: s.performedBy || undefined,
@@ -394,7 +397,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
 
         // Strict Check: Prevent voting if service is in the past
         if (!isUpcoming(currentService.date, currentService.time)) {
-            alert("Голосування вже закрите, оскільки час служіння минув.");
+            alert(t('service.voting.closed'));
             return;
         }
 
@@ -443,7 +446,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
             setConfirmedMembers(previousConfirmed);
             setAbsentMembers(previousAbsent);
             setCurrentService(previousService);
-            alert("Не вдалося зберегти голос. Перевірте з'єднання.");
+            alert(t('service.voting.save_failed'));
         }
         finally { setVotingLoading(false); }
     };
@@ -488,7 +491,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
             id: crypto.randomUUID(),
             type: 'choir',
             title: s.title,
-            performer: "Хор",
+            performer: t("program.type.choir"),
             songId: s.id,
             songTitle: s.title,
             conductor: s.conductor || undefined,
@@ -558,7 +561,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                 // Determine Parts
                 const partsData = (song.parts && song.parts.length > 0)
                     ? song.parts.map((p: any) => ({ name: p.name || 'Part', pdfUrl: p.pdfUrl }))
-                    : [{ name: 'Головна', pdfUrl: song.pdfUrl || '' }];
+                    : [{ name: t('song.main_part'), pdfUrl: song.pdfUrl || '' }];
 
                 if (partsData.length > 0 && partsData[0].pdfUrl) {
                     try {
@@ -577,7 +580,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                 initialPartIndex: 0,
                                 songId,
                                 userUid: userData?.id || 'anonymous',
-                                title: song.title || itemTitle || 'Пісня',
+                                title: song.title || itemTitle || t('songs.list.song'),
                             });
                             return;
                         }
@@ -588,8 +591,8 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
 
                 // If resolving base64 failed, the file is not cached for offline.
                 await Dialog.alert({
-                    title: 'Помилка Кешу',
-                    message: 'Файл не збережений для офлайн-перегляду. Підключіться до інтернету, щоб завантажити його або натисніть кнопку кешування.'
+                    title: t('service.cache.error_title'),
+                    message: t('service.cache.error_message')
                 });
                 return;
             }
@@ -597,7 +600,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
             if (song) {
                 const partsData = (song.parts && song.parts.length > 0)
                     ? song.parts.map((p: any) => ({ name: p.name || 'Part', pdfUrl: p.pdfUrl }))
-                    : [{ name: 'Головна', pdfUrl: song.pdfUrl || '' }];
+                    : [{ name: t('song.main_part'), pdfUrl: song.pdfUrl || '' }];
 
                 if (partsData[0]?.pdfUrl) {
                     PencilKitAnnotator.openNativePdfViewer({
@@ -605,7 +608,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                         initialPartIndex: 0,
                         songId,
                         userUid: userData?.id || 'anonymous',
-                        title: song.title || itemTitle || 'Пісня',
+                        title: song.title || itemTitle || t('songs.list.song'),
                     }).catch(e => console.error('[NativePdf] Error:', e));
                     return;
                 }
@@ -620,7 +623,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
             if (song) {
                 setPreviewModalSong(song);
             } else {
-                setPreviewModalSong({ id: songId, title: itemTitle || "Пісня" });
+                setPreviewModalSong({ id: songId, title: itemTitle || t("songs.list.song") });
             }
             return;
         }
@@ -776,7 +779,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
             setShowAttendance(false);
         } catch (error) {
             console.error('Failed to save attendance:', error);
-            alert('Не вдалося зберегти. Спробуйте ще раз.');
+            alert(t('service.members.save_failed'));
         }
     };
 
@@ -952,13 +955,13 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
     const handlePrint = async () => {
         if (Capacitor.isNativePlatform()) {
             const result = await ActionSheet.showActions({
-                title: 'Формат друку',
-                message: 'Оберіть скільки копій програми розмістити на одному аркуші А4:',
+                title: t('service.print.format_title'),
+                message: t('service.print.format_message'),
                 options: [
-                    { title: '1 (Крупно)' },
-                    { title: '2 (А5, Горизонтально)' },
-                    { title: '4 (А6, Компактно)' },
-                    { title: 'Скасувати', style: ActionSheetButtonStyle.Cancel }
+                    { title: t('service.print.1copy') },
+                    { title: t('service.print.2copy') },
+                    { title: t('service.print.4copy') },
+                    { title: t('common.cancel'), style: ActionSheetButtonStyle.Cancel }
                 ]
             });
             if (result.index === 3) return; // Cancel
@@ -980,17 +983,17 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                 // Auto-infer older items that were imported or missing types
                 if (!item.type || item.type === 'other') {
                     const lower = displayTitle.toLowerCase();
-                    if (lower.includes('заг. спів') || lower.includes('загальний спів')) config = programTypeConfig['congregation'];
-                    else if (lower.includes('вірш')) config = programTypeConfig['verse'];
-                    else if (lower.includes('хор') || lower.includes('пісня хору')) config = programTypeConfig['choir'];
-                    else if (lower.includes('молитва')) config = programTypeConfig['prayer'];
-                    else if (lower.includes('проповідь')) config = programTypeConfig['sermon'];
-                    else if (lower.includes('соло')) config = programTypeConfig['solo'];
-                    else if (lower.includes('ансамбль')) config = programTypeConfig['ensemble'];
+                    if (lower.includes(t('program.type.congregation').toLowerCase()) || lower.includes('заг. спів') || lower.includes('загальний спів')) config = programTypeConfig['congregation'];
+                    else if (lower.includes(t('program.type.verse').toLowerCase()) || lower.includes('вірш')) config = programTypeConfig['verse'];
+                    else if (lower.includes(t('program.type.choir').toLowerCase()) || lower.includes('хор') || lower.includes(t('service.choir_song_keyword').toLowerCase()) || lower.includes('пісня хору')) config = programTypeConfig['choir'];
+                    else if (lower.includes(t('program.type.prayer').toLowerCase()) || lower.includes('молитва')) config = programTypeConfig['prayer'];
+                    else if (lower.includes(t('program.type.sermon').toLowerCase()) || lower.includes('проповідь')) config = programTypeConfig['sermon'];
+                    else if (lower.includes(t('program.type.solo').toLowerCase()) || lower.includes('соло')) config = programTypeConfig['solo'];
+                    else if (lower.includes(t('program.type.ensemble').toLowerCase()) || lower.includes('ансамбль')) config = programTypeConfig['ensemble'];
                 }
 
-                if (config.label === 'Хор' && displayTitle.toLowerCase().includes('пісня хору')) {
-                    displayTitle = displayTitle.replace(/пісня хору\s*-?\s*/i, '').trim();
+                if (config.label === t('program.type.choir') && (displayTitle.toLowerCase().includes(t('service.choir_song_keyword').toLowerCase()) || displayTitle.toLowerCase().includes('пісня хору'))) {
+                    displayTitle = displayTitle.replace(new RegExp(t('service.choir_song_keyword') + '\\s*-?\\s*', 'i'), '').replace(/пісня хору\s*-?\s*/i, '').trim();
                 }
 
                 // If songId is present, try to get the real song title
@@ -1000,12 +1003,12 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                     if (found) displaySongTitle = found.title;
                 }
 
-                const isLegacyOther = config.label === 'Інше' && displayTitle && displayTitle.toLowerCase() !== 'інше';
+                const isLegacyOther = config.label === t('program.type.other') && displayTitle && displayTitle.toLowerCase() !== t('program.type.other').toLowerCase() && displayTitle.toLowerCase() !== 'інше';
                 const mainDisplayName = isLegacyOther ? displayTitle : config.label;
 
                 let subtitleText = '';
-                if (config.label === 'Хор') {
-                    subtitleText = displaySongTitle || (displayTitle.toLowerCase() !== 'хор' ? displayTitle : '');
+                if (config.label === t('program.type.choir')) {
+                    subtitleText = displaySongTitle || (displayTitle.toLowerCase() !== t('program.type.choir').toLowerCase() && displayTitle.toLowerCase() !== 'хор' ? displayTitle : '');
                 } else if (!isLegacyOther && displayTitle && displayTitle.toLowerCase() !== config.label.toLowerCase()) {
                     subtitleText = displayTitle;
                 }
@@ -1023,7 +1026,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
             }).join('');
 
             const dateStr = new Date(currentService.date).toLocaleDateString("uk-UA", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
-            const timeStr = currentService.time ? ' о ' + currentService.time : '';
+            const timeStr = currentService.time ? ` ${t('common.at_time')} ` + currentService.time : '';
 
             const singleProgramHtml = `
                 <div class="program-title">${currentService.title}</div>
@@ -1133,7 +1136,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                 });
 
                 if (!canvas.width || !canvas.height) {
-                    throw new Error("HTML2Canvas повернув порожнє полотно (ширина або висота 0).");
+                    throw new Error(t("service.print_error_empty_canvas"));
                 }
 
                 const imgData = canvas.toDataURL('image/jpeg', 0.98);
@@ -1160,9 +1163,9 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                     });
                     
                     await Share.share({
-                        title: 'Програма: ' + currentService.title,
+                        title: t('service.print_program_prefix') + ' ' + currentService.title,
                         url: result.uri,
-                        dialogTitle: 'Друк програми'
+                        dialogTitle: t('service.print.dialog_title')
                     });
                 } else {
                     pdf.save('program-' + currentService.id.slice(0, 6) + '.pdf');
@@ -1181,7 +1184,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
             }
             console.error("Print error:", e);
             try {
-                await Dialog.alert({ title: 'Помилка друку', message: e?.message || String(e) });
+                await Dialog.alert({ title: t('service.print.error'), message: e?.message || String(e) });
             } catch (_) {
                 // Ignore Dialog failure (e.g. not native), do not use window.alert
                 console.error('Print dialog failed for: ' + (e?.message || String(e)));
@@ -1224,7 +1227,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                             }`}
                     >
                         <ListOrdered className="w-4 h-4" />
-                        Програма
+                        {t('service.tab.program')}
                     </button>
                     <button
                         onClick={() => setActiveTab('choir')}
@@ -1234,7 +1237,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                             }`}
                     >
                         <Users className="w-4 h-4" />
-                        Хористи
+                        {t('service.tab.choir')}
                     </button>
                 </div>
 
@@ -1245,14 +1248,14 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                         {programItems.length > 0 && (
                             <div className="space-y-4 pt-2">
                                 <div className="flex items-center justify-between px-1">
-                                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-[0.15em]">Порядок служіння ({programItems.length})</h3>
+                                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-[0.15em]">{t('service.program.order')} ({programItems.length})</h3>
                                     <div className="flex items-center gap-2">
                                         <button
                                             onClick={handlePrint}
                                             className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-xs font-bold hover:bg-primary/20 transition-colors"
                                         >
                                             <Printer className="w-3.5 h-3.5" />
-                                            Друк
+                                            {t('service.program.print')}
                                         </button>
                                         {canEdit && (
                                             <button
@@ -1260,7 +1263,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors relative ${currentService.description ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20' : 'bg-surface-highlight text-text-secondary hover:bg-surface-highlight/80'}`}
                                             >
                                                 <Pencil className="w-3.5 h-3.5" />
-                                                Нотатки
+                                                {t('service.program.notes')}
                                                 {currentService.description && <span className="w-1.5 h-1.5 bg-amber-400 rounded-full absolute -top-0.5 -right-0.5" />}
                                             </button>
                                         )}
@@ -1275,9 +1278,9 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                     <div className="flex-1 w-full relative">
                                         {!canEdit ? (
                                             <div className="flex items-center gap-2">
-                                                <span className="text-[14px] font-medium text-text-primary">Розспіванка</span>
+                                                <span className="text-[14px] font-medium text-text-primary">{t('service.warmup.label')}</span>
                                                 <span className={`text-[14px] font-medium ${warmupConductor ? 'text-text-secondary' : 'text-text-secondary/40'}`}>
-                                                    {warmupConductor || "Без розспіванки"}
+                                                    {warmupConductor || t('service.warmup.no')}
                                                 </span>
                                             </div>
                                         ) : !showCustomWarmup ? (
@@ -1293,14 +1296,14 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                                 style={{ fontSize: '16px' }}
                                                 className="w-full bg-transparent text-[16px] font-medium text-text-primary appearance-none focus:outline-none cursor-pointer"
                                             >
-                                                <option value="">Без розспіванки</option>
+                                                <option value="">{t('service.warmup.no')}</option>
                                                 {regentsList.map((name, i) => (
                                                     <option key={name + i} value={name}>{name}</option>
                                                 ))}
                                                 {warmupConductor && !regentsList.includes(warmupConductor) && (
                                                     <option value={warmupConductor}>{warmupConductor}</option>
                                                 )}
-                                                <option value="__ADD_NEW__">➕ Новий регент...</option>
+                                                <option value="__ADD_NEW__">{t('service.warmup.add_regent')}</option>
                                             </select>
                                         ) : (
                                             <div className="flex items-center gap-2">
@@ -1309,7 +1312,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                                     value={warmupConductor}
                                                     onChange={(e) => setWarmupConductor(e.target.value)}
                                                     style={{ fontSize: '16px' }}
-                                                    placeholder="Хто проводить?"
+                                                    placeholder={t('service.warmup.who')}
                                                     className="flex-1 min-w-0 bg-surface-highlight text-[16px] font-medium text-text-primary rounded-lg px-2 py-1 outline-none border border-primary/30"
                                                     autoFocus
                                                     onKeyDown={(e) => {
@@ -1342,28 +1345,28 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                             // Auto-infer older items that were imported or missing types
                                             if (!item.type || item.type === 'other') {
                                                 const lower = displayTitle.toLowerCase();
-                                                if (lower.includes('заг. спів') || lower.includes('загальний спів')) config = programTypeConfig['congregation'];
-                                                else if (lower.includes('вірш')) config = programTypeConfig['verse'];
-                                                else if (lower.includes('хор') || lower.includes('пісня хору')) config = programTypeConfig['choir'];
-                                                else if (lower.includes('молитва')) config = programTypeConfig['prayer'];
-                                                else if (lower.includes('проповідь')) config = programTypeConfig['sermon'];
-                                                else if (lower.includes('соло')) config = programTypeConfig['solo'];
-                                                else if (lower.includes('ансамбль')) config = programTypeConfig['ensemble'];
+                                                if (lower.includes(t('program.type.congregation').toLowerCase()) || lower.includes('заг. спів') || lower.includes('загальний спів')) config = programTypeConfig['congregation'];
+                                                else if (lower.includes(t('program.type.verse').toLowerCase()) || lower.includes('вірш')) config = programTypeConfig['verse'];
+                                                else if (lower.includes(t('program.type.choir').toLowerCase()) || lower.includes('хор') || lower.includes(t('service.choir_song_keyword').toLowerCase()) || lower.includes('пісня хору')) config = programTypeConfig['choir'];
+                                                else if (lower.includes(t('program.type.prayer').toLowerCase()) || lower.includes('молитва')) config = programTypeConfig['prayer'];
+                                                else if (lower.includes(t('program.type.sermon').toLowerCase()) || lower.includes('проповідь')) config = programTypeConfig['sermon'];
+                                                else if (lower.includes(t('program.type.solo').toLowerCase()) || lower.includes('соло')) config = programTypeConfig['solo'];
+                                                else if (lower.includes(t('program.type.ensemble').toLowerCase()) || lower.includes('ансамбль')) config = programTypeConfig['ensemble'];
                                             }
 
                                             // Sometimes legacy items had "Пісня хору Мінь Бог живий" as title
-                                            if (config.label === 'Хор' && displayTitle.toLowerCase().includes('пісня хору')) {
-                                                displayTitle = displayTitle.replace(/пісня хору\s*-?\s*/i, '').trim();
+                                            if (config.label === t('program.type.choir') && (displayTitle.toLowerCase().includes(t('service.choir_song_keyword').toLowerCase()) || displayTitle.toLowerCase().includes('пісня хору'))) {
+                                                displayTitle = displayTitle.replace(new RegExp(t('service.choir_song_keyword') + '\\s*-?\\s*', 'i'), '').replace(/пісня хору\s*-?\s*/i, '').trim();
                                             }
 
-                                            const isLegacyOther = config.label === 'Інше' && displayTitle && displayTitle.toLowerCase() !== 'інше';
+                                            const isLegacyOther = config.label === t('program.type.other') && displayTitle && displayTitle.toLowerCase() !== t('program.type.other').toLowerCase() && displayTitle.toLowerCase() !== 'інше';
                                             const mainDisplayName = isLegacyOther ? displayTitle : config.label;
 
                                             // Choose what to show as the subtitle
                                             // For Choir, we want the song name as the subtitle (displayTitle or songTitle)
                                             let subtitleText = '';
-                                            if (config.label === 'Хор') {
-                                                subtitleText = displaySongTitle || (displayTitle.toLowerCase() !== 'хор' ? displayTitle : '');
+                                            if (config.label === t('program.type.choir')) {
+                                                subtitleText = displaySongTitle || (displayTitle.toLowerCase() !== t('program.type.choir').toLowerCase() && displayTitle.toLowerCase() !== 'хор' ? displayTitle : '');
                                                 // For others, show displayTitle if it differs from the main label
                                             } else if (!isLegacyOther && displayTitle && displayTitle.toLowerCase() !== config.label.toLowerCase()) {
                                                 subtitleText = displayTitle;
@@ -1482,19 +1485,19 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                         className="w-full py-4 border border-dashed border-border/60 rounded-[28px] text-text-secondary hover:text-text-primary hover:bg-surface-highlight/30 hover:border-border transition-all flex items-center justify-center gap-2 text-sm font-medium"
                                     >
                                         <Plus className="w-4 h-4" />
-                                        Додати пункт
+                                        {t('service.program.add_item')}
                                     </button>
                                 )}
 
                                 {/* Notes Section — at end of program */}
                                 {editingDescription ? (
                                     <div className="bg-surface/30 rounded-[20px] border border-primary/30 shadow-sm p-4 space-y-3">
-                                        <label className="text-xs text-text-secondary uppercase font-bold">Нотатки</label>
+                                        <label className="text-xs text-text-secondary uppercase font-bold">{t('service.program.notes')}</label>
                                         <textarea
                                             autoFocus
                                             value={editDescription}
                                             onChange={e => setEditDescription(e.target.value)}
-                                            placeholder="Наприклад: особливості служіння, нагадування..."
+                                            placeholder={t('service.program.notes_placeholder')}
                                             rows={4}
                                             className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
                                         />
@@ -1503,13 +1506,13 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                                 onClick={() => { setEditingDescription(false); setEditDescription(currentService.description || ''); }}
                                                 className="flex-1 py-2 text-sm font-bold text-text-secondary bg-surface-highlight rounded-xl hover:bg-surface-highlight/80 transition-colors"
                                             >
-                                                Скасувати
+                                                {t('common.cancel')}
                                             </button>
                                             <button
                                                 onClick={saveDescription}
                                                 className="flex-1 py-2 text-sm font-bold text-background bg-primary rounded-xl hover:opacity-90 transition-colors"
                                             >
-                                                Зберегти
+                                                {t('common.save')}
                                             </button>
                                         </div>
                                     </div>
@@ -1518,14 +1521,14 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                         <div className="flex items-center justify-between mb-1.5">
                                             <p className="text-[10px] font-bold text-text-secondary uppercase tracking-wider flex items-center gap-1.5">
                                                 <Pencil className="w-3 h-3 text-amber-400" />
-                                                Нотатки
+                                                {t('service.program.notes')}
                                             </p>
                                             {canEdit && (
                                                 <button
                                                     onClick={() => { setEditDescription(currentService.description || ''); setEditingDescription(true); }}
                                                     className="text-[11px] font-semibold text-primary hover:text-primary/80 transition-colors"
                                                 >
-                                                    Редагувати
+                                                    {t('service.program.notes_edit')}
                                                 </button>
                                             )}
                                         </div>
@@ -1539,7 +1542,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                                 onClick={() => setCurrentService(prev => ({ ...prev, __notesExpanded: !(prev as any).__notesExpanded } as any))}
                                                 className="text-[11px] font-semibold text-primary mt-1.5 hover:text-primary/80 transition-colors"
                                             >
-                                                {(currentService as any).__notesExpanded ? 'Згорнути' : 'Показати більше'}
+                                                {(currentService as any).__notesExpanded ? t('service.program.notes_collapse') : t('service.program.notes_show_more')}
                                             </button>
                                         ) : null}
                                     </div>
@@ -1553,13 +1556,13 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                 {canEdit && (
                                     <>
                                         <div className="flex items-center justify-between gap-3 px-1">
-                                            <h2 className="text-xs font-bold text-text-secondary uppercase tracking-[0.15em]">Програма</h2>
+                                            <h2 className="text-xs font-bold text-text-secondary uppercase tracking-[0.15em]">{t('service.program.header')}</h2>
                                             <button
                                                 onClick={() => { setEditDescription(currentService.description || ''); setEditingDescription(true); }}
                                                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors relative ${currentService.description ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20' : 'bg-surface-highlight text-text-secondary hover:bg-surface-highlight/80'}`}
                                             >
                                                 <Pencil className="w-3.5 h-3.5" />
-                                                Нотатки
+                                                {t('service.program.notes')}
                                                 {currentService.description && <span className="w-1.5 h-1.5 bg-amber-400 rounded-full absolute -top-0.5 -right-0.5" />}
                                             </button>
                                         </div>
@@ -1571,8 +1574,8 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                                 <Plus className="w-6 h-6 text-primary" />
                                             </div>
                                             <div className="text-center">
-                                                <span className="text-[15px] font-bold text-text-primary block mb-1">Створити програму</span>
-                                                <span className="text-sm text-text-secondary">Натисніть, щоб додати пісні та молитви</span>
+                                                <span className="text-[15px] font-bold text-text-primary block mb-1">{t('service.program.create')}</span>
+                                                <span className="text-sm text-text-secondary">{t('service.program.create_hint')}</span>
                                             </div>
                                         </button>
                                     </>
@@ -1581,12 +1584,12 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                 {/* Notes Section — when program is empty */}
                                 {editingDescription ? (
                                     <div className="bg-surface/30 rounded-[20px] border border-primary/30 shadow-sm p-4 space-y-3">
-                                        <label className="text-xs text-text-secondary uppercase font-bold">Нотатки</label>
+                                        <label className="text-xs text-text-secondary uppercase font-bold">{t('service.program.notes')}</label>
                                         <textarea
                                             autoFocus
                                             value={editDescription}
                                             onChange={e => setEditDescription(e.target.value)}
-                                            placeholder="Наприклад: особливості служіння, нагадування..."
+                                            placeholder={t('service.program.notes_placeholder')}
                                             rows={4}
                                             className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
                                         />
@@ -1595,13 +1598,13 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                                 onClick={() => { setEditingDescription(false); setEditDescription(currentService.description || ''); }}
                                                 className="flex-1 py-2 text-sm font-bold text-text-secondary bg-surface-highlight rounded-xl hover:bg-surface-highlight/80 transition-colors"
                                             >
-                                                Скасувати
+                                                {t('common.cancel')}
                                             </button>
                                             <button
                                                 onClick={saveDescription}
                                                 className="flex-1 py-2 text-sm font-bold text-background bg-primary rounded-xl hover:opacity-90 transition-colors"
                                             >
-                                                Зберегти
+                                                {t('common.save')}
                                             </button>
                                         </div>
                                     </div>
@@ -1610,14 +1613,14 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                         <div className="flex items-center justify-between mb-1.5">
                                             <p className="text-[10px] font-bold text-text-secondary uppercase tracking-wider flex items-center gap-1.5">
                                                 <Pencil className="w-3 h-3 text-amber-400" />
-                                                Нотатки
+                                                {t('service.program.notes')}
                                             </p>
                                             {canEdit && (
                                                 <button
                                                     onClick={() => { setEditDescription(currentService.description || ''); setEditingDescription(true); }}
                                                     className="text-[11px] font-semibold text-primary hover:text-primary/80 transition-colors"
                                                 >
-                                                    Редагувати
+                                                    {t('service.program.notes_edit')}
                                                 </button>
                                             )}
                                         </div>
@@ -1631,7 +1634,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                                 onClick={() => setCurrentService(prev => ({ ...prev, __notesExpanded: !(prev as any).__notesExpanded } as any))}
                                                 className="text-[11px] font-semibold text-primary mt-1.5 hover:text-primary/80 transition-colors"
                                             >
-                                                {(currentService as any).__notesExpanded ? 'Згорнути' : 'Показати більше'}
+                                                {(currentService as any).__notesExpanded ? t('service.program.notes_collapse') : t('service.program.notes_show_more')}
                                             </button>
                                         ) : null}
                                     </div>
@@ -1645,14 +1648,14 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                 {(!isServiceType && activeTab === 'program') && (
                     <div className="mt-8 space-y-4">
                         <div className="flex items-center justify-between gap-3 px-1">
-                            <h2 className="text-xs font-bold text-text-secondary uppercase tracking-[0.15em]">Пісні ({(currentService.songs || []).length})</h2>
+                            <h2 className="text-xs font-bold text-text-secondary uppercase tracking-[0.15em]">{t('service.program.songs_header')} ({(currentService.songs || []).length})</h2>
                             {canEdit && (
                                 <button
                                     onClick={() => { setEditDescription(currentService.description || ''); setEditingDescription(true); }}
                                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors relative ${currentService.description ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20' : 'bg-surface-highlight text-text-secondary hover:bg-surface-highlight/80'}`}
                                 >
                                     <Pencil className="w-3.5 h-3.5" />
-                                    Нотатки
+                                    {t("service.program.notes")}
                                     {currentService.description && <span className="w-1.5 h-1.5 bg-amber-400 rounded-full absolute -top-0.5 -right-0.5" />}
                                 </button>
                             )}
@@ -1667,9 +1670,9 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                 <div className="flex-1 w-full relative">
                                     {!canEdit ? (
                                         <div className="flex items-center gap-2">
-                                            <span className="text-[15px] font-medium text-text-primary">Розспіванка</span>
+                                            <span className="text-[15px] font-medium text-text-primary">{t("service.warmup.label")}</span>
                                             <span className={`text-[14px] font-medium ${warmupConductor ? 'text-text-secondary' : 'text-text-secondary/40'}`}>
-                                                {warmupConductor || "Без розспіванки"}
+                                                {warmupConductor || t("service.warmup.no")}
                                             </span>
                                         </div>
                                     ) : !showCustomWarmup ? (
@@ -1685,14 +1688,14 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                             style={{ fontSize: '16px' }}
                                             className="w-full bg-transparent text-[16px] font-medium text-text-primary appearance-none focus:outline-none cursor-pointer"
                                         >
-                                            <option value="">Без розспіванки</option>
+                                            <option value="">{t("service.warmup.no")}</option>
                                             {regentsList.map((name, i) => (
                                                 <option key={name + i} value={name}>{name}</option>
                                             ))}
                                             {warmupConductor && !regentsList.includes(warmupConductor) && (
                                                 <option value={warmupConductor}>{warmupConductor}</option>
                                             )}
-                                            <option value="__ADD_NEW__">➕ Новий регент...</option>
+                                            <option value="__ADD_NEW__">{t("service.warmup.add_regent")}</option>
                                         </select>
                                     ) : (
                                         <div className="flex items-center gap-2">
@@ -1701,7 +1704,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                                 value={warmupConductor}
                                                 onChange={(e) => setWarmupConductor(e.target.value)}
                                                 style={{ fontSize: '16px' }}
-                                                placeholder="Хто проводить?"
+                                                placeholder={t("service.warmup.who")}
                                                 className="flex-1 min-w-0 bg-surface-highlight text-[16px] font-medium text-text-primary rounded-lg px-2 py-1.5 outline-none border border-primary/30"
                                                 autoFocus
                                                 onKeyDown={(e) => {
@@ -1728,8 +1731,8 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                         <Plus className="w-6 h-6 text-primary" />
                                     </div>
                                     <div className="text-center">
-                                        <span className="text-[15px] font-bold text-text-primary block mb-1">Список порожній</span>
-                                        <span className="text-sm text-text-secondary">Натисніть, щоб додати пісні на репетицію</span>
+                                        <span className="text-[15px] font-bold text-text-primary block mb-1">{t("service.empty_list")}</span>
+                                        <span className="text-sm text-text-secondary">{t("service.empty_rehearsal_hint")}</span>
                                     </div>
                                 </button>
                             ) : (
@@ -1738,8 +1741,8 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                         <Music className="w-8 h-8" />
                                     </div>
                                     <div>
-                                        <p className="text-text-primary font-medium">Список порожній</p>
-                                        <p className="text-sm text-text-secondary">Пісень ще не додано</p>
+                                        <p className="text-text-primary font-medium">{t("service.empty_list")}</p>
+                                        <p className="text-sm text-text-secondary">{t("service.empty_songs_hint")}</p>
                                     </div>
                                 </div>
                             )
@@ -1816,19 +1819,19 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                 className="w-full py-4 border border-dashed border-border/60 rounded-[28px] text-text-secondary hover:text-text-primary hover:bg-surface-highlight/30 hover:border-border transition-all flex items-center justify-center gap-2 text-sm font-medium"
                             >
                                 <Plus className="w-4 h-4" />
-                                Додати ще пісню
+                                {t('service.program.add_more_songs')}
                             </button>
                         )}
 
                         {/* Notes Section — at end of rehearsal songs */}
                         {editingDescription ? (
                             <div className="bg-surface/30 rounded-[20px] border border-primary/30 shadow-sm p-4 space-y-3">
-                                <label className="text-xs text-text-secondary uppercase font-bold">Нотатки</label>
+                                <label className="text-xs text-text-secondary uppercase font-bold">{t('service.program.notes')}</label>
                                 <textarea
                                     autoFocus
                                     value={editDescription}
                                     onChange={e => setEditDescription(e.target.value)}
-                                    placeholder="Наприклад: особливості репетиції, нагадування..."
+                                    placeholder={t('service.program.notes_placeholder_rehearsal')}
                                     rows={4}
                                     className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
                                 />
@@ -1837,13 +1840,13 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                         onClick={() => { setEditingDescription(false); setEditDescription(currentService.description || ''); }}
                                         className="flex-1 py-2 text-sm font-bold text-text-secondary bg-surface-highlight rounded-xl hover:bg-surface-highlight/80 transition-colors"
                                     >
-                                        Скасувати
+                                        {t('common.cancel')}
                                     </button>
                                     <button
                                         onClick={saveDescription}
                                         className="flex-1 py-2 text-sm font-bold text-background bg-primary rounded-xl hover:opacity-90 transition-colors"
                                     >
-                                        Зберегти
+                                        {t('common.save')}
                                     </button>
                                 </div>
                             </div>
@@ -1852,14 +1855,14 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                 <div className="flex items-center justify-between mb-1.5">
                                     <p className="text-[10px] font-bold text-text-secondary uppercase tracking-wider flex items-center gap-1.5">
                                         <Pencil className="w-3 h-3 text-amber-400" />
-                                        Нотатки
+                                        {t('service.program.notes')}
                                     </p>
                                     {canEdit && (
                                         <button
                                             onClick={() => { setEditDescription(currentService.description || ''); setEditingDescription(true); }}
                                             className="text-[11px] font-semibold text-primary hover:text-primary/80 transition-colors"
                                         >
-                                            Редагувати
+                                            {t('service.program.notes_edit')}
                                         </button>
                                     )}
                                 </div>
@@ -1873,7 +1876,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                         onClick={() => setCurrentService(prev => ({ ...prev, __notesExpanded: !(prev as any).__notesExpanded } as any))}
                                         className="text-[11px] font-semibold text-primary mt-1.5 hover:text-primary/80 transition-colors"
                                     >
-                                        {(currentService as any).__notesExpanded ? 'Згорнути' : 'Показати більше'}
+                                        {(currentService as any).__notesExpanded ? t('service.program.notes_collapse') : t('service.program.notes_show_more')}
                                     </button>
                                 ) : null}
                             </div>
@@ -1887,7 +1890,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                         {/* Voting Section */}
                         {isFuture ? (
                             <div className="bg-surface/30 border border-border/60 rounded-[28px] p-5">
-                                <h3 className="text-xs font-bold text-text-secondary uppercase tracking-[0.15em] mb-4 text-center">Ваша участь</h3>
+                                <h3 className="text-xs font-bold text-text-secondary uppercase tracking-[0.15em] mb-4 text-center">{t('service.voting.my_part')}</h3>
                                 <div className="grid grid-cols-2 gap-3">
                                     <button
                                         onClick={() => handleVote('present')}
@@ -1900,7 +1903,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                         <div className={`w-8 h-8 rounded-full flex items-center justify-center ${myStatus === 'present' ? 'bg-green-500 text-black shadow-lg shadow-green-500/20' : 'bg-surface-highlight text-text-secondary'}`}>
                                             <Check className="w-4 h-4" strokeWidth={3} />
                                         </div>
-                                        <span className={`text-[13px] font-bold ${myStatus === 'present' ? 'text-green-400' : 'text-text-secondary'}`}>Буду</span>
+                                        <span className={`text-[13px] font-bold ${myStatus === 'present' ? 'text-green-400' : 'text-text-secondary'}`}>{t('service.voting.attending')}</span>
                                     </button>
 
                                     <button
@@ -1914,7 +1917,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                         <div className={`w-8 h-8 rounded-full flex items-center justify-center ${myStatus === 'absent' ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' : 'bg-surface-highlight text-text-secondary'}`}>
                                             <X className="w-4 h-4" strokeWidth={3} />
                                         </div>
-                                        <span className={`text-[13px] font-bold ${myStatus === 'absent' ? 'text-red-400' : 'text-text-secondary'}`}>Не буду</span>
+                                        <span className={`text-[13px] font-bold ${myStatus === 'absent' ? 'text-red-400' : 'text-text-secondary'}`}>{t('service.voting.not_attending')}</span>
                                     </button>
                                 </div>
                             </div>
@@ -1931,11 +1934,11 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                 </div>
                                 <div>
                                     <p className="font-bold text-text-primary text-[15px]">
-                                        {myStatus === 'present' ? 'Ви були присутні' :
-                                            myStatus === 'absent' ? 'Ви були відсутні' :
-                                                'Статус не вказано'}
+                                        {myStatus === 'present' ? t('service.voting.was_present') :
+                                            myStatus === 'absent' ? t('service.voting.was_absent') :
+                                                t('service.voting.no_status')}
                                     </p>
-                                    <p className="text-xs text-text-secondary mt-0.5">Голосування завершено</p>
+                                    <p className="text-xs text-text-secondary mt-0.5">{t('service.voting.closed_label')}</p>
                                 </div>
                             </div>
                         )}
@@ -1962,24 +1965,24 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                             <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center">
                                                 <Users className="w-4 h-4 text-indigo-400" />
                                             </div>
-                                            <span className="text-text-primary font-bold text-[16px]">Учасники</span>
+                                            <span className="text-text-primary font-bold text-[16px]">{t('service.members.title')}</span>
                                         </div>
-                                        <span className="text-[11px] font-bold text-text-secondary bg-surface-highlight px-3 py-1.5 rounded-full group-hover:bg-surface-highlight/80 transition-colors">Відкрити</span>
+                                        <span className="text-[11px] font-bold text-text-secondary bg-surface-highlight px-3 py-1.5 rounded-full group-hover:bg-surface-highlight/80 transition-colors">{t('service.members.open')}</span>
                                     </div>
 
                                     <div className="px-5 pb-5 space-y-4 relative z-10">
                                         <div className="flex items-center gap-2">
                                             <div className="w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_12px_rgba(34,197,94,0.6)] animate-pulse"></div>
                                             <span className="text-2xl font-bold text-text-primary leading-none">{confirmedList.length}</span>
-                                            <span className="text-sm font-medium text-text-secondary">всього</span>
+                                            <span className="text-sm font-medium text-text-secondary">{t('service.members.total')}</span>
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-1.5 text-xs">
-                                            {voiceStats.Soprano > 0 && <div className="flex justify-between px-3 py-2 bg-pink-500/5 rounded-xl"><span className="text-text-secondary">Сопрано</span> <span className="font-bold text-pink-400">{voiceStats.Soprano}</span></div>}
-                                            {voiceStats.Alto > 0 && <div className="flex justify-between px-3 py-2 bg-purple-500/5 rounded-xl"><span className="text-text-secondary">Альт</span> <span className="font-bold text-purple-400">{voiceStats.Alto}</span></div>}
-                                            {voiceStats.Tenor > 0 && <div className="flex justify-between px-3 py-2 bg-blue-500/5 rounded-xl"><span className="text-text-secondary">Тенор</span> <span className="font-bold text-blue-400">{voiceStats.Tenor}</span></div>}
-                                            {voiceStats.Bass > 0 && <div className="flex justify-between px-3 py-2 bg-green-500/5 rounded-xl"><span className="text-text-secondary">Бас</span> <span className="font-bold text-green-400">{voiceStats.Bass}</span></div>}
-                                            {voiceStats.Unknown > 0 && <div className="flex justify-between px-3 py-2 bg-surface-highlight/50 rounded-xl"><span className="text-text-secondary">Без партії</span> <span className="font-bold text-text-primary">{voiceStats.Unknown}</span></div>}
+                                            {voiceStats.Soprano > 0 && <div className="flex justify-between px-3 py-2 bg-pink-500/5 rounded-xl"><span className="text-text-secondary">{t('service.voice.soprano')}</span> <span className="font-bold text-pink-400">{voiceStats.Soprano}</span></div>}
+                                            {voiceStats.Alto > 0 && <div className="flex justify-between px-3 py-2 bg-purple-500/5 rounded-xl"><span className="text-text-secondary">{t('service.voice.alto')}</span> <span className="font-bold text-purple-400">{voiceStats.Alto}</span></div>}
+                                            {voiceStats.Tenor > 0 && <div className="flex justify-between px-3 py-2 bg-blue-500/5 rounded-xl"><span className="text-text-secondary">{t('service.voice.tenor')}</span> <span className="font-bold text-blue-400">{voiceStats.Tenor}</span></div>}
+                                            {voiceStats.Bass > 0 && <div className="flex justify-between px-3 py-2 bg-green-500/5 rounded-xl"><span className="text-text-secondary">{t('service.voice.bass')}</span> <span className="font-bold text-green-400">{voiceStats.Bass}</span></div>}
+                                            {voiceStats.Unknown > 0 && <div className="flex justify-between px-3 py-2 bg-surface-highlight/50 rounded-xl"><span className="text-text-secondary">{t('service.members.no_voice')}</span> <span className="font-bold text-text-primary">{voiceStats.Unknown}</span></div>}
                                         </div>
 
                                         {absentCount > 0 && (
@@ -1989,7 +1992,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                                 </div>
                                                 <div>
                                                     <span className="font-bold">{absentCount}</span>
-                                                    <span className="ml-1 opacity-80">не буде</span>
+                                                    <span className="ml-1 opacity-80">{t('service.members.absent_label')}</span>
                                                 </div>
                                             </div>
                                         )}
@@ -2012,8 +2015,8 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                     <ChevronLeft className="w-6 h-6" />
                                 </button>
                                 <div>
-                                    <h3 className="text-xl font-bold text-text-primary">Додати пісні</h3>
-                                    <p className="text-xs text-text-secondary">Оберіть пісні зі списку</p>
+                                    <h3 className="text-xl font-bold text-text-primary">{t('service.add_songs.title')}</h3>
+                                    <p className="text-xs text-text-secondary">{t('service.add_songs.hint')}</p>
                                 </div>
                             </div>
                             <div className="w-10" /> {/* Spacer for balance */}
@@ -2022,7 +2025,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                         <div className="p-4 bg-background sticky top-[73px] z-10 border-b border-border">
                             <input
                                 type="text"
-                                placeholder="Пошук пісні..."
+                                placeholder={t('service.add_songs.search')}
                                 className="w-full px-5 py-4 bg-surface rounded-2xl text-text-primary border border-border focus:outline-none focus:border-border/50 text-lg placeholder:text-text-secondary/50"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
@@ -2051,7 +2054,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                             {alreadyInService ? (
                                                 <div className="text-xs text-green-500 mt-1 flex items-center gap-1">
                                                     <Check className="w-3 h-3" />
-                                                    Уже додано
+                                                    {t('service.add_songs.already_added')}
                                                 </div>
                                             ) : song.conductor && (
                                                 <div className="flex items-center gap-1.5 mt-1">
@@ -2080,7 +2083,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                 disabled={selectedSongsToService.length === 0}
                                 className="w-full py-4 bg-primary text-background rounded-2xl font-bold text-lg hover:opacity-90 transition-colors shadow-lg disabled:opacity-50 disabled:bg-surface-highlight disabled:text-text-secondary flex items-center justify-center gap-2"
                             >
-                                Додати
+                                {t('service.add_songs.add_button')}
                                 {selectedSongsToService.length > 0 && (
                                     <span className="bg-black text-white text-xs px-2 py-0.5 rounded-full min-w-[20px]">
                                         {selectedSongsToService.length}
@@ -2099,11 +2102,11 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                         <div className="flex-1 overflow-hidden flex flex-col">
                             <div className="p-4 border-b border-border flex justify-between items-center bg-surface sticky top-0 z-10 pt-[calc(1rem+env(safe-area-inset-top))]">
                                 <div>
-                                    <h3 className="text-xl font-bold text-text-primary">Учасники</h3>
+                                    <h3 className="text-xl font-bold text-text-primary">{t('service.members.title')}</h3>
                                     <div className="flex items-center gap-2 text-xs text-text-secondary">
-                                        <span>Всього: {choirMembers.length}</span>
+                                        <span>{t('service.members.total')}: {choirMembers.length}</span>
                                         <span>•</span>
-                                        <span>Буде: {confirmedMembers.length}</span>
+                                        <span>{t('service.members.will_be')}: {confirmedMembers.length}</span>
                                     </div>
                                 </div>
                                 <button onClick={() => setShowAttendance(false)} className="p-2 bg-surface-highlight rounded-full hover:bg-surface-highlight/80">
@@ -2113,16 +2116,16 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
 
                             {/* Filters */}
                             <div className="px-4 py-3 border-b border-border bg-background/50 backdrop-blur-sm flex gap-2 overflow-x-auto scrollbar-hide">
-                                {['Всі', 'Soprano', 'Alto', 'Tenor', 'Bass'].map(filter => {
+                                {[t('service.members.filter_all'), 'Soprano', 'Alto', 'Tenor', 'Bass'].map(filter => {
                                     const isActive =
                                         (search === filter) ||
-                                        (filter === 'Всі' && search === '') ||
+                                        (filter === t('service.members.filter_all') && search === '') ||
                                         (filter === 'Real Users' && search === 'real');
 
                                     return (
                                         <button
                                             key={filter}
-                                            onClick={() => setSearch(filter === 'Всі' ? '' : filter)}
+                                            onClick={() => setSearch(filter === t('service.members.filter_all') ? '' : filter)}
                                             className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${isActive
                                                 ? 'bg-primary text-background font-bold'
                                                 : 'bg-surface-highlight text-text-secondary hover:text-text-primary'
@@ -2178,7 +2181,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                                             {member.name}
                                                         </span>
                                                         <span className="text-xs text-text-secondary">
-                                                            {member.voice || 'Без партії'}
+                                                            {member.voice || t('service.members.no_voice')}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -2220,7 +2223,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                                                 <Check className="w-5 h-5 text-green-500" />
                                                             </div>
                                                         ) : (
-                                                            <span className="text-xs text-text-secondary bg-surface-highlight px-2 py-1 rounded-lg">Очікуємо</span>
+                                                            <span className="text-xs text-text-secondary bg-surface-highlight px-2 py-1 rounded-lg">{t('service.members.pending')}</span>
                                                         )}
                                                     </div>
                                                 )}
@@ -2238,10 +2241,10 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                                 disabled
                                                 className="w-full py-3 bg-surface-highlight text-text-secondary rounded-xl font-bold cursor-not-allowed"
                                             >
-                                                Зберегти
+                                                {t('service.members.save')}
                                             </button>
                                             <p className="text-center text-xs text-text-secondary mt-2">
-                                                Збереження доступне після початку служіння
+                                                {t('service.members.save_after_start')}
                                             </p>
                                         </>
                                     ) : (
@@ -2250,13 +2253,13 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                                 onClick={handleSaveAttendance}
                                                 className="w-full py-3 bg-primary text-background rounded-xl font-bold hover:opacity-90 transition-colors shadow-lg"
                                             >
-                                                Зберегти
+                                                {t('service.members.save')}
                                             </button>
                                             <button
                                                 onClick={markRestAsPresent}
                                                 className="w-full mt-2 py-3 text-blue-400 font-medium text-sm hover:bg-blue-500/10 rounded-xl transition-colors"
                                             >
-                                                Відмітити решту як "Буде"
+                                                {t('service.members.mark_rest_present')}
                                             </button>
                                         </>
                                     )}
@@ -2276,9 +2279,9 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                     <Trash2 className="w-6 h-6 text-red-500" />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-bold text-text-primary">Видалити пісню?</h3>
+                                    <h3 className="text-lg font-bold text-text-primary">{t('service.delete_song.title')}</h3>
                                     <p className="text-text-secondary text-sm mt-1">
-                                        "{songToDeleteIndex !== null ? currentService.songs?.[songToDeleteIndex]?.songTitle : ""}" буде прибрано з цієї програми.
+                                        "{songToDeleteIndex !== null ? currentService.songs?.[songToDeleteIndex]?.songTitle : ""}" {t("service.remove_song_suffix")}
                                     </p>
                                 </div>
                                 <div className="flex gap-3 w-full mt-2">
@@ -2286,13 +2289,13 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                         onClick={cancelDeleteSong}
                                         className="flex-1 py-3 border border-border rounded-xl text-text-primary hover:bg-surface-highlight transition-colors font-medium text-sm"
                                     >
-                                        Скасувати
+                                        {t('common.cancel')}
                                     </button>
                                     <button
                                         onClick={confirmRemoveSong}
                                         className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors text-sm"
                                     >
-                                        Видалити
+                                        {t('common.delete')}
                                     </button>
                                 </div>
                             </div>
@@ -2308,7 +2311,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                         <div className="bg-surface border border-border w-full max-w-sm p-6 rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200">
                             <div className="space-y-5">
                                 <div className="flex justify-between items-center">
-                                    <h3 className="text-lg font-bold text-text-primary">Хто виконував?</h3>
+                                    <h3 className="text-lg font-bold text-text-primary">{t('service.credits.title')}</h3>
                                     <button onClick={() => setEditingSongIndex(null)} className="p-1 hover:bg-surface-highlight rounded-full">
                                         <X className="w-5 h-5 text-text-secondary" />
                                     </button>
@@ -2316,7 +2319,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
 
                                 {/* Conductor Dropdown */}
                                 <div className="relative z-20">
-                                    <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Диригент</label>
+                                    <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">{t('service.credits.conductor')}</label>
                                     {!showCustomConductor ? (
                                         <div className="relative" ref={conductorDropdownRef}>
                                             <button
@@ -2325,7 +2328,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                                 className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl flex items-center justify-between hover:bg-surface transition-all"
                                             >
                                                 <span className={`text-sm font-medium ${tempConductor ? 'text-text-primary' : 'text-text-secondary'}`}>
-                                                    {tempConductor || "Оберіть диригента..."}
+                                                    {tempConductor || t('service.credits.conductor_placeholder')}
                                                 </span>
                                                 <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${isConductorDropdownOpen ? 'rotate-180' : ''}`} />
                                             </button>
@@ -2339,7 +2342,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                                         }}
                                                         className={`w-full px-4 py-3 flex items-center justify-between hover:bg-surface-highlight cursor-pointer transition-colors ${!tempConductor ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:text-text-primary'}`}
                                                     >
-                                                        <span className="text-sm font-medium italic">Без диригента</span>
+                                                        <span className="text-sm font-medium italic">{t('service.credits.no_conductor')}</span>
                                                     </div>
                                                     {regentsList.map(name => (
                                                         <div
@@ -2362,7 +2365,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                                         className="w-full px-4 py-3 flex items-center gap-2 hover:bg-surface-highlight cursor-pointer transition-colors text-primary border-t border-border/50"
                                                     >
                                                         <Plus className="w-4 h-4" />
-                                                        <span className="text-sm font-medium">Новий диригент...</span>
+                                                        <span className="text-sm font-medium">{t('service.credits.new_conductor')}</span>
                                                     </div>
                                                 </div>
                                             )}
@@ -2373,7 +2376,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                                 type="text"
                                                 value={tempConductor}
                                                 onChange={(e) => setTempConductor(e.target.value)}
-                                                placeholder="Введіть ім'я..."
+                                                placeholder={t('service.credits.name_placeholder')}
                                                 className="flex-1 min-w-0 px-4 py-3 bg-surface-highlight text-sm font-medium text-text-primary rounded-xl outline-none border border-primary/30"
                                                 autoFocus
                                                 onKeyDown={(e) => {
@@ -2389,7 +2392,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
 
                                 {/* Pianist Dropdown */}
                                 <div className="relative z-10">
-                                    <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Піаніст</label>
+                                    <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">{t('service.credits.pianist')}</label>
                                     {!showCustomPianist ? (
                                         <div className="relative" ref={pianistDropdownRef}>
                                             <button
@@ -2398,7 +2401,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                                 className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl flex items-center justify-between hover:bg-surface transition-all"
                                             >
                                                 <span className={`text-sm font-medium ${tempPianist ? 'text-text-primary' : 'text-text-secondary'}`}>
-                                                    {tempPianist || "Оберіть піаніста (опціонально)..."}
+                                                    {tempPianist || t('service.credits.pianist_placeholder')}
                                                 </span>
                                                 <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${isPianistDropdownOpen ? 'rotate-180' : ''}`} />
                                             </button>
@@ -2412,7 +2415,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                                         }}
                                                         className={`w-full px-4 py-3 flex items-center justify-between hover:bg-surface-highlight cursor-pointer transition-colors ${!tempPianist ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:text-text-primary'}`}
                                                     >
-                                                        <span className="text-sm font-medium italic">Без піаніста</span>
+                                                        <span className="text-sm font-medium italic">{t('service.credits.no_pianist')}</span>
                                                     </div>
                                                     {knownPianists.map(name => (
                                                         <div
@@ -2435,7 +2438,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                                         className="w-full px-4 py-3 flex items-center gap-2 hover:bg-surface-highlight cursor-pointer transition-colors text-primary border-t border-border/50"
                                                     >
                                                         <Plus className="w-4 h-4" />
-                                                        <span className="text-sm font-medium">Новий піаніст...</span>
+                                                        <span className="text-sm font-medium">{t('service.credits.new_pianist')}</span>
                                                     </div>
                                                 </div>
                                             )}
@@ -2446,7 +2449,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                                 type="text"
                                                 value={tempPianist}
                                                 onChange={(e) => setTempPianist(e.target.value)}
-                                                placeholder="Введіть ім'я..."
+                                                placeholder={t('service.credits.name_placeholder')}
                                                 className="flex-1 min-w-0 px-4 py-3 bg-surface-highlight text-sm font-medium text-text-primary rounded-xl outline-none border border-primary/30"
                                                 autoFocus
                                                 onKeyDown={(e) => {
@@ -2470,7 +2473,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                     }}
                                     className="w-full py-4 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-colors"
                                 >
-                                    Зберегти
+                                    {t('common.save')}
                                 </button>
                             </div>
                         </div>
@@ -2483,7 +2486,7 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                 <div className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
                     <div className="bg-surface border border-border w-full max-w-sm p-6 rounded-3xl shadow-2xl">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold text-text-primary">Редагувати</h3>
+                            <h3 className="text-xl font-bold text-text-primary">{t('service.edit.title')}</h3>
                             <button onClick={() => setShowEditServiceModal(false)} className="p-2 text-text-secondary hover:text-text-primary transition-colors">
                                 <X className="w-5 h-5" />
                             </button>
@@ -2492,19 +2495,19 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                         <div className="space-y-5">
                             {/* Title */}
                             <div>
-                                <label className="text-xs text-text-secondary uppercase font-bold mb-2 block">Назва</label>
+                                <label className="text-xs text-text-secondary uppercase font-bold mb-2 block">{t('service.edit.name_label')}</label>
                                 <input
                                     autoFocus
                                     value={editTitle}
                                     onChange={e => setEditTitle(e.target.value)}
-                                    placeholder="Назва служіння..."
+                                    placeholder={t('service.edit.name_placeholder')}
                                     className="w-full h-[50px] px-4 bg-surface-highlight text-text-primary border border-border rounded-xl focus:border-primary/50 focus:bg-surface outline-none transition-all"
                                 />
                             </div>
 
                             {/* Date */}
                             <div>
-                                <label className="text-xs text-text-secondary uppercase font-bold mb-2 block">Дата</label>
+                                <label className="text-xs text-text-secondary uppercase font-bold mb-2 block">{t('service.edit.date_label')}</label>
                                 <div className="relative w-full">
                                     <div className="w-full h-[50px] flex items-center pl-[44px] pr-4 bg-surface-highlight border border-border rounded-xl text-text-primary text-[15px] focus-within:border-primary/50 focus-within:bg-surface transition-all">
                                         {editDate ? editDate.split('-').reverse().join('.') : ''}
@@ -2522,8 +2525,8 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                             {/* Time */}
                             <div>
                                 <label className="text-xs text-text-secondary uppercase font-bold mb-2 flex items-center justify-between">
-                                    <span>Час</span>
-                                    <span className="text-[10px] text-text-secondary/50 lowercase font-medium tracking-normal">(необов'язково)</span>
+                                    <span>{t('service.edit.time_label')}</span>
+                                    <span className="text-[10px] text-text-secondary/50 lowercase font-medium tracking-normal">{t('service.edit.time_optional')}</span>
                                 </label>
                                 <div className="relative w-full">
                                     <div className="w-full h-[50px] flex items-center pl-[44px] pr-4 bg-surface-highlight border border-border rounded-xl text-text-primary text-[15px] focus-within:border-primary/50 focus-within:bg-surface transition-all">
@@ -2544,14 +2547,14 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                     onClick={() => setShowEditServiceModal(false)}
                                     className="flex-1 p-3 bg-surface-highlight text-text-secondary rounded-xl font-bold hover:bg-surface-highlight/80 transition-colors"
                                 >
-                                    Скасувати
+                                    {t('common.cancel')}
                                 </button>
                                 <button
                                     onClick={saveServiceDetails}
                                     disabled={!editTitle.trim()}
                                     className="flex-1 p-3 bg-primary text-background rounded-xl font-bold hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
                                 >
-                                    <Save className="w-4 h-4" /> Зберегти
+                                    <Save className="w-4 h-4" /> {t('common.save')}
                                 </button>
                             </div>
                         </div>
@@ -2581,9 +2584,9 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                     <Trash2 className="w-6 h-6 text-red-500" />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-bold text-text-primary">Видалити пункт?</h3>
+                                    <h3 className="text-lg font-bold text-text-primary">{t('service.delete_item.title')}</h3>
                                     <p className="text-text-secondary text-sm mt-1">
-                                        &quot;{programItems.find(p => p.id === programItemToDelete)?.title}&quot; буде видалено з програми.
+                                        &quot;{programItems.find(p => p.id === programItemToDelete)?.title}&quot; {t("service.remove_item_suffix")}
                                     </p>
                                 </div>
                                 <div className="flex gap-3 w-full mt-2">
@@ -2591,13 +2594,13 @@ export default function ServiceView({ service, allServices = [], onBack, canEdit
                                         onClick={() => setProgramItemToDelete(null)}
                                         className="flex-1 py-3 border border-border rounded-xl text-text-primary hover:bg-surface-highlight transition-colors font-medium text-sm"
                                     >
-                                        Скасувати
+                                        {t('common.cancel')}
                                     </button>
                                     <button
                                         onClick={() => programItemToDelete && handleRemoveProgramItem(programItemToDelete)}
                                         className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors text-sm"
                                     >
-                                        Видалити
+                                        {t('common.delete')}
                                     </button>
                                 </div>
                             </div>

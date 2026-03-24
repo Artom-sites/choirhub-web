@@ -38,7 +38,7 @@ export default function ServiceList({
     allHistoryLoaded = false
 }: ServiceListProps) {
     const { userData, user } = useAuth();
-    const { t } = useTranslation();
+    const { t, language } = useTranslation();
     const effectiveCanEdit = canEdit;
 
     // Local-to-prop state mapping
@@ -67,7 +67,7 @@ export default function ServiceList({
     const [showScheduleModal, setShowScheduleModal] = useState(false);
 
     // Create form
-    const [newTitle, setNewTitle] = useState("Співанка");
+    const [newTitle, setNewTitle] = useState(t('services.create.default_title') || "Співанка");
     const [newType, setNewType] = useState<'service' | 'rehearsal'>('rehearsal');
     const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
     const [newTime, setNewTime] = useState("");
@@ -166,7 +166,7 @@ export default function ServiceList({
             await addService(userData.choirId, serviceData);
 
             setShowCreateModal(false);
-            setNewTitle("Співанка");
+            setNewTitle(t('services.create.default_title') || "Співанка");
             setNewType('rehearsal');
             setNewDate(new Date().toISOString().split('T')[0]);
             setNewTime("");
@@ -204,7 +204,9 @@ export default function ServiceList({
     const formatDate = (dateStr: string) => {
         const [y, m, d] = dateStr.split('-').map(Number);
         const date = new Date(y, m - 1, d);
-        return new Intl.DateTimeFormat('uk-UA', {
+        const localeMap: Record<string, string> = { uk: 'uk-UA', en: 'en-US', ru: 'ru-RU', de: 'de-DE' };
+        const activeLocale = localeMap[language] || 'uk-UA';
+        return new Intl.DateTimeFormat(activeLocale, {
             weekday: 'long',
             day: 'numeric',
             month: 'long'
@@ -230,7 +232,7 @@ export default function ServiceList({
             {/* Header with Archive Toggle - Spacious & Clean */}
             <div className="sticky top-[calc(4rem_+_env(safe-area-inset-top))] bg-background/95 backdrop-blur-md pt-3 pb-3 -mx-4 px-4 mb-4 z-40 flex items-center justify-between border-b border-border">
                 <h2 className="text-lg font-bold text-text-primary">
-                    {showArchive ? 'Архів служінь' : 'Найближчі служіння'}
+                    {showArchive ? t('services.list.archive') : t('services.list.upcoming')}
                 </h2>
 
                 <div className="flex items-center gap-3">
@@ -238,7 +240,7 @@ export default function ServiceList({
                         onClick={() => setShowArchive(!showArchive)}
                         className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${showArchive ? 'bg-primary text-background shadow-md' : 'text-text-secondary bg-surface hover:bg-surface-highlight hover:text-text-primary'}`}
                     >
-                        {showArchive ? 'Актуальні' : 'Архів'}
+                        {showArchive ? t('services.list.active') : t('services.list.archive')}
                     </button>
 
                     {effectiveCanEdit && !showArchive && (
@@ -289,14 +291,14 @@ export default function ServiceList({
                                 <Calendar className="w-8 h-8" />
                             </div>
                             <p className="text-text-secondary font-medium">
-                                {showArchive ? 'Архіви порожні' : 'Немає запланованих служінь'}
+                                {showArchive ? t('services.list.empty') : t('services.list.empty')}
                             </p>
                             {!showArchive && effectiveCanEdit && (
                                 <button
                                     onClick={() => setShowCreateModal(true)}
                                     className="mt-6 px-6 py-3 bg-primary text-background hover:opacity-90 transition-colors font-bold text-sm rounded-xl"
                                 >
-                                    Створити перше
+                                    {t('services.list.create_first')}
                                 </button>
                             )}
                         </div>
@@ -332,7 +334,7 @@ export default function ServiceList({
                                                 <div className="flex justify-between items-start">
                                                     <div className="flex-1 min-w-0">
                                                         <p className={`text-[11px] font-bold uppercase tracking-widest mb-1.5 ${isToday(service.date) ? 'text-primary' : 'text-text-secondary'}`}>
-                                                            {isToday(service.date) ? 'Сьогодні' : formatDate(service.date)}
+                                                            {isToday(service.date) ? t('services.list.today') : formatDate(service.date)}
                                                         </p>
                                                         <h3 className="text-lg font-bold text-text-primary leading-tight">{service.title}</h3>
                                                     </div>
@@ -342,7 +344,7 @@ export default function ServiceList({
                                                 <div className="flex items-center gap-3 mt-3">
                                                     <div className="flex items-center gap-1.5 text-xs text-text-secondary">
                                                         <Music className="w-3.5 h-3.5" />
-                                                        <span>{(service.songs || []).length} пісень</span>
+                                                        <span>{t('services.item.songsCount', { count: (service.songs || []).length })}</span>
                                                     </div>
                                                     {service.time && (
                                                         <div className="flex items-center gap-1.5 text-xs text-text-secondary">
@@ -377,7 +379,7 @@ export default function ServiceList({
                                                                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${status === 'present' ? 'bg-success text-white ring-2 ring-success/50' : 'bg-background text-text-secondary hover:bg-surface-highlight'}`}
                                                             >
                                                                 <Check className="w-3.5 h-3.5" />
-                                                                {status === 'present' ? 'Я буду' : 'Буду'}
+                                                                {status === 'present' ? t('services.actions.will_be_present_active') : t('services.actions.will_be_present')}
                                                             </button>
                                                         )}
 
@@ -387,7 +389,7 @@ export default function ServiceList({
                                                                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${status === 'absent' ? 'bg-danger/20 text-danger ring-1 ring-danger/50' : 'bg-background text-text-secondary hover:bg-surface-highlight'}`}
                                                             >
                                                                 <X className="w-3.5 h-3.5" />
-                                                                Не буду
+                                                                {t('services.actions.will_not_be_present')}
                                                             </button>
                                                         )}
                                                     </div>
@@ -413,12 +415,12 @@ export default function ServiceList({
                         {loadingHistory ? (
                             <>
                                 <Loader2 className="w-4 h-4 animate-spin" />
-                                Завантаження...
+                                {t('archive.loading')}
                             </>
                         ) : (
                             <>
                                 <Clock className="w-4 h-4" />
-                                Завантажити старіші
+                                {t('archive.load_more')}
                             </>
                         )}
                     </button>
@@ -452,26 +454,26 @@ export default function ServiceList({
                                 <button
                                     onClick={() => {
                                         setNewType('service');
-                                        if (newTitle === "Співанка" || newTitle === "Репетиція") setNewTitle("Служіння");
+                                        if (newTitle === t('services.create.default_title') || newTitle === t('services.create.tab_rehearsal')) setNewTitle(t('services.create.tab_service'));
                                     }}
                                     className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${newType === 'service'
                                         ? 'bg-primary text-background shadow-sm'
                                         : 'text-text-secondary hover:text-text-primary'
                                         }`}
                                 >
-                                    Служіння
+                                    {t('services.create.tab_service')}
                                 </button>
                                 <button
                                     onClick={() => {
                                         setNewType('rehearsal');
-                                        if (newTitle === "Служіння") setNewTitle("Співанка");
+                                        if (newTitle === t('services.create.tab_service')) setNewTitle(t('services.create.default_title'));
                                     }}
                                     className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${newType === 'rehearsal'
                                         ? 'bg-primary text-background shadow-sm'
                                         : 'text-text-secondary hover:text-text-primary'
                                         }`}
                                 >
-                                    Репетиція
+                                    {t('services.create.tab_rehearsal')}
                                 </button>
                             </div>
 
@@ -581,7 +583,7 @@ export default function ServiceList({
                                         <Loader2 className="w-5 h-5 animate-spin" />
                                         Створення...
                                     </>
-                                ) : 'Створити'}
+                                ) : t('services.actions.create_button')}
                             </button>
                         </div>
                     </div>

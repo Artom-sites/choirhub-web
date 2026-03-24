@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function PrivacyText() {
+export default function PrivacyTextUk() {
     return (
         <>
             <p className="text-xs text-text-secondary">Останнє оновлення: 22 березня 2026</p>

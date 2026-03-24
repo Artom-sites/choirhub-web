@@ -4,9 +4,12 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ExternalLink, ShieldAlert, FileText, Music2, Scale, Copyright, Lock, ArrowLeft } from "lucide-react";
 import { Browser } from "@capacitor/browser";
-import PrivacyText from "./legal/PrivacyText";
-import TermsText from "./legal/TermsText";
+import PrivacyTextUk from "./legal/PrivacyTextUk";
+import PrivacyTextEn from "./legal/PrivacyTextEn";
+import TermsTextUk from "./legal/TermsTextUk";
+import TermsTextEn from "./legal/TermsTextEn";
 import GlassPageHeader from "./GlassPageHeader";
+import { useTranslation } from "@/contexts/TranslationContext";
 
 interface LegalModalProps {
     isOpen: boolean;
@@ -17,6 +20,7 @@ interface LegalModalProps {
 type SubView = 'main' | 'privacy' | 'terms';
 
 export default function LegalModal({ isOpen, onClose, initialView = 'main' }: LegalModalProps) {
+    const { t } = useTranslation();
     const [subView, setSubView] = useState<SubView>(initialView);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -67,9 +71,9 @@ export default function LegalModal({ isOpen, onClose, initialView = 'main' }: Le
                     {/* Header */}
                     <GlassPageHeader
                         title={
-                            subView === 'main' ? 'Джерела та контент' :
-                            subView === 'privacy' ? 'Політика конфіденційності' :
-                            'Умови використання'
+                            subView === 'main' ? t('legal.title_sources') :
+                            subView === 'privacy' ? t('legal.privacy_policy') :
+                            t('legal.terms_of_use')
                         }
                         onBack={handleClose}
                         isActive={isOpen}
@@ -89,28 +93,26 @@ export default function LegalModal({ isOpen, onClose, initialView = 'main' }: Le
 }
 
 function MainContent({ openExternal, onOpenPrivacy, onOpenTerms }: { openExternal: (url: string) => Promise<void>; onOpenPrivacy: () => void; onOpenTerms: () => void }) {
+    const { t } = useTranslation();
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
             <section className="space-y-3 flex flex-col">
                 <div className="flex items-center gap-2 text-text-primary font-bold text-base">
                     <Music2 className="w-5 h-5 text-indigo-400" />
-                    <h2>Каталог пісень</h2>
+                    <h2>{t('legal.sec_catalog')}</h2>
                 </div>
                 <div className="p-4 bg-surface rounded-2xl border border-border space-y-3">
                     <p className="text-sm text-text-secondary leading-relaxed">
-                        Каталог пісень у застосунку сформовано на основі відкритих матеріалів,
-                        опублікованих Музично-хоровим відділом МСЦ ЄХБ (Міжнародний союз церков
-                        євангельських християн-баптистів).
+                        {t('legal.sec_catalog_desc1')}
                     </p>
                     <p className="text-sm text-text-secondary leading-relaxed">
-                        Ці матеріали призначені для вільного використання в церковному служінні
-                        та доступні на офіційному сайті організації.
+                        {t('legal.sec_catalog_desc2')}
                     </p>
                     <button
                         onClick={() => openExternal('https://mscmusic.org')}
                         className="inline-flex items-center gap-2 text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors uppercase tracking-wider mt-2"
                     >
-                        Перейти до джерела
+                        {t('legal.btn_source')}
                         <ExternalLink className="w-3 h-3" />
                     </button>
                 </div>
@@ -119,16 +121,14 @@ function MainContent({ openExternal, onOpenPrivacy, onOpenTerms }: { openExterna
             <section className="space-y-3 flex flex-col">
                 <div className="flex items-center gap-2 text-text-primary font-bold text-base">
                     <Copyright className="w-5 h-5 text-purple-400" />
-                    <h2>Авторські права</h2>
+                    <h2>{t('legal.sec_copyright')}</h2>
                 </div>
                 <div className="p-4 bg-surface rounded-2xl border border-border space-y-3">
                     <p className="text-sm text-text-secondary leading-relaxed">
-                        Застосунок не є власником музичних творів і не претендує на авторські права.
-                        Всі права на оригінальні твори належать їх авторам та правовласникам.
+                        {t('legal.sec_copyright_desc1')}
                     </p>
                     <p className="text-sm text-text-secondary leading-relaxed">
-                        Ми лише надаємо зручний інтерфейс для доступу до матеріалів,
-                        які вже є у відкритому доступі.
+                        {t('legal.sec_copyright_desc2')}
                     </p>
                 </div>
             </section>
@@ -136,16 +136,14 @@ function MainContent({ openExternal, onOpenPrivacy, onOpenTerms }: { openExterna
             <section className="space-y-3 flex flex-col">
                 <div className="flex items-center gap-2 text-text-primary font-bold text-base">
                     <FileText className="w-5 h-5 text-amber-400" />
-                    <h2>Користувацький контент</h2>
+                    <h2>{t('legal.sec_user_content')}</h2>
                 </div>
                 <div className="p-5 md:p-6 bg-surface rounded-2xl md:rounded-3xl border border-border flex flex-col flex-1 gap-3">
                     <p className="text-sm text-text-secondary leading-relaxed">
-                        Користувачі можуть додавати власні матеріали (ноти, тексти, PDF-файли)
-                        для використання в межах свого хору або церковної спільноти.
+                        {t('legal.sec_user_content_desc1')}
                     </p>
                     <p className="text-sm text-text-secondary leading-relaxed">
-                        Завантажений контент зберігається на захищених серверах і доступний
-                        лише учасникам відповідного хору.
+                        {t('legal.sec_user_content_desc2')}
                     </p>
                 </div>
             </section>
@@ -153,16 +151,14 @@ function MainContent({ openExternal, onOpenPrivacy, onOpenTerms }: { openExterna
             <section className="space-y-3 flex flex-col">
                 <div className="flex items-center gap-2 text-text-primary font-bold text-base">
                     <Lock className="w-5 h-5 text-cyan-400" />
-                    <h2>Захист даних</h2>
+                    <h2>{t('legal.sec_protection')}</h2>
                 </div>
                 <div className="p-5 md:p-6 bg-surface rounded-2xl md:rounded-3xl border border-border flex flex-col flex-1 gap-3">
                     <p className="text-sm text-text-secondary leading-relaxed">
-                        Ваші дані зашифровані та зберігаються на серверах Google Firebase
-                        та Cloudflare з дотриманням стандартів GDPR.
+                        {t('legal.sec_protection_desc1')}
                     </p>
                     <p className="text-sm text-text-secondary leading-relaxed">
-                        Ми не передаємо ваші персональні дані третім сторонам
-                        для маркетингових або комерційних цілей.
+                        {t('legal.sec_protection_desc2')}
                     </p>
                 </div>
             </section>
@@ -170,16 +166,14 @@ function MainContent({ openExternal, onOpenPrivacy, onOpenTerms }: { openExterna
             <section className="space-y-3 flex flex-col">
                 <div className="flex items-center gap-2 text-text-primary font-bold text-base">
                     <ShieldAlert className="w-5 h-5 text-emerald-400" />
-                    <h2>Відповідальність</h2>
+                    <h2>{t('legal.sec_responsibility')}</h2>
                 </div>
                 <div className="p-5 md:p-6 bg-surface rounded-2xl md:rounded-3xl border border-border flex flex-col flex-1 gap-3">
                     <p className="text-sm text-text-secondary leading-relaxed">
-                        Користувачі несуть відповідальність за контент, який вони додають
-                        або використовують у застосунку.
+                        {t('legal.sec_responsibility_desc1')}
                     </p>
                     <p className="text-sm text-text-secondary leading-relaxed">
-                        Завантажуючи матеріали, ви підтверджуєте, що маєте право
-                        на їх використання в межах церковного служіння та некомерційних цілей.
+                        {t('legal.sec_responsibility_desc2')}
                     </p>
                 </div>
             </section>
@@ -187,12 +181,11 @@ function MainContent({ openExternal, onOpenPrivacy, onOpenTerms }: { openExterna
             <section className="space-y-3 flex flex-col">
                 <div className="flex items-center gap-2 text-text-primary font-bold text-base">
                     <Scale className="w-5 h-5 text-rose-400" />
-                    <h2>Правова інформація</h2>
+                    <h2>{t('legal.sec_legal')}</h2>
                 </div>
                 <div className="p-5 md:p-6 bg-surface rounded-2xl md:rounded-3xl border border-border flex flex-col flex-1 gap-3">
                     <p className="text-sm text-text-secondary leading-relaxed mb-4">
-                        Детальну інформацію про обробку персональних даних
-                        можна знайти в нашій Політиці конфіденційності.
+                        {t('legal.sec_legal_desc1')}
                     </p>
 
                     <div className="flex flex-col gap-0 border border-border rounded-xl overflow-hidden divide-y divide-border">
@@ -200,14 +193,14 @@ function MainContent({ openExternal, onOpenPrivacy, onOpenTerms }: { openExterna
                             onClick={onOpenPrivacy}
                             className="w-full text-left py-3 px-4 hover:bg-surface-highlight transition-colors flex items-center justify-between group"
                         >
-                            <span className="text-sm font-semibold text-text-primary group-hover:text-rose-400 transition-colors">Політика конфіденційності</span>
+                            <span className="text-sm font-semibold text-text-primary group-hover:text-rose-400 transition-colors">{t('legal.privacy_policy')}</span>
                             <ArrowLeft className="w-4 h-4 text-text-secondary rotate-180" />
                         </button>
                         <button
                             onClick={onOpenTerms}
                             className="w-full text-left py-3 px-4 hover:bg-surface-highlight transition-colors flex items-center justify-between group"
                         >
-                            <span className="text-sm font-semibold text-text-primary group-hover:text-primary transition-colors">Умови використання</span>
+                            <span className="text-sm font-semibold text-text-primary group-hover:text-primary transition-colors">{t('legal.terms_of_use')}</span>
                             <ArrowLeft className="w-4 h-4 text-text-secondary rotate-180" />
                         </button>
                     </div>
@@ -218,9 +211,11 @@ function MainContent({ openExternal, onOpenPrivacy, onOpenTerms }: { openExterna
 }
 
 function PrivacyContent() {
-    return <PrivacyText />;
+    const { language } = useTranslation();
+    return language === 'uk' ? <PrivacyTextUk /> : <PrivacyTextEn />;
 }
 
 function TermsContent() {
-    return <TermsText />;
+    const { language } = useTranslation();
+    return language === 'uk' ? <TermsTextUk /> : <TermsTextEn />;
 }

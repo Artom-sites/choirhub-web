@@ -8,6 +8,7 @@ import { uploadPendingSongPdf } from "@/lib/storage";
 import { Dialog } from '@capacitor/dialog';
 import { useAuth } from "@/contexts/AuthContext";
 import { OFFICIAL_THEMES } from "@/lib/themes";
+import { useTranslation } from "@/contexts/TranslationContext";
 
 interface Props {
     onClose: () => void;
@@ -90,6 +91,7 @@ function CustomDropdown({ value, options, onChange, placeholder = "Обрати.
 
 export default function SubmitSongModal({ onClose, onSuccess }: Props) {
     const { user, userData } = useAuth();
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(false);
     const [file, setFile] = useState<File | null>(null);
 
@@ -181,7 +183,7 @@ export default function SubmitSongModal({ onClose, onSuccess }: Props) {
                 onClick={e => e.stopPropagation()}
             >
                 <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-bold text-text-primary">Запропонувати пісню</h2>
+                    <h2 className="text-xl font-bold text-text-primary">{t('submit_song.title')}</h2>
                     <button onClick={onClose} className="p-2 hover:bg-surface-highlight rounded-full transition-colors">
                         <X className="w-5 h-5 text-text-secondary" />
                     </button>
@@ -190,7 +192,7 @@ export default function SubmitSongModal({ onClose, onSuccess }: Props) {
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {/* Song Title */}
                     <div>
-                        <label className="block text-sm font-medium text-text-secondary mb-1">Назва твору *</label>
+                        <label className="block text-sm font-medium text-text-secondary mb-1">{t('submit_song.song_title')}</label>
                         <input
                             required
                             type="text"
@@ -204,7 +206,7 @@ export default function SubmitSongModal({ onClose, onSuccess }: Props) {
                     {/* Composer & Poet */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-text-secondary mb-1">Композитор</label>
+                            <label className="block text-sm font-medium text-text-secondary mb-1">{t('submit_song.composer')}</label>
                             <input
                                 type="text"
                                 value={form.composer}
@@ -214,7 +216,7 @@ export default function SubmitSongModal({ onClose, onSuccess }: Props) {
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-text-secondary mb-1">Автор тексту</label>
+                            <label className="block text-sm font-medium text-text-secondary mb-1">{t('submit_song.poet')}</label>
                             <input
                                 type="text"
                                 value={form.poet}
@@ -228,7 +230,7 @@ export default function SubmitSongModal({ onClose, onSuccess }: Props) {
                     {/* Category & Theme Dropdowns */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-text-secondary mb-1">Категорія</label>
+                            <label className="block text-sm font-medium text-text-secondary mb-1">{t('submit_song.category')}</label>
                             <CustomDropdown
                                 value={form.category}
                                 options={CATEGORIES}
@@ -236,12 +238,12 @@ export default function SubmitSongModal({ onClose, onSuccess }: Props) {
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-text-secondary mb-1">Тема</label>
+                            <label className="block text-sm font-medium text-text-secondary mb-1">{t('submit_song.theme')}</label>
                             <CustomDropdown
                                 value={form.theme}
                                 options={OFFICIAL_THEMES.filter(t => t !== "Інші")}
                                 onChange={val => setForm({ ...form, theme: val })}
-                                placeholder="Не вказано"
+                                placeholder={t('submit_song.theme_not_specified')}
                                 allowEmpty
                             />
                         </div>
@@ -249,7 +251,7 @@ export default function SubmitSongModal({ onClose, onSuccess }: Props) {
 
                     {/* PDF Upload */}
                     <div>
-                        <label className="block text-sm font-medium text-text-secondary mb-1">PDF Файл *</label>
+                        <label className="block text-sm font-medium text-text-secondary mb-1">{t('submit_song.pdf_file')}</label>
                         <div className="relative">
                             <input
                                 required
@@ -267,7 +269,7 @@ export default function SubmitSongModal({ onClose, onSuccess }: Props) {
                                 ) : (
                                     <>
                                         <Upload className="w-5 h-5 text-text-secondary" />
-                                        <span className="text-text-secondary">Оберіть PDF файл</span>
+                                        <span className="text-text-secondary">{t('global.choose_pdf')}</span>
                                     </>
                                 )}
                             </div>
@@ -275,7 +277,7 @@ export default function SubmitSongModal({ onClose, onSuccess }: Props) {
                     </div>
 
                     <div className="pt-2 text-xs text-text-secondary text-center">
-                        Пісня з'явиться в каталозі "Новинки" після перевірки модератором.
+                        {t('submit_song.info')}
                     </div>
 
                     <button
@@ -283,7 +285,7 @@ export default function SubmitSongModal({ onClose, onSuccess }: Props) {
                         disabled={loading || !file || !form.title}
                         className="w-full py-3 bg-primary text-background font-bold rounded-xl hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
-                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Надіслати"}
+                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : t('submit_song.submit')}
                     </button>
                 </form>
             </div>

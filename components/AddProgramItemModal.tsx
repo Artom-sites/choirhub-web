@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, Search, Music, BookOpen, HandHeart, Hand, Mic, Users2, MoreHorizontal, FileText } from "lucide-react";
 import { ProgramItem, ProgramItemType, SimpleSong } from "@/types";
 import { useRepertoire } from "@/contexts/RepertoireContext";
+import { useTranslation, TranslationKey } from "@/contexts/TranslationContext";
 
 interface AddProgramItemModalProps {
     onAdd: (item: Omit<ProgramItem, 'id' | 'order'>) => void;
@@ -14,18 +15,19 @@ interface AddProgramItemModalProps {
     onEdit?: (item: ProgramItem) => void;
 }
 
-const ITEM_TYPES: { type: ProgramItemType; label: string; icon: React.ReactNode; color: string }[] = [
-    { type: 'choir', label: 'Хор', icon: <Music className="w-4 h-4" />, color: 'bg-blue-500/15 text-blue-400 border-blue-500/30' },
-    { type: 'congregation', label: 'Заг. спів', icon: <Users2 className="w-4 h-4" />, color: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30' },
-    { type: 'verse', label: 'Вірш', icon: <BookOpen className="w-4 h-4" />, color: 'bg-purple-500/15 text-purple-400 border-purple-500/30' },
-    { type: 'prayer', label: 'Молитва', icon: <Hand className="w-4 h-4" />, color: 'bg-amber-500/15 text-amber-500 border-amber-500/30' },
-    { type: 'sermon', label: 'Проповідь', icon: <BookOpen className="w-4 h-4" />, color: 'bg-orange-500/15 text-orange-400 border-orange-500/30' },
-    { type: 'solo', label: 'Соло', icon: <Mic className="w-4 h-4" />, color: 'bg-pink-500/15 text-pink-400 border-pink-500/30' },
-    { type: 'ensemble', label: 'Ансамбль', icon: <Users2 className="w-4 h-4" />, color: 'bg-green-500/15 text-green-400 border-green-500/30' },
-    { type: 'other', label: 'Інше', icon: <MoreHorizontal className="w-4 h-4" />, color: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30' },
+const ITEM_TYPES: { type: ProgramItemType; labelKey: TranslationKey; icon: React.ReactNode; color: string }[] = [
+    { type: 'choir', labelKey: 'program.type.choir', icon: <Music className="w-4 h-4" />, color: 'bg-blue-500/15 text-blue-400 border-blue-500/30' },
+    { type: 'congregation', labelKey: 'program.type.congregation', icon: <Users2 className="w-4 h-4" />, color: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30' },
+    { type: 'verse', labelKey: 'program.type.verse', icon: <BookOpen className="w-4 h-4" />, color: 'bg-purple-500/15 text-purple-400 border-purple-500/30' },
+    { type: 'prayer', labelKey: 'program.type.prayer', icon: <Hand className="w-4 h-4" />, color: 'bg-amber-500/15 text-amber-500 border-amber-500/30' },
+    { type: 'sermon', labelKey: 'program.type.sermon', icon: <BookOpen className="w-4 h-4" />, color: 'bg-orange-500/15 text-orange-400 border-orange-500/30' },
+    { type: 'solo', labelKey: 'program.type.solo', icon: <Mic className="w-4 h-4" />, color: 'bg-pink-500/15 text-pink-400 border-pink-500/30' },
+    { type: 'ensemble', labelKey: 'program.type.ensemble', icon: <Users2 className="w-4 h-4" />, color: 'bg-green-500/15 text-green-400 border-green-500/30' },
+    { type: 'other', labelKey: 'program.type.other', icon: <MoreHorizontal className="w-4 h-4" />, color: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30' },
 ];
 
 export default function AddProgramItemModal({ onAdd, onClose, editItem, onEdit }: AddProgramItemModalProps) {
+    const { t } = useTranslation();
     const isEditMode = !!editItem;
     const [selectedType, setSelectedType] = useState<ProgramItemType>(editItem?.type || 'choir');
     const [title, setTitle] = useState(editItem?.title || "");
@@ -55,14 +57,14 @@ export default function AddProgramItemModal({ onAdd, onClose, editItem, onEdit }
         s.title.toLowerCase().includes(songSearch.toLowerCase())
     );
 
-    const typeConfig = ITEM_TYPES.find(t => t.type === selectedType)!;
+    const typeConfig = ITEM_TYPES.find(it => it.type === selectedType)!;
 
     const handleSubmit = () => {
         if (isEditMode && editItem && onEdit) {
             const updated: ProgramItem = {
                 ...editItem,
                 type: selectedType,
-                title: title.trim() || typeConfig.label,
+                title: title.trim() || t(typeConfig.labelKey),
                 performer: performer.trim() || undefined,
                 songId: linkedSong?.id || editItem.songId,
                 songTitle: linkedSong?.title || editItem.songTitle,
@@ -78,7 +80,7 @@ export default function AddProgramItemModal({ onAdd, onClose, editItem, onEdit }
         } else {
             const payload: Omit<ProgramItem, 'id' | 'order'> = {
                 type: selectedType,
-                title: title.trim() || typeConfig.label,
+                title: title.trim() || t(typeConfig.labelKey),
             };
 
             const cleanedPerformer = performer.trim();
@@ -100,7 +102,7 @@ export default function AddProgramItemModal({ onAdd, onClose, editItem, onEdit }
             >
                 {/* Header */}
                 <div className="flex items-center justify-between mb-5">
-                    <h2 className="text-lg font-bold text-text-primary">{isEditMode ? 'Редагувати пункт' : 'Додати пункт'}</h2>
+                    <h2 className="text-lg font-bold text-text-primary">{isEditMode ? t('program.edit_item') : t('program.add_item')}</h2>
                     <button onClick={onClose} className="p-2 text-text-secondary hover:text-text-primary rounded-full hover:bg-surface-highlight transition-colors">
                         <X className="w-5 h-5" />
                     </button>
@@ -115,7 +117,7 @@ export default function AddProgramItemModal({ onAdd, onClose, editItem, onEdit }
                                 autoFocus
                                 value={songSearch}
                                 onChange={e => setSongSearch(e.target.value)}
-                                placeholder="Пошук пісні..."
+                                placeholder={t('program.search_song')}
                                 className="w-full pl-10 pr-4 py-3 bg-surface-highlight border border-border rounded-xl text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
                             />
                         </div>
@@ -140,29 +142,29 @@ export default function AddProgramItemModal({ onAdd, onClose, editItem, onEdit }
                                 </button>
                             ))}
                             {filteredSongs.length === 0 && (
-                                <p className="text-center text-sm text-text-secondary py-6">Нічого не знайдено</p>
+                                <p className="text-center text-sm text-text-secondary py-6">{t('search.not_found')}</p>
                             )}
                         </div>
                         <button
                             onClick={() => setShowSongPicker(false)}
                             className="w-full py-3 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
                         >
-                            Скасувати
+                            {t('common.cancel')}
                         </button>
                     </div>
                 ) : (
                     <div className="space-y-4">
                         {/* Type Chips */}
                         <div className="flex flex-wrap gap-1.5 sm:gap-2 justify-center sm:justify-start">
-                            {ITEM_TYPES.map(({ type, label, icon, color }) => (
+                            {ITEM_TYPES.map(({ type, labelKey, icon, color }) => (
                                 <button
                                     key={type}
                                     onClick={() => {
                                         // If title matches the current type label (auto-generated), update to new label
-                                        const oldTypeConfig = ITEM_TYPES.find(t => t.type === selectedType);
-                                        if (!title.trim() || title.trim() === oldTypeConfig?.label) {
-                                            const newConfig = ITEM_TYPES.find(t => t.type === type);
-                                            setTitle(newConfig?.label || '');
+                                        const oldTypeConfig = ITEM_TYPES.find(it => it.type === selectedType);
+                                        if (!title.trim() || title.trim() === (oldTypeConfig ? t(oldTypeConfig.labelKey) : '')) {
+                                            const newConfig = ITEM_TYPES.find(it => it.type === type);
+                                            setTitle(newConfig ? t(newConfig.labelKey) : '');
                                         }
                                         setSelectedType(type);
                                         // Clear linked song if switching away from choir/congregation
@@ -172,7 +174,7 @@ export default function AddProgramItemModal({ onAdd, onClose, editItem, onEdit }
                                         }`}
                                 >
                                     {icon}
-                                    {label}
+                                    {t(labelKey)}
                                 </button>
                             ))}
                         </div>
@@ -182,7 +184,7 @@ export default function AddProgramItemModal({ onAdd, onClose, editItem, onEdit }
                             <input
                                 value={title}
                                 onChange={e => setTitle(e.target.value)}
-                                placeholder={selectedType === 'choir' || selectedType === 'congregation' ? "Назва пісні" : selectedType === 'verse' ? "Назва або автор вірша" : "Опис пункту"}
+                                placeholder={selectedType === 'choir' || selectedType === 'congregation' ? t('program.song_title_placeholder') : selectedType === 'verse' ? t('program.verse_placeholder') : t('program.item_placeholder')}
                                 className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 font-medium"
                             />
                         </div>
@@ -192,7 +194,7 @@ export default function AddProgramItemModal({ onAdd, onClose, editItem, onEdit }
                             <input
                                 value={performer}
                                 onChange={e => setPerformer(e.target.value)}
-                                placeholder="Хто виконує (необов'язково)"
+                                placeholder={t('program.performer_placeholder')}
                                 className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 font-medium"
                             />
                         </div>
@@ -214,7 +216,7 @@ export default function AddProgramItemModal({ onAdd, onClose, editItem, onEdit }
                                         className="w-full py-3 border border-dashed border-border rounded-xl text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-highlight/50 transition-all flex items-center justify-center gap-2"
                                     >
                                         <Music className="w-4 h-4" />
-                                        Прикріпити пісню з репертуару
+                                        {t('program.link_song')}
                                     </button>
                                 )}
                             </div>
@@ -225,7 +227,7 @@ export default function AddProgramItemModal({ onAdd, onClose, editItem, onEdit }
                             onClick={handleSubmit}
                             className="w-full py-4 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                         >
-                            {isEditMode ? 'Зберегти' : 'Додати'}
+                            {isEditMode ? t('common.save') : t('common.add')}
                         </button>
                     </div>
                 )}

@@ -9,6 +9,7 @@ import { CATEGORIES as OFFICIAL_THEMES_IMPORTED } from "@/lib/themes";
 const OFFICIAL_THEMES = OFFICIAL_THEMES_IMPORTED;
 
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "@/contexts/TranslationContext";
 import { updateDoc, doc, arrayRemove } from "firebase/firestore";
 import { getFirestoreLazy } from "@/lib/firebase";
 import ConfirmationModal from "./ConfirmationModal";
@@ -74,6 +75,7 @@ export default function EditSongModal({
     knownPianists
 }: EditSongModalProps) {
     const { userData } = useAuth();
+    const { t } = useTranslation();
 
     const normalizedRegents = useMemo(() => Array.from(new Set(
         (regents || [])
@@ -180,7 +182,7 @@ export default function EditSongModal({
     const handleSave = async (e: React.FormEvent | React.MouseEvent) => {
         e.preventDefault();
         if (!title.trim()) {
-            setError("Введіть назву пісні");
+            setError(t('edit_song.song_name_required'));
             return;
         }
 
@@ -240,7 +242,7 @@ export default function EditSongModal({
             onClose();
         } catch (err: any) {
             console.error(err);
-            await Dialog.alert({ title: "Помилка", message: "Помилка збереження" });
+            await Dialog.alert({ title: t('song.error'), message: t('edit_song.save_error') });
         } finally {
             setLoading(false);
         }
@@ -268,7 +270,7 @@ export default function EditSongModal({
             onClose();
         } catch (e) {
             console.error("Failed to delete conductor:", e);
-            await Dialog.alert({ title: "Помилка", message: "Помилка видалення" });
+            await Dialog.alert({ title: t('song.error'), message: t('edit_song.delete_error') });
         } finally {
             setConductorToDelete(null);
         }
@@ -297,7 +299,7 @@ export default function EditSongModal({
             onClose();
         } catch (e) {
             console.error("Failed to delete pianist:", e);
-            await Dialog.alert({ title: "Помилка", message: "Помилка видалення" });
+            await Dialog.alert({ title: t('song.error'), message: t('edit_song.delete_error') });
         } finally {
             setPianistToDelete(null);
         }
@@ -315,7 +317,7 @@ export default function EditSongModal({
                     <form onSubmit={handleSave} className="flex flex-col w-full">
                         {/* Header */}
                         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-border">
-                            <h2 className="text-xl font-bold text-text-primary">Редагувати пісню</h2>
+                            <h2 className="text-xl font-bold text-text-primary">{t('edit_song.title')}</h2>
                             <button
                                 type="button"
                                 onClick={onClose}
@@ -331,13 +333,13 @@ export default function EditSongModal({
                             {/* Title Field */}
                             <div>
                                 <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                                    Назва пісні <span className="text-danger">*</span>
+                                    {t('edit_song.song_name')} <span className="text-danger">*</span>
                                 </label>
                                 <input
                                     type="text"
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
-                                    placeholder="Введіть назву"
+                                    placeholder={t('edit_song.song_name_placeholder')}
                                     className="w-full bg-surface-highlight text-text-primary text-[16px] rounded-xl px-4 py-3 border border-border placeholder:text-text-secondary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
                                 />
                             </div>
@@ -345,7 +347,7 @@ export default function EditSongModal({
                             {/* Theme / Category Field */}
                             <div ref={themeDropdownRef} className="relative z-30">
                                 <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                                    Категорія (тематика)
+                                    {t('edit_song.category')}
                                 </label>
                                 {!showCustomTheme ? (
                                     <div className="relative">
@@ -354,7 +356,7 @@ export default function EditSongModal({
                                             className="w-full bg-surface-highlight text-text-primary text-[16px] rounded-xl px-4 py-3 border border-border flex items-center justify-between cursor-pointer transition-all hover:bg-surface-hover"
                                         >
                                             <span className={theme ? 'text-text-primary' : 'text-text-secondary'}>
-                                                {theme || "Оберіть..."}
+                                                {theme || t('edit_song.category_placeholder')}
                                             </span>
                                             <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${isThemeDropdownOpen ? 'rotate-180' : ''}`} />
                                         </div>
@@ -383,7 +385,7 @@ export default function EditSongModal({
                                                         onClick={() => { setShowCustomTheme(true); setIsThemeDropdownOpen(false); }}
                                                         className="flex items-center px-4 py-2.5 cursor-pointer hover:bg-surface"
                                                     >
-                                                        <span className="text-[15px] text-primary">Інша тематика...</span>
+                                                        <span className="text-[15px] text-primary">{t('edit_song.other_category')}</span>
                                                     </div>
                                                 </div>
                                             </DropdownPortal>
@@ -395,7 +397,7 @@ export default function EditSongModal({
                                             type="text"
                                             value={customTheme || ""}
                                             onChange={(e) => setCustomTheme(e.target.value)}
-                                            placeholder="Введіть тематику..."
+                                            placeholder={t('edit_song.category_input')}
                                             className="flex-1 bg-surface-highlight text-text-primary text-[16px] rounded-xl px-4 py-3 border border-primary/50 placeholder:text-text-secondary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
                                             autoFocus
                                         />
@@ -409,7 +411,7 @@ export default function EditSongModal({
                             {/* Conductor Field */}
                             <div ref={dropdownRef} className="relative z-20">
                                 <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                                    Хто диригує
+                                    {t('edit_song.conductor')}
                                 </label>
                                 {!showCustomInput ? (
                                     <div className="relative">
@@ -418,7 +420,7 @@ export default function EditSongModal({
                                             className="w-full bg-surface-highlight text-text-primary text-[16px] rounded-xl px-4 py-3 border border-border flex items-center justify-between cursor-pointer transition-all hover:bg-surface-hover"
                                         >
                                             <span className={conductor ? 'text-text-primary' : 'text-text-secondary'}>
-                                                {conductor || "Оберіть..."}
+                                                {conductor || t('edit_song.category_placeholder')}
                                             </span>
                                             <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${isConductorDropdownOpen ? 'rotate-180' : ''}`} />
                                         </div>
@@ -458,7 +460,7 @@ export default function EditSongModal({
                                                         onClick={() => { setShowCustomInput(true); setIsConductorDropdownOpen(false); }}
                                                         className="flex items-center px-4 py-2.5 cursor-pointer hover:bg-surface"
                                                     >
-                                                        <span className="text-[15px] text-primary">Інший диригент...</span>
+                                                        <span className="text-[15px] text-primary">{t('edit_song.other_conductor')}</span>
                                                     </div>
                                                 </div>
                                             </DropdownPortal>
@@ -470,7 +472,7 @@ export default function EditSongModal({
                                             type="text"
                                             value={customConductor}
                                             onChange={(e) => setCustomConductor(e.target.value)}
-                                            placeholder="Введіть ім'я..."
+                                            placeholder={t('edit_song.conductor_placeholder')}
                                             className="flex-1 bg-surface-highlight text-text-primary text-[16px] rounded-xl px-4 py-3 border border-primary/50 placeholder:text-text-secondary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
                                             autoFocus
                                         />
@@ -484,7 +486,7 @@ export default function EditSongModal({
                             {/* Pianist Field */}
                             <div ref={pianistDropdownRef} className="relative z-10">
                                 <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                                    Піаніст
+                                    {t('edit_song.pianist')}
                                 </label>
                                 {!showCustomPianist ? (
                                     <div className="relative">
@@ -493,7 +495,7 @@ export default function EditSongModal({
                                             className="w-full bg-surface-highlight text-text-primary text-[16px] rounded-xl px-4 py-3 border border-border flex items-center justify-between cursor-pointer transition-all hover:bg-surface-hover"
                                         >
                                             <span className={pianist ? 'text-text-primary' : 'text-text-secondary'}>
-                                                {pianist || "Оберіть піаніста (опціонально)..."}
+                                                {pianist || t('edit_song.pianist_placeholder')}
                                             </span>
                                             <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${isPianistDropdownOpen ? 'rotate-180' : ''}`} />
                                         </div>
@@ -512,7 +514,7 @@ export default function EditSongModal({
                                                         onClick={() => { setPianist(""); setIsPianistDropdownOpen(false); }}
                                                         className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-surface border-b border-border"
                                                     >
-                                                        <span className={`text-[15px] italic ${!pianist ? 'text-primary font-medium' : 'text-text-secondary'}`}>Немає</span>
+                                                        <span className={`text-[15px] italic ${!pianist ? 'text-primary font-medium' : 'text-text-secondary'}`}>{t('edit_song.no_pianist')}</span>
                                                         {!pianist && <Check className="w-4 h-4 text-primary" />}
                                                     </div>
                                                     {knownPianists.map(p => (
@@ -540,7 +542,7 @@ export default function EditSongModal({
                                                         onClick={() => { setShowCustomPianist(true); setIsPianistDropdownOpen(false); }}
                                                         className="flex items-center px-4 py-2.5 cursor-pointer hover:bg-surface"
                                                     >
-                                                        <span className="text-[15px] text-primary">Інший піаніст...</span>
+                                                        <span className="text-[15px] text-primary">{t('edit_song.other_pianist')}</span>
                                                     </div>
                                                 </div>
                                             </DropdownPortal>
@@ -552,7 +554,7 @@ export default function EditSongModal({
                                             type="text"
                                             value={customPianist}
                                             onChange={(e) => setCustomPianist(e.target.value)}
-                                            placeholder="Введіть ім'я..."
+                                            placeholder={t('edit_song.pianist_placeholder')}
                                             className="flex-1 bg-surface-highlight text-text-primary text-[16px] rounded-xl px-4 py-3 border border-primary/50 placeholder:text-text-secondary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all"
                                             autoFocus
                                         />
@@ -585,7 +587,7 @@ export default function EditSongModal({
                                 ) : (
                                     <>
                                         <Save className="w-4.5 h-4.5" />
-                                        Зберегти зміни
+                                        {t('edit_song.save')}
                                     </>
                                 )}
                             </button>
@@ -598,9 +600,9 @@ export default function EditSongModal({
                 isOpen={!!conductorToDelete}
                 onClose={() => setConductorToDelete(null)}
                 onConfirm={confirmDeleteConductor}
-                title="Видалити диригента?"
-                message={`Ви дійсно хочете видалити "${conductorToDelete}" зі списку?`}
-                confirmLabel="Видалити"
+                title={t('edit_song.delete_conductor_title')}
+                message={`${conductorToDelete}`}
+                confirmLabel={t('common.delete')}
                 isDestructive
             />
 
@@ -608,9 +610,9 @@ export default function EditSongModal({
                 isOpen={!!pianistToDelete}
                 onClose={() => setPianistToDelete(null)}
                 onConfirm={confirmDeletePianist}
-                title="Видалити піаніста?"
-                message={`Ви дійсно хочете видалити "${pianistToDelete}" зі списку?`}
-                confirmLabel="Видалити"
+                title={t('edit_song.delete_pianist_title')}
+                message={`${pianistToDelete}`}
+                confirmLabel={t('common.delete')}
                 isDestructive
             />
         </>

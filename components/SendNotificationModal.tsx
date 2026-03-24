@@ -5,6 +5,7 @@ import { getServices, functions } from "@/lib/db";
 import { Service } from "@/types";
 import Toast from "./Toast";
 import { httpsCallable } from "firebase/functions";
+import { useTranslation } from "@/contexts/TranslationContext";
 
 interface SendNotificationModalProps {
     isOpen: boolean;
@@ -13,6 +14,7 @@ interface SendNotificationModalProps {
 
 export default function SendNotificationModal({ isOpen, onClose }: SendNotificationModalProps) {
     const { user, userData } = useAuth();
+    const { t } = useTranslation();
     const [title, setTitle] = useState("");
     const [body, setBody] = useState("");
     const [loading, setLoading] = useState(false);
@@ -83,7 +85,7 @@ export default function SendNotificationModal({ isOpen, onClose }: SendNotificat
                 console.warn(`[SendNotification] Token errors:`, JSON.stringify(data.errors, null, 2));
             }
 
-            setToast({ message: "Сповіщення надіслано", type: "success" });
+            setToast({ message: t('notify.sent'), type: "success" });
 
             setTimeout(() => {
                 onClose();
@@ -92,7 +94,7 @@ export default function SendNotificationModal({ isOpen, onClose }: SendNotificat
 
         } catch (error: any) {
             console.error(error);
-            setToast({ message: error.message || "Помилка відправки", type: "error" });
+            setToast({ message: error.message || t('notify.error'), type: "error" });
         } finally {
             setLoading(false);
         }
@@ -103,31 +105,31 @@ export default function SendNotificationModal({ isOpen, onClose }: SendNotificat
             <div className="bg-surface w-full max-w-md rounded-3xl border border-border p-6 shadow-2xl scale-100 animate-in zoom-in-95 duration-200">
                 <h3 className="text-xl font-bold text-text-primary mb-6 flex items-center gap-2">
                     <Send className="w-5 h-5" />
-                    Сповіщення хору
+                    {t('notify.title')}
                 </h3>
 
                 <div className="space-y-4 max-h-[70vh] overflow-y-auto no-scrollbar pb-6 pr-2">
                     <div>
                         <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                            Заголовок <span className="text-[10px] lowercase text-text-secondary/70 font-normal">(необов'язково)</span>
+                            {t('notify.heading_label')} <span className="text-[10px] lowercase text-text-secondary/70 font-normal">{t('notify.heading_optional')}</span>
                         </label>
                         <input
                             type="text"
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
-                            placeholder="Наприклад: Зміна часу репетиції"
+                            placeholder={t('notify.heading_placeholder')}
                             className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent/30"
                         />
                     </div>
 
                     <div>
                         <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                            Текст повідомлення
+                            {t('notify.body_label')}
                         </label>
                         <textarea
                             value={body}
                             onChange={(e) => setBody(e.target.value)}
-                            placeholder="Введіть текст..."
+                            placeholder={t('notify.body_placeholder')}
                             rows={4}
                             className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent/30 resize-none"
                         />
@@ -135,11 +137,11 @@ export default function SendNotificationModal({ isOpen, onClose }: SendNotificat
 
                     <div>
                         <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                            Прив'язати до служіння (Опитування)
+                            {t('notify.link_service')}
                         </label>
                         {loadingServices ? (
                             <div className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl text-text-secondary flex items-center gap-2">
-                                <Loader2 className="w-4 h-4 animate-spin" /> Завантаження...
+                                <Loader2 className="w-4 h-4 animate-spin" /> {t('notify.loading')}
                             </div>
                         ) : (
                             <select
@@ -150,7 +152,7 @@ export default function SendNotificationModal({ isOpen, onClose }: SendNotificat
                                 }}
                                 className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl text-text-primary focus:outline-none focus:border-accent/30 appearance-none"
                             >
-                                <option value="">Без прив'язки</option>
+                                <option value="">{t('notify.no_link')}</option>
                                 {services.map(s => {
                                     const [y, m, d] = s.date.split('-').map(Number);
                                     return (
@@ -173,8 +175,8 @@ export default function SendNotificationModal({ isOpen, onClose }: SendNotificat
                                 className="w-5 h-5 rounded border-border text-primary focus:ring-primary focus:ring-offset-surface bg-background"
                             />
                             <label htmlFor="enableVotingToggle" className="text-sm font-medium text-text-primary cursor-pointer select-none">
-                                Додати кнопки голосування <br />
-                                <span className="text-xs text-text-secondary font-normal">("Буду" / "Не буду")</span>
+                                {t('notify.add_voting')} <br />
+                                <span className="text-xs text-text-secondary font-normal">{t('notify.voting_options')}</span>
                             </label>
                         </div>
                     )}
@@ -184,14 +186,14 @@ export default function SendNotificationModal({ isOpen, onClose }: SendNotificat
                             onClick={onClose}
                             className="flex-1 py-3 bg-surface-highlight text-text-primary font-medium rounded-xl hover:bg-surface transition-colors"
                         >
-                            Скасувати
+                            {t('common.cancel')}
                         </button>
                         <button
                             onClick={handleSend}
                             disabled={loading || !body.trim()}
                             className="flex-1 py-3 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Надіслати"}
+                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : t('notify.send')}
                         </button>
                     </div>
                 </div>

@@ -16,11 +16,13 @@ import { ChoirNotification, Service } from "@/types";
 import Toast from "@/components/Toast";
 import GlassPageHeader from "@/components/GlassPageHeader";
 import { httpsCallable } from "firebase/functions";
+import { useTranslation } from "@/contexts/TranslationContext";
 
 type Tab = "inbox" | "compose";
 
 export default function NotificationsPage() {
     const router = useRouter();
+    const { t } = useTranslation();
     const { user, userData } = useAuth();
     const {
         permissionStatus, loading: fcmLoading, requestPermission,
@@ -135,7 +137,7 @@ export default function NotificationsPage() {
             const data = result.data as any;
             if (!data.success) throw new Error(data.error || "Failed to send");
 
-            setToast({ message: "Сповіщення надіслано", type: "success" });
+            setToast({ message: t('notif.sent'), type: "success" });
             setBody("");
             setSelectedServiceId("");
             setEnableVoting(false);
@@ -161,15 +163,15 @@ export default function NotificationsPage() {
     }, [router]);
 
     const availableTabs = [
-        { id: "inbox" as Tab, label: "Вхідні" },
-        ...(canCompose ? [{ id: "compose" as Tab, label: "Написати" }] : []),
+        { id: "inbox" as Tab, label: t('notif.tab.inbox') },
+        ...(canCompose ? [{ id: "compose" as Tab, label: t('notif.tab.compose') }] : []),
     ];
 
     return (
         <div className="min-h-screen bg-background text-text-primary flex flex-col" data-native-inner="true">
             {/* ─── HEADER ─── */}
             <GlassPageHeader
-                title={showSettings ? "Налаштування" : "Сповіщення"}
+                title={showSettings ? t('notif.settings') : t('notif.title')}
                 tabs={!showSettings ? availableTabs.map(t => t.label) : undefined}
                 activeTab={availableTabs.findIndex(t => t.id === activeTab)}
                 onTabChange={(index) => setActiveTab(availableTabs[index].id)}
@@ -194,8 +196,8 @@ export default function NotificationsPage() {
                         <div className="p-4 bg-surface rounded-2xl card-shadow">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="font-bold text-text-primary">Пуш-сповіщення</p>
-                                    <p className="text-xs text-text-secondary mt-1">Отримувати сповіщення на цей пристрій</p>
+                                    <p className="font-bold text-text-primary">{t('notif.push.label')}</p>
+                                    <p className="text-xs text-text-secondary mt-1">{t('notif.push.description')}</p>
                                 </div>
                                 {isPreferenceEnabled ? (
                                     <button
@@ -219,24 +221,24 @@ export default function NotificationsPage() {
                             {!isSupported && (
                                 <p className="text-xs text-red-400 mt-3">
                                     {Capacitor.isNativePlatform()
-                                        ? "Ваш пристрій не підтримує пуш-сповіщення"
-                                        : "Ваш пристрій або браузер не підтримує пуш-сповіщення"}
+                                        ? t('notif.push.not_supported_ios')
+                                        : t('notif.push.not_supported_other')}
                                 </p>
                             )}
 
                             {permissionStatus === "denied" && (
                                 <div className="mt-3 p-3 bg-amber-500/10 rounded-xl space-y-1">
                                     <p className="text-xs text-amber-400 font-medium">
-                                        Сповіщення заблоковані в налаштуваннях пристрою
+                                        {t('notif.push.blocked_label')}
                                     </p>
                                     <p className="text-[11px] text-text-secondary">
                                         {/iPad|iPhone|iPod/.test(navigator.userAgent) && Capacitor.isNativePlatform()
-                                            ? "Налаштування → MyChoir → Сповіщення → Увімкнути"
+                                            ? t('notif.push.enable_ios')
                                             : /iPad|iPhone|iPod/.test(navigator.userAgent)
-                                                ? "Налаштування → Safari → Сповіщення → MyChoir → Дозволити"
+                                                ? t('notif.push.enable_safari')
                                                 : Capacitor.isNativePlatform()
-                                                    ? "Налаштування вашого пристрою → Додатки → MyChoir → Дозволити сповіщення"
-                                                    : "Відкрийте налаштування браузера для цього сайту і дозвольте сповіщення."}
+                                                    ? t('notif.push.enable_android')
+                                                    : t('notif.push.enable_browser')}
                                     </p>
                                 </div>
                             )}
@@ -254,7 +256,7 @@ export default function NotificationsPage() {
                         ) : notifications.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-20 text-text-secondary">
                                 <BellOff className="w-12 h-12 mb-3 opacity-20" />
-                                <p className="text-sm">Немає сповіщень</p>
+                                <p className="text-sm">{t('notif.empty')}</p>
                             </div>
                         ) : (
                             <div className="space-y-3">
@@ -263,13 +265,13 @@ export default function NotificationsPage() {
                                         {/* Delete confirmation overlay */}
                                         {confirmDeleteId === n.id && (
                                             <div className="absolute inset-0 bg-surface/95 backdrop-blur-sm rounded-2xl flex items-center justify-center gap-3 z-10 p-4">
-                                                <span className="text-sm text-text-primary font-medium">Видалити?</span>
+                                                <span className="text-sm text-text-primary font-medium">{t('notif.delete_confirm')}</span>
                                                 <button
                                                     onClick={() => handleDelete(n.id)}
                                                     disabled={deletingId === n.id}
                                                     className="px-4 py-2 bg-red-500 text-white text-sm font-bold rounded-xl hover:bg-red-600 transition-colors active:scale-95 min-w-[60px] flex items-center justify-center"
                                                 >
-                                                    {deletingId === n.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Так"}
+                                                    {deletingId === n.id ? <Loader2 className="w-4 h-4 animate-spin" /> : t('notif.yes')}
                                                 </button>
                                                 <button
                                                     onClick={() => setConfirmDeleteId(null)}
@@ -312,8 +314,8 @@ export default function NotificationsPage() {
                                         {/* Voting Buttons */}
                                         {n.enableVoting && n.serviceId && (() => {
                                             const service = services.find(s => s.id === n.serviceId);
-                                            if (!service) return <p className="text-xs text-text-secondary/60 italic mt-3">Служіння видалено або не знайдено</p>;
-                                            if (service.isFinalized) return <p className="text-xs text-text-secondary/60 italic mt-3">Служіння закрито (статистика збережена)</p>;
+                                            if (!service) return <p className="text-xs text-text-secondary/60 italic mt-3">{t('notif.service_deleted')}</p>;
+                                            if (service.isFinalized) return <p className="text-xs text-text-secondary/60 italic mt-3">{t('notif.service_closed')}</p>;
 
                                             const isPresent = userData?.id ? service.confirmedMembers?.includes(userData.id) : false;
                                             const isAbsent = userData?.id ? service.absentMembers?.includes(userData.id) : false;
@@ -336,7 +338,7 @@ export default function NotificationsPage() {
                                                                 }`}
                                                         >
                                                             {votingServiceId === n.serviceId && !isPresent && !isAbsent
-                                                                ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Буду"}
+                                                                ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : t('notif.vote.will')}
                                                         </button>
                                                         <button
                                                             onClick={() => { if (!isAbsent) handleVote(n.serviceId!, "absent"); }}
@@ -347,7 +349,7 @@ export default function NotificationsPage() {
                                                                 }`}
                                                         >
                                                             {votingServiceId === n.serviceId && !isPresent && !isAbsent
-                                                                ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Не буду"}
+                                                                ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : t('notif.vote.wont')}
                                                         </button>
                                                     </div>
                                                 </div>
@@ -355,7 +357,7 @@ export default function NotificationsPage() {
                                         })()}
 
                                         <div className="mt-3 flex items-center justify-between">
-                                            <span className="text-[10px] text-text-secondary/50">Від: {n.senderName}</span>
+                                            <span className="text-[10px] text-text-secondary/50">{t('notif.from')} {n.senderName}</span>
                                         </div>
                                     </div>
                                 ))}
@@ -369,12 +371,12 @@ export default function NotificationsPage() {
                     <div className="space-y-4 animate-in fade-in duration-200">
                         <div>
                             <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                                Текст повідомлення
+                                {t('notif.compose.text_label')}
                             </label>
                             <textarea
                                 value={body}
                                 onChange={e => setBody(e.target.value)}
-                                placeholder="Введіть текст..."
+                                placeholder={t('notif.compose.text_placeholder')}
                                 rows={4}
                                 className="w-full px-4 py-3 bg-surface border border-border rounded-xl text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-accent/30 resize-none"
                             />
@@ -382,11 +384,11 @@ export default function NotificationsPage() {
 
                         <div>
                             <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                                Прив'язати до служіння (Опитування)
+                                {t('notif.compose.link_service')}
                             </label>
                             {loadingServices ? (
                                 <div className="w-full px-4 py-3 bg-surface border border-border rounded-xl text-text-secondary flex items-center gap-2">
-                                    <Loader2 className="w-4 h-4 animate-spin" /> Завантаження...
+                                    <Loader2 className="w-4 h-4 animate-spin" /> {t('notif.compose.loading')}
                                 </div>
                             ) : (
                                 <select
@@ -397,7 +399,7 @@ export default function NotificationsPage() {
                                     }}
                                     className="w-full px-4 py-3 bg-surface border border-border rounded-xl text-text-primary focus:outline-none focus:border-accent/30 appearance-none"
                                 >
-                                    <option value="">Без прив'язки</option>
+                                    <option value="">{t('notif.compose.no_link')}</option>
                                     {services.map(s => {
                                         const [y, m, d] = s.date.split("-").map(Number);
                                         return (
@@ -420,8 +422,8 @@ export default function NotificationsPage() {
                                     className="w-5 h-5 rounded border-border text-primary focus:ring-primary focus:ring-offset-surface bg-background"
                                 />
                                 <label htmlFor="enableVotingToggle" className="text-sm font-medium text-text-primary cursor-pointer select-none">
-                                    Додати кнопки голосування <br />
-                                    <span className="text-xs text-text-secondary font-normal">("Буду" / "Не буду")</span>
+                                    {t('notif.compose.add_voting')} <br />
+                                    <span className="text-xs text-text-secondary font-normal">{t('notif.compose.voting_hint')}</span>
                                 </label>
                             </div>
                         )}
@@ -432,7 +434,7 @@ export default function NotificationsPage() {
                             className="w-full py-3.5 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-base"
                         >
                             {sendLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                            Надіслати
+                            {t('notif.compose.send')}
                         </button>
                     </div>
                 )}

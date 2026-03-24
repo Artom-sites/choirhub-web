@@ -9,6 +9,7 @@ import {
 import { Trash2, RotateCcw, X, Clock, AlertTriangle, Music, Calendar } from "lucide-react";
 import ConfirmationModal from "./ConfirmationModal";
 import GlassPageHeader from "./GlassPageHeader";
+import { useTranslation } from "@/contexts/TranslationContext";
 
 interface TrashBinProps {
     choirId: string;
@@ -27,6 +28,8 @@ export default function TrashBin({ choirId, onClose, onRestore, initialFilter = 
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [confirmDelete, setConfirmDelete] = useState<{ id: string; type: 'service' | 'song' } | null>(null);
+
+    const { t, language } = useTranslation();
 
     const DAYS_TO_KEEP = 7;
 
@@ -121,9 +124,9 @@ export default function TrashBin({ choirId, onClose, onRestore, initialFilter = 
         <div className="fixed inset-0 z-[70] bg-background flex flex-col animate-in slide-in-from-bottom duration-300" data-native-inner="true">
             {/* Header */}
             <GlassPageHeader
-                title="Корзина"
+                title={t('trash.title')}
                 onBack={onClose}
-                tabs={['Всі', 'Служіння', 'Пісні']}
+                tabs={[t('trash.tabs.all'), t('trash.tabs.services'), t('trash.tabs.songs')]}
                 activeTab={activeFilter === 'all' ? 0 : activeFilter === 'service' ? 1 : 2}
                 onTabChange={(index) => {
                     if (index === 0) setActiveFilter('all');
@@ -139,20 +142,20 @@ export default function TrashBin({ choirId, onClose, onRestore, initialFilter = 
                 <div className="max-w-lg mx-auto space-y-3">
                     {loading ? (
                         <div className="text-center py-12 text-text-secondary">
-                            Завантаження...
+                            {t('global.state.loading')}
                         </div>
                     ) : filteredItems.length === 0 ? (
                         <div className="text-center py-12">
                             <Trash2 className="w-12 h-12 mx-auto mb-4 text-text-secondary opacity-50" />
-                            <p className="text-text-primary font-medium">Корзина порожня</p>
+                            <p className="text-text-primary font-medium">{t('trash.empty_title')}</p>
                             <p className="text-sm text-text-secondary mt-1">
-                                Видалені елементи зберігаються тут {DAYS_TO_KEEP} днів
+                                {t('trash.empty_info', { days: DAYS_TO_KEEP })}
                             </p>
                         </div>
                     ) : (
                         <>
                             <p className="text-xs text-text-secondary text-center mb-4">
-                                Елементи автоматично видаляються через {DAYS_TO_KEEP} днів
+                                {t('trash.auto_delete_info', { days: DAYS_TO_KEEP })}
                             </p>
                             {filteredItems.map(item => {
                                 const daysLeft = getDaysRemaining(item.data.deletedAt!);
@@ -169,11 +172,11 @@ export default function TrashBin({ choirId, onClose, onRestore, initialFilter = 
                                                 <div className="flex items-center gap-2 mb-1">
                                                     {isService ? (
                                                         <span className="bg-blue-500/10 text-blue-400 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 w-fit">
-                                                            <Calendar className="w-3 h-3" /> Служіння
+                                                            <Calendar className="w-3 h-3" /> {t('trash.item.service')}
                                                         </span>
                                                     ) : (
                                                         <span className="bg-emerald-500/10 text-emerald-400 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 w-fit">
-                                                            <Music className="w-3 h-3" /> Пісня
+                                                            <Music className="w-3 h-3" /> {t('trash.item.song')}
                                                         </span>
                                                     )}
                                                 </div>
@@ -182,7 +185,7 @@ export default function TrashBin({ choirId, onClose, onRestore, initialFilter = 
                                                 </h3>
                                                 {isService && 'date' in data && (
                                                     <p className="text-sm text-text-secondary">
-                                                        {new Date(data.date).toLocaleDateString('uk-UA', {
+                                                        {new Date(data.date).toLocaleDateString(language === 'uk' ? 'uk-UA' : language === 'ru' ? 'ru-RU' : language === 'de' ? 'de-DE' : 'en-US', {
                                                             day: 'numeric',
                                                             month: 'long',
                                                             year: 'numeric'
@@ -193,8 +196,8 @@ export default function TrashBin({ choirId, onClose, onRestore, initialFilter = 
                                                 <div className={`flex items-center gap-1 mt-2 text-xs ${isExpiring ? 'text-orange-400' : 'text-text-secondary'}`}>
                                                     <Clock className="w-3 h-3" />
                                                     {daysLeft === 0
-                                                        ? "Буде видалено сьогодні"
-                                                        : `Залишилось ${daysLeft} дн.`
+                                                        ? t('trash.deleted_today')
+                                                        : t('trash.days_left', { days: daysLeft })
                                                     }
                                                 </div>
                                             </div>
@@ -203,7 +206,7 @@ export default function TrashBin({ choirId, onClose, onRestore, initialFilter = 
                                                     onClick={() => handleRestore(data.id, item.type)}
                                                     disabled={actionLoading === data.id}
                                                     className="p-3 bg-green-500/10 text-green-400 rounded-xl hover:bg-green-500/20 transition-colors disabled:opacity-50"
-                                                    title="Відновити"
+                                                    title={t('trash.actions.restore')}
                                                 >
                                                     <RotateCcw className="w-5 h-5" />
                                                 </button>
@@ -211,7 +214,7 @@ export default function TrashBin({ choirId, onClose, onRestore, initialFilter = 
                                                     onClick={() => setConfirmDelete({ id: data.id, type: item.type })}
                                                     disabled={actionLoading === data.id}
                                                     className="p-3 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 transition-colors disabled:opacity-50"
-                                                    title="Видалити назавжди"
+                                                    title={t('trash.actions.delete_forever')}
                                                 >
                                                     <Trash2 className="w-5 h-5" />
                                                 </button>
@@ -221,7 +224,7 @@ export default function TrashBin({ choirId, onClose, onRestore, initialFilter = 
                                             isService && 'songs' in data && (data.songs || []).length > 0 && (
                                                 <div className="mt-3 pt-3 border-t border-border">
                                                     <p className="text-xs text-text-secondary">
-                                                        {(data.songs || []).length} {(data.songs || []).length === 1 ? 'пісня' : (data.songs || []).length < 5 ? 'пісні' : 'пісень'}
+                                                        {t('services.item.songsCount', { count: (data.songs || []).length })}
                                                     </p>
                                                 </div>
                                             )
@@ -237,9 +240,9 @@ export default function TrashBin({ choirId, onClose, onRestore, initialFilter = 
             {/* Confirmation Modal */}
             <ConfirmationModal
                 isOpen={!!confirmDelete}
-                title="Видалити назавжди?"
-                message="Цей елемент буде видалено без можливості відновлення."
-                confirmLabel="Видалити"
+                title={t('trash.confirm.title')}
+                message={t('trash.confirm.message')}
+                confirmLabel={t('global.actions.delete')}
                 isDestructive
                 onConfirm={() => confirmDelete && handlePermanentDelete(confirmDelete.id, confirmDelete.type)}
                 onClose={() => setConfirmDelete(null)}

@@ -5,6 +5,7 @@ import { AlertTriangle, Trash2 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { Dialog } from "@capacitor/dialog";
 import { hapticLight, hapticSuccess, hapticWarning } from "../hooks/useHaptics";
+import { useTranslation } from "@/contexts/TranslationContext";
 
 if (typeof window !== "undefined") {
     (window as any).__destructiveConfirmCallback = (id: string, value: boolean) => {
@@ -33,10 +34,14 @@ export default function ConfirmationModal({
     onConfirm,
     title,
     message,
-    confirmLabel = "Підтвердити",
-    cancelLabel = "Скасувати",
+    confirmLabel,
+    cancelLabel,
     isDestructive = false
 }: ConfirmationModalProps) {
+    const { t } = useTranslation();
+    const finalConfirmLabel = confirmLabel || t('common.confirm');
+    const finalCancelLabel = cancelLabel || t('common.cancel');
+
     const [isNativeRendering, setIsNativeRendering] = useState(false);
     
     // Use refs for callbacks to prevent re-triggering Native Dialog on re-renders
@@ -53,7 +58,7 @@ export default function ConfirmationModal({
             setIsNativeRendering(true);
             hapticLight();
             
-            let messageStr = "Ви впевнені, що хочете виконати цю дію?";
+            let messageStr = t('common.are_you_sure');
             if (typeof message === 'string') {
                 messageStr = message;
             } else if (message && typeof (message as any).props?.children === 'string') {
@@ -74,8 +79,8 @@ export default function ConfirmationModal({
                 (window as any).webkit.messageHandlers.destructiveConfirm.postMessage({
                     title,
                     message: messageStr,
-                    okButtonTitle: confirmLabel,
-                    cancelButtonTitle: cancelLabel,
+                    okButtonTitle: finalConfirmLabel,
+                    cancelButtonTitle: finalCancelLabel,
                     callbackId
                 });
                 return;
@@ -84,8 +89,8 @@ export default function ConfirmationModal({
             Dialog.confirm({
                 title,
                 message: messageStr,
-                okButtonTitle: confirmLabel,
-                cancelButtonTitle: cancelLabel
+                okButtonTitle: finalConfirmLabel,
+                cancelButtonTitle: finalCancelLabel
             }).then(({ value }) => {
                 if (value) {
                     if (isDestructive) hapticWarning();
@@ -139,13 +144,13 @@ export default function ConfirmationModal({
                             }`}
                     >
                         {isDestructive && <Trash2 className="w-4 h-4" />}
-                        {confirmLabel}
+                        {finalConfirmLabel}
                     </button>
                     <button
                         onClick={onClose}
                         className="w-full py-4 bg-surface-highlight border border-border text-text-primary rounded-2xl hover:bg-surface-highlight/80 transition-colors font-medium"
                     >
-                        {cancelLabel}
+                        {finalCancelLabel}
                     </button>
                 </div>
             </div>

@@ -878,8 +878,8 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                             <div className="flex items-center gap-2">
                                 <p className="text-2xl font-bold text-text-primary tracking-tight">
                                     {searchQuery || activeFiltersCount > 0
-                                        ? `${filteredSongs.length} знайдено`
-                                        : `${totalSongsCount} пісень`}
+                                    ? `${filteredSongs.length}`
+                                    : t('services.item.songsCount', { count: totalSongsCount })}
                                 </p>
                                 {loading && (
                                     <Loader2 className="w-4 h-4 text-primary animate-spin" />
@@ -937,7 +937,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                         setSelectedTheme(null);
                                     }}
                                     searchInput={{
-                                        placeholder: "Пошук в архіві...",
+                                        placeholder: t('search.archive_placeholder'),
                                         value: searchQuery,
                                         onChange: setSearchQuery,
                                         autoFocus: true
@@ -946,7 +946,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                         {
                                             items: CATEGORIES.map(cat => ({
                                                 id: `cat:${cat.id}`,
-                                                label: cat.label,
+                                                label: t(`global.categories.${cat.id}` as any),
                                                 isActive: selectedCategory === cat.id,
                                                 children: SUBCATEGORIES[cat.id]?.map(sub => ({
                                                     id: `sub:${sub.id}`,
@@ -957,10 +957,10 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                         },
                                         {
                                             items: [
-                                                { id: 'lang:all', label: 'Всі', isActive: selectedLanguage === 'all' },
-                                                { id: 'lang:ukr', label: '🇺🇦 Українська', isActive: selectedLanguage === 'ukr' },
-                                                { id: 'lang:rus', label: '🇷🇺 Російська', isActive: selectedLanguage === 'rus' },
-                                                { id: 'lang:eng', label: '🌍 Англійська', isActive: selectedLanguage === 'eng' },
+                                                { id: 'lang:all', label: t('global.categories.all'), isActive: selectedLanguage === 'all' },
+                                                { id: 'lang:ukr', label: `🇺🇦 ${t('global.lang_ukr')}`, isActive: selectedLanguage === 'ukr' },
+                                                { id: 'lang:rus', label: `🇷🇺 ${t('global.lang_rus')}`, isActive: selectedLanguage === 'rus' },
+                                                { id: 'lang:eng', label: `🌍 ${t('global.lang_eng')}`, isActive: selectedLanguage === 'eng' },
                                             ]
                                         }
                                     ]}
@@ -991,7 +991,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                             </div>
                                         ) : (
                                             <div className="space-y-0 mt-2">
-                                                <p className="text-xs text-text-secondary my-2">{filteredSongs.length} {filteredSongs.length === 1 ? 'пісня' : 'пісень'}</p>
+                                                <p className="text-xs text-text-secondary my-2">{t('services.item.songsCount', { count: filteredSongs.length })}</p>
                                                 {filteredSongs.slice(0, 50).map(song => (
                                                     <div
                                                         key={`search-${song.id}`}
@@ -1447,7 +1447,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                         onClick={() => setShowSubmitModal(true)}
                         className="app-fab fixed w-14 h-14 bg-primary text-background rounded-full shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40 right-4"
                         style={{ bottom: 'var(--fab-bottom)' }}
-                        title="Запропонувати пісню"
+                        title={t('submit_song.title')}
                     >
                         <Plus className="w-7 h-7" />
                     </button>

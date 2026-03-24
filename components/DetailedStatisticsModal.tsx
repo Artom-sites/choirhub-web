@@ -4,6 +4,7 @@ import { X, Calendar, Users, TrendingUp, TrendingDown, Filter, Mic2, Trophy, Ale
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 import { Choir } from "@/types";
 import { getFirstNameInitial } from "@/lib/utils";
+import { useTranslation } from "@/contexts/TranslationContext";
 import GlassPageHeader from "./GlassPageHeader";
 
 interface AttendanceTrendEntry {
@@ -35,6 +36,7 @@ export default function DetailedStatisticsModal({
     attendanceTrend,
     memberStats
 }: DetailedStatisticsModalProps) {
+    const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState<'services' | 'members'>('services');
 
     const sortedServices = useMemo(() => {
@@ -118,10 +120,10 @@ export default function DetailedStatisticsModal({
         });
 
         return [
-            { name: 'Сопрано', key: 'Soprano', pct: groups.Soprano.total > 0 ? Math.round((groups.Soprano.present / groups.Soprano.total) * 100) : 0, color: '#f472b6' },
-            { name: 'Альт', key: 'Alto', pct: groups.Alto.total > 0 ? Math.round((groups.Alto.present / groups.Alto.total) * 100) : 0, color: '#c084fc' },
-            { name: 'Тенор', key: 'Tenor', pct: groups.Tenor.total > 0 ? Math.round((groups.Tenor.present / groups.Tenor.total) * 100) : 0, color: '#60a5fa' },
-            { name: 'Бас', key: 'Bass', pct: groups.Bass.total > 0 ? Math.round((groups.Bass.present / groups.Bass.total) * 100) : 0, color: '#4ade80' },
+            { name: t('stats.voice.soprano'), key: 'Soprano', pct: groups.Soprano.total > 0 ? Math.round((groups.Soprano.present / groups.Soprano.total) * 100) : 0, color: '#f472b6' },
+            { name: t('stats.voice.alto'), key: 'Alto', pct: groups.Alto.total > 0 ? Math.round((groups.Alto.present / groups.Alto.total) * 100) : 0, color: '#c084fc' },
+            { name: t('stats.voice.tenor'), key: 'Tenor', pct: groups.Tenor.total > 0 ? Math.round((groups.Tenor.present / groups.Tenor.total) * 100) : 0, color: '#60a5fa' },
+            { name: t('stats.voice.bass'), key: 'Bass', pct: groups.Bass.total > 0 ? Math.round((groups.Bass.present / groups.Bass.total) * 100) : 0, color: '#4ade80' },
         ].filter(g => g.pct > 0);
     }, [choir.members, memberStats]);
 
@@ -163,7 +165,7 @@ export default function DetailedStatisticsModal({
             .sort(([a], [b]) => a.localeCompare(b))
             .map(([key, val]) => {
                 const [y, m] = key.split('-');
-                const monthNames = ['Січ', 'Лют', 'Бер', 'Кві', 'Тра', 'Чер', 'Лип', 'Сер', 'Вер', 'Жов', 'Лис', 'Гру'];
+                const monthNames = [t('stats.detailed.month.jan'), t('stats.detailed.month.feb'), t('stats.detailed.month.mar'), t('stats.detailed.month.apr'), t('stats.detailed.month.may'), t('stats.detailed.month.jun'), t('stats.detailed.month.jul'), t('stats.detailed.month.aug'), t('stats.detailed.month.sep'), t('stats.detailed.month.oct'), t('stats.detailed.month.nov'), t('stats.detailed.month.dec')];
                 return {
                     name: `${monthNames[parseInt(m) - 1]} '${y.slice(2)}`,
                     pct: Math.round(val.sum / val.count),
@@ -189,9 +191,9 @@ export default function DetailedStatisticsModal({
     return (
         <div className="fixed inset-0 z-[70] bg-background flex flex-col animate-in slide-in-from-bottom duration-300" data-native-inner="true">
             <GlassPageHeader
-                title="Детальна аналітика"
+                title={t('stats.detailed.title')}
                 onBack={onClose}
-                tabs={['Служіння', 'Хористи']}
+                tabs={[t('stats.detailed.tab.services'), t('stats.detailed.tab.members')]}
                 activeTab={activeTab === 'services' ? 0 : 1}
                 onTabChange={(index) => setActiveTab(index === 0 ? 'services' : 'members')}
             />
@@ -206,7 +208,7 @@ export default function DetailedStatisticsModal({
                                         <div className="w-8 h-8 rounded-xl bg-orange-500/10 flex items-center justify-center">
                                             <TrendingUp className="w-4 h-4 text-orange-400" />
                                         </div>
-                                        Графік
+                                        {t('stats.chart')}
                                     </h3>
                                     <div className="flex bg-surface-highlight rounded-lg p-1">
                                         {(['1m', '3m', '6m', 'all'] as const).map(f => (
@@ -215,7 +217,7 @@ export default function DetailedStatisticsModal({
                                                 onClick={() => setTimeFilter(f)}
                                                 className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${timeFilter === f ? 'bg-surface shadow-sm text-text-primary' : 'text-text-secondary hover:text-text-primary'}`}
                                             >
-                                                {f === '1m' ? '1 міс' : f === '3m' ? '3 міс' : f === '6m' ? '6 міс' : 'Усі'}
+                                                {f === '1m' ? t('stats.detailed.filter.1m') : f === '3m' ? t('stats.detailed.filter.3m') : f === '6m' ? t('stats.detailed.filter.6m') : t('stats.detailed.filter.all')}
                                             </button>
                                         ))}
                                     </div>
@@ -281,7 +283,7 @@ export default function DetailedStatisticsModal({
                                                         }}
                                                         itemStyle={{ color: 'var(--text-secondary)' }}
                                                         labelStyle={{ color: 'var(--text-primary)', fontWeight: 'bold', marginBottom: '4px' }}
-                                                        formatter={(value: any) => [`${value}%`, 'Явка']}
+                                                        formatter={(value: any) => [`${value}%`, t('stats.attendance_label')]}
                                                     />
                                                     <Area
                                                         type="monotone"
@@ -309,7 +311,7 @@ export default function DetailedStatisticsModal({
                                         <div className="w-7 h-7 rounded-lg bg-green-500/10 flex items-center justify-center">
                                             <Trophy className="w-3.5 h-3.5 text-green-400" />
                                         </div>
-                                        <span className="text-xs text-text-secondary font-medium">Найкраща</span>
+                                        <span className="text-xs text-text-secondary font-medium">{t('stats.detailed.best')}</span>
                                     </div>
                                     <p className="text-2xl font-bold text-green-400">{records.best.percentage}%</p>
                                     <p className="text-[11px] text-text-secondary mt-0.5">
@@ -324,7 +326,7 @@ export default function DetailedStatisticsModal({
                                         <div className="w-7 h-7 rounded-lg bg-red-500/10 flex items-center justify-center">
                                             <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
                                         </div>
-                                        <span className="text-xs text-text-secondary font-medium">Найгірша</span>
+                                        <span className="text-xs text-text-secondary font-medium">{t('stats.detailed.worst')}</span>
                                     </div>
                                     <p className="text-2xl font-bold text-red-400">{records.worst.percentage}%</p>
                                     <p className="text-[11px] text-text-secondary mt-0.5">
@@ -341,7 +343,7 @@ export default function DetailedStatisticsModal({
                         {trendInfo && (
                             <div className="bg-surface border border-border rounded-2xl p-4 flex items-center justify-between">
                                 <div>
-                                    <p className="text-xs text-text-secondary font-medium mb-1">Тренд (останні 5 вс попередні 5)</p>
+                                    <p className="text-xs text-text-secondary font-medium mb-1">{t('stats.detailed.trend_label')}</p>
                                     <p className="text-sm text-text-secondary">
                                         {trendInfo.avgPrev}% → {trendInfo.avgLast}%
                                     </p>
@@ -365,7 +367,7 @@ export default function DetailedStatisticsModal({
                                     <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center">
                                         <Calendar className="w-4 h-4 text-blue-400" />
                                     </div>
-                                    Середня явка по місяцях
+                                    {t('stats.detailed.monthly_avg')}
                                 </h3>
                                 <div className="h-48 w-full -ml-4">
                                     <ResponsiveContainer width="100%" height="100%">
@@ -398,7 +400,7 @@ export default function DetailedStatisticsModal({
                                                 }}
                                                 itemStyle={{ color: 'var(--text-secondary)' }}
                                                 labelStyle={{ color: 'var(--text-primary)', fontWeight: 'bold', marginBottom: '4px' }}
-                                                formatter={(value: any) => [`${value}%`, 'Середня явка']}
+                                                formatter={(value: any) => [`${value}%`, t('stats.detailed.monthly_avg')]}
                                             />
                                             <Bar dataKey="pct" radius={[6, 6, 0, 0]} maxBarSize={40} fill="var(--primary)" />
                                         </BarChart>
@@ -412,7 +414,7 @@ export default function DetailedStatisticsModal({
                                 <div className="w-8 h-8 rounded-xl bg-orange-500/10 flex items-center justify-center">
                                     <Calendar className="w-4 h-4 text-orange-400" />
                                 </div>
-                                Хронологія служінь
+                                {t('stats.detailed.timeline')}
                             </h3>
                             {sortedServices.map((service, idx) => (
                                 <div key={idx} className="bg-surface border border-border rounded-2xl p-4 flex items-center justify-between">
@@ -423,19 +425,19 @@ export default function DetailedStatisticsModal({
                                                 return new Date(y, m - 1, d).toLocaleDateString('uk-UA', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
                                             })()}
                                         </div>
-                                        <div className="text-sm text-text-secondary mt-1">Присутні: {service.present} з {service.total}</div>
+                                        <div className="text-sm text-text-secondary mt-1">{t('stats.detailed.present')}: {service.present} {t('stats.detailed.from')} {service.total}</div>
                                     </div>
                                     <div className="text-right">
                                         <div className={`text-xl font-bold ${service.percentage >= 70 ? 'text-green-400' : service.percentage >= 40 ? 'text-orange-400' : 'text-danger'}`}>
                                             {service.percentage}%
                                         </div>
-                                        <div className="text-[10px] text-text-secondary uppercase tracking-wider">Явка</div>
+                                        <div className="text-[10px] text-text-secondary uppercase tracking-wider">{t('stats.attendance_label')}</div>
                                     </div>
                                 </div>
                             ))}
                             {sortedServices.length === 0 && (
                                 <div className="text-center py-12 text-text-secondary">
-                                    У вас ще немає збережених служінь із зазначеною відвідуваністю.
+                                    {t('stats.detailed.no_services')}
                                 </div>
                             )}
                         </div>
@@ -450,7 +452,7 @@ export default function DetailedStatisticsModal({
                                     <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center">
                                         <Mic2 className="w-4 h-4 text-purple-400" />
                                     </div>
-                                    Відвідуваність по партіям
+                                    {t('stats.detailed.attendance_by_voice')}
                                 </h3>
                                 <div className="h-56 w-full -ml-4">
                                     <ResponsiveContainer width="100%" height="100%">
@@ -483,7 +485,7 @@ export default function DetailedStatisticsModal({
                                                 }}
                                                 itemStyle={{ color: 'var(--text-secondary)' }}
                                                 labelStyle={{ color: 'var(--text-primary)', fontWeight: 'bold', marginBottom: '4px' }}
-                                                formatter={(value: any) => [`${value}%`, 'Середня явка']}
+                                                formatter={(value: any) => [`${value}%`, t('stats.detailed.monthly_avg')]}
                                             />
                                             <Bar dataKey="pct" radius={[6, 6, 0, 0]} maxBarSize={50}>
                                                 {voiceGroupStats.map((entry, index) => (
@@ -502,17 +504,17 @@ export default function DetailedStatisticsModal({
                                 <div className="bg-surface border border-border rounded-2xl p-3 text-center">
                                     <div className="w-3 h-3 rounded-full bg-green-400 mx-auto mb-2"></div>
                                     <p className="text-xl font-bold text-green-400">{activityCategories.active.length}</p>
-                                    <p className="text-[10px] text-text-secondary uppercase tracking-wider mt-0.5">Активні (&gt;70%)</p>
+                                    <p className="text-[10px] text-text-secondary uppercase tracking-wider mt-0.5">{t('stats.detailed.active')} (&gt;70%)</p>
                                 </div>
                                 <div className="bg-surface border border-border rounded-2xl p-3 text-center">
                                     <div className="w-3 h-3 rounded-full bg-orange-400 mx-auto mb-2"></div>
                                     <p className="text-xl font-bold text-orange-400">{activityCategories.atRisk.length}</p>
-                                    <p className="text-[10px] text-text-secondary uppercase tracking-wider mt-0.5">Під ризиком</p>
+                                    <p className="text-[10px] text-text-secondary uppercase tracking-wider mt-0.5">{t('stats.detailed.at_risk')}</p>
                                 </div>
                                 <div className="bg-surface border border-border rounded-2xl p-3 text-center">
                                     <div className="w-3 h-3 rounded-full bg-red-400 mx-auto mb-2"></div>
                                     <p className="text-xl font-bold text-red-400">{activityCategories.inactive.length}</p>
-                                    <p className="text-[10px] text-text-secondary uppercase tracking-wider mt-0.5">Неактивні</p>
+                                    <p className="text-[10px] text-text-secondary uppercase tracking-wider mt-0.5">{t('stats.detailed.inactive')}</p>
                                 </div>
                             </div>
                         )}
@@ -522,7 +524,7 @@ export default function DetailedStatisticsModal({
                                 <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center">
                                     <Users className="w-4 h-4 text-blue-400" />
                                 </div>
-                                Персональний рейтинг
+                                {t('stats.detailed.personal_rating')}
                             </h3>
                             {sortedMembers.map(member => (
                                 <div key={member.id} className="bg-surface border border-border rounded-2xl p-4 flex items-center gap-3">
@@ -536,7 +538,7 @@ export default function DetailedStatisticsModal({
                                             {member.stats.servicesWithRecord > 0 && (
                                                 <>
                                                     <span className="w-1 h-1 rounded-full bg-border"></span>
-                                                    <span>Був(-ла) на {member.stats.presentCount} з {member.stats.servicesWithRecord}</span>
+                                                    <span>{t('stats.detailed.attended')} {member.stats.presentCount} {t('stats.detailed.from')} {member.stats.servicesWithRecord}</span>
                                                 </>
                                             )}
                                         </div>

@@ -5,6 +5,7 @@ import { X, Plus, Trash2, Calendar, Clock, Mic2, AlertCircle, Loader2, Save, Che
 import { RecurringSchedule, RecurringRule, ChoirMember } from "@/types";
 import { getRecurringSchedule, saveRecurringSchedule, getChoir } from "@/lib/db";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "@/contexts/TranslationContext";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface RecurringScheduleModalProps {
@@ -13,10 +14,11 @@ interface RecurringScheduleModalProps {
     choirId: string;
 }
 
-const DAYS_UK = ["Нд", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
 
 export default function RecurringScheduleModal({ isOpen, onClose, choirId }: RecurringScheduleModalProps) {
     const { user, refreshProfile } = useAuth();
+    const { t } = useTranslation();
+    const DAYS = t('schedule.days').split(',');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [rules, setRules] = useState<RecurringRule[]>([]);
@@ -89,13 +91,13 @@ export default function RecurringScheduleModal({ isOpen, onClose, choirId }: Rec
             
             if (error?.code === 'permission-denied') {
                 await Dialog.alert({
-                    title: "Доступ обмежено",
-                    message: "Система не змогла підтвердити ваші права на зміну розкладу. Спробуйте оновити сторінку або перезайдіть в акаунт."
+                    title: t('schedule.error.access_title'),
+                    message: t('schedule.error.access_msg')
                 });
             } else {
                 await Dialog.alert({
-                    title: "Помилка",
-                    message: "Не вдалося зберегти розклад. Перевірте з'єднання з інтернетом."
+                    title: t('schedule.error.save_title'),
+                    message: t('schedule.error.save_msg')
                 });
             }
         } finally {
@@ -108,7 +110,7 @@ export default function RecurringScheduleModal({ isOpen, onClose, choirId }: Rec
         const newRule: RecurringRule = {
             id: newId,
             type: 'rehearsal',
-            title: 'Співанка',
+            title: t('schedule.default_title.rehearsal'),
             dayOfWeek: 2, // Tuesday
             time: '18:00',
             enabled: true,
@@ -152,8 +154,8 @@ export default function RecurringScheduleModal({ isOpen, onClose, choirId }: Rec
                 {/* Header */}
                 <div className="p-6 border-b border-border flex justify-between items-center">
                     <div>
-                        <h3 className="text-xl font-bold text-text-primary">Регулярні події</h3>
-                        <p className="text-sm text-text-secondary mt-1">Автоматичне створення розкладу</p>
+                        <h3 className="text-xl font-bold text-text-primary">{t('schedule.title')}</h3>
+                        <p className="text-sm text-text-secondary mt-1">{t('schedule.subtitle')}</p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-surface-highlight rounded-full transition-colors">
                         <X className="w-6 h-6 text-text-secondary" />
@@ -165,7 +167,7 @@ export default function RecurringScheduleModal({ isOpen, onClose, choirId }: Rec
                     {loading ? (
                         <div className="py-20 flex flex-col items-center justify-center gap-3">
                             <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                            <p className="text-text-secondary text-sm">Завантаження розкладу...</p>
+                            <p className="text-text-secondary text-sm">{t('schedule.loading')}</p>
                         </div>
                     ) : (
                         <>
@@ -176,8 +178,8 @@ export default function RecurringScheduleModal({ isOpen, onClose, choirId }: Rec
                                         <Settings className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <span className="font-bold text-text-primary block">Автоматизація</span>
-                                        <span className="text-[11px] text-text-secondary font-medium uppercase tracking-wider">Розумний розклад</span>
+                                        <span className="font-bold text-text-primary block">{t('schedule.automation')}</span>
+                                        <span className="text-[11px] text-text-secondary font-medium uppercase tracking-wider">{t('schedule.smart')}</span>
                                     </div>
                                 </div>
                                 <button 
@@ -190,13 +192,13 @@ export default function RecurringScheduleModal({ isOpen, onClose, choirId }: Rec
 
                             <div className="space-y-4 pt-2">
                                 <div className="flex items-center justify-between px-1">
-                                    <h4 className="text-[11px] font-extrabold text-text-secondary uppercase tracking-[0.2em] opacity-80">Ваш розклад</h4>
+                                    <h4 className="text-[11px] font-extrabold text-text-secondary uppercase tracking-[0.2em] opacity-80">{t('schedule.your_schedule')}</h4>
                                     <button 
                                         onClick={addEmptyRule}
                                         className="py-1.5 px-3.5 bg-primary text-background rounded-full text-[11px] font-black flex items-center gap-1.5 hover:shadow-lg hover:shadow-primary/20 transition-all active:scale-95"
                                     >
                                         <Plus className="w-3.5 h-3.5 stroke-[3]" />
-                                        ДОДАТИ
+                                        {t('schedule.add')}
                                     </button>
                                 </div>
 
@@ -205,7 +207,7 @@ export default function RecurringScheduleModal({ isOpen, onClose, choirId }: Rec
                                         <div className="w-16 h-16 bg-surface-highlight rounded-3xl flex items-center justify-center mx-auto mb-4 border border-border/50">
                                             <Calendar className="w-8 h-8 text-text-secondary/40" />
                                         </div>
-                                        <p className="text-text-secondary text-sm font-medium px-10">Тут будуть ваші регулярні репетиції</p>
+                                        <p className="text-text-secondary text-sm font-medium px-10">{t('schedule.empty')}</p>
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
@@ -216,42 +218,42 @@ export default function RecurringScheduleModal({ isOpen, onClose, choirId }: Rec
                                                         {/* Segmented Control for Type */}
                                                         <div className="flex bg-surface-highlight border border-border/60 rounded-[18px] p-1 gap-1">
                                                             <button 
-                                                                onClick={() => setEditForm({...editForm, type: 'rehearsal', title: 'Співанка'})}
+                                                                onClick={() => setEditForm({...editForm, type: 'rehearsal', title: t('schedule.default_title.rehearsal')})}
                                                                 className={`flex-1 py-2.5 rounded-[14px] text-xs font-bold transition-all duration-200 ${editForm.type === 'rehearsal' ? 'bg-primary text-background shadow-md' : 'text-text-secondary hover:text-text-primary'}`}
-                                                            >Репетиція</button>
+                                                            >{t('schedule.type.rehearsal')}</button>
                                                             <button 
-                                                                onClick={() => setEditForm({...editForm, type: 'service', title: 'Служіння'})}
+                                                                onClick={() => setEditForm({...editForm, type: 'service', title: t('schedule.default_title.service')})}
                                                                 className={`flex-1 py-2.5 rounded-[14px] text-xs font-bold transition-all duration-200 ${editForm.type === 'service' ? 'bg-primary text-background shadow-md' : 'text-text-secondary hover:text-text-primary'}`}
-                                                            >Служіння</button>
+                                                            >{t('schedule.type.service')}</button>
                                                         </div>
 
                                                         <div className="space-y-4">
                                                             <div>
-                                                                <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1 mb-1.5 block opacity-70">Назва події</label>
+                                                                <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1 mb-1.5 block opacity-70">{t('schedule.event_name')}</label>
                                                                 <input 
                                                                     type="text" 
                                                                     value={editForm.title}
                                                                     onChange={e => setEditForm({...editForm, title: e.target.value})}
                                                                     className="w-full h-13 px-4 bg-surface-highlight border border-border/60 rounded-xl text-sm font-bold text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                                                                    placeholder="Наприклад: Співанка"
+                                                                    placeholder={t('schedule.event_placeholder')}
                                                                 />
                                                             </div>
                                                             
                                                             <div className="grid grid-cols-2 gap-4">
                                                                 <div>
-                                                                    <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1 mb-1.5 block opacity-70">День</label>
+                                                                    <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1 mb-1.5 block opacity-70">{t('schedule.day')}</label>
                                                                     <div className="relative h-13">
                                                                         <select 
                                                                             value={editForm.dayOfWeek}
                                                                             onChange={e => setEditForm({...editForm, dayOfWeek: Number(e.target.value)})}
                                                                             className="w-full h-full px-4 bg-surface-highlight border border-border/60 rounded-xl text-sm font-bold text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
                                                                         >
-                                                                            {DAYS_UK.map((day, i) => <option key={i} value={i}>{day}</option>)}
+                                                                            {DAYS.map((day, i) => <option key={i} value={i}>{day}</option>)}
                                                                         </select>
                                                                     </div>
                                                                 </div>
                                                                 <div>
-                                                                    <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1 mb-1.5 block opacity-70">Час</label>
+                                                                    <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1 mb-1.5 block opacity-70">{t('schedule.time')}</label>
                                                                     <div className="relative h-13">
                                                                         <input 
                                                                             type="time" 
@@ -264,14 +266,14 @@ export default function RecurringScheduleModal({ isOpen, onClose, choirId }: Rec
                                                             </div>
 
                                                             <div>
-                                                                <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1 mb-1.5 block opacity-70">Хто проводить розспіванку</label>
+                                                                <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1 mb-1.5 block opacity-70">{t('schedule.warmup_conductor')}</label>
                                                                 <div className="relative h-13">
                                                                     <select 
                                                                         value={editForm.warmupConductor}
                                                                         onChange={e => setEditForm({...editForm, warmupConductor: e.target.value})}
                                                                         className="w-full h-full pl-4 pr-10 bg-surface-highlight border border-border/60 rounded-xl text-sm font-bold text-text-primary appearance-none focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
                                                                     >
-                                                                        <option value="">Не вказано</option>
+                                                                        <option value="">{t('schedule.no_conductor')}</option>
                                                                         {regents.map((r, i) => <option key={i} value={r}>{r}</option>)}
                                                                     </select>
                                                                     <Mic2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary/60 pointer-events-none" />
@@ -284,7 +286,7 @@ export default function RecurringScheduleModal({ isOpen, onClose, choirId }: Rec
                                                                 onClick={saveEdit}
                                                                 className="flex-[3] h-12 bg-text-primary text-background rounded-xl text-sm font-black flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all shadow-md"
                                                             >
-                                                                ГОТОВО
+                                                                {t('schedule.done')}
                                                             </button>
                                                             <button 
                                                                 onClick={() => deleteRule(rule.id)}
@@ -301,13 +303,13 @@ export default function RecurringScheduleModal({ isOpen, onClose, choirId }: Rec
                                                     >
                                                         <div className="flex items-center gap-5">
                                                             <div className="w-14 h-14 bg-surface border border-border/50 rounded-2xl flex flex-col items-center justify-center shadow-sm group-hover/card:border-primary/20 transition-colors">
-                                                                <span className="text-[10px] font-black text-primary leading-none uppercase tracking-widest">{DAYS_UK[rule.dayOfWeek]}</span>
+                                                                <span className="text-[10px] font-black text-primary leading-none uppercase tracking-widest">{DAYS[rule.dayOfWeek]}</span>
                                                                 <span className="text-sm font-black text-text-primary mt-1">{rule.time}</span>
                                                             </div>
                                                             <div>
                                                                 <h5 className="font-bold text-text-primary text-[17px] leading-tight">{rule.title}</h5>
                                                                 <div className="flex items-center gap-2 mt-1">
-                                                                    <span className="text-[10px] text-text-secondary font-bold uppercase tracking-widest px-1.5 py-0.5 bg-surface rounded-md border border-border/30">Кожного тижня</span>
+                                                                    <span className="text-[10px] text-text-secondary font-bold uppercase tracking-widest px-1.5 py-0.5 bg-surface rounded-md border border-border/30">{t('schedule.every_week')}</span>
                                                                     {rule.warmupConductor && (
                                                                         <span className="text-[10px] text-primary/70 font-bold uppercase tracking-widest flex items-center gap-1">
                                                                             <Mic2 className="w-2.5 h-2.5" />
@@ -343,7 +345,7 @@ export default function RecurringScheduleModal({ isOpen, onClose, choirId }: Rec
                         className="flex-1 h-15 bg-text-primary text-background rounded-[22px] font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 hover:opacity-95 active:scale-[0.98] transition-all disabled:opacity-50 shadow-xl shadow-background/10"
                     >
                         {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5 stroke-[2.5]" />}
-                        Зберегти
+                        {t('schedule.save')}
                     </button>
                 </div>
             </motion.div>

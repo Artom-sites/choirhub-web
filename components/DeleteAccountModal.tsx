@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Loader2, AlertTriangle, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "@/contexts/TranslationContext";
 
 interface DeleteAccountModalProps {
     isOpen: boolean;
@@ -14,12 +15,13 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm }: Delet
     const [loading, setLoading] = useState(false);
     const [confirmText, setConfirmText] = useState("");
     const [error, setError] = useState("");
+    const { t } = useTranslation();
 
     if (!isOpen) return null;
 
     const handleDelete = async () => {
-        if (confirmText !== "ВИДАЛИТИ") {
-            setError("Введіть слово ВИДАЛИТИ для підтвердження");
+        if (confirmText !== t("account.delete_account_keyword")) {
+            setError(t("account.delete_account_keyword_error"));
             return;
         }
 
@@ -31,7 +33,7 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm }: Delet
             // Modal will be closed by parent or navigation will happen
         } catch (e) {
             console.error(e);
-            setError("Помилка видалення. Спробуйте ще раз.");
+            setError(t("account.delete_account_error"));
             setLoading(false);
         }
     };
@@ -52,20 +54,20 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm }: Delet
                         <AlertTriangle className="w-8 h-8 text-red-500" />
                     </div>
 
-                    <h3 className="text-xl font-bold text-white">Видалити акаунт?</h3>
+                    <h3 className="text-xl font-bold text-white">{t("account.delete_account_title")}</h3>
                     <p className="text-sm text-text-secondary">
-                        Ця дія <span className="text-red-400 font-bold">незворотна</span>. Всі ваші дані, налаштування та історія будуть втрачені назавжди.
+                        {t("account.delete_account_desc_1")} <span className="text-red-400 font-bold">{t("account.delete_account_desc_2")}</span>{t("account.delete_account_desc_3")}
                     </p>
 
                     <div className="w-full pt-4 space-y-2">
                         <label className="text-xs text-text-secondary uppercase tracking-widest font-bold">
-                            Для підтвердження введіть "ВИДАЛИТИ"
+                            {t("account.delete_account_label")}
                         </label>
                         <input
                             value={confirmText}
                             onChange={(e) => { setConfirmText(e.target.value.toUpperCase()); setError(""); }}
                             className="w-full p-3 bg-white/5 border border-white/10 rounded-xl text-center text-white placeholder:text-white/20 focus:border-red-500/50 focus:outline-none transition-colors"
-                            placeholder="ВИДАЛИТИ"
+                            placeholder={t("account.delete_account_keyword")}
                         />
                         {error && <p className="text-red-400 text-xs font-bold animate-pulse">{error}</p>}
                     </div>
@@ -76,17 +78,17 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm }: Delet
                             disabled={loading}
                             className="py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold transition-colors"
                         >
-                            Скасувати
+                            {t("common.cancel")}
                         </button>
                         <button
                             onClick={handleDelete}
-                            disabled={loading || confirmText !== "ВИДАЛИТИ"}
+                            disabled={loading || confirmText !== t("account.delete_account_keyword")}
                             className="py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
                                 <>
                                     <Trash2 className="w-5 h-5" />
-                                    Видалити
+                                    {t("common.delete")}
                                 </>
                             )}
                         </button>

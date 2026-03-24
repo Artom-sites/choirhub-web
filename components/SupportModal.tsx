@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Mail, MessageCircle, Globe, HeartHandshake } from "lucide-react";
 import { Browser } from "@capacitor/browser";
 import GlassPageHeader from "./GlassPageHeader";
+import { useTranslation } from "@/contexts/TranslationContext";
 
 interface SupportModalProps {
     isOpen: boolean;
@@ -11,6 +12,7 @@ interface SupportModalProps {
 }
 
 export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
+    const { t } = useTranslation();
     const openExternal = async (url: string) => {
         try {
             if (url.startsWith('mailto:') || url.startsWith('tel:')) {
@@ -42,7 +44,7 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
         },
         {
             icon: Globe,
-            label: 'Сайт',
+            label: t('support.website'),
             value: 'artom.dev',
             href: 'https://artom.dev',
             color: 'text-emerald-400',
@@ -62,7 +64,7 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
                     data-native-inner="true"
                 >
                     <GlassPageHeader
-                        title="Підтримка"
+                        title={t('account.support')}
                         onBack={onClose}
                         isActive={isOpen}
                     />
@@ -75,9 +77,9 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
                                 <div className="w-16 h-16 rounded-3xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
                                     <HeartHandshake className="w-8 h-8 text-primary" />
                                 </div>
-                                <h2 className="text-2xl font-bold text-text-primary mb-2">Є питання?</h2>
+                                <h2 className="text-2xl font-bold text-text-primary mb-2">{t('support.any_questions')}</h2>
                                 <p className="text-text-secondary text-sm leading-relaxed max-w-xs">
-                                    Зв&apos;яжіться з нами будь-яким зручним способом. Відповідаємо якнайшвидше.
+                                    {t('support.contact_us')}
                                 </p>
                             </div>
 
@@ -102,7 +104,7 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
 
                             {/* Note */}
                             <p className="text-center text-xs text-text-secondary/60 pt-2">
-                                Розроблено в Україні 🇺🇦
+                                {t('support.made_in_ukraine')}
                             </p>
                         </div>
                     </div>

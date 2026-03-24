@@ -157,16 +157,16 @@ export default function SongList({
         try {
             const payload = {
                 isVisible: isActiveTab,
-                tabs: choirType !== 'standard' ? ['Репертуар', 'Архів МХО'] : [],
+                tabs: choirType !== 'standard' ? [t('songs.list.tab_repertoire'), t('songs.list.tab_archive')] : [],
                 activeTab: subTab === 'repertoire' ? 0 : 1,
                 searchInput: {
                     value: search,
-                    placeholder: "Пошук пісень, регентів...",
+                    placeholder: t('songs.list.search_placeholder'),
                     autoFocus: false
                 },
                 filterMenu: subTab === 'repertoire' ? [
                     [
-                        { id: 'theme:All', label: 'Всі', isActive: selectedCategory === 'All' },
+                        { id: 'theme:All', label: t('songs.list.filter_all'), isActive: selectedCategory === 'All' },
                         ...Array.from(new Set([...CATEGORIES, ...(knownCategories || [])])).map(cat => ({
                             id: `theme:${cat}`,
                             label: cat,
@@ -194,10 +194,10 @@ export default function SongList({
                         }))
                     ],
                     [
-                        { id: 'arch_lang:all', label: 'Всі', isActive: archiveLanguage === 'all' },
-                        { id: 'arch_lang:ukr', label: '🇺🇦 Українська', isActive: archiveLanguage === 'ukr' },
-                        { id: 'arch_lang:rus', label: '🇷🇺 Російська', isActive: archiveLanguage === 'rus' },
-                        { id: 'arch_lang:eng', label: '🌍 Англійська', isActive: archiveLanguage === 'eng' },
+                        { id: 'arch_lang:all', label: t('songs.list.filter_all'), isActive: archiveLanguage === 'all' },
+                        { id: 'arch_lang:ukr', label: t('songs.list.lang_ukr'), isActive: archiveLanguage === 'ukr' },
+                        { id: 'arch_lang:rus', label: t('songs.list.lang_rus'), isActive: archiveLanguage === 'rus' },
+                        { id: 'arch_lang:eng', label: t('songs.list.lang_eng'), isActive: archiveLanguage === 'eng' },
                     ]
                 ]
             };
@@ -301,7 +301,7 @@ export default function SongList({
                             if (pdfUrl) {
                                 const partsData = (song.parts && song.parts.length > 0)
                                     ? song.parts.map((p: any) => ({ name: p.name || 'Part', pdfUrl: p.pdfUrl }))
-                                    : [{ name: 'Головна', pdfUrl }];
+                                    : [{ name: t('songs.list.main_part'), pdfUrl }];
                                 const validParts = partsData.filter(p => !!p.pdfUrl);
                                 if (validParts.length > 0) {
                                     console.log(`[OfflineCache] Caching "${song.title}" from repertoire...`);
@@ -345,7 +345,7 @@ export default function SongList({
 
                         if (cachedParts && cachedParts.length > 0) {
                             // Use cached base64 data — works offline
-                            partsData = cachedParts.map(p => ({ name: p.name || 'Головна', pdfUrl: p.pdfBase64 }));
+                            partsData = cachedParts.map(p => ({ name: p.name || t('songs.list.main_part'), pdfUrl: p.pdfBase64 }));
                         } else {
                             // Use remote URLs — requires internet
                             const pdfUrl = song.parts?.[0]?.pdfUrl || song.pdfUrl;
@@ -355,7 +355,7 @@ export default function SongList({
                             }
                             partsData = (song.parts && song.parts.length > 0)
                                 ? song.parts.map((p: any) => ({ name: p.name || 'Part', pdfUrl: p.pdfUrl }))
-                                : [{ name: 'Головна', pdfUrl }];
+                                : [{ name: t('songs.list.main_part'), pdfUrl }];
                         }
 
                         await PencilKitAnnotator.openNativePdfViewer({
@@ -379,7 +379,7 @@ export default function SongList({
         if (!userData?.choirId) return;
         const normalizedTitle = song.title.trim().toLowerCase();
         const duplicate = songs.find((s: SimpleSong) => s.title.trim().toLowerCase() === normalizedTitle);
-        if (duplicate) throw new Error(`Пісня "${duplicate.title}" вже існує в репертуарі`);
+        if (duplicate) throw new Error(`${t('songs.list.song')} "${duplicate.title}" ${t('songs.list.already_exists')}`);
 
         const allKnown = [...regents, ...knownConductors];
         if (song.conductor && !allKnown.includes(song.conductor)) {
@@ -394,7 +394,7 @@ export default function SongList({
                 } else {
                     await uploadSongParts(userData.choirId, newSongId, pdfFiles);
                 }
-            } catch (e) { console.error(e); await Dialog.alert({ title: "Помилка", message: "Пісню створено, але PDF не завантажився." }); }
+            } catch (e) { console.error(e); await Dialog.alert({ title: t('songs.list.error_title'), message: t('songs.list.pdf_error') }); }
         }
         await refreshRepertoire();
         if (onRefresh) onRefresh();
@@ -410,10 +410,10 @@ export default function SongList({
         const duplicate = songs.find((s: SimpleSong) => s.title.trim().toLowerCase() === normalizedTitle);
         if (duplicate) {
             const { value } = await Dialog.confirm({
-                title: "Така пісня вже є",
-                message: `Пісня "${duplicate.title}" вже існує в репертуарі. Ви впевнені, що хочете додати її ще раз?`,
-                okButtonTitle: "Додати",
-                cancelButtonTitle: "Скасувати"
+                title: t('songs.list.duplicate_title'),
+                message: `${t('songs.list.song')} "${duplicate.title}" ${t('songs.list.duplicate_confirm')}`,
+                okButtonTitle: t('songs.list.add_btn'),
+                cancelButtonTitle: t('songs.list.cancel_btn')
             });
             if (!value) return; // User cancelled
         }
@@ -436,7 +436,7 @@ export default function SongList({
             setShowOpenSongConfirm(true);
         } catch (e) {
             console.error(e);
-            setToast({ message: "Помилка додавання з архіву", type: "error" });
+            setToast({ message: t('songs.list.error_archive_add'), type: "error" });
         }
     };
 
@@ -452,11 +452,11 @@ export default function SongList({
         if (!userData?.choirId || !editingSong) return;
         try {
             await updateSong(userData.choirId, editingSong.id, updates);
-            setToast({ message: "Зміни збережено", type: "success" });
+            setToast({ message: t('songs.list.success_save'), type: "success" });
             setEditingSong(null);
             await refreshRepertoire();
             if (onRefresh) onRefresh();
-        } catch (e) { console.error(e); await Dialog.alert({ title: "Помилка", message: "Помилка оновлення" }); }
+        } catch (e) { console.error(e); await Dialog.alert({ title: t('songs.list.error_title'), message: t('songs.list.error_update') }); }
     };
 
     const initiateDelete = (e: React.MouseEvent | null, id: string) => {
@@ -470,9 +470,9 @@ export default function SongList({
             await softDeleteLocalSong(userData.choirId, deletingSongId, userData.id || "unknown");
             const deletedId = deletingSongId;
             setToast({
-                message: "Пісню переміщено до кошика",
+                message: t('songs.list.moved_to_trash'),
                 type: "success",
-                actionLabel: "Скасувати",
+                actionLabel: t('songs.list.undo_btn'),
                 onAction: async () => {
                     try {
                         await restoreLocalSong(userData.choirId!, deletedId);
@@ -485,7 +485,7 @@ export default function SongList({
             if (onRefresh) onRefresh();
         } catch (e) {
             console.error(e);
-            setToast({ message: "Помилка при видаленні", type: "error" });
+            setToast({ message: t('songs.list.error_delete'), type: "error" });
         } finally { setDeletingSongId(null); }
     };
 
@@ -506,7 +506,7 @@ export default function SongList({
                             }`}
                     >
                         <Music2 className="w-4 h-4" />
-                        Репертуар
+                        {t('songs.list.tab_repertoire')}
                     </button>
                     <button
                         onClick={() => setSubTab('catalog')}
@@ -516,7 +516,7 @@ export default function SongList({
                             }`}
                     >
                         <Library className="w-4 h-4" />
-                        Архів МХО
+                        {t('songs.list.tab_archive')}
                     </button>
                 </div>
             )}
@@ -542,10 +542,10 @@ export default function SongList({
                             const duplicate = songs.find((s: SimpleSong) => s.title.trim().toLowerCase() === normalizedTitle);
                             if (duplicate) {
                                 const { value } = await Dialog.confirm({
-                                    title: "Така пісня вже є",
-                                    message: `Пісня "${duplicate.title}" вже існує в репертуарі. Ви впевнені, що хочете додати її ще раз?`,
-                                    okButtonTitle: "Додати",
-                                    cancelButtonTitle: "Скасувати"
+                                    title: t('songs.list.duplicate_title'),
+                                    message: `${t('songs.list.song')} "${duplicate.title}" ${t('songs.list.duplicate_confirm')}`,
+                                    okButtonTitle: t('songs.list.add_btn'),
+                                    cancelButtonTitle: t('songs.list.cancel_btn')
                                 });
                                 if (!value) return; // User cancelled
                             }
@@ -561,12 +561,12 @@ export default function SongList({
                                     hasPdf: !!pdfUrl,
                                     parts: globalSong.parts,
                                 });
-                                setToast({ message: `"${globalSong.title}" додано до репертуару`, type: "success" });
+                                setToast({ message: `"${globalSong.title}" ${t('songs.list.added_from_archive')}`, type: "success" });
                                 await refreshRepertoire();
                                 if (onRefresh) onRefresh();
                             } catch (e) {
                                 console.error(e);
-                                setToast({ message: "Помилка додавання з архіву", type: "error" });
+                                setToast({ message: t('songs.list.error_archive_add'), type: "error" });
                             }
                         } : undefined}
                     />
@@ -599,7 +599,7 @@ export default function SongList({
                             <button
                                 onClick={() => setShowTrashBin(true)}
                                 className="p-2 rounded-full hover:bg-surface-highlight transition-colors text-text-secondary hover:text-danger"
-                                title="Кошик"
+                                title={t('songs.list.trash_tooltip')}
                             >
                                 <Trash2 className="w-5 h-5" />
                             </button>
@@ -619,11 +619,11 @@ export default function SongList({
                             data-native-inner="true"
                         >
                             <GlassPageHeader
-                                title="Пошук"
+                                title={t('songs.list.search_title')}
                                 searchInput={{
                                     value: search,
                                     onChange: setSearch,
-                                    placeholder: "Назва пісні, диригент...",
+                                    placeholder: t('songs.list.search_placeholder2'),
                                     autoFocus: true
                                 }}
                                 onBack={() => {
@@ -635,7 +635,7 @@ export default function SongList({
                                 filterMenu={[
                                     {
                                         items: [
-                                            { id: 'theme:All', label: 'Всі', isActive: selectedCategory === 'All' },
+                                            { id: 'theme:All', label: t('songs.list.filter_all'), isActive: selectedCategory === 'All' },
                                             ...Array.from(new Set([...CATEGORIES, ...(knownCategories || [])])).map(cat => ({
                                                 id: `theme:${cat}`,
                                                 label: cat,
@@ -671,11 +671,11 @@ export default function SongList({
                                             <div className="w-16 h-16 bg-surface rounded-full flex items-center justify-center mx-auto mb-4">
                                                 <Music2 className="w-8 h-8 text-text-secondary" />
                                             </div>
-                                            <p className="text-text-secondary">{search ? 'Нічого не знайдено' : 'Почніть вводити назву пісні'}</p>
+                                            <p className="text-text-secondary">{search ? t('songs.list.empty_search') : t('songs.list.start_typing')}</p>
                                         </div>
                                     ) : (
                                         <div className="space-y-0">
-                                            <p className="text-xs text-text-secondary my-2">{filteredSongs.length} {filteredSongs.length === 1 ? 'пісня' : 'пісень'}</p>
+                                            <p className="text-xs text-text-secondary my-2">{filteredSongs.length} {filteredSongs.length === 1 ? t('songs.list.songs_count_single') : t('songs.list.songs_count_plural')}</p>
                                             {filteredSongs.map(song => (
                                                 <div
                                                     key={song.id}
@@ -728,7 +728,7 @@ export default function SongList({
                             {isMobile === false && (
                                 <div className="flex flex-col h-full">
                                     <div className="grid grid-cols-[1fr_180px_180px_60px] gap-4 py-3 pl-0 pr-4 border-b border-border bg-background text-xs font-bold text-text-secondary uppercase tracking-wider">
-                                        <div>Назва</div><div>Категорія</div><div>Диригент</div><div></div>
+                                        <div>{t('songs.list.col_name')}</div><div>{t('songs.list.col_category')}</div><div>{t('songs.list.col_conductor')}</div><div></div>
                                     </div>
                                     <Virtuoso
                                         ref={virtuosoRef}
@@ -752,7 +752,7 @@ export default function SongList({
                                                                 {song.conductor ? <div className="flex items-center gap-1.5 text-sm text-primary font-medium"><User className="w-3.5 h-3.5" /><span>{song.conductor}</span></div> : <span className="text-sm text-text-secondary/50">—</span>}
                                                             </div>
                                                             <div className="flex justify-end">
-                                                                {effectiveCanAdd && <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleEditClick(e, song); }} className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface transition-colors" title="Детальніше"><MoreVertical className="w-5 h-5" /></button>}
+                                                                {effectiveCanAdd && <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleEditClick(e, song); }} className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface transition-colors" title={t('songs.list.more_info')}><MoreVertical className="w-5 h-5" /></button>}
                                                             </div>
                                                         </div>
                                                     </SwipeableCard>
@@ -787,7 +787,7 @@ export default function SongList({
                                                                     <span className="text-xs text-text-secondary">{song.category}</span>
                                                                 </div>
                                                             </div>
-                                                            {effectiveCanAdd && <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleEditClick(e, song); }} className="p-2 rounded-lg text-text-secondary hover:text-text-primary active:scale-95 transition-transform" title="Детальніше"><MoreVertical className="w-5 h-5" /></button>}
+                                                            {effectiveCanAdd && <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleEditClick(e, song); }} className="p-2 rounded-lg text-text-secondary hover:text-text-primary active:scale-95 transition-transform" title={t('songs.list.more_info')}><MoreVertical className="w-5 h-5" /></button>}
                                                         </div>
                                                     </SwipeableCard>
                                                 </div>
@@ -809,7 +809,7 @@ export default function SongList({
             {/* Archive Search Modal from Add Song */}
             {choirType !== 'standard' && showArchiveModal && (
                 <div className="fixed inset-0 z-[200] bg-background flex flex-col" data-native-inner="true">
-                    <GlassPageHeader title="Знайти в архіві" onBack={() => setShowArchiveModal(false)} />
+                    <GlassPageHeader title={t('songs.list.archive_search_title')} onBack={() => setShowArchiveModal(false)} />
                     <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-8">
                         <GlobalArchive onAddSong={handleLinkArchive} initialSearchQuery={pendingArchiveQuery} isOverlayOpen={true} />
                     </div>
@@ -822,7 +822,7 @@ export default function SongList({
             {showTrashBin && (
                 <TrashBin choirId={userData?.choirId || ""} onClose={() => setShowTrashBin(false)} initialFilter="song" onRestore={() => refreshRepertoire()} />
             )}
-            <ConfirmationModal isOpen={!!deletingSongId} onClose={cancelDelete} onConfirm={confirmDelete} title="Видалити пісню?" message="Цю пісню буде видалено з репертуару назавжди." confirmLabel="Видалити" isDestructive />
+            <ConfirmationModal isOpen={!!deletingSongId} onClose={cancelDelete} onConfirm={confirmDelete} title={t('songs.list.delete_title')} message={t('songs.list.delete_desc')} confirmLabel={t('songs.list.delete_btn')} isDestructive />
             <ConfirmationModal
                 isOpen={showOpenSongConfirm}
                 onClose={() => { setShowOpenSongConfirm(false); setLastAddedSongId(null); }}
@@ -833,15 +833,15 @@ export default function SongList({
                         setLastAddedSongId(null);
                     }
                 }}
-                title="Пісню додано!"
-                message="Пісню успішно додано до репертуару. Відкрити її зараз?"
-                confirmLabel="Відкрити"
+                title={t('songs.list.added_title')}
+                message={t('songs.list.added_desc')}
+                confirmLabel={t('songs.list.open_btn')}
             />
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} duration={toast.onAction ? 5000 : 3000} actionLabel={toast.actionLabel} onAction={toast.onAction} />}
 
             {/* Floating Add Button */}
             {canAddSongs && subTab === 'repertoire' && setShowAddModal && !showAddModal && !isOverlayOpen && (
-                <button onClick={() => setShowAddModal(true)} className="app-fab fixed w-14 h-14 bg-primary text-background rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60] right-4" style={{ bottom: 'var(--fab-bottom)' }} title="Додати пісню">
+                <button onClick={() => setShowAddModal(true)} className="app-fab fixed w-14 h-14 bg-primary text-background rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-[60] right-4" style={{ bottom: 'var(--fab-bottom)' }} title={t('songs.list.add_song_tooltip')}>
                     <Plus className="w-7 h-7" />
                 </button>
             )}

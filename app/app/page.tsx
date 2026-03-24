@@ -388,12 +388,12 @@ function HomePageContent() {
   const iconInputRef = useRef<HTMLInputElement>(null);
 
   const AVAILABLE_PERMISSIONS: { key: Permission; label: string }[] = [
-    { key: 'add_songs', label: 'Додавати пісні' },
-    { key: 'edit_attendance', label: 'Відмічати відсутніх' },
-    { key: 'edit_credits', label: 'Записувати диригента/піаніста' },
-    { key: 'view_stats', label: 'Бачити статистику' },
-    { key: 'manage_services', label: 'Створювати/видаляти служіння' },
-    { key: 'notify_members', label: 'Надсилати сповіщення' },
+    { key: 'add_songs', label: t('permissions.add_songs') },
+    { key: 'edit_attendance', label: t('permissions.edit_attendance') },
+    { key: 'edit_credits', label: t('permissions.edit_credits') },
+    { key: 'view_stats', label: t('permissions.view_stats') },
+    { key: 'manage_services', label: t('permissions.manage_services') },
+    { key: 'notify_members', label: t('permissions.notify_members') },
   ];
 
   // ------------------------------------------------------------------
@@ -481,7 +481,7 @@ function HomePageContent() {
       setShowFinishAppRegistration(false);
     } catch (e: any) {
       console.error(e);
-      setManagerError(e.message || "Помилка збереження");
+      setManagerError(e.message || t("manager.error_save"));
     } finally {
       setClaimLoading(false);
     }
@@ -710,15 +710,15 @@ function HomePageContent() {
             <span className="text-[13px] font-semibold text-text-primary truncate min-w-[50px]">{member.name}</span>
             {/* Role badge */}
             {(() => {
-              const label = member.roleLabel || (member.role === 'head' ? 'Керівник' : member.role === 'regent' ? 'Регент' : null);
+              const label = member.roleLabel || (member.role === 'head' ? t('global.roles.head') : member.role === 'regent' ? t('global.roles.regent') : null);
               if (!label) return null;
               
               let colorClass = "bg-indigo-500/15 text-indigo-400 border-indigo-500/20";
-              const lowerLabel = label.toLowerCase();
+              const lowerLabel = member.roleLabel ? member.roleLabel.toLowerCase() : '';
               
-              if (lowerLabel.includes('керівник')) {
+              if (member.role === 'head' || lowerLabel.includes('керівник')) {
                 colorClass = "bg-orange-500/15 text-orange-400 border-orange-500/20";
-              } else if (lowerLabel.includes('регент')) {
+              } else if (member.role === 'regent' || lowerLabel.includes('регент')) {
                 colorClass = "bg-purple-500/15 text-purple-400 border-purple-500/20";
               } else if (lowerLabel.includes('акомпаніатор')) {
                 colorClass = "bg-blue-500/15 text-blue-400 border-blue-500/20";
@@ -1054,7 +1054,7 @@ function HomePageContent() {
       setChoirToLeave(null);
     } catch (e) {
       console.error("Error leaving choir:", e);
-      await Dialog.alert({ title: "Помилка", message: "Не вдалося покинути хор" });
+      await Dialog.alert({ title: t("common.error"), message: t("manager.error_leave_choir") });
     }
   };
 
@@ -1100,7 +1100,7 @@ function HomePageContent() {
       router.replace('/app');
     } catch (e: any) {
       console.error("Error creating choir:", e);
-      setManagerError("Помилка створення хору: " + (e.message || "Невідома помилка"));
+      setManagerError(t("manager.error_create_choir_prefix") + " " + (e.message || t("manager.error_unknown")));
     } finally {
       setManagerLoading(false);
     }
@@ -1193,13 +1193,13 @@ function HomePageContent() {
       }
     } catch (e: any) {
       console.error(e);
-      const msg = e.message || "Помилка приєднання";
+      const msg = e.message || t("manager.error_join");
       if (msg.includes("Invalid invite code")) {
-        setManagerError("Невірний код");
+        setManagerError(t("manager.error_invalid_code"));
       } else if (msg.includes("Already a member")) {
-        setManagerError("Ви вже є учасником цього хору");
+        setManagerError(t("manager.error_already_member"));
       } else {
-        setManagerError("Помилка приєднання");
+        setManagerError(t("manager.error_join"));
       }
     } finally {
       setManagerLoading(false);
@@ -1231,11 +1231,11 @@ function HomePageContent() {
       console.error("Claim error:", e);
       const msg = e.message || "";
       if (msg.includes("already has an account") || msg.includes("already claimed")) {
-        await Dialog.alert({ title: "Помилка", message: "Цей профіль вже прив'язаний до іншого акаунту. Зверніться до регента для переприв'язки." });
+        await Dialog.alert({ title: t("common.error"), message: t("manager.error_already_linked_to_other") });
       } else if (msg.includes("already linked")) {
-        await Dialog.alert({ title: "Помилка", message: "Ваш акаунт вже прив'язаний до іншого учасника." });
+        await Dialog.alert({ title: t("common.error"), message: t("manager.error_account_already_linked") });
       } else {
-        await Dialog.alert({ title: "Помилка", message: "Помилка прив'язки: " + msg });
+        await Dialog.alert({ title: t("common.error"), message: t("manager.error_link_prefix") + " " + msg });
       }
     } finally {
       setClaimLoading(false);
@@ -1361,7 +1361,7 @@ function HomePageContent() {
       setShowEditMemberModal(false);
     } catch (e) {
       console.error(e);
-      setManagerError("Помилка збереження");
+      setManagerError(t("manager.error_save"));
     }
   };
 
@@ -1393,7 +1393,7 @@ function HomePageContent() {
       // await fetchChoirData(); // Listener handles updates 
     } catch (e) {
       console.error(e);
-      await Dialog.alert({ title: "Помилка", message: "Не вдалося об'єднати учасників" });
+      await Dialog.alert({ title: t("common.error"), message: t("manager.error_merge_members") });
     }
   };
 
@@ -1445,7 +1445,7 @@ function HomePageContent() {
       setLinkingAppUser(null);
     } catch (e) {
       console.error(e);
-      await Dialog.alert({ title: "Помилка", message: "Не вдалося прив'язати користувача" });
+      await Dialog.alert({ title: t("common.error"), message: t("manager.error_link_user") });
     }
   };
 
@@ -1499,7 +1499,7 @@ function HomePageContent() {
       }
     } catch (error: any) {
       console.error("Delete Account Error:", error);
-      setManagerError(error.message || "Сталася помилка при видаленні акаунту");
+      setManagerError(error.message || t("manager.error_delete_account"));
     }
   };
 
@@ -1613,9 +1613,9 @@ function HomePageContent() {
 
   const getRoleBadge = (role: string) => {
     const roleConfig: Record<string, { label: string; className: string }> = {
-      head: { label: "Регент", className: "bg-primary/10 text-primary border border-primary/20" },
-      regent: { label: "Регент", className: "bg-primary/10 text-primary border border-primary/20" },
-      member: { label: "Хорист", className: "bg-surface-highlight text-text-secondary border border-border" },
+      head: { label: t("global.roles.regent"), className: "bg-primary/10 text-primary border border-primary/20" },
+      regent: { label: t("global.roles.regent"), className: "bg-primary/10 text-primary border border-primary/20" },
+      member: { label: t("global.roles.member"), className: "bg-surface-highlight text-text-secondary border border-border" },
     };
     if (role === 'member') return null;
     const config = roleConfig[role] || roleConfig.member;
@@ -1720,7 +1720,7 @@ function HomePageContent() {
                 <div>
                   <h3 className="text-lg font-bold text-white">{t('account.logout_confirm')}</h3>
                   <p className="text-[#a1a1aa] text-sm mt-1">
-                    Для повторного входу знадобиться увійти через Google.
+                    {t("account.logout_warning")}
                   </p>
                 </div>
                 <div className="flex gap-3 w-full mt-2">
@@ -1728,13 +1728,13 @@ function HomePageContent() {
                     onClick={() => setShowLogoutConfirm(false)}
                     className="flex-1 py-3 border border-white/10 rounded-xl text-white hover:bg-[#27272a] transition-colors font-medium text-sm"
                   >
-                    Скасувати
+                    {t("common.cancel")}
                   </button>
                   <button
                     onClick={handleLogout}
                     className="flex-1 py-3 bg-white text-black rounded-xl font-bold hover:bg-gray-100 transition-colors text-sm"
                   >
-                    Вийти
+                    {t("account.logout")}
                   </button>
                 </div>
               </div>
@@ -1790,16 +1790,16 @@ function HomePageContent() {
                     </div>
                   )}
                 </button>
-                <p className="text-text-secondary text-xs mt-2">{uploadingIcon ? 'Завантаження...' : 'Натисніть, щоб змінити фото'}</p>
+                <p className="text-text-secondary text-xs mt-2">{uploadingIcon ? t('common.loading') : t('account.change_photo')}</p>
                 {choir?.icon && !uploadingIcon && (
                   <button
                     onClick={async () => {
                       if (!userData?.choirId) return;
                       const confirmed = await Dialog.confirm({
-                        title: 'Видалити фото?',
-                        message: 'Ви впевнені, що хочете видалити фото хору?',
-                        okButtonTitle: 'Видалити',
-                        cancelButtonTitle: 'Скасувати'
+                        title: t('account.delete_photo_title'),
+                        message: t('account.delete_photo_confirm'),
+                        okButtonTitle: t('common.delete'),
+                        cancelButtonTitle: t('common.cancel')
                       });
                       if (!confirmed.value) return;
 
@@ -1814,7 +1814,7 @@ function HomePageContent() {
                     className="mt-3 flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 font-medium p-2 rounded-lg hover:bg-red-500/10 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
-                    Видалити фото
+                    {t("account.delete_photo")}
                   </button>
                 )}
               </div>
@@ -1826,7 +1826,7 @@ function HomePageContent() {
                   type="text"
                   value={editChoirName}
                   onChange={(e) => setEditChoirName(e.target.value)}
-                  placeholder="Назва хору"
+                  placeholder={t("account.choir_name")}
                   className="w-full px-4 py-3 bg-surface-highlight border border-border rounded-xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:border-primary/50"
                 />
               </div>
@@ -1877,7 +1877,7 @@ function HomePageContent() {
                   className="w-full py-4 bg-primary text-background rounded-2xl font-bold hover:opacity-90 transition-all shadow-lg active:scale-[0.98] flex items-center justify-center gap-2"
                 >
                   {savingChoirSettings && <Loader2 className="w-5 h-5 animate-spin" />}
-                  Зберегти зміни
+                  {t("common.save_changes")}
                 </button>
               </div>
             </motion.div>
@@ -1926,14 +1926,14 @@ function HomePageContent() {
                         >
                           <div className="text-left">
                             <p className="text-text-primary font-bold">{m.choirName}</p>
-                            <p className="text-xs text-text-secondary uppercase">{m.role === 'head' ? 'Регент' : m.role === 'regent' ? 'Регент' : 'Хорист'}</p>
+                            <p className="text-xs text-text-secondary uppercase">{m.role === 'head' ? t('global.roles.regent') : m.role === 'regent' ? t('global.roles.regent') : t('global.roles.member')}</p>
                           </div>
                           <Repeat className="w-4 h-4 text-text-secondary group-hover:text-primary transition-colors" />
                         </button>
                         <button
                           onClick={() => setChoirToLeave({ id: m.choirId, name: m.choirName })}
                           className="p-4 rounded-2xl bg-surface-highlight border border-border hover:bg-red-500/10 hover:border-red-500/30 flex items-center justify-center transition-all group/delete"
-                          title="Покинути хор"
+                          title={t("account.leave_choir")}
                         >
                           <LogOut className="w-5 h-5 text-text-secondary group-hover/delete:text-red-500 transition-colors" />
                         </button>
@@ -1943,7 +1943,7 @@ function HomePageContent() {
 
                   <div className="grid grid-cols-2 gap-3 pt-4">
                     <button onClick={() => setManagerMode('create')} className="p-3 bg-primary text-background rounded-xl text-sm font-bold hover:opacity-90">
-                      Створити
+                      {t("manager.create")}
                     </button>
                     <button onClick={() => {
                       setManagerMode('join');
@@ -1954,7 +1954,7 @@ function HomePageContent() {
                         setJoinFirstName(parts.slice(1).join(' '));
                       }
                     }} className="p-3 bg-surface-highlight text-text-primary rounded-xl text-sm font-bold hover:bg-surface-highlight/80 border border-border">
-                      Приєднатись
+                      {t("manager.join")}
                     </button>
                   </div>
                 </div>
@@ -1962,12 +1962,12 @@ function HomePageContent() {
 
               {managerMode === 'create' && (
                 <div className="space-y-4">
-                  <button onClick={() => setManagerMode('list')} className="text-xs text-text-secondary hover:text-text-primary mb-2">← Назад</button>
+                  <button onClick={() => setManagerMode('list')} className="text-xs text-text-secondary hover:text-text-primary mb-2">{t("common.back_arrow")}</button>
                   <h3 className="text-xl font-bold text-text-primary">{t('account.new_choir')}</h3>
                   <input
                     value={newChoirName}
                     onChange={e => setNewChoirName(e.target.value)}
-                    placeholder="Назва хору"
+                    placeholder={t("account.choir_name")}
                     className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl placeholder:text-text-secondary"
                   />
                   <div className="space-y-2">
@@ -2008,14 +2008,14 @@ function HomePageContent() {
                     disabled={managerLoading || !newChoirName.trim() || !newChoirType}
                     className="w-full p-3 bg-primary text-background rounded-xl font-bold hover:opacity-90 disabled:opacity-50"
                   >
-                    {managerLoading ? <Loader2 className="animate-spin mx-auto" /> : "Створити"}
+                    {managerLoading ? <Loader2 className="animate-spin mx-auto" /> : t("manager.create")}
                   </button>
                 </div>
               )}
 
               {managerMode === 'join' && (
                 <div className="space-y-4">
-                  <button onClick={() => { setManagerMode('list'); setManagerError(""); }} className="text-xs text-text-secondary hover:text-text-primary mb-2">← Назад</button>
+                  <button onClick={() => { setManagerMode('list'); setManagerError(""); }} className="text-xs text-text-secondary hover:text-text-primary mb-2">{t("common.back_arrow")}</button>
                   <h3 className="text-xl font-bold text-text-primary">{t('account.join')}</h3>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -2023,7 +2023,7 @@ function HomePageContent() {
                       <input
                         value={joinLastName}
                         onChange={e => setJoinLastName(e.target.value)}
-                        placeholder="Шевченко (необов'язково)"
+                        placeholder={t("manager.last_name_optional")}
                         className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl placeholder:text-text-secondary"
                         autoCapitalize="words"
                       />
@@ -2033,7 +2033,7 @@ function HomePageContent() {
                       <input
                         value={joinFirstName}
                         onChange={e => setJoinFirstName(e.target.value)}
-                        placeholder="Тарас (необов'язково)"
+                        placeholder={t("manager.first_name_optional")}
                         className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl placeholder:text-text-secondary"
                         autoCapitalize="words"
                       />
@@ -2042,7 +2042,7 @@ function HomePageContent() {
                   <input
                     value={joinCode}
                     onChange={e => setJoinCode(e.target.value.toUpperCase())}
-                    placeholder="Код (6 символів)"
+                    placeholder={t("manager.code_placeholder")}
                     maxLength={6}
                     className="w-full p-3 bg-surface-highlight text-text-primary border border-border rounded-xl text-center font-mono uppercase tracking-widest placeholder:text-text-secondary"
                   />
@@ -2052,7 +2052,7 @@ function HomePageContent() {
                     disabled={managerLoading || joinCode.length !== 6}
                     className="w-full p-3 bg-primary text-background rounded-xl font-bold hover:opacity-90 disabled:opacity-50"
                   >
-                    {managerLoading ? <Loader2 className="animate-spin mx-auto" /> : "Додатись"}
+                    {managerLoading ? <Loader2 className="animate-spin mx-auto" /> : t('global.actions.join')}
                   </button>
                 </div>
               )}
@@ -2177,7 +2177,7 @@ function HomePageContent() {
                   disabled={claimLoading || !selectedClaimId}
                   className="w-full py-4 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-all flex justify-center shadow-lg disabled:opacity-50"
                 >
-                  {claimLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Так, це я"}
+                  {claimLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : t("account.claim_yes")}
                 </button>
                 <button
                   onClick={() => {
@@ -2256,7 +2256,7 @@ function HomePageContent() {
                   disabled={claimLoading}
                   className="w-full py-4 bg-primary text-background font-bold rounded-xl hover:opacity-90 transition-all flex justify-center shadow-lg disabled:opacity-50"
                 >
-                  {claimLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Продовжити"}
+                  {claimLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : t("common.continue")}
                 </button>
               </div>
             </motion.div>
@@ -2277,7 +2277,7 @@ function HomePageContent() {
             data-native-inner="true"
           >
             <GlassPageHeader
-              title="Акаунт"
+              title={t('layout.account')}
               onBack={() => setShowAccount(false)}
               isActive={showAccount}
               rightSegmented={{
@@ -2350,41 +2350,7 @@ function HomePageContent() {
                   </div>
                 )}
 
-                {/* Language Settings */}
-                <div className="bg-surface rounded-2xl p-4 card-shadow">
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center">
-                        <Globe className="w-5 h-5" />
-                      </div>
-                      <div className="text-left">
-                        <p className="text-text-primary font-bold text-sm">{t('account.language') || "Мова (Language)"}</p>
-                        <p className="text-xs text-text-secondary">{t('account.language_subtitle')}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex bg-surface-highlight/50 p-1 rounded-xl w-full">
-                      {[
-                        { id: 'uk', label: '🇺🇦' },
-                        { id: 'en', label: '🇬🇧' },
-                        { id: 'ru', label: '🇷🇺' },
-                        { id: 'de', label: '🇩🇪' }
-                      ].map((item) => (
-                        <button
-                          key={item.id}
-                          onClick={() => changeLanguage(item.id as any)}
-                          className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                            language === item.id 
-                              ? "bg-background text-text-primary shadow-sm" 
-                              : "text-text-secondary hover:text-text-primary"
-                          }`}
-                        >
-                          {item.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                {/* Old Language Settings Removed */}
 
                 {/* Management Block (Choir & Codes) */}
                 <div className="bg-surface rounded-2xl p-4 card-shadow">
@@ -2415,7 +2381,7 @@ function HomePageContent() {
                           className="text-xs text-accent hover:underline flex items-center gap-1"
                         >
                           <PlusCircle className="w-3 h-3" />
-                          Додати
+                          {t('global.actions.add')}
                         </button>
                       </div>
 
@@ -2455,7 +2421,7 @@ function HomePageContent() {
                         {/* Admin Codes */}
                         {choir.adminCodes && choir.adminCodes.length > 0 && choir.adminCodes.map((ac, idx) => (
                           <div key={idx} className="flex items-center justify-between p-4 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
-                            <span className="text-text-primary text-base">{ac.label || 'Адмін'}</span>
+                            <span className="text-text-primary text-base">{ac.label || t('account.admin_role')}</span>
                             <div className="flex items-center gap-3">
                               <code className="text-base font-mono font-medium text-text-primary">{ac.code}</code>
                               <button
@@ -2485,6 +2451,39 @@ function HomePageContent() {
 
               </div>
 
+              {/* Language Settings */}
+              <div className="bg-surface rounded-2xl p-1 mt-6 card-shadow">
+                <div className="flex items-center justify-between p-3 relative hover:bg-surface-highlight/50 transition-colors rounded-xl">
+                  <div className="flex items-center gap-3 pointer-events-none">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
+                      <Globe className="w-5 h-5" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-text-primary font-bold text-sm">{t('account.language')}</p>
+                      <p className="text-xs text-text-secondary">{t('account.language_subtitle')}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 pointer-events-none">
+                    <span className="text-sm font-medium text-text-secondary">
+                      {language === 'uk' ? '🇺🇦 Українська' : language === 'ru' ? '🇷🇺 Русский' : language === 'en' ? '🇬🇧 English' : language === 'de' ? '🇩🇪 Deutsch' : ''}
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-text-secondary/50" />
+                  </div>
+                  
+                  <select 
+                    value={language}
+                    onChange={(e) => changeLanguage(e.target.value as any)}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  >
+                    <option value="uk">🇺🇦 Українська</option>
+                    <option value="ru">🇷🇺 Русский</option>
+                    <option value="en">🇬🇧 English</option>
+                    <option value="de">🇩🇪 Deutsch</option>
+                  </select>
+                </div>
+              </div>
+
               {/* Cache Management - only on native app */}
               {isNative && (
                 <div className="bg-surface rounded-2xl p-4 card-shadow mt-6">
@@ -2496,7 +2495,7 @@ function HomePageContent() {
                     <div className="flex-1 min-w-0">
                       <h3 className="text-sm font-bold text-text-primary">{t('account.offline_cache')}</h3>
                       <p className="text-xs text-text-secondary">
-                        {cacheSize.count} пісень • {cacheSize.sizeBytes < 1024 * 1024
+                        {cacheSize.count} {t('songs.list.songs_count_plural')} • {cacheSize.sizeBytes < 1024 * 1024
                           ? `${(cacheSize.sizeBytes / 1024).toFixed(0)} КБ`
                           : `${(cacheSize.sizeBytes / 1024 / 1024).toFixed(1)} МБ`}
                       </p>
@@ -2531,10 +2530,10 @@ function HomePageContent() {
                         <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">{t('account.max_limit')}</span>
                         <span className="text-xs font-bold text-text-primary bg-surface-highlight px-2 py-0.5 rounded-md">
                           {(() => {
-                            if (cacheLimit === 'unlimited') return 'Безліміт';
-                            if (cacheLimit === '1gb') return '1 ГБ';
-                            if (cacheLimit === '500mb') return '500 МБ';
-                            if (cacheLimit === '50mb') return '50 МБ';
+                            if (cacheLimit === 'unlimited') return t('account.unlimited');
+                            if (cacheLimit === '1gb') return t('account.cache_1gb');
+                            if (cacheLimit === '500mb') return t('account.cache_500mb');
+                            if (cacheLimit === '50mb') return t('account.cache_50mb');
                             const n = parseInt(cacheLimit, 10);
                             return !isNaN(n) ? `${n} МБ` : '100 МБ';
                           })()}
@@ -2584,7 +2583,7 @@ function HomePageContent() {
                         className="w-full accent-primary h-2 rounded-lg appearance-none cursor-pointer"
                       />
                       <div className="flex justify-between text-[10px] text-text-secondary/50 mt-1 px-0.5">
-                        <span>50 МБ</span>
+                        <span>{t("account.cache_50mb")}</span>
                         <span>{t('account.unlimited')}</span>
                       </div>
                     </div>
@@ -2595,12 +2594,12 @@ function HomePageContent() {
                         <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">{t('account.auto_delete')}</span>
                         <span className="text-xs font-bold text-text-primary bg-surface-highlight px-2 py-0.5 rounded-md">
                           {(() => {
-                            if (cacheRetention === 'never') return 'Ніколи';
-                            if (cacheRetention === '7d') return '7 днів';
-                            if (cacheRetention === '30d') return '30 днів';
-                            if (cacheRetention === '90d') return '90 днів';
+                            if (cacheRetention === 'never') return t('account.never');
+                            if (cacheRetention === '7d') return t('common.days_7');
+                            if (cacheRetention === '30d') return t('common.days_30');
+                            if (cacheRetention === '90d') return t('common.days_90');
                             const n = parseInt(cacheRetention, 10);
-                            return !isNaN(n) ? `${n} днів` : '30 днів';
+                            return !isNaN(n) ? `${n} днів` : t('common.days_30');
                           })()}
                         </span>
                       </div>
@@ -2648,7 +2647,7 @@ function HomePageContent() {
                         className="w-full accent-primary h-2 rounded-lg appearance-none cursor-pointer"
                       />
                       <div className="flex justify-between text-[10px] text-text-secondary/50 mt-1 px-0.5">
-                        <span>1 день</span>
+                        <span>{t("common.day_one")}</span>
                         <span>{t('account.never')}</span>
                       </div>
                     </div>
@@ -2665,10 +2664,10 @@ function HomePageContent() {
                   onClick={async () => {
                     const { Dialog } = await import('@capacitor/dialog');
                     const { value } = await Dialog.confirm({
-                      title: 'Написати лист',
-                      message: 'Відкрити поштовий додаток для зв\'язку з підтримкою?',
-                      okButtonTitle: 'Відкрити',
-                      cancelButtonTitle: 'Скасувати',
+                      title: t('account.contact_title'),
+                      message: t('account.contact_msg'),
+                      okButtonTitle: t('common.open'),
+                      cancelButtonTitle: t('common.cancel'),
                     });
                     if (value) {
                       window.location.href = 'mailto:artom.devv@gmail.com?subject=ChoirHub%20Підтримка';
@@ -2711,7 +2710,7 @@ function HomePageContent() {
                   onClick={() => setShowDeleteModal(true)}
                   className="w-full py-3 text-danger hover:bg-danger/10 rounded-xl text-sm transition-all"
                 >
-                  Видалити акаунт
+                  {t("account.delete_account")}
                 </button>
               </div>
             </div>
@@ -2765,7 +2764,7 @@ function HomePageContent() {
               <button
                 onClick={() => setShowSearchOverlay(true)}
                 className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-surface-highlight transition-colors text-text-secondary hover:text-text-primary"
-                title="Пошук"
+                title={t('search.placeholder')}
               >
                 <Search className="w-5 h-5" />
               </button>
@@ -2775,7 +2774,7 @@ function HomePageContent() {
             <button
               onClick={() => router.push('/notifications')}
               className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-surface-highlight transition-colors relative"
-              title="Сповіщення"
+              title={t("notif.title")}
             >
               {unreadNotifications > 0 ? (
                 <>
@@ -2862,7 +2861,7 @@ function HomePageContent() {
                       className="flex items-center gap-1.5 px-3 py-2 bg-primary text-background rounded-xl text-xs font-bold hover:opacity-90 transition-colors"
                     >
                       <UserPlus className="w-3.5 h-3.5" />
-                      Додати
+                      {t('global.actions.add')}
                     </button>
                   )}
                 </div>
@@ -2871,11 +2870,11 @@ function HomePageContent() {
               {/* Voice Filters */}
               <div className="flex overflow-x-auto gap-1.5 scrollbar-hide -mx-4 px-4 pb-2">
                 {[
-                  { key: '', label: 'Всі' },
-                  { key: 'Soprano', label: 'Сопрано' },
-                  { key: 'Alto', label: 'Альт' },
-                  { key: 'Tenor', label: 'Тенор' },
-                  { key: 'Bass', label: 'Бас' },
+                  { key: '', label: t('global.voices.all') },
+                  { key: 'Soprano', label: t('global.voices.soprano') },
+                  { key: 'Alto', label: t('global.voices.alto') },
+                  { key: 'Tenor', label: t('global.voices.tenor') },
+                  { key: 'Bass', label: t('global.voices.bass') },
                 ].map(filter => (
                   <button
                     key={filter.key}
@@ -3071,9 +3070,9 @@ function HomePageContent() {
           style={{ height: 'var(--nav-height)' }}
         >
           {[
-            { id: 'home', label: 'Служіння', icon: FilledHouseIcon },
-            { id: 'songs', label: 'Пісні', icon: Music2 },
-            { id: 'members', label: 'Учасники', icon: Users }
+            { id: 'home', label: t('layout.tabs.services'), icon: FilledHouseIcon },
+            { id: 'songs', label: t('layout.tabs.songs'), icon: Music2 },
+            { id: 'members', label: t('layout.tabs.members'), icon: Users }
           ].map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -3209,7 +3208,7 @@ function HomePageContent() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                      Прізвище
+                      {t('account.last_name')}
                     </label>
                     <input
                       type="text"
@@ -3223,7 +3222,7 @@ function HomePageContent() {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                      Ім'я
+                      {t('account.first_name')}
                     </label>
                     <input
                       type="text"
@@ -3242,7 +3241,7 @@ function HomePageContent() {
                     disabled={savingName || !newFirstName.trim() || !newLastName.trim()}
                     className="w-full py-4 bg-primary text-background font-bold rounded-2xl hover:opacity-90 transition-all shadow-lg active:scale-[0.98] flex items-center justify-center gap-2"
                   >
-                    {savingName ? <Loader2 className="animate-spin w-5 h-5" /> : "Зберегти ім'я"}
+                    {savingName ? <Loader2 className="animate-spin w-5 h-5" /> : t("account.save_name")}
                   </button>
                 </div>
               </motion.div>

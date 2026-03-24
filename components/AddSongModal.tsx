@@ -9,6 +9,7 @@ import { updateDoc, doc, arrayRemove } from "firebase/firestore";
 import { getFirestoreLazy } from "@/lib/firebase";
 import ConfirmationModal from "./ConfirmationModal";
 import { Dialog } from '@capacitor/dialog';
+import { useTranslation } from "@/contexts/TranslationContext";
 
 // ... imports
 
@@ -25,6 +26,7 @@ interface AddSongModalProps {
 
 export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownConductors, knownCategories, knownPianists, onSearchArchive }: AddSongModalProps) {
     const { userData } = useAuth();
+    const { t } = useTranslation();
 
     const [title, setTitle] = useState("");
     const [category, setCategory] = useState("Інші");
@@ -89,7 +91,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!title.trim()) {
-            setError("Введіть назву пісні");
+            setError(t('songs.add.error_title_req'));
             return;
         }
 
@@ -97,7 +99,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
         if (showCustomCategory && customCategory.trim()) {
             finalCategory = customCategory.trim();
         } else if (showCustomCategory && !customCategory.trim()) {
-            setError("Введіть назву нової категорії");
+            setError(t('songs.add.error_cat_req'));
             return;
         }
 
@@ -105,7 +107,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
         if (showCustomInput && customConductor.trim()) {
             finalConductor = customConductor.trim();
         } else if (showCustomInput && !customConductor.trim()) {
-            setError("Введіть ім'я диригента");
+            setError(t('songs.add.error_cond_req'));
             return;
         }
 
@@ -154,7 +156,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
 
             handleClose();
         } catch (err: any) {
-            setError(err.message || "Помилка додавання. Спробуйте ще раз.");
+            setError(err.message || t('songs.add.error_adding'));
             console.error(err);
         } finally {
             setLoading(false);
@@ -195,7 +197,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
             }
         } catch (e) {
             console.error("Failed to delete conductor:", e);
-            await Dialog.alert({ title: "Помилка", message: "Помилка видалення" });
+            await Dialog.alert({ title: t('common.error'), message: t('songs.add.error_deleting') });
         } finally {
             setConductorToDelete(null);
         }
@@ -218,7 +220,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
             }
         } catch (e) {
             console.error("Failed to delete pianist:", e);
-            await Dialog.alert({ title: "Помилка", message: "Помилка видалення" });
+            await Dialog.alert({ title: t('common.error'), message: t('songs.add.error_deleting') });
         } finally {
             setPianistToDelete(null);
         }
@@ -232,7 +234,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                 <div className="bg-surface w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-md sm:rounded-3xl shadow-2xl overflow-hidden border-x-0 sm:border border-border animate-in slide-in-from-bottom duration-300 flex flex-col">
                     {/* Header */}
                     <div className="flex items-center justify-between p-6 pt-[calc(1.5rem+env(safe-area-inset-top))] border-b border-border bg-surface z-10 shrink-0">
-                        <h2 className="text-xl font-bold text-text-primary">Нова пісня</h2>
+                        <h2 className="text-xl font-bold text-text-primary">{t('songs.add.new_song')}</h2>
                         <button
                             onClick={handleClose}
                             className="p-2 hover:bg-surface-highlight rounded-full transition-colors text-text-secondary hover:text-text-primary"
@@ -247,13 +249,13 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                             {/* Title */}
                             <div>
                                 <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                                    Назва пісні *
+                                    {t('songs.add.title_label')}
                                 </label>
                                 <input
                                     type="text"
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
-                                    placeholder="Введіть назву..."
+                                    placeholder={t('songs.add.title_placeholder')}
                                     className="w-full px-4 py-3.5 bg-surface-highlight border border-border rounded-xl focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-text-primary placeholder:text-text-secondary/40 transition-all font-medium"
                                     autoFocus
                                 />
@@ -262,7 +264,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                             {/* Category (Theme) */}
                             <div>
                                 <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                                    Категорія (Тематика)
+                                    {t('songs.add.category_label')}
                                 </label>
                                 {
                                     !showCustomCategory ? (
@@ -274,7 +276,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                                             >
                                                 <div className="flex items-center gap-2">
                                                     <span className={`text-sm font-medium ${category ? 'text-text-primary' : 'text-text-secondary'}`}>
-                                                        {category || "Оберіть категорію..."}
+                                                        {category || t('songs.add.category_placeholder')}
                                                     </span>
                                                 </div>
                                                 <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${isCategoryDropdownOpen ? 'rotate-180' : ''}`} />
@@ -302,7 +304,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                                                         className="w-full px-4 py-3 flex items-center gap-2 hover:bg-surface-highlight cursor-pointer text-primary border-t border-border"
                                                     >
                                                         <Plus className="w-4 h-4" />
-                                                        <span className="text-sm font-medium">Своя категорія...</span>
+                                                        <span className="text-sm font-medium">{t('songs.add.custom_category')}</span>
                                                     </div>
                                                 </div>
                                             )}
@@ -313,7 +315,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                                                 type="text"
                                                 value={customCategory}
                                                 onChange={(e) => setCustomCategory(e.target.value)}
-                                                placeholder="Назва категорії"
+                                                placeholder={t('songs.add.category_name')}
                                                 className="w-full px-4 py-3.5 bg-surface-highlight border border-border rounded-xl focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-text-primary placeholder:text-text-secondary/40 transition-all font-medium"
                                                 autoFocus
                                             />
@@ -322,7 +324,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                                                 onClick={() => setShowCustomCategory(false)}
                                                 className="text-xs text-blue-400 hover:text-blue-300 font-medium pl-1"
                                             >
-                                                Назад до списку
+                                                {t('songs.add.back_to_list')}
                                             </button>
                                         </div>
                                     )
@@ -332,7 +334,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                             {/* Conductor */}
                             <div>
                                 <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                                    Диригент *
+                                    {t('songs.add.conductor_label')}
                                 </label>
                                 {
                                     !showCustomInput ? (
@@ -345,7 +347,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                                                 <div className="flex items-center gap-2">
                                                     <User className="w-4 h-4 text-text-secondary group-hover:text-primary transition-colors" />
                                                     <span className={`text-sm font-medium ${conductor ? 'text-text-primary' : 'text-text-secondary'}`}>
-                                                        {conductor || "Оберіть диригента..."}
+                                                        {conductor || t('songs.add.conductor_placeholder')}
                                                     </span>
                                                 </div>
                                                 <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${isConductorDropdownOpen ? 'rotate-180' : ''}`} />
@@ -382,7 +384,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                                                         className="w-full px-4 py-3 flex items-center gap-2 hover:bg-surface-highlight cursor-pointer text-primary border-t border-border"
                                                     >
                                                         <Plus className="w-4 h-4" />
-                                                        <span className="text-sm font-medium">Інший...</span>
+                                                        <span className="text-sm font-medium">{t('songs.add.other')}</span>
                                                     </div>
                                                 </div>
                                             )}
@@ -393,7 +395,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                                                 type="text"
                                                 value={customConductor}
                                                 onChange={(e) => setCustomConductor(e.target.value)}
-                                                placeholder="Ім'я диригента"
+                                                placeholder={t('songs.add.conductor_name')}
                                                 className="w-full px-4 py-3.5 bg-surface-highlight border border-border rounded-xl focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-text-primary placeholder:text-text-secondary/40 transition-all font-medium"
                                                 autoFocus
                                             />
@@ -402,7 +404,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                                                 onClick={() => setShowCustomInput(false)}
                                                 className="text-xs text-blue-400 hover:text-blue-300 font-medium pl-1"
                                             >
-                                                Назад до списку
+                                                {t('songs.add.back_to_list')}
                                             </button>
                                         </div>
                                     )
@@ -412,7 +414,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                             {/* Pianist */}
                             <div>
                                 <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                                    Піаніст
+                                    {t('songs.add.pianist_label')}
                                 </label>
 
                                 {!showCustomPianist ? (
@@ -425,7 +427,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                                             <div className="flex items-center gap-2">
                                                 <User className="w-4 h-4 text-text-secondary group-hover:text-primary transition-colors" />
                                                 <span className={`text-sm font-medium ${pianist ? 'text-text-primary' : 'text-text-secondary'}`}>
-                                                    {pianist || "Оберіть піаніста (опціонально)..."}
+                                                    {pianist || t('songs.add.pianist_placeholder')}
                                                 </span>
                                             </div>
                                             <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${isPianistDropdownOpen ? 'rotate-180' : ''}`} />
@@ -440,7 +442,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                                                     }}
                                                     className={`w-full px-4 py-3 flex items-center justify-between hover:bg-surface-highlight cursor-pointer transition-colors ${!pianist ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:text-text-primary'}`}
                                                 >
-                                                    <span className="text-sm font-medium italic">Без піаніста</span>
+                                                    <span className="text-sm font-medium italic">{t('songs.add.no_pianist')}</span>
                                                 </div>
                                                 {(knownPianists || []).map(p => (
                                                     <div
@@ -471,7 +473,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                                                     className="w-full px-4 py-3 flex items-center gap-2 hover:bg-surface-highlight cursor-pointer text-primary border-t border-border"
                                                 >
                                                     <Plus className="w-4 h-4" />
-                                                    <span className="text-sm font-medium">Інший піаніст...</span>
+                                                    <span className="text-sm font-medium">{t('songs.add.other_pianist')}</span>
                                                 </div>
                                             </div>
                                         )}
@@ -482,7 +484,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                                             type="text"
                                             value={customPianist}
                                             onChange={(e) => setCustomPianist(e.target.value)}
-                                            placeholder="Ім'я піаніста"
+                                            placeholder={t('songs.add.pianist_name')}
                                             className="w-full px-4 py-3.5 bg-surface-highlight border border-border rounded-xl focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-text-primary placeholder:text-text-secondary/40 transition-all font-medium"
                                             autoFocus
                                         />
@@ -491,7 +493,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                                             onClick={() => setShowCustomPianist(false)}
                                             className="text-xs text-primary hover:text-primary/80 font-medium pl-1"
                                         >
-                                            Назад до списку
+                                            {t('songs.add.back_to_list')}
                                         </button>
                                     </div>
                                 )}
@@ -500,7 +502,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                             {/* PDF Files (Parts) */}
                             <div>
                                 <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                                    PDF Файли (опціонально)
+                                    {t('songs.add.pdf_label')}
                                 </label>
 
                                 {/* Added files list */}
@@ -555,7 +557,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                                             {pdfFiles.length > 0 ? <Plus className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
                                         </div>
                                         <span className="text-sm font-medium text-text-secondary group-hover:text-text-primary transition-colors">
-                                            {pdfFiles.length > 0 ? 'Ще один файл' : 'Завантажити PDF'}
+                                            {pdfFiles.length > 0 ? t('songs.add.another_file') : t('songs.add.upload_pdf')}
                                         </span>
                                     </button>
 
@@ -568,7 +570,7 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                                                 onSearchArchive(title);
                                             }}
                                             className="w-16 flex-shrink-0 bg-surface-highlight border border-border rounded-xl flex items-center justify-center text-text-secondary hover:text-primary hover:border-primary/30 hover:bg-surface transition-all"
-                                            title="Знайти в Архіві МХО"
+                                            title={t('songs.add.find_in_archive')}
                                         >
                                             <Search className="w-5 h-5" />
                                         </button>
@@ -594,12 +596,12 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                                 {loading ? (
                                     <>
                                         <Loader2 className="w-5 h-5 animate-spin" />
-                                        Додавання...
+                                        {t('songs.add.adding')}
                                     </>
                                 ) : (
                                     <>
                                         <Plus className="w-5 h-5" />
-                                        Додати пісню
+                                        {t('songs.add.add_song')}
                                     </>
                                 )}
                             </button>
@@ -612,9 +614,9 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                 isOpen={!!conductorToDelete}
                 onClose={() => setConductorToDelete(null)}
                 onConfirm={confirmDeleteConductor}
-                title="Видалити диригента?"
-                message={`Ви дійсно хочете видалити "${conductorToDelete}" зі списку?`}
-                confirmLabel="Видалити"
+                title={t('songs.add.delete_conductor_title')}
+                message={t('songs.add.delete_confirm', { name: conductorToDelete || '' })}
+                confirmLabel={t('songs.add.delete')}
                 isDestructive
             />
 
@@ -622,9 +624,9 @@ export default function AddSongModal({ isOpen, onClose, onAdd, regents, knownCon
                 isOpen={!!pianistToDelete}
                 onClose={() => setPianistToDelete(null)}
                 onConfirm={confirmDeletePianist}
-                title="Видалити піаніста?"
-                message={`Ви дійсно хочете видалити "${pianistToDelete}" зі списку?`}
-                confirmLabel="Видалити"
+                title={t('songs.add.delete_pianist_title')}
+                message={t('songs.add.delete_confirm', { name: pianistToDelete || '' })}
+                confirmLabel={t('songs.add.delete')}
                 isDestructive
             />
         </>

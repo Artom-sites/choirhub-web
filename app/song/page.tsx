@@ -25,9 +25,11 @@ import GlobalArchive from "@/components/GlobalArchive";
 import { GlobalSong } from "@/types";
 import { useStatusBar } from "@/hooks/useStatusBar";
 import DictionaryManagerModal from "@/components/DictionaryManagerModal";
+import { useTranslation } from "@/contexts/TranslationContext";
 
 function SongContent() {
     const router = useRouter();
+    const { t } = useTranslation();
     const searchParams = useSearchParams();
     const songId = searchParams.get('id');
     const { userData } = useAuth();
@@ -182,7 +184,7 @@ function SongContent() {
         const pdfUrl = globalSong.parts?.[0]?.pdfUrl;
 
         if (!pdfUrl) {
-            setToast({ message: "У цій пісні з архіву немає PDF", type: "error" });
+            setToast({ message: t('song.toast.no_pdf'), type: "error" });
             return;
         }
 
@@ -196,7 +198,7 @@ function SongContent() {
                 poet: song.poet,
             });
 
-            setToast({ message: "PDF успішно прикріплено", type: "success" });
+            setToast({ message: t('song.toast.pdf_attached'), type: "success" });
             setShowArchiveModal(false);
 
             // Update song state directly instead of reloading page
@@ -209,7 +211,7 @@ function SongContent() {
             } : null);
         } catch (error) {
             console.error(error);
-            setToast({ message: "Помилка при оновленні", type: "error" });
+            setToast({ message: t('song.toast.update_error'), type: "error" });
         } finally {
             setUploading(false);
         }
@@ -236,7 +238,7 @@ function SongContent() {
                         if (pdfUrl && !isTelegramLink(pdfUrl)) {
                             partsData = (cachedSong.parts && cachedSong.parts.length > 0)
                                 ? cachedSong.parts.map((p: any) => ({ name: p.name || 'Part', pdfUrl: p.pdfUrl }))
-                                : [{ name: 'Головна', pdfUrl }];
+                                : [{ name: t('song.main_part'), pdfUrl }];
                         }
                     }
                 }
@@ -294,7 +296,7 @@ function SongContent() {
                 }
             } catch (e: any) {
                 console.warn("Failed to fetch song from Firestore (likely offline):", e);
-                setFetchError(e.message || "Помилка завантаження");
+                setFetchError(e.message || t('song.toast.fetch_error'));
             }
 
             // Try to load from offline cache
@@ -309,7 +311,7 @@ function SongContent() {
                         title: cachedSong.title,
                         hasPdf: true,
                         pdfData: cachedSong.parts?.[0]?.pdfBase64,
-                        category: 'Збережено офлайн',
+                        category: t('song.category_offline'),
                     };
                     setIsOfflineMode(true);
                 }
@@ -344,7 +346,7 @@ function SongContent() {
                     if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios') {
                         const partsData = (fetched.parts && fetched.parts.length > 0)
                             ? fetched.parts.map(p => ({ name: p.name || 'Part', pdfUrl: p.pdfUrl }))
-                            : [{ name: 'Головна', pdfUrl: fetched.pdfUrl || fetched.pdfData! }];
+                            : [{ name: t('song.main_part'), pdfUrl: fetched.pdfUrl || fetched.pdfData! }];
 
                         PencilKitAnnotator.openNativePdfViewer({
                             parts: partsData,
@@ -401,13 +403,13 @@ function SongContent() {
         const isPdf = file.type === 'application/pdf' || (file instanceof File && file.name.toLowerCase().endsWith('.pdf'));
         if (!isPdf) {
             setUploadStatus('error');
-            setErrorMessage("Тільки PDF файли дозволені");
+            setErrorMessage(t('song.toast.only_pdf'));
             return;
         }
 
         if (file.size > 50 * 1024 * 1024) {
             setUploadStatus('error');
-            setErrorMessage("Файл занадто великий (макс. 50 MB)");
+            setErrorMessage(t('song.toast.file_too_large'));
             return;
         }
 
@@ -427,7 +429,7 @@ function SongContent() {
                 // Open PencilKit native viewer on iOS
                 const partsData = (updatedSong.parts && updatedSong.parts.length > 0)
                     ? updatedSong.parts.map(p => ({ name: p.name || 'Part', pdfUrl: p.pdfUrl }))
-                    : [{ name: 'Головна', pdfUrl: url }];
+                    : [{ name: t('song.main_part'), pdfUrl: url }];
                 PencilKitAnnotator.openNativePdfViewer({
                     parts: partsData,
                     initialPartIndex: 0,
@@ -445,7 +447,7 @@ function SongContent() {
         } catch (err) {
             console.error("Upload error:", err);
             setUploadStatus('error');
-            setErrorMessage("Помилка завантаження файлу");
+            setErrorMessage(t('song.toast.file_add_error'));
         } finally {
             setUploading(false);
         }
@@ -461,11 +463,11 @@ function SongContent() {
         // iOS file picker may return empty or wrong type for PDFs
         const isPdf = file.type === 'application/pdf' || (file instanceof File && file.name.toLowerCase().endsWith('.pdf'));
         if (!isPdf) {
-            await Dialog.alert({ title: "Помилка", message: "Тільки PDF файли дозволені" });
+            await Dialog.alert({ title: t('song.error'), message: t('song.toast.only_pdf') });
             return;
         }
         if (file.size > 50 * 1024 * 1024) {
-            await Dialog.alert({ title: "Помилка", message: "Файл занадто великий (макс. 50 MB)" });
+            await Dialog.alert({ title: t('song.error'), message: t('song.toast.file_too_large') });
             return;
         }
 
@@ -478,10 +480,10 @@ function SongContent() {
             setSong(prev => prev ? { ...prev, hasPdf: true, parts: updatedParts, pdfUrl: updatedParts[0]?.pdfUrl } : null);
             setAddingPart(false);
             setNewPartName("");
-            setToast({ message: "Файл додано", type: "success" });
+            setToast({ message: t('song.toast.file_added'), type: "success" });
         } catch (err) {
             console.error("Add part error:", err);
-            setToast({ message: "Помилка додавання файлу", type: "error" });
+            setToast({ message: t('song.toast.file_add_error'), type: "error" });
         } finally {
             setUploading(false);
         }
@@ -491,10 +493,10 @@ function SongContent() {
         if (!userData?.choirId || !songId || !song) return;
 
         const { value: confirmed } = await Dialog.confirm({
-            title: "Видалити файл?",
-            message: "Ви впевнені, що хочете видалити цю частину?",
-            okButtonTitle: "Видалити",
-            cancelButtonTitle: "Скасувати"
+            title: t('song.dialog.delete_file_title'),
+            message: t('song.dialog.delete_file_msg'),
+            okButtonTitle: t('common.delete'),
+            cancelButtonTitle: t('common.cancel')
         });
 
         if (!confirmed) return;
@@ -507,10 +509,10 @@ function SongContent() {
                 const updated = prev.parts.filter(p => p.id !== partId);
                 return { ...prev, parts: updated, pdfUrl: updated[0]?.pdfUrl };
             });
-            setToast({ message: "Файл видалено", type: "success" });
+            setToast({ message: t('song.toast.file_deleted'), type: "success" });
         } catch (err: any) {
             console.error("Delete part error:", err);
-            const msg = err?.message === "Cannot delete last part" ? "Не можна видалити останній файл" : "Помилка видалення";
+            const msg = err?.message === "Cannot delete last part" ? t('song.toast.last_part_error') : t('song.toast.file_delete_error');
             setToast({ message: msg, type: "error" });
         } finally {
             setUploading(false);
@@ -524,11 +526,11 @@ function SongContent() {
             await updateSong(userData.choirId, songId, updates);
             setSong(prev => prev ? { ...prev, ...updates } : null);
             setShowEditModal(false);
-            setToast({ message: "Дані пісні оновлено", type: "success" });
+            setToast({ message: t('song.toast.song_updated'), type: "success" });
 
         } catch (error) {
             console.error("Failed to update song:", error);
-            setToast({ message: "Помилка оновлення", type: "error" });
+            setToast({ message: t('song.toast.update_song_error'), type: "error" });
         }
     };
 
@@ -544,7 +546,7 @@ function SongContent() {
             router.push("/");
         } catch (error) {
             console.error("Error deleting song:", error);
-            setToast({ message: "Помилка видалення", type: "error" });
+            setToast({ message: t('song.toast.file_delete_error'), type: "error" });
         }
     };
 
@@ -595,7 +597,7 @@ function SongContent() {
         return (
             <div className="min-h-screen bg-background relative overflow-x-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] text-text-primary" data-native-inner="true">
                 {/* Skeleton Header - isActive=false keeps native header showing previous screen until content is fully loaded */}
-                <GlassPageHeader title="Завантаження..." isActive={false} />
+                <GlassPageHeader title={t('song.loading')} isActive={false} />
 
                 <div className="md:max-w-3xl lg:max-w-4xl mx-auto px-4 py-6 space-y-6">
                     {/* Skeleton Title & Info */}
@@ -625,23 +627,23 @@ function SongContent() {
 
         return (
             <div className="min-h-[100dvh] bg-background flex flex-col pt-[calc(3rem+env(safe-area-inset-top))] px-4 relative">
-                <GlassPageHeader title="Помилка" onBack={() => router.back()} />
+                <GlassPageHeader title={t('song.error')} onBack={() => router.back()} />
                 <div className="flex-1 flex flex-col items-center justify-center -mt-20">
                     <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 shadow-sm border ${isOfflineError ? 'bg-surface border-border text-text-secondary' : 'bg-red-500/10 border-red-500/20 text-red-500'}`}>
                         {isOfflineError ? <WifiOff className="w-10 h-10" /> : <AlertCircle className="w-10 h-10" />}
                     </div>
                     {isOfflineError ? (
                         <>
-                            <h2 className="text-2xl font-bold text-text-primary mb-3 text-center">Ви офлайн</h2>
+                            <h2 className="text-2xl font-bold text-text-primary mb-3 text-center">{t('song.offline')}</h2>
                             <p className="text-text-secondary text-center px-4 max-w-sm mb-8 leading-relaxed">
-                                Ця пісня ще не збережена на вашому пристрої. Підключіться до інтернету, щоб отримати доступ.
+                                {t('song.offline_desc')}
                             </p>
                         </>
                     ) : (
                         <>
-                            <h2 className="text-2xl font-bold text-text-primary mb-3 text-center">Пісню не знайдено</h2>
+                            <h2 className="text-2xl font-bold text-text-primary mb-3 text-center">{t('song.not_found')}</h2>
                             <p className="text-text-secondary text-center px-4 max-w-sm mb-8 leading-relaxed">
-                                Можливо, її було видалено, або у вас немає до неї доступу.
+                                {t('song.not_found_desc')}
                             </p>
                         </>
                     )}
@@ -649,7 +651,7 @@ function SongContent() {
                         onClick={() => router.back()}
                         className="px-8 py-3.5 bg-surface-highlight text-text-primary font-semibold rounded-2xl active:scale-95 transition-all text-[15px] border border-border"
                     >
-                        Повернутися назад
+                        {t('song.go_back')}
                     </button>
                 </div>
             </div>
@@ -685,7 +687,7 @@ function SongContent() {
                                         if (isIOS) {
                                             const partsData = (song.parts && song.parts.length > 0)
                                                 ? song.parts.map(p => ({ name: p.name || 'Part', pdfUrl: p.pdfUrl }))
-                                                : [{ name: 'Головна', pdfUrl: song.pdfUrl || song.pdfData! }];
+                                                : [{ name: t('song.main_part'), pdfUrl: song.pdfUrl || song.pdfData! }];
 
                                             PencilKitAnnotator.openNativePdfViewer({
                                                 parts: partsData,
@@ -765,10 +767,10 @@ function SongContent() {
         try {
             await updateSong(userData.choirId, songId, { parts: updatedParts });
             setSong(prev => prev ? { ...prev, parts: updatedParts } : null);
-            setToast({ message: "Назву оновлено", type: "success" });
+            setToast({ message: t('song.toast.renamed'), type: "success" });
         } catch (err) {
             console.error("Rename part error:", err);
-            setToast({ message: "Помилка перейменування", type: "error" });
+            setToast({ message: t('song.toast.rename_error'), type: "error" });
         } finally {
             setRenamingPartId(null);
             setRenameValue("");
@@ -815,10 +817,10 @@ function SongContent() {
 
             await updateSong(userData.choirId, songId, { [field]: finalValue });
             setSong(prev => prev ? { ...prev, [field]: finalValue } : null);
-            setToast({ message: "Збережено", type: "success" });
+            setToast({ message: t('song.toast.saved'), type: "success" });
         } catch (err) {
             console.error("Update field error:", err);
-            setToast({ message: "Помилка збереження", type: "error" });
+            setToast({ message: t('song.toast.save_error'), type: "error" });
         } finally {
             setEditingField(null);
             setEditValue("");
@@ -832,10 +834,10 @@ function SongContent() {
         if (!userData?.choirId) return;
 
         const { value: confirm } = await Dialog.confirm({
-            title: "Видалити",
-            message: `Видаляємо "${item}" зі списку?`,
-            okButtonTitle: "Видалити",
-            cancelButtonTitle: "Скасувати"
+            title: t('song.dialog.delete_generic'),
+            message: `${t('song.dialog.delete_vocab')}`,
+            okButtonTitle: t('common.delete'),
+            cancelButtonTitle: t('common.cancel')
         });
 
         if (confirm) {
@@ -874,10 +876,10 @@ function SongContent() {
                         knownCategories: (prev.knownCategories || []).filter(c => c !== item)
                     }));
                 }
-                setToast({ message: "Вилучено зі словника", type: "success" });
+                setToast({ message: t('song.toast.vocab_removed'), type: "success" });
             } catch (err) {
                 console.error("Delete item error:", err);
-                setToast({ message: "Помилка видалення", type: "error" });
+                setToast({ message: t('song.toast.vocab_error'), type: "error" });
             }
         }
     };
@@ -925,7 +927,7 @@ function SongContent() {
                                 className="w-full py-4 bg-[#2AABEE] text-white rounded-2xl font-bold hover:bg-[#2AABEE]/90 transition-colors shadow-lg shadow-[#2AABEE]/20 flex items-center justify-center gap-2"
                             >
                                 <ExternalLink className="w-5 h-5" />
-                                Відкрити в Telegram
+                                {t('song.open_telegram')}
                             </a>
                         ) : (
                             <div className="flex gap-3">
@@ -934,7 +936,7 @@ function SongContent() {
                                         if (isIOS) {
                                             const partsData = (song.parts && song.parts.length > 0)
                                                 ? song.parts.map(p => ({ name: p.name || 'Part', pdfUrl: p.pdfUrl }))
-                                                : [{ name: 'Головна', pdfUrl: song.pdfUrl || song.pdfData! }];
+                                                : [{ name: t('song.main_part'), pdfUrl: song.pdfUrl || song.pdfData! }];
 
                                             PencilKitAnnotator.openNativePdfViewer({
                                                 parts: partsData,
@@ -952,7 +954,7 @@ function SongContent() {
                                     className="flex-1 py-4 bg-primary text-background rounded-2xl font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 flex items-center justify-center gap-2 text-base"
                                 >
                                     <FileText className="w-5 h-5" />
-                                    Відкрити ноти
+                                    {t('song.open_scores')}
                                 </button>
                                 <button
                                     onClick={handleDownload}
@@ -968,7 +970,7 @@ function SongContent() {
                         {(canEdit || (song.parts && song.parts.length > 1)) && (
                             <div className="bg-surface border border-border rounded-2xl overflow-hidden">
                                 <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-                                    <p className="text-xs text-text-secondary uppercase tracking-wider font-bold">Партитури</p>
+                                    <p className="text-xs text-text-secondary uppercase tracking-wider font-bold">{t('song.parts.label')}</p>
                                     <span className="text-[10px] text-text-secondary/50 bg-surface-highlight px-2 py-0.5 rounded-full">{song.parts?.length || 1} файл(ів)</span>
                                 </div>
 
@@ -1001,7 +1003,7 @@ function SongContent() {
                                                                     if (e.key === 'Enter') handleRenamePart(part.id!, renameValue);
                                                                     if (e.key === 'Escape') { setRenamingPartId(null); setRenameValue(""); }
                                                                 }}
-                                                                placeholder="Нова назва..."
+                                                                placeholder={t('song.part_placeholder')}
                                                                 className="flex-1 px-2 py-1 bg-surface-highlight border border-primary/30 rounded-lg text-sm text-text-primary placeholder:text-text-secondary/40 focus:outline-none focus:border-primary"
                                                                 autoFocus
                                                             />

@@ -2,6 +2,7 @@
 
 import { Bell, BellOff, Loader2, AlertCircle, CheckCircle } from "lucide-react";
 import { useFcmToken } from "@/hooks/useFcmToken";
+import { useTranslation } from "@/contexts/TranslationContext";
 
 export default function NotificationSettings() {
     const {
@@ -12,6 +13,7 @@ export default function NotificationSettings() {
         isSupported,
         isGranted,
     } = useFcmToken();
+    const { t } = useTranslation();
 
     console.log("[NotificationSettings] Render. Status:", permissionStatus, "IsGranted:", isGranted);
 
@@ -21,13 +23,13 @@ export default function NotificationSettings() {
                 <div className="flex items-center gap-3 text-text-secondary">
                     <BellOff className="w-5 h-5" />
                     <div>
-                        <p className="text-text-primary font-medium">Сповіщення недоступні</p>
+                        <p className="text-text-primary font-medium">{t('notif.unavailable.label')}</p>
                         <p className="text-sm">
                             {/iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).Capacitor?.isNativePlatform?.()
-                                ? "На iOS сповіщення працюють тільки якщо додати додаток на головний екран"
+                                ? t('notif.unavailable.ios_hint')
                                 : ((window as any).Capacitor?.isNativePlatform?.() 
-                                    ? "Ваш пристрій не підтримує пуш-сповіщення"
-                                    : "Ваш пристрій або браузер не підтримує пуш-сповіщення")}
+                                    ? t('notif.push.not_supported_ios')
+                                    : t('notif.push.not_supported_other'))}
                         </p>
                     </div>
                 </div>
@@ -49,9 +51,9 @@ export default function NotificationSettings() {
                         </div>
                     )}
                     <div>
-                        <p className="text-text-primary font-medium">Сповіщення</p>
+                        <p className="text-text-primary font-medium">{t('notif.title')}</p>
                         <p className="text-sm text-text-secondary">
-                            {isGranted ? "Увімкнено" : "Отримуйте нагадування про служіння"}
+                            {isGranted ? t('notif.enabled') : t('notif.subscribe_hint')}
                         </p>
                     </div>
                 </div>
@@ -63,14 +65,14 @@ export default function NotificationSettings() {
                         className="px-4 py-2 bg-primary text-background rounded-xl font-bold text-sm hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >
                         {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                        {permissionStatus === "denied" ? "Заблоковано" : "Увімкнути"}
+                        {permissionStatus === "denied" ? t('notif.blocked') : t('notif.enable')}
                     </button>
                 )}
 
                 {isGranted && (
                     <div className="flex items-center gap-1 text-green-400 text-sm">
                         <CheckCircle className="w-4 h-4" />
-                        <span>Активовано</span>
+                        <span>{t('notif.activated')}</span>
                     </div>
                 )}
             </div>
@@ -85,16 +87,16 @@ export default function NotificationSettings() {
             {permissionStatus === "denied" && (
                 <div className="mt-3 p-3 bg-amber-500/10 rounded-xl space-y-2">
                     <p className="text-amber-400 text-sm font-medium">
-                        Сповіщення заблоковані в налаштуваннях пристрою
+                        {t('notif.push.blocked_label')}
                     </p>
                     <p className="text-xs text-text-secondary leading-relaxed">
                         {/iPad|iPhone|iPod/.test(navigator.userAgent) && (window as any).Capacitor?.isNativePlatform?.()
-                            ? 'Налаштування → MyChoir → Сповіщення → Увімкнути'
+                            ? t('notif.push.enable_ios')
                             : /iPad|iPhone|iPod/.test(navigator.userAgent)
-                                ? 'Налаштування → Safari → Сповіщення → MyChoir → Дозволити'
+                                ? t('notif.push.enable_safari')
                                 : (window as any).Capacitor?.isNativePlatform?.()
-                                    ? 'Налаштування вашого пристрою → Додатки → MyChoir → Дозволити сповіщення'
-                                    : 'Відкрийте налаштування браузера для цього сайту і дозвольте сповіщення.'}
+                                    ? t('notif.push.enable_android')
+                                    : t('notif.push.enable_browser')}
                     </p>
                 </div>
             )}
