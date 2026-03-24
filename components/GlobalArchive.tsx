@@ -985,7 +985,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                                 { id: 'theme:all', label: t('global.categories.all'), isActive: !selectedTheme },
                                                 ...OFFICIAL_THEMES.filter(thm => thm !== "Інші").sort((a,b) => a.localeCompare(b)).map(theme => ({
                                                     id: `theme:${theme}`,
-                                                    label: t(`global.themes.${theme.replace(/ /g, '_')}` as any, { defaultValue: theme }),
+                                                    label: t(`global.themes.${theme.replace(/ /g, '_').replace(/[''\u2019\u02BC]/g, '')}` as any, { defaultValue: theme }),
                                                     isActive: selectedTheme === theme,
                                                 })),
                                                 { id: `theme:Інші`, label: t(`global.themes.Інші` as any, { defaultValue: 'Інші' }), isActive: selectedTheme === 'Інші' }
@@ -1163,7 +1163,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                         <td className="py-3 px-4">
                                             {song.theme ? (
                                                 <span className="text-sm text-text-secondary">
-                                                    {t(`global.themes.${song.theme.replace(/ /g, '_')}` as any, { defaultValue: song.theme })}
+                                                    {t(`global.themes.${song.theme.replace(/ /g, '_').replace(/[''\u2019\u02BC]/g, '')}` as any, { defaultValue: song.theme })}
                                                 </span>
                                             ) : (
                                                 <span className="text-sm text-text-secondary/50">—</span>
@@ -1222,7 +1222,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                             {song.subcategory && song.theme && <span className="text-xs text-text-secondary">•</span>}
                                             {song.theme && (
                                                 <span className="text-xs text-text-secondary">
-                                                    {t(`global.themes.${song.theme.replace(/ /g, '_')}` as any, { defaultValue: song.theme })}
+                                                    {t(`global.themes.${song.theme.replace(/ /g, '_').replace(/[''\u2019\u02BC]/g, '')}` as any, { defaultValue: song.theme })}
                                                 </span>
                                             )}
                                             {((song.partsCount && song.partsCount > 1) || (song.parts && song.parts.length > 1)) && (

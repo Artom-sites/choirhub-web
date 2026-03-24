@@ -169,7 +169,7 @@ export default function SongList({
                         { id: 'theme:All', label: t('songs.list.filter_all'), isActive: selectedCategory === 'All' },
                         ...Array.from(new Set([...CATEGORIES, ...(knownCategories || [])])).map(cat => ({
                             id: `theme:${cat}`,
-                            label: t(`global.themes.${cat.replace(/ /g, '_')}` as any, { defaultValue: cat }),
+                            label: t(`global.themes.${cat.replace(/ /g, '_').replace(/[''\u2019\u02BC]/g, '')}` as any, { defaultValue: cat }),
                             isActive: selectedCategory === cat
                         }))
                     ],
@@ -638,7 +638,7 @@ export default function SongList({
                                             { id: 'theme:All', label: t('songs.list.filter_all'), isActive: selectedCategory === 'All' },
                                             ...Array.from(new Set([...CATEGORIES, ...(knownCategories || [])])).map(cat => ({
                                                 id: `theme:${cat}`,
-                                                label: t(`global.themes.${cat.replace(/ /g, '_')}` as any, { defaultValue: cat }),
+                                                label: t(`global.themes.${cat.replace(/ /g, '_').replace(/[''\u2019\u02BC]/g, '')}` as any, { defaultValue: cat }),
                                                 isActive: selectedCategory === cat
                                             }))
                                         ]
@@ -696,7 +696,7 @@ export default function SongList({
                                                         <div className="flex items-center gap-1.5 mt-0.5">
                                                             {song.conductor && <span className="text-xs text-primary font-medium flex items-center gap-1"><User className="w-3 h-3" />{song.conductor}</span>}
                                                             {song.conductor && <span className="text-xs text-text-secondary">•</span>}
-                                                            <span className="text-xs text-text-secondary">{t(`global.themes.${song.category.replace(/ /g, '_')}` as any, { defaultValue: song.category })}</span>
+                                                            <span className="text-xs text-text-secondary">{t(`global.themes.${song.category.replace(/ /g, '_').replace(/[''\u2019\u02BC]/g, '')}` as any, { defaultValue: song.category })}</span>
                                                         </div>
                                                     </div>
                                                     <ChevronRight className="w-4 h-4 text-text-secondary/40 flex-shrink-0" />
@@ -747,7 +747,7 @@ export default function SongList({
                                                                 </div>
                                                                 <p className="font-semibold text-text-primary truncate">{song.title}</p>
                                                             </div>
-                                                            <div className="truncate"><span className="text-sm text-text-secondary">{t(`global.themes.${song.category.replace(/ /g, '_')}` as any, { defaultValue: song.category })}</span></div>
+                                                            <div className="truncate"><span className="text-sm text-text-secondary">{t(`global.themes.${song.category.replace(/ /g, '_').replace(/[''\u2019\u02BC]/g, '')}` as any, { defaultValue: song.category })}</span></div>
                                                             <div className="truncate">
                                                                 {song.conductor ? <div className="flex items-center gap-1.5 text-sm text-primary font-medium"><User className="w-3.5 h-3.5" /><span>{song.conductor}</span></div> : <span className="text-sm text-text-secondary/50">—</span>}
                                                             </div>
@@ -784,7 +784,7 @@ export default function SongList({
                                                                 <div className="flex items-center gap-1.5 mt-0.5">
                                                                     {song.conductor && <span className="text-xs text-primary font-medium flex items-center gap-1"><User className="w-3 h-3" />{song.conductor}</span>}
                                                                     {song.conductor && <span className="text-xs text-text-secondary">•</span>}
-                                                                    <span className="text-xs text-text-secondary">{t(`global.themes.${song.category.replace(/ /g, '_')}` as any, { defaultValue: song.category })}</span>
+                                                                    <span className="text-xs text-text-secondary">{t(`global.themes.${song.category.replace(/ /g, '_').replace(/[''\u2019\u02BC]/g, '')}` as any, { defaultValue: song.category })}</span>
                                                                 </div>
                                                             </div>
                                                             {effectiveCanAdd && <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleEditClick(e, song); }} className="p-2 rounded-lg text-text-secondary hover:text-text-primary active:scale-95 transition-transform" title={t('songs.list.more_info')}><MoreVertical className="w-5 h-5" /></button>}

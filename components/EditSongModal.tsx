@@ -356,7 +356,7 @@ export default function EditSongModal({
                                             className="w-full bg-surface-highlight text-text-primary text-[16px] rounded-xl px-4 py-3 border border-border flex items-center justify-between cursor-pointer transition-all hover:bg-surface-hover"
                                         >
                                             <span className={theme ? 'text-text-primary' : 'text-text-secondary'}>
-                                                {theme ? t(`global.themes.${theme.replace(/ /g, '_')}` as any, { defaultValue: theme }) : t('edit_song.category_placeholder')}
+                                                {theme ? t(`global.themes.${theme.replace(/ /g, '_').replace(/[''\u2019\u02BC]/g, '')}` as any, { defaultValue: theme }) : t('edit_song.category_placeholder')}
                                             </span>
                                             <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${isThemeDropdownOpen ? 'rotate-180' : ''}`} />
                                         </div>
@@ -378,7 +378,7 @@ export default function EditSongModal({
                                                             className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-surface border-b border-border last:border-none"
                                                         >
                                                             <span className={`text-[15px] ${theme === themeOption ? 'text-primary font-medium' : 'text-text-primary'}`}>
-                                                                {t(`global.themes.${themeOption.replace(/ /g, '_')}` as any, { defaultValue: themeOption })}
+                                                                {t(`global.themes.${themeOption.replace(/ /g, '_').replace(/[''\u2019\u02BC]/g, '')}` as any, { defaultValue: themeOption })}
                                                             </span>
                                                             {theme === themeOption && <Check className="w-4 h-4 text-primary" />}
                                                         </div>

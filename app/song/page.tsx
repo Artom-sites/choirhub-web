@@ -891,7 +891,7 @@ function SongContent() {
             <GlassPageHeader
                 title={song.title}
                 subtitle={[
-                    t(`global.themes.${song.category.replace(/ /g, '_')}` as any, { defaultValue: song.category }),
+                    t(`global.themes.${song.category.replace(/ /g, '_').replace(/[''\u2019\u02BC]/g, '')}` as any, { defaultValue: song.category }),
                     song.conductor,
                     song.pianist ? `🎹 ${song.pianist}` : null
                 ].filter(Boolean).join(' · ')}
