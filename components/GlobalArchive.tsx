@@ -1340,7 +1340,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         <div className="flex items-center justify-between mb-2">
-                                            <h3 className="text-lg font-bold text-white">{t('songs.add_to_repertoire')}</h3>
+                                            <h3 className="text-lg font-bold text-text-primary">{t('songs.add_to_repertoire')}</h3>
                                             <button
                                                 onClick={() => setShowAddOptions(false)}
                                                 className="p-1 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-highlight transition-colors"
@@ -1350,11 +1350,11 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                         </div>
                                         <p className="text-text-secondary text-sm mb-5">{t('songs.choose_what_to_add')}</p>
                                         <div className="flex flex-col gap-3">
-                                            <button onClick={() => handleAddPart(previewSong, previewPartIndex)} className="w-full py-4 px-4 bg-accent/20 border border-accent text-white font-semibold rounded-xl hover:bg-accent/30 transition-colors text-left">
+                                            <button onClick={() => handleAddPart(previewSong, previewPartIndex)} className="w-full py-4 px-4 bg-accent/20 border border-accent text-text-primary font-semibold rounded-xl hover:bg-accent/30 transition-colors text-left">
                                                 <div className="text-xs opacity-70 mb-1">{t('songs.only_current_part')}</div>
                                                 <div className="truncate text-accent">{extractInstrument(previewSong.parts[previewPartIndex]?.name || 'Поточна партія', previewSong.title)}</div>
                                             </button>
-                                            <button onClick={() => { handleAddSongWrapper(previewSong); setShowAddOptions(false); setPreviewSong(null); }} className="w-full py-4 px-4 bg-surface-highlight border border-border text-white font-semibold rounded-xl hover:bg-surface-highlight/80 transition-colors text-left">
+                                            <button onClick={() => { handleAddSongWrapper(previewSong); setShowAddOptions(false); setPreviewSong(null); }} className="w-full py-4 px-4 bg-surface-highlight border border-border text-text-primary font-semibold rounded-xl hover:bg-surface-highlight/80 transition-colors text-left">
                                                 <div className="text-xs opacity-70 mb-1">{t('songs.full_song')}</div>
                                                 <div className="truncate">{previewSong.parts.length} партій</div>
                                             </button>
