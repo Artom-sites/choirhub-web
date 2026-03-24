@@ -1277,7 +1277,7 @@ export async function getPendingSongs(): Promise<PendingSong[]> {
  * 1. Add to global_songs
  * 2. Delete from pending_songs (or mark approved)
  */
-export async function approveSong(pendingSong: PendingSong, adminId: string): Promise<void> {
+export async function approveSong(pendingSong: PendingSong, adminId: string): Promise<string> {
     try {
         // 1. Prepare global song data
         const { id, status, submittedBy, submittedByName, submittedChoirId, submittedAt, reviewedBy, reviewedAt, rejectionReason, ...songData } = pendingSong;
@@ -1290,7 +1290,7 @@ export async function approveSong(pendingSong: PendingSong, adminId: string): Pr
         };
 
         // 2. Add to global catalog (global_songs)
-        await addDoc(collection(getDb(), "global_songs"), globalSongData);
+        const docRef = await addDoc(collection(getDb(), "global_songs"), globalSongData);
 
         // 3. Mark pending song as approved (or delete it if you prefer cleanup)
         // We'll mark it approved to keep history for the user
@@ -1300,6 +1300,8 @@ export async function approveSong(pendingSong: PendingSong, adminId: string): Pr
             reviewedBy: adminId,
             reviewedAt: serverTimestamp()
         });
+
+        return docRef.id;
 
     } catch (error) {
         console.error("Error approving song:", error);

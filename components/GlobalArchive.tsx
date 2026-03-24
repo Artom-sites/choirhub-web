@@ -817,21 +817,38 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
         if (!approveModal.song) return;
         setApproveModal(prev => ({ ...prev, loading: true }));
         try {
-            await approveSong(approveModal.song, user!.uid);
+            const newGlobalId = await approveSong(approveModal.song, user!.uid);
+            
+            // Construct the resolved global song locally
+            const approvedSong: GlobalSong = {
+                ...approveModal.song,
+                id: newGlobalId,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                sortTitle: approveModal.song.title.toUpperCase(),
+            } as GlobalSong;
+
+            // 1. Optimistic UI update: Deduplicate, sort, cache, and update search index
+            setSongs(prev => {
+                const newSongsList = processSongs([...prev, approvedSong]);
+                saveToCache(newSongsList);
+                setupFuse(newSongsList);
+                setTotalSongsCount(newSongsList.length);
+                return newSongsList;
+            });
+
+            // 2. Clear pending state
             setPendingSongs(prev => prev.filter(s => s.id !== approveModal.song!.id));
             setApproveModal({ isOpen: false, song: null, loading: false });
-            // Clear cache to show new song in archive
-            localStorage.removeItem(CACHE_KEY);
-            localStorage.removeItem(CACHE_TIMESTAMP_KEY);
-            await loadFromR2();
 
-            // Trigger Background Index Update
+            // 3. Trigger Background R2 Index Update
             try {
                 fetch('/api/search-index', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'add', song: approveModal.song })
-                }); // Don't await, let it run in background
+                    body: JSON.stringify({ action: 'add', song: approvedSong })
+                }).catch(() => console.warn('Background search-index rebuild failed silently')); 
+                // Don't await, let it run in background so UI isn't blocked
             } catch (ignore) { }
 
             setAlertModal({ isOpen: true, title: 'Успішно!', message: 'Пісню додано до архіву', variant: 'success' });
