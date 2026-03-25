@@ -61,6 +61,11 @@ function HomePageContent() {
 
   const searchParams = useSearchParams();
   const { user, userData, loading: authLoading, signOut, refreshProfile, isGuest, updateActiveChoir, linkWithGoogle, linkWithApple } = useAuth();
+  
+  // Track canEdit state in a ref to prevent stale closures in global native callbacks
+  const canEditRef = useRef(false);
+  canEditRef.current = userData?.role === 'head' || userData?.role === 'regent';
+  
   const { theme, setTheme } = useTheme();
   const { t, language, changeLanguage } = useTranslation();
 
@@ -569,7 +574,7 @@ function HomePageContent() {
     (window as any).__nativeHeaderBellClick = () => router.push('/notifications');
     (window as any).__nativeHeaderTitleClick = () => setShowChoirManager(true);
     (window as any).__nativeHeaderLogoClick = () => {
-      if (userData?.role === 'head' || userData?.role === 'regent') {
+      if (canEditRef.current) {
         setEditChoirName(choir?.name || ''); 
         setShowChoirSettings(true); 
       }
@@ -583,7 +588,7 @@ function HomePageContent() {
       delete (window as any).__nativeHeaderLogoClick;
       delete (window as any).__nativeHeaderSearchClick;
     };
-  }, [router, choir?.name, userData?.role]);
+  }, [router, choir?.name]);
   // ---------------------------------
 
   // Native FAB tap → open correct modal based on active tab and sub-tab
