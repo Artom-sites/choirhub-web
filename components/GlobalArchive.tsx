@@ -35,6 +35,7 @@ interface GlobalArchiveProps {
     externalCategory?: string;
     externalSubCategory?: string | null;
     externalLanguage?: 'all' | 'ukr' | 'rus' | 'eng' | 'ger' | 'rom';
+    externalTheme?: string | null;
 }
 
 export const CATEGORIES = [
@@ -96,7 +97,7 @@ const fuseOptions = {
     minMatchCharLength: 2,
 };
 
-export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQuery = "", showSearchOverlay, setShowSearchOverlay, externalSearchQuery, externalCategory, externalSubCategory, externalLanguage }: GlobalArchiveProps) {
+export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQuery = "", showSearchOverlay, setShowSearchOverlay, externalSearchQuery, externalCategory, externalSubCategory, externalLanguage, externalTheme }: GlobalArchiveProps) {
     const { user, userData } = useAuth();
     const { t } = useTranslation();
     const [songs, setSongs] = useState<GlobalSong[]>([]);
@@ -119,6 +120,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
     useEffect(() => { if (externalCategory !== undefined) setSelectedCategory(externalCategory); }, [externalCategory]);
     useEffect(() => { if (externalSubCategory !== undefined) setSelectedSubCategory(externalSubCategory); }, [externalSubCategory]);
     useEffect(() => { if (externalLanguage !== undefined) setSelectedLanguage(externalLanguage); }, [externalLanguage]);
+    useEffect(() => { if (externalTheme !== undefined) setSelectedTheme(externalTheme); }, [externalTheme]);
 
     // Pagination State
     const [hasMore, setHasMore] = useState(true);
@@ -343,6 +345,8 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
 
     const CACHE_KEY = 'globalArchiveSongsCache';
     const CACHE_TIMESTAMP_KEY = 'globalArchiveCacheTime';
+    /** Separate key: ISO timestamp of the last successful R2 load. Used as fallback for delta sync. */
+    const LAST_SYNC_KEY = 'globalArchiveLastSyncTime';
     const CACHE_MAX_AGE = 24 * 60 * 60 * 1000; // 24 hours
 
     // Load from localStorage cache (for offline)
@@ -360,11 +364,18 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
         return null;
     };
 
-    // Save to localStorage cache
+    // Save to localStorage cache + record the sync timestamp separately
     const saveToCache = (data: GlobalSong[]) => {
         try {
             localStorage.setItem(CACHE_KEY, JSON.stringify(data));
             localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+        } catch (e) { /* silent */ }
+    };
+
+    /** Record "I just synced from R2/Firestore" so loadDelta can use it even if song rows lack updatedAt */
+    const recordSyncTime = () => {
+        try {
+            localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
         } catch (e) { /* silent */ }
     };
 
@@ -415,6 +426,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
             setHasMore(false);
             setupFuse(sortedSongs);
             saveToCache(sortedSongs);
+            recordSyncTime(); // ← record we have a fresh R2 snapshot
             console.log(`✅ Loaded ${sortedSongs.length} songs from R2 (0 Firestore reads)`);
             return sortedSongs;
         } catch (e) {
@@ -494,28 +506,49 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
         init();
     }, []);
 
-    // 4. Delta Sync (Fetch only new updates from Firestore)
+    // 4. Delta Sync — fetch only songs newer than our last known sync point
     const loadDelta = async (baseSongs: GlobalSong[]) => {
         if (baseSongs.length === 0) return;
 
         try {
-            // Find max updated time
+            /** Parse any updatedAt shape that may appear in the R2 index or localStorage cache:
+             *  - ISO string (new index format)           → new Date(s).getTime()
+             *  - Firestore Timestamp {seconds, nanoseconds} → seconds * 1000
+             *  - Unix number (ms)                        → value as-is
+             */
+            const parseTs = (u: any): number => {
+                if (!u) return 0;
+                if (typeof u === 'string') { const t = new Date(u).getTime(); return isNaN(t) ? 0 : t; }
+                if (typeof u === 'number') return u > 1e10 ? u : u * 1000; // ms vs s
+                if (u.seconds) return u.seconds * 1000;
+                return 0;
+            };
+
+            // 1. Derive maxTime from song rows (works after R2 index is rebuilt with updatedAt)
             let maxTime = 0;
-            if (baseSongs.length > 0) {
-                console.log("🔍 Sample updatedAt:", baseSongs[0].updatedAt, "Type:", typeof baseSongs[0].updatedAt);
-            }
             baseSongs.forEach(s => {
-                const t = s.updatedAt ? new Date(s.updatedAt).getTime() : 0;
+                const t = parseTs((s as any).updatedAt);
                 if (t > maxTime) maxTime = t;
             });
 
+            // 2. Belt-and-suspenders: fall back to the stored sync timestamp
+            //    This covers old caches that pre-date the updatedAt field in the index.
             if (maxTime === 0) {
-                console.warn("⚠️ Delta Sync Skipped: No valid updatedAt found in base songs.");
+                const stored = localStorage.getItem(LAST_SYNC_KEY);
+                if (stored) {
+                    const t = new Date(stored).getTime();
+                    if (!isNaN(t)) maxTime = t;
+                }
+            }
+
+            if (maxTime === 0) {
+                // Truly no reference point — skip silently (will resolve after next rebuild)
+                console.info('[GlobalArchive] Delta sync skipped: no sync timestamp available yet.');
                 return;
             }
 
             const lastUpdate = new Date(maxTime);
-            console.log(`🔄 Delta Sync: Checking for updates since ${lastUpdate.toISOString()}...`);
+            console.log(`🔄 Delta Sync: checking for updates since ${lastUpdate.toISOString()}...`);
 
             const q = query(
                 collection(getFirestoreLazy(), "global_songs"),
@@ -524,12 +557,11 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
 
             const snapshot = await getDocs(q);
             if (snapshot.empty) {
-                console.log("✅ Delta Sync: No new updates found.");
+                console.log('✅ Delta Sync: no new updates.');
             } else {
                 console.log(`🚀 Found ${snapshot.size} new updates! Merging...`);
                 const newSongs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GlobalSong));
 
-                // Merge
                 const currentMap = new Map(baseSongs.map(s => [s.id, s]));
                 newSongs.forEach(s => currentMap.set(s.id, s));
 
@@ -540,9 +572,10 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                 setTotalSongsCount(sorted.length);
                 setupFuse(sorted);
                 saveToCache(sorted);
+                recordSyncTime();
             }
         } catch (e) {
-            console.error("Delta sync failed", e);
+            console.error('Delta sync failed', e);
         }
     };
 
@@ -843,7 +876,11 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
 
             // 3. Trigger Background R2 Index Update
             try {
-                fetch('/api/search-index', {
+                const searchIndexUrl = Capacitor.isNativePlatform() 
+                    ? 'https://mychoir.vercel.app/api/search-index' 
+                    : '/api/search-index';
+                    
+                fetch(searchIndexUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ action: 'add', song: approvedSong })
@@ -982,13 +1019,20 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                         },
                                         {
                                             items: [
-                                                { id: 'theme:all', label: t('global.categories.all'), isActive: !selectedTheme },
-                                                ...OFFICIAL_THEMES.filter(thm => thm !== "Інші").sort((a,b) => a.localeCompare(b)).map(theme => ({
-                                                    id: `theme:${theme}`,
-                                                    label: t(`global.themes.${theme.replace(/ /g, '_').replace(/[''\u2019\u02BC]/g, '')}` as any, { defaultValue: theme }),
-                                                    isActive: selectedTheme === theme,
-                                                })),
-                                                { id: `theme:Інші`, label: t(`global.themes.Інші` as any, { defaultValue: 'Інші' }), isActive: selectedTheme === 'Інші' }
+                                                {
+                                                    id: 'theme_dropdown',
+                                                    label: t('global.themes_label' as any, { defaultValue: 'Тематика' }),
+                                                    isActive: !!selectedTheme,
+                                                    children: [
+                                                        { id: 'theme:all', label: t('global.categories.all'), isActive: !selectedTheme },
+                                                        ...OFFICIAL_THEMES.filter(thm => thm !== "Інші").sort((a,b) => a.localeCompare(b)).map(theme => ({
+                                                            id: `theme:${theme}`,
+                                                            label: t(`global.themes.${theme.replace(/ /g, '_').replace(/[''\u2019\u02BC]/g, '')}` as any, { defaultValue: theme }),
+                                                            isActive: selectedTheme === theme,
+                                                        })),
+                                                        { id: `theme:Інші`, label: t(`global.themes.Інші` as any, { defaultValue: 'Інші' }), isActive: selectedTheme === 'Інші' }
+                                                    ]
+                                                }
                                             ]
                                         }
                                     ]}
@@ -1006,6 +1050,8 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                         } else if (itemId.startsWith('theme:')) {
                                             const themeId = itemId.slice(6);
                                             setSelectedTheme(themeId === 'all' ? null : themeId === selectedTheme ? null : themeId);
+                                        } else if (itemId === 'theme_dropdown') {
+                                            setSelectedTheme(null);
                                         }
                                     }}
                                 />

@@ -6,7 +6,7 @@ import { Capacitor } from "@capacitor/core";
 import { Dialog } from '@capacitor/dialog';
 import { Search, FileText, Music2, ChevronRight, Filter, Plus, Eye, User, Loader2, Trash2, MoreVertical, Library, X } from "lucide-react";
 import { SimpleSong } from "@/types";
-import { CATEGORIES, Category } from "@/lib/themes";
+import { CATEGORIES, OFFICIAL_THEMES, Category } from "@/lib/themes";
 import { AnimatePresence, motion } from "framer-motion";
 import { Virtuoso, TableVirtuoso, VirtuosoHandle } from 'react-virtuoso';
 import Fuse from 'fuse.js';
@@ -103,6 +103,7 @@ export default function SongList({
     const [archiveCategory, setArchiveCategory] = useState("all");
     const [archiveSubCategory, setArchiveSubCategory] = useState<string | null>(null);
     const [archiveLanguage, setArchiveLanguage] = useState<'all' | 'ukr' | 'rus' | 'eng'>('all');
+    const [archiveTheme, setArchiveTheme] = useState<string | null>(null);
 
     // Listen to main nav double tap to scroll to top (for Repertoire list)
     useEffect(() => {
@@ -194,10 +195,33 @@ export default function SongList({
                         }))
                     ],
                     [
-                        { id: 'arch_lang:all', label: t('songs.list.filter_all'), isActive: archiveLanguage === 'all' },
-                        { id: 'arch_lang:ukr', label: t('songs.list.lang_ukr'), isActive: archiveLanguage === 'ukr' },
-                        { id: 'arch_lang:rus', label: t('songs.list.lang_rus'), isActive: archiveLanguage === 'rus' },
-                        { id: 'arch_lang:eng', label: t('songs.list.lang_eng'), isActive: archiveLanguage === 'eng' },
+                        {
+                            id: 'arch_theme_dropdown',
+                            label: t('global.themes_label' as any, { defaultValue: 'Тематика' }),
+                            isActive: !!archiveTheme,
+                            children: [
+                                { id: 'arch_theme:all', label: t('songs.list.filter_all'), isActive: !archiveTheme },
+                                ...OFFICIAL_THEMES.filter(thm => thm !== 'Інші').sort((a, b) => a.localeCompare(b)).map(theme => ({
+                                    id: `arch_theme:${theme}`,
+                                    label: t(`global.themes.${theme.replace(/ /g, '_').replace(/['\u2019\u02BC]/g, '')}` as any, { defaultValue: theme }),
+                                    isActive: archiveTheme === theme,
+                                })),
+                                { id: 'arch_theme:Інші', label: t('global.themes.Інші' as any, { defaultValue: 'Інші' }), isActive: archiveTheme === 'Інші' }
+                            ]
+                        }
+                    ],
+                    [
+                        {
+                            id: 'arch_lang_dropdown',
+                            label: t('global.language' as any, { defaultValue: 'Мова' }),
+                            isActive: archiveLanguage !== 'all',
+                            children: [
+                                { id: 'arch_lang:all', label: t('songs.list.filter_all'), isActive: archiveLanguage === 'all' },
+                                { id: 'arch_lang:ukr', label: t('songs.list.lang_ukr'), isActive: archiveLanguage === 'ukr' },
+                                { id: 'arch_lang:rus', label: t('songs.list.lang_rus'), isActive: archiveLanguage === 'rus' },
+                                { id: 'arch_lang:eng', label: t('songs.list.lang_eng'), isActive: archiveLanguage === 'eng' },
+                            ]
+                        }
                     ]
                 ]
             };
@@ -206,7 +230,7 @@ export default function SongList({
             console.warn("subHeaderSync error", e);
         }
         
-    }, [isNative, isActiveTab, subTab, search, selectedCategory, selectedConductor, uniqueConductors, choirType, knownCategories, archiveCategory, archiveSubCategory, archiveLanguage]);
+    }, [isNative, isActiveTab, subTab, search, selectedCategory, selectedConductor, uniqueConductors, choirType, knownCategories, archiveCategory, archiveSubCategory, archiveLanguage, archiveTheme]);
 
     useEffect(() => {
         if (!isNative) return;
@@ -235,6 +259,13 @@ export default function SongList({
             } else if (itemId.startsWith('arch_lang:')) {
                 const lang = itemId.slice(10) as 'ukr' | 'rus' | 'eng';
                 setArchiveLanguage(archiveLanguage === lang ? 'all' : lang);
+            } else if (itemId === 'arch_lang_dropdown') {
+                setArchiveLanguage('all');
+            } else if (itemId.startsWith('arch_theme:')) {
+                const themeId = itemId.slice(11);
+                setArchiveTheme(themeId === 'all' ? null : themeId === archiveTheme ? null : themeId);
+            } else if (itemId === 'arch_theme_dropdown') {
+                setArchiveTheme(null);
             }
         };
 
@@ -247,7 +278,7 @@ export default function SongList({
                 (window as any).webkit?.messageHandlers?.subHeaderSync?.postMessage({ isVisible: false });
             } catch (e) {}
         };
-    }, [isNative, selectedCategory, selectedConductor]);
+    }, [isNative, selectedCategory, selectedConductor, archiveTheme, archiveLanguage, archiveSubCategory]);
 
     const filteredSongs = useMemo(() => {
         let results = songs;
@@ -534,6 +565,7 @@ export default function SongList({
                         externalCategory={archiveCategory}
                         externalSubCategory={archiveSubCategory}
                         externalLanguage={archiveLanguage}
+                        externalTheme={archiveTheme}
                         onAddSong={canAddSongs ? async (globalSong) => {
                             if (!userData?.choirId) return;
 

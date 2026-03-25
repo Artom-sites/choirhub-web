@@ -39,11 +39,21 @@ const streamToString = (stream: any) =>
         stream.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
     });
 
+const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+export async function OPTIONS() {
+    return NextResponse.json({}, { headers: corsHeaders });
+}
+
 export async function POST(req: NextRequest) {
     const db = getDb();
 
     if (!r2Client) {
-        return NextResponse.json({ error: "R2 not configured" }, { status: 503 });
+        return NextResponse.json({ error: "R2 not configured" }, { status: 503, headers: corsHeaders });
     }
 
     try {
@@ -52,7 +62,7 @@ export async function POST(req: NextRequest) {
         // action: 'add' | 'update' | 'delete' | 'rebuild'
 
         if (!action) {
-            return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+            return NextResponse.json({ error: "Invalid payload" }, { status: 400, headers: corsHeaders });
         }
 
         let currentDesc: any[] = [];
@@ -69,6 +79,10 @@ export async function POST(req: NextRequest) {
                 })
                 .map(doc => {
                     const data = doc.data();
+                    // Serialize Firestore Timestamp to ISO string so JSON round-trips cleanly
+                    const updatedAt = data.updatedAt?.toDate?.()?.toISOString()
+                        ?? data.addedAt?.toDate?.()?.toISOString()
+                        ?? null;
                     return {
                         id: doc.id,
                         title: data.title,
@@ -79,13 +93,14 @@ export async function POST(req: NextRequest) {
                         poet: data.poet || null,
                         pdfUrl: data.pdfUrl || data.parts?.[0]?.pdfUrl || null,
                         partsCount: data.parts?.length || 0,
+                        updatedAt,
                     };
                 });
             console.log(`Fetched ${snapshot.docs.length} songs for index.`);
         } else {
             // Incremental Update (Read existing index first)
             if (!song || !song.id) {
-                return NextResponse.json({ error: "Missing song data for incremental update" }, { status: 400 });
+                return NextResponse.json({ error: "Missing song data for incremental update" }, { status: 400, headers: corsHeaders });
             }
 
             try {
@@ -102,7 +117,13 @@ export async function POST(req: NextRequest) {
                 console.warn("Index not found or empty, starting fresh.", e.message);
             }
 
-            // Minimal fields for search
+            // Minimal fields for search + updatedAt for client-side delta sync
+            const updatedAt = song.updatedAt
+                ? (typeof song.updatedAt === 'string'
+                    ? song.updatedAt
+                    : song.updatedAt?.toDate?.()?.toISOString?.() ?? new Date().toISOString())
+                : new Date().toISOString();
+
             const miniSong = {
                 id: song.id,
                 title: song.title,
@@ -113,6 +134,7 @@ export async function POST(req: NextRequest) {
                 poet: song.poet || null,
                 pdfUrl: song.pdfUrl || song.parts?.[0]?.pdfUrl || null,
                 partsCount: song.parts?.length || 0,
+                updatedAt,
             };
 
             if (action === 'add' || action === 'update') {
@@ -134,9 +156,9 @@ export async function POST(req: NextRequest) {
 
         await r2Client.send(putCmd);
 
-        return NextResponse.json({ success: true, count: currentDesc.length });
+        return NextResponse.json({ success: true, count: currentDesc.length }, { headers: corsHeaders });
     } catch (error: any) {
         console.error("Index Update Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: error.message }, { status: 500, headers: corsHeaders });
     }
 }
