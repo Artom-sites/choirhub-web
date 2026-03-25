@@ -1,32 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { r2Client, R2_BUCKET_NAME } from "@/lib/r2";
-import * as admin from "firebase-admin";
-
-// Initialize Firebase Admin if not already lazily to avoid Vercel build errors
-function getDb() {
-    if (!admin.apps.length) {
-        const b64Key = process.env.FIREBASE_PRIVATE_KEY_B64 || '';
-        const privateKey = b64Key ? Buffer.from(b64Key, 'base64').toString('utf8').replace(/\\n/g, '\n') : '';
-
-        if (b64Key && process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL) {
-            try {
-                admin.initializeApp({
-                    credential: admin.credential.cert({
-                        projectId: process.env.FIREBASE_PROJECT_ID,
-                        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-                        privateKey: privateKey,
-                    }),
-                });
-            } catch (e: any) {
-                console.error("FIREBASE INIT ERROR:", e.message);
-            }
-        } else {
-            console.warn("Skipping Firebase Admin init: Missing environment variables (expected during build)");
-        }
-    }
-    return admin.firestore();
-}
+import { getAdmin } from "@/lib/firebase-admin";
+import { getFirestore } from "firebase-admin/firestore";
 
 const INDEX_KEY = "global_songs_index.json";
 
@@ -50,13 +26,17 @@ export async function OPTIONS() {
 }
 
 export async function POST(req: NextRequest) {
-    const db = getDb();
-
     if (!r2Client) {
         return NextResponse.json({ error: "R2 not configured" }, { status: 503, headers: corsHeaders });
     }
 
     try {
+        const adminApp = getAdmin();
+        if (!adminApp) {
+            return NextResponse.json({ error: "Firebase Admin not configured" }, { status: 500, headers: corsHeaders });
+        }
+        const db = getFirestore(adminApp);
+
         const body = await req.json();
         const { action, song } = body;
         // action: 'add' | 'update' | 'delete' | 'rebuild'
