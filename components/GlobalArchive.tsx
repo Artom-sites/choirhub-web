@@ -1133,7 +1133,7 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                             <FileText className="w-5 h-5 text-purple-400" />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <h3 className="font-semibold text-white">{song.title}</h3>
+                                            <h3 className="font-semibold text-text-primary">{song.title}</h3>
                                             <p className="text-xs text-text-secondary">{song.composer} • {song.category}</p>
                                             <p className="text-[10px] text-text-secondary/60 mt-0.5">Від: {song.submittedByName}</p>
                                         </div>
@@ -1260,6 +1260,12 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                                     <div className="flex-1 min-w-0">
                                         <p className="font-semibold text-text-primary truncate">{song.title}</p>
                                         <div className="flex items-center gap-1.5 mt-0.5">
+                                            {song.category && (
+                                                <span className="text-xs text-text-secondary">
+                                                    {t(`global.categories.${song.category}` as any, { defaultValue: song.category })}
+                                                </span>
+                                            )}
+                                            {song.category && (song.subcategory || song.theme) && <span className="text-xs text-text-secondary">•</span>}
                                             {song.subcategory && (
                                                 <span className="text-xs text-text-secondary">
                                                     {getSubcategoryLabel(song.category, song.subcategory, t)}
@@ -1453,16 +1459,14 @@ export default function GlobalArchive({ onAddSong, isOverlayOpen, initialSearchQ
                 loading={approveModal.loading}
             />
 
-            <InputModal
+            <ConfirmModal
                 isOpen={rejectModal.isOpen}
                 onClose={() => setRejectModal({ ...rejectModal, isOpen: false })}
-                onSubmit={handleRejectConfirm}
-                title="Відхилити пісню"
-                message={`Вкажіть причину відхилення для пісні "${rejectModal.song?.title}":`}
-                placeholder="Наприклад: Неякісний PDF, дублікат..."
-                submitText="Відхилити"
-                cancelText="Скасувати"
-                required
+                onConfirm={() => handleRejectConfirm("Відхилено")}
+                title="Відхилити пісню?"
+                message={`Ви дійсно хочете відхилити пісню "${rejectModal.song?.title}"?`}
+                confirmText="Відхилити"
+                variant="danger"
                 loading={rejectModal.loading}
             />
 
