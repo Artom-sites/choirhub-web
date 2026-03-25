@@ -22,6 +22,7 @@ import StatisticsView from "@/components/StatisticsView"; // New
 import EditMemberModal from "@/components/EditMemberModal"; // New
 import MergeMemberModal from "@/components/MergeMemberModal"; // New
 import MemberStatsModal from "@/components/MemberStatsModal";
+import NotificationSettings from "@/components/NotificationSettings";
 import InstallPrompt from "@/components/InstallPrompt";
 import GlassPageHeader from "@/components/GlassPageHeader";
 
@@ -35,7 +36,7 @@ import ConfirmationModal from "@/components/ConfirmationModal";
 import {
   Music2, Loader2, Copy, Check, HelpCircle, Mail, Shield,
   LogOut, ChevronLeft, ChevronRight, House, User, Users, Repeat,
-  PlusCircle, Plus, UserPlus, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor, Scale, Smartphone, RefreshCw, Search, ArrowUpDown, Palette, HardDrive, AlertTriangle, Calendar, Music, Globe
+  PlusCircle, Plus, UserPlus, UserX, X, Trash2, Camera, BarChart2, Link2, Pencil, FileText, Heart, Bell, BellOff, Sun, Moon, Monitor, Scale, Smartphone, RefreshCw, Search, ArrowUpDown, Palette, HardDrive, AlertTriangle, Calendar, Music, Globe
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import NotificationPrompt from "@/components/NotificationPrompt";
@@ -333,6 +334,7 @@ function HomePageContent() {
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [showStats, setShowStats] = useState(false);
   const [showAccount, setShowAccount] = useState(false);
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [showChoirManager, setShowChoirManager] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showEditMemberModal, setShowEditMemberModal] = useState(false);
@@ -341,6 +343,7 @@ function HomePageContent() {
   const [linkingAppUser, setLinkingAppUser] = useState<any | null>(null);
   const [viewingMemberStats, setViewingMemberStats] = useState<ChoirMember | null>(null);
   const [showAdminCodeModal, setShowAdminCodeModal] = useState(false);
+  const [showAllAdminCodes, setShowAllAdminCodes] = useState(false);
   const [showEditName, setShowEditName] = useState(false);
   const [showChoirSettings, setShowChoirSettings] = useState(false);
   const [showLegalModal, setShowLegalModal] = useState(false);
@@ -348,6 +351,7 @@ function HomePageContent() {
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [showAddServiceModal, setShowAddServiceModal] = useState(false);
   const [showAddSongModal, setShowAddSongModal] = useState(false);
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
@@ -564,7 +568,12 @@ function HomePageContent() {
     (window as any).__nativeHeaderAvatarClick = () => setShowAccount(true);
     (window as any).__nativeHeaderBellClick = () => router.push('/notifications');
     (window as any).__nativeHeaderTitleClick = () => setShowChoirManager(true);
-    (window as any).__nativeHeaderLogoClick = () => { setEditChoirName(choir?.name || ''); setShowChoirSettings(true); };
+    (window as any).__nativeHeaderLogoClick = () => {
+      if (userData?.role === 'head' || userData?.role === 'regent') {
+        setEditChoirName(choir?.name || ''); 
+        setShowChoirSettings(true); 
+      }
+    };
     (window as any).__nativeHeaderSearchClick = () => setShowSearchOverlay(true);
 
     return () => {
@@ -574,7 +583,7 @@ function HomePageContent() {
       delete (window as any).__nativeHeaderLogoClick;
       delete (window as any).__nativeHeaderSearchClick;
     };
-  }, [router, choir?.name]);
+  }, [router, choir?.name, userData?.role]);
   // ---------------------------------
 
   // Native FAB tap → open correct modal based on active tab and sub-tab
@@ -2272,27 +2281,31 @@ function HomePageContent() {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-0 flex flex-col bg-background"
+            className="fixed inset-0 bg-background overflow-y-auto"
             style={{ background: 'var(--background)', zIndex: 90 }}
             data-native-inner="true"
           >
-            <GlassPageHeader
-              title={t('layout.account')}
-              onBack={() => setShowAccount(false)}
-              isActive={showAccount}
-              rightSegmented={{
-                items: ["sun.max", "moon", "desktopcomputer"],
-                active: theme === "light" ? 0 : theme === "dark" ? 1 : 2,
-                onChange: (index) => {
-                  if (index === 0) setTheme("light");
-                  else if (index === 1) setTheme("dark");
-                  else setTheme("system");
-                }
-              }}
-            />
+            <div className="fixed top-0 left-0 right-0 z-50 pointer-events-none">
+              <div className="pointer-events-auto">
+                <GlassPageHeader
+                  title={t('layout.account')}
+                  onBack={() => setShowAccount(false)}
+                  isActive={showAccount}
+                  rightSegmented={{
+                    items: ["sun.max", "moon", "desktopcomputer"],
+                    active: theme === "light" ? 0 : theme === "dark" ? 1 : 2,
+                    onChange: (index) => {
+                      if (index === 0) setTheme("light");
+                      else if (index === 1) setTheme("dark");
+                      else setTheme("system");
+                    }
+                  }}
+                />
+              </div>
+            </div>
 
-            <div className="md:max-w-3xl lg:max-w-4xl mx-auto w-full h-full flex flex-col p-6 overflow-y-auto pb-safe">
-              <div className="space-y-6 flex-1 pt-6">
+            <div className="md:max-w-3xl lg:max-w-4xl mx-auto w-full min-h-full flex flex-col p-6 pb-safe pt-[calc(56px+env(safe-area-inset-top)+24px)]">
+              <div className="space-y-6 flex-1">
                 {/* Profile Card */}
                 <div className="bg-surface rounded-2xl p-6 flex items-center gap-5 card-shadow">
                   <div className="w-16 h-16 rounded-full bg-accent text-white flex items-center justify-center text-xl font-bold shadow-lg overflow-hidden">
@@ -2352,368 +2365,483 @@ function HomePageContent() {
 
                 {/* Old Language Settings Removed */}
 
-                {/* Management Block (Choir & Codes) */}
-                <div className="bg-surface rounded-2xl p-4 card-shadow">
-                  {/* Change Choir Button */}
-                  <button
-                    onClick={() => { setManagerMode('list'); setJoinCode(''); setJoinLastName(''); setJoinFirstName(''); setManagerError(''); setShowChoirManager(true); }}
-                    className="w-full flex items-center justify-between py-2 transition-all group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-accent/10 text-accent flex items-center justify-center">
-                        <Repeat className="w-5 h-5" />
-                      </div>
-                      <div className="text-left">
-                        <p className="text-text-primary font-bold text-sm">{t('account.change_choir')}</p>
-                        <p className="text-xs text-text-secondary group-hover:text-text-primary/80">{t('account.change_choir_subtitle')}</p>
-                      </div>
-                    </div>
-                    <PlusCircle className="w-5 h-5 text-text-secondary group-hover:text-text-primary" />
-                  </button>
 
-                  {/* Codes for admin */}
-                  {(userData?.role === 'head' || userData?.role === 'regent') && choir && (
-                    <div className="pt-4 border-t border-border mt-4">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-sm text-text-secondary">{t('account.access_codes')}</h3>
-                        <button
-                          onClick={() => setShowAdminCodeModal(true)}
-                          className="text-xs text-accent hover:underline flex items-center gap-1"
+              {/* -- SETTINGS LIST (FLAT LAYOUT) -- */}
+              <div className="mt-8 flex flex-col">
+                
+                {/* 1. General Settings */}
+                <div className="mb-8">
+                  <h3 className="text-sm font-semibold text-text-secondary mb-2 px-2">{t('account.settings' as any, { defaultValue: 'Налаштування' })}</h3>
+                  <div className="flex flex-col border-t border-border">
+                    {/* Language Settings */}
+                    <button 
+                      onClick={() => setShowLanguagePicker(true)}
+                      className="w-full flex items-center justify-between py-4 px-2 hover:bg-white/5 transition-colors border-b border-border group"
+                    >
+                      <div className="flex items-center gap-4">
+                        <Globe className="w-5 h-5 text-text-secondary" />
+                        <div className="text-left flex flex-col items-start">
+                          <p className="text-text-primary font-medium text-base">{t('account.language')}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-base text-text-secondary">
+                          {language === 'uk' ? 'Українська' : language === 'ru' ? 'Русский' : language === 'en' ? 'English' : language === 'de' ? 'Deutsch' : ''}
+                        </span>
+                        <ChevronRight className="w-5 h-5 text-text-secondary/50 group-hover:text-text-primary transition-colors" />
+                      </div>
+                    </button>
+
+                    {/* Notification Settings — inline toggle */}
+                    <div className="w-full flex items-center justify-between py-4 px-2 border-b border-border">
+                      <div className="flex items-center gap-4">
+                        <Bell className={`w-5 h-5 ${isGranted ? 'text-green-500' : 'text-text-secondary'}`} />
+                        <div className="text-left flex flex-col items-start">
+                          <p className="text-text-primary font-medium text-base">Сповіщення</p>
+                          {permissionStatus === 'denied' && (
+                            <p className="text-xs text-amber-500">Заблоковано в налаштуваннях</p>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                          role="switch"
+                          aria-checked={isGranted}
+                          disabled={fcmLoading || (!isGranted && permissionStatus === 'denied')}
+                          onClick={() => {
+                            if (isGranted) unsubscribe("AccountSettings");
+                            else requestPermission("AccountSettings");
+                          }}
+                          className={`relative inline-flex h-[31px] w-[51px] shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out disabled:cursor-not-allowed disabled:opacity-50 ${
+                            isGranted ? 'bg-green-500' : 'bg-[#787880]/30'
+                          }`}
                         >
-                          <PlusCircle className="w-3 h-3" />
-                          {t('global.actions.add')}
+                          <span
+                            aria-hidden="true"
+                            className={`pointer-events-none inline-block h-[27px] w-[27px] transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${
+                              isGranted ? 'translate-x-[22px]' : 'translate-x-[2px]'
+                            }`}
+                          />
+                        </button>
+                    </div>
+      
+                    {/* Language Picker Modal */}
+                    {showLanguagePicker && (
+                      <div className="relative z-[150]">
+                        <div 
+                          className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity flex items-center justify-center p-4" 
+                          onClick={() => setShowLanguagePicker(false)}
+                          data-native-inner="true"
+                        >
+                          <div 
+                            className="bg-surface w-full max-w-sm rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="flex items-center justify-between p-6 pb-4">
+                              <h3 className="text-[22px] font-bold text-text-primary tracking-tight">{t('account.language')}</h3>
+                              <button 
+                                onClick={() => setShowLanguagePicker(false)}
+                                className="w-8 h-8 flex items-center justify-center bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 rounded-full transition-colors text-text-secondary hover:text-text-primary"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                            <div className="px-6 pb-6 space-y-3">
+                              {([
+                                { code: 'uk', flag: '🇺🇦', label: 'Українська' },
+                                { code: 'en', flag: '🇬🇧', label: 'English' },
+                                { code: 'ru', flag: '🇷🇺', label: 'Русский' },
+                                { code: 'de', flag: '🇩🇪', label: 'Deutsch' },
+                              ] as { code: 'uk' | 'en' | 'ru' | 'de'; flag: string; label: string }[]).map(({ code, flag, label }) => {
+                                const isActive = language === code;
+                                return (
+                                  <button
+                                    key={code}
+                                    onClick={() => {
+                                      changeLanguage(code);
+                                      setShowLanguagePicker(false);
+                                    }}
+                                    className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all duration-200 active:scale-[0.98] border ${
+                                      isActive
+                                        ? 'bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/10 text-text-primary'
+                                        : 'bg-transparent border-border hover:bg-black/5 dark:hover:bg-white/5 text-text-secondary hover:text-text-primary'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-4">
+                                      <span className="text-[22px] leading-none">{flag}</span>
+                                      <span className={`text-[17px] ${isActive ? 'font-bold' : 'font-semibold'}`}>{label}</span>
+                                    </div>
+                                    {isActive && (
+                                      <div className="w-6 h-6 rounded-full bg-[#1c1c1e] dark:bg-white flex items-center justify-center shadow-sm">
+                                        <Check className="w-4 h-4 text-white dark:text-[#1c1c1e]" strokeWidth={3} />
+                                      </div>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 2a. Choir */}
+                <div className="mb-8">
+                  <h3 className="text-sm font-semibold text-text-secondary mb-2 px-2">Хор</h3>
+                  <div className="flex flex-col border-t border-border">
+                    <button
+                      onClick={() => { setManagerMode('list'); setJoinCode(''); setJoinLastName(''); setJoinFirstName(''); setManagerError(''); setShowChoirManager(true); }}
+                      className="w-full flex items-center justify-between py-4 px-2 hover:bg-white/5 transition-colors border-b border-border group"
+                    >
+                      <div className="flex items-center gap-4">
+                        <Repeat className="w-5 h-5 text-accent" />
+                        <div className="text-left flex flex-col items-start">
+                          <p className="text-text-primary font-medium text-base">{t('account.change_choir')}</p>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-text-secondary/50 group-hover:text-text-primary transition-colors" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2b. Access Codes - Admin only */}
+                {(userData?.role === 'head' || userData?.role === 'regent') && choir && (
+                  <div className="mb-8">
+                    <div className="flex items-center justify-between mb-2 px-2">
+                      <h3 className="text-sm font-semibold text-text-secondary">Коди доступу</h3>
+                      <button
+                        onClick={() => setShowAdminCodeModal(true)}
+                        className="text-xs font-medium text-accent hover:opacity-80 flex items-center gap-1 transition-opacity uppercase tracking-wider"
+                      >
+                        <PlusCircle className="w-3.5 h-3.5" />
+                        {t('global.actions.add') || 'Додати'}
+                      </button>
+                    </div>
+                    <div className="flex flex-col border-t border-border">
+                      <div className="flex items-center justify-between py-4 px-2 border-b border-border hover:bg-white/5 transition-colors">
+                        <div className="flex items-center gap-4">
+                          <Users className="w-5 h-5 text-text-secondary" />
+                          <span className="text-text-primary font-medium text-base">{t('account.members_code')}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-text-secondary font-mono">{choir.memberCode}</span>
+                          <button
+                            onClick={() => copyCode(`https://mychoir.vercel.app/?code=${choir.memberCode}`)}
+                            className="text-text-secondary hover:text-accent transition-colors"
+                          >
+                            {copiedCode === `https://mychoir.vercel.app/?code=${choir.memberCode}`
+                              ? <Check className="w-5 h-5 text-success" />
+                              : <Copy className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between py-4 px-2 border-b border-border hover:bg-white/5 transition-colors">
+                        <div className="flex items-center gap-4">
+                          <Music className="w-5 h-5 text-text-secondary" />
+                          <span className="text-text-primary font-medium text-base">{t('account.regents_code')}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-text-secondary font-mono">{choir.regentCode}</span>
+                          <button
+                            onClick={() => copyCode(`https://mychoir.vercel.app/?code=${choir.regentCode}`)}
+                            className="text-text-secondary hover:text-accent transition-colors"
+                          >
+                            {copiedCode === `https://mychoir.vercel.app/?code=${choir.regentCode}`
+                              ? <Check className="w-5 h-5 text-success" />
+                              : <Copy className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {choir.adminCodes && choir.adminCodes.length > 0 && (
+                        <>
+                          {/* Toggle row */}
+                          <button
+                            onClick={() => setShowAllAdminCodes(v => !v)}
+                            className="w-full flex items-center justify-between py-3.5 px-2 hover:bg-white/5 transition-colors border-b border-border text-text-secondary group"
+                          >
+                            <span className="text-sm font-medium">
+                              {showAllAdminCodes
+                                ? 'Сховати кастомні ролі'
+                                : `Кастомні ролі (${choir.adminCodes.length})`}
+                            </span>
+                            <ChevronRight
+                              className={`w-4 h-4 text-text-secondary/50 transition-transform duration-200 ${
+                                showAllAdminCodes ? 'rotate-90' : ''
+                              }`}
+                            />
+                          </button>
+
+                          {/* Collapsible custom codes */}
+                          {showAllAdminCodes && choir.adminCodes.map((ac, idx) => (
+                            <div key={idx} className="flex items-center justify-between py-4 px-2 border-b border-border hover:bg-white/5 transition-colors">
+                              <div className="flex items-center gap-4">
+                                <UserX className="w-5 h-5 text-text-secondary" />
+                                <span className="text-text-primary font-medium text-base">{ac.label || t('account.admin_role')}</span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="text-sm text-text-secondary font-mono">{ac.code}</span>
+                                <button
+                                  onClick={() => copyCode(`https://mychoir.vercel.app/?code=${ac.code}`)}
+                                  className="text-text-secondary hover:text-accent transition-colors"
+                                >
+                                  {copiedCode === `https://mychoir.vercel.app/?code=${ac.code}`
+                                    ? <Check className="w-5 h-5 text-success" />
+                                    : <Copy className="w-4 h-4" />}
+                                </button>
+                                <button
+                                  onClick={() => setDeletingAdminCode(ac.code)}
+                                  className="text-text-secondary/50 hover:text-danger transition-colors ml-1"
+                                  title="Видалити"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Cache Management - only Native */}
+                {isNative && (
+                  <div className="mb-8">
+                    <h3 className="text-sm font-semibold text-text-secondary mb-2 px-2">{t('account.offline_cache')}</h3>
+                    <div className="flex flex-col border-t border-border">
+                      <div className="py-4 px-2 border-b border-border flex items-center justify-between">
+                        <div className="flex items-center gap-4 text-left">
+                          <HardDrive className="w-5 h-5 text-text-secondary" />
+                          <div className="flex flex-col items-start">
+                            <span className="text-text-primary font-medium text-base">Кешовані пісні</span>
+                            <span className="text-sm text-text-secondary">
+                              {cacheSize.count} {t('songs.list.songs_count_plural')} • {cacheSize.sizeBytes < 1024 * 1024
+                                ? `${(cacheSize.sizeBytes / 1024).toFixed(0)} КБ`
+                                : `${(cacheSize.sizeBytes / 1024 / 1024).toFixed(1)} МБ`}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            setCacheClearLoading(true);
+                            try {
+                              const { clearAllCache, getCacheSize: getSize } = await import('@/lib/offlineDb');
+                              await clearAllCache();
+                              const newSize = await getSize();
+                              setCacheSize(newSize);
+                            } catch (e) {
+                              console.error('Clear cache error:', e);
+                            } finally {
+                              setCacheClearLoading(false);
+                            }
+                          }}
+                          disabled={cacheClearLoading || cacheSize.count === 0}
+                          className="px-4 py-2 text-sm font-medium text-danger bg-danger/10 rounded-xl hover:bg-danger/20 transition-colors disabled:opacity-30 flex items-center gap-2"
+                        >
+                          {cacheClearLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                          Очистити
                         </button>
                       </div>
 
-                      <div className="bg-surface-highlight rounded-xl overflow-hidden">
-                        {/* Member Code */}
-                        <div className="flex items-center justify-between p-4 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
-                          <span className="text-text-primary text-base">{t('account.members_code')}</span>
-                          <div className="flex items-center gap-3">
-                            <code className="text-base font-mono font-medium text-text-primary">{choir.memberCode}</code>
-                            <button
-                              onClick={() => copyCode(`https://mychoir.vercel.app/?code=${choir.memberCode}`)}
-                              className="text-text-secondary hover:text-accent transition-colors"
-                            >
-                              {copiedCode === `https://mychoir.vercel.app/?code=${choir.memberCode}`
-                                ? <Check className="w-5 h-5 text-success" />
-                                : <Copy className="w-5 h-5" />}
-                            </button>
+                      <div className="py-4 px-2 border-b border-border space-y-5">
+                        {/* Limit slider */}
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium text-text-primary">{t('account.max_limit')}</span>
+                            <span className="text-sm text-text-secondary">
+                              {(() => {
+                                if (cacheLimit === 'unlimited') return t('account.unlimited');
+                                if (cacheLimit === '1gb') return t('account.cache_1gb');
+                                if (cacheLimit === '500mb') return t('account.cache_500mb');
+                                if (cacheLimit === '50mb') return t('account.cache_50mb');
+                                const n = parseInt(cacheLimit, 10);
+                                return !isNaN(n) ? `${n} МБ` : '100 МБ';
+                              })()}
+                            </span>
                           </div>
-                        </div>
-
-                        {/* Regent Code */}
-                        <div className="flex items-center justify-between p-4 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
-                          <span className="text-text-primary text-base">{t('account.regents_code')}</span>
-                          <div className="flex items-center gap-3">
-                            <code className="text-base font-mono font-medium text-text-primary">{choir.regentCode}</code>
-                            <button
-                              onClick={() => copyCode(`https://mychoir.vercel.app/?code=${choir.regentCode}`)}
-                              className="text-text-secondary hover:text-accent transition-colors"
-                            >
-                              {copiedCode === `https://mychoir.vercel.app/?code=${choir.regentCode}`
-                                ? <Check className="w-5 h-5 text-success" />
-                                : <Copy className="w-5 h-5" />}
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Admin Codes */}
-                        {choir.adminCodes && choir.adminCodes.length > 0 && choir.adminCodes.map((ac, idx) => (
-                          <div key={idx} className="flex items-center justify-between p-4 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
-                            <span className="text-text-primary text-base">{ac.label || t('account.admin_role')}</span>
-                            <div className="flex items-center gap-3">
-                              <code className="text-base font-mono font-medium text-text-primary">{ac.code}</code>
-                              <button
-                                onClick={() => copyCode(`https://mychoir.vercel.app/?code=${ac.code}`)}
-                                className="text-text-secondary hover:text-accent transition-colors"
-                              >
-                                {copiedCode === `https://mychoir.vercel.app/?code=${ac.code}`
-                                  ? <Check className="w-5 h-5 text-success" />
-                                  : <Copy className="w-5 h-5" />}
-                              </button>
-                              <button
-                                onClick={() => setDeletingAdminCode(ac.code)}
-                                className="text-text-secondary/50 hover:text-danger transition-colors ml-1"
-                                title="Видалити"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-
-                </div>
-
-              </div>
-
-              {/* Language Settings */}
-              <div className="bg-surface rounded-2xl p-1 mt-6 card-shadow">
-                <div className="flex items-center justify-between p-3 relative hover:bg-surface-highlight/50 transition-colors rounded-xl">
-                  <div className="flex items-center gap-3 pointer-events-none">
-                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
-                      <Globe className="w-5 h-5" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-text-primary font-bold text-sm">{t('account.language')}</p>
-                      <p className="text-xs text-text-secondary">{t('account.language_subtitle')}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 pointer-events-none">
-                    <span className="text-sm font-medium text-text-secondary">
-                      {language === 'uk' ? '🇺🇦 Українська' : language === 'ru' ? '🇷🇺 Русский' : language === 'en' ? '🇬🇧 English' : language === 'de' ? '🇩🇪 Deutsch' : ''}
-                    </span>
-                    <ChevronRight className="w-4 h-4 text-text-secondary/50" />
-                  </div>
-                  
-                  <select 
-                    value={language}
-                    onChange={(e) => changeLanguage(e.target.value as any)}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  >
-                    <option value="uk">🇺🇦 Українська</option>
-                    <option value="ru">🇷🇺 Русский</option>
-                    <option value="en">🇬🇧 English</option>
-                    <option value="de">🇩🇪 Deutsch</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Cache Management - only on native app */}
-              {isNative && (
-                <div className="bg-surface rounded-2xl p-4 card-shadow mt-6">
-                  {/* Header row with icon, title, stats, and clear button */}
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
-                      <HardDrive className="w-4.5 h-4.5 text-blue-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-bold text-text-primary">{t('account.offline_cache')}</h3>
-                      <p className="text-xs text-text-secondary">
-                        {cacheSize.count} {t('songs.list.songs_count_plural')} • {cacheSize.sizeBytes < 1024 * 1024
-                          ? `${(cacheSize.sizeBytes / 1024).toFixed(0)} КБ`
-                          : `${(cacheSize.sizeBytes / 1024 / 1024).toFixed(1)} МБ`}
-                      </p>
-                    </div>
-                    <button
-                      onClick={async () => {
-                        setCacheClearLoading(true);
-                        try {
-                          const { clearAllCache, getCacheSize: getSize } = await import('@/lib/offlineDb');
-                          await clearAllCache();
-                          const newSize = await getSize();
-                          setCacheSize(newSize);
-                        } catch (e) {
-                          console.error('Clear cache error:', e);
-                        } finally {
-                          setCacheClearLoading(false);
-                        }
-                      }}
-                      disabled={cacheClearLoading || cacheSize.count === 0}
-                      className="px-3 py-1.5 text-xs font-semibold text-danger bg-danger/8 rounded-lg hover:bg-danger/15 transition-colors disabled:opacity-30 flex items-center gap-1.5"
-                    >
-                      {cacheClearLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
-                      Очистити
-                    </button>
-                  </div>
-
-                  {/* Compact sliders */}
-                  <div className="space-y-4">
-                    {/* Limit slider */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">{t('account.max_limit')}</span>
-                        <span className="text-xs font-bold text-text-primary bg-surface-highlight px-2 py-0.5 rounded-md">
-                          {(() => {
-                            if (cacheLimit === 'unlimited') return t('account.unlimited');
-                            if (cacheLimit === '1gb') return t('account.cache_1gb');
-                            if (cacheLimit === '500mb') return t('account.cache_500mb');
-                            if (cacheLimit === '50mb') return t('account.cache_50mb');
-                            const n = parseInt(cacheLimit, 10);
-                            return !isNaN(n) ? `${n} МБ` : '100 МБ';
-                          })()}
-                        </span>
-                      </div>
-                      <input
-                        type="range"
-                        min="50"
-                        max="1050"
-                        step="50"
-                        value={(() => {
-                          if (cacheLimit === 'unlimited') return 1050;
-                          if (cacheLimit === '1gb') return 1000;
-                          if (cacheLimit === '500mb') return 500;
-                          if (cacheLimit === '50mb') return 50;
-                          const n = parseInt(cacheLimit, 10);
-                          return !isNaN(n) ? n : 100;
-                        })()}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value, 10);
-                          const newLimit = val > 1000 ? 'unlimited' : String(val);
-                          setCacheLimitState(newLimit);
-                        }}
-                        onPointerUp={async (e) => {
-                          const val = parseInt((e.target as HTMLInputElement).value, 10);
-                          const newLimit = val > 1000 ? 'unlimited' : String(val);
-                          const { setCacheLimit: setLimit, enforceLimit: enforce, getCacheSize: getSize } = await import('@/lib/offlineDb');
-                          setLimit(newLimit);
-                          await enforce();
-                          const newSize = await getSize();
-                          setCacheSize(newSize);
-                        }}
-                        style={{
-                          background: (() => {
-                            const val = (() => {
+                          <input
+                            type="range"
+                            min="50"
+                            max="1050"
+                            step="50"
+                            value={(() => {
                               if (cacheLimit === 'unlimited') return 1050;
                               if (cacheLimit === '1gb') return 1000;
                               if (cacheLimit === '500mb') return 500;
                               if (cacheLimit === '50mb') return 50;
                               const n = parseInt(cacheLimit, 10);
                               return !isNaN(n) ? n : 100;
-                            })();
-                            const pct = ((val - 50) / (1050 - 50)) * 100;
-                            return `linear-gradient(to right, var(--primary) ${pct}%, var(--surface-highlight) ${pct}%)`;
-                          })()
-                        }}
-                        className="w-full accent-primary h-2 rounded-lg appearance-none cursor-pointer"
-                      />
-                      <div className="flex justify-between text-[10px] text-text-secondary/50 mt-1 px-0.5">
-                        <span>{t("account.cache_50mb")}</span>
-                        <span>{t('account.unlimited')}</span>
-                      </div>
-                    </div>
+                            })()}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              const newLimit = val > 1000 ? 'unlimited' : String(val);
+                              setCacheLimitState(newLimit);
+                            }}
+                            onPointerUp={async (e) => {
+                              const val = parseInt((e.target as HTMLInputElement).value, 10);
+                              const newLimit = val > 1000 ? 'unlimited' : String(val);
+                              const { setCacheLimit: setLimit, enforceLimit: enforce, getCacheSize: getSize } = await import('@/lib/offlineDb');
+                              setLimit(newLimit);
+                              await enforce();
+                              const newSize = await getSize();
+                              setCacheSize(newSize);
+                            }}
+                            style={{
+                              background: (() => {
+                                const val = (() => {
+                                  if (cacheLimit === 'unlimited') return 1050;
+                                  if (cacheLimit === '1gb') return 1000;
+                                  if (cacheLimit === '500mb') return 500;
+                                  if (cacheLimit === '50mb') return 50;
+                                  const n = parseInt(cacheLimit, 10);
+                                  return !isNaN(n) ? n : 100;
+                                })();
+                                const pct = ((val - 50) / (1050 - 50)) * 100;
+                                return `linear-gradient(to right, var(--primary) ${pct}%, var(--surface-highlight) ${pct}%)`;
+                              })()
+                            }}
+                            className="w-full accent-primary h-2 rounded-lg appearance-none cursor-pointer"
+                          />
+                        </div>
 
-                    {/* Retention slider */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">{t('account.auto_delete')}</span>
-                        <span className="text-xs font-bold text-text-primary bg-surface-highlight px-2 py-0.5 rounded-md">
-                          {(() => {
-                            if (cacheRetention === 'never') return t('account.never');
-                            if (cacheRetention === '7d') return t('common.days_7');
-                            if (cacheRetention === '30d') return t('common.days_30');
-                            if (cacheRetention === '90d') return t('common.days_90');
-                            const n = parseInt(cacheRetention, 10);
-                            return !isNaN(n) ? `${n} днів` : t('common.days_30');
-                          })()}
-                        </span>
-                      </div>
-                      <input
-                        type="range"
-                        min="1"
-                        max="185"
-                        step="1"
-                        value={(() => {
-                          if (cacheRetention === 'never') return 185;
-                          if (cacheRetention === '7d') return 7;
-                          if (cacheRetention === '30d') return 30;
-                          if (cacheRetention === '90d') return 90;
-                          const n = parseInt(cacheRetention, 10);
-                          return !isNaN(n) ? n : 30;
-                        })()}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value, 10);
-                          const newRet = val > 180 ? 'never' : String(val);
-                          setCacheRetentionState(newRet);
-                        }}
-                        onPointerUp={async (e) => {
-                          const val = parseInt((e.target as HTMLInputElement).value, 10);
-                          const newRet = val > 180 ? 'never' : String(val);
-                          const { setCacheRetention: setRet, enforceLimit: enforce, getCacheSize: getSize } = await import('@/lib/offlineDb');
-                          setRet(newRet);
-                          await enforce();
-                          const newSize = await getSize();
-                          setCacheSize(newSize);
-                        }}
-                        style={{
-                          background: (() => {
-                            const val = (() => {
+                        {/* Retention slider */}
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium text-text-primary">{t('account.auto_delete')}</span>
+                            <span className="text-sm text-text-secondary">
+                              {(() => {
+                                if (cacheRetention === 'never') return t('account.never');
+                                if (cacheRetention === '7d') return t('common.days_7');
+                                if (cacheRetention === '30d') return t('common.days_30');
+                                if (cacheRetention === '90d') return t('common.days_90');
+                                const n = parseInt(cacheRetention, 10);
+                                return !isNaN(n) ? `${n} днів` : t('common.days_30');
+                              })()}
+                            </span>
+                          </div>
+                          <input
+                            type="range"
+                            min="1"
+                            max="185"
+                            step="1"
+                            value={(() => {
                               if (cacheRetention === 'never') return 185;
                               if (cacheRetention === '7d') return 7;
                               if (cacheRetention === '30d') return 30;
                               if (cacheRetention === '90d') return 90;
                               const n = parseInt(cacheRetention, 10);
                               return !isNaN(n) ? n : 30;
-                            })();
-                            const pct = ((val - 1) / (185 - 1)) * 100;
-                            return `linear-gradient(to right, var(--primary) ${pct}%, var(--surface-highlight) ${pct}%)`;
-                          })()
-                        }}
-                        className="w-full accent-primary h-2 rounded-lg appearance-none cursor-pointer"
-                      />
-                      <div className="flex justify-between text-[10px] text-text-secondary/50 mt-1 px-0.5">
-                        <span>{t("common.day_one")}</span>
-                        <span>{t('account.never')}</span>
+                            })()}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              const newRet = val > 180 ? 'never' : String(val);
+                              setCacheRetentionState(newRet);
+                            }}
+                            onPointerUp={async (e) => {
+                              const val = parseInt((e.target as HTMLInputElement).value, 10);
+                              const newRet = val > 180 ? 'never' : String(val);
+                              const { setCacheRetention: setRet, enforceLimit: enforce, getCacheSize: getSize } = await import('@/lib/offlineDb');
+                              setRet(newRet);
+                              await enforce();
+                              const newSize = await getSize();
+                              setCacheSize(newSize);
+                            }}
+                            style={{
+                              background: (() => {
+                                const val = (() => {
+                                  if (cacheRetention === 'never') return 185;
+                                  if (cacheRetention === '7d') return 7;
+                                  if (cacheRetention === '30d') return 30;
+                                  if (cacheRetention === '90d') return 90;
+                                  const n = parseInt(cacheRetention, 10);
+                                  return !isNaN(n) ? n : 30;
+                                })();
+                                const pct = ((val - 1) / (185 - 1)) * 100;
+                                return `linear-gradient(to right, var(--primary) ${pct}%, var(--surface-highlight) ${pct}%)`;
+                              })()
+                            }}
+                            className="w-full accent-primary h-2 rounded-lg appearance-none cursor-pointer"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
+                )}
+
+
+                {/* 4. About & System */}
+                <div className="mb-8">
+                  <h3 className="text-sm font-semibold text-text-secondary mb-2 px-2">{t('account.about') || 'Про застосунок'}</h3>
+                  <div className="flex flex-col border-t border-border">
+                    <button
+                      onClick={async () => {
+                        const { Dialog } = await import('@capacitor/dialog');
+                        const { value } = await Dialog.confirm({
+                          title: t('account.contact_title'),
+                          message: t('account.contact_msg'),
+                          okButtonTitle: t('common.open'),
+                          cancelButtonTitle: t('common.cancel'),
+                        });
+                        if (value) {
+                          window.location.href = 'mailto:artom.devv@gmail.com?subject=ChoirHub%20Підтримка';
+                        }
+                      }}
+                      className="w-full flex items-center justify-between py-4 px-2 hover:bg-white/5 transition-colors border-b border-border group"
+                    >
+                      <div className="flex items-center gap-4">
+                        <Mail className="w-5 h-5 text-text-secondary" />
+                        <span className="text-text-primary font-medium text-base">{t('account.support')}</span>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-text-secondary/50 group-hover:text-text-primary transition-colors" />
+                    </button>
+
+                    <button
+                      onClick={() => { setLegalInitialView('main'); setShowLegalModal(true); }}
+                      className="w-full flex items-center justify-between py-4 px-2 hover:bg-white/5 transition-colors border-b border-border group"
+                    >
+                      <div className="flex items-center gap-4">
+                        <Scale className="w-5 h-5 text-text-secondary" />
+                        <span className="text-text-primary font-medium text-base">{t('account.legal')}</span>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-text-secondary/50 group-hover:text-text-primary transition-colors" />
+                    </button>
+
+                    <button
+                      onClick={() => setShowHelpModal(true)}
+                      className="w-full flex items-center justify-between py-4 px-2 hover:bg-white/5 transition-colors border-b border-border group"
+                    >
+                      <div className="flex items-center gap-4">
+                        <HelpCircle className="w-5 h-5 text-text-secondary" />
+                        <span className="text-text-primary font-medium text-base">{t('account.faq')}</span>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-text-secondary/50 group-hover:text-text-primary transition-colors" />
+                    </button>
+
+                    <button
+                      onClick={() => setShowLogoutConfirm(true)}
+                      className="w-full flex items-center gap-4 py-4 px-2 hover:bg-white/5 transition-colors border-b border-border text-text-secondary hover:text-text-primary group"
+                    >
+                      <LogOut className="w-5 h-5" />
+                      <span className="font-medium text-base">{t('account.logout')}</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => setShowDeleteModal(true)}
+                      className="w-full flex items-center justify-between py-4 px-2 hover:bg-danger/5 transition-colors text-danger"
+                    >
+                      <div className="flex items-center gap-4">
+                        <span className="font-medium text-base">{t("account.delete_account")}</span>
+                      </div>
+                    </button>
+                  </div>
                 </div>
-              )}
 
-
-              {/* Про застосунок Section */}
-              <div className="mt-8">
-                <p className="text-sm text-text-secondary mb-4">{t('account.about')}</p>
-
-                <button
-                  onClick={async () => {
-                    const { Dialog } = await import('@capacitor/dialog');
-                    const { value } = await Dialog.confirm({
-                      title: t('account.contact_title'),
-                      message: t('account.contact_msg'),
-                      okButtonTitle: t('common.open'),
-                      cancelButtonTitle: t('common.cancel'),
-                    });
-                    if (value) {
-                      window.location.href = 'mailto:artom.devv@gmail.com?subject=ChoirHub%20Підтримка';
-                    }
-                  }}
-                  className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
-                >
-                  <Mail className="w-5 h-5 text-text-secondary" />
-                  <span>{t('account.support')}</span>
-                </button>
-
-                <button
-                  onClick={() => { setLegalInitialView('main'); setShowLegalModal(true); }}
-                  className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
-                >
-                  <Scale className="w-5 h-5 text-text-secondary" />
-                  <span>{t('account.legal')}</span>
-                </button>
-
-                <button
-                  onClick={() => setShowHelpModal(true)}
-                  className="w-full py-4 text-left text-lg font-medium text-text-primary hover:text-primary border-t border-border transition-all flex items-center gap-4 group"
-                >
-                  <HelpCircle className="w-5 h-5 text-text-secondary" />
-                  <span>{t('account.faq')}</span>
-                </button>
-
-                <button
-                  onClick={() => setShowLogoutConfirm(true)}
-                  className="w-full py-4 text-left text-lg font-medium text-text-secondary hover:text-text-primary border-t border-border transition-all flex items-center gap-4 group"
-                >
-                  <LogOut className="w-5 h-5" />
-                  <span>{t('account.logout')}</span>
-                </button>
-              </div>
-
-              {/* Delete Account Button */}
-              <div className="mt-8 pt-4 border-t border-border">
-                <button
-                  onClick={() => setShowDeleteModal(true)}
-                  className="w-full py-3 text-danger hover:bg-danger/10 rounded-xl text-sm transition-all"
-                >
-                  {t("account.delete_account")}
-                </button>
               </div>
             </div>
+          </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -2735,7 +2863,7 @@ function HomePageContent() {
               className={`w-10 h-10 bg-surface-highlight rounded-xl flex items-center justify-center border border-border overflow-hidden relative group ${canEdit ? 'cursor-pointer hover:border-accent/30' : ''}`}
             >
               {choir?.icon ? (
-                <img src={choir.icon} alt="Choir" className="w-full h-full object-cover" />
+                <img src={choir?.icon} alt="Choir" className="w-full h-full object-cover" />
               ) : (
                 <span className="text-xl text-text-primary font-bold">{choir?.name?.[0]?.toUpperCase() || "C"}</span>
               )}
@@ -3257,7 +3385,7 @@ function HomePageContent() {
             isOpen={!!mergingMember}
             onClose={() => setMergingMember(null)}
             onMerge={handleMerge}
-            sourceMember={mergingMember}
+            sourceMember={mergingMember!}
             allMembers={choir?.members || []}
           />
         )
